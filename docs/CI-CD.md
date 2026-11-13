@@ -23,3 +23,19 @@ Hilfsskripte in `scripts/`: `verify-app-arch.mjs` (PE/Mach-O-Architektur), `smok
 ## Offene Sicherheitsbefunde
 
 Siehe Abschnitt „Bekannt und bewusst offen“ in `VALIDATION-REPORT.md` sowie das Audit-Summary des jeweiligen CI-Laufs (Build-Werkzeug-Abhängigkeiten von `electron-builder`, nur zur Bauzeit relevant).
+
+## CodeQL-Befunde (Import 2.2.0, 15 Alerts)
+
+CodeQL bleibt als aktives Gate bestehen. Bearbeitung:
+
+| Alert | Datei | Bewertung | Maßnahme |
+|---|---|---|---|
+| Incomplete multi-character sanitization (7) | `html-mail`, `cloud`, `previews`, `security-analysis`, `templates` | real, geringes Risiko (Ausgabe ist Klartext) | behoben: `stripTags`/`replaceUntilStable` entfernen Tags bis zum stabilen Ergebnis |
+| Double escaping/unescaping | `cloud.mjs` | real (`&amp;lt;` → `<`) | behoben: `&amp;` wird zuletzt dekodiert |
+| Polynomial regex (vCard-Import) | `routes-dav.mjs` | real (quadratisch bei vielen `BEGIN:VCARD` ohne `END`) | behoben: linearer `splitVcards` |
+| Insufficient password hash | `inbox-watcher.mjs` | kein Passwort-Hashing: In-Memory-Fingerprint zur Änderungserkennung, nie gespeichert | Code auf `HMAC` mit zufälligem Prozess-Schlüssel umgestellt; Alert nur bei Fortbestand als False Positive zu dismissen |
+| Replacement of a substring with itself | `test/integration/full.test.mjs` | Test-No-op | behoben (entfernt) |
+| Missing rate limiting (3) | `app.mjs` ×2, `routes-accounts.mjs` | False Positive: Server bindet ausschließlich an `127.0.0.1`, mit Host-/Origin-Prüfung; Statische Dateien bzw. OAuth-Rückruf (zufälliger, einmaliger `state`) | begründet dismissen |
+| Incomplete URL substring sanitization | `test/cloud.test.mjs` | False Positive: exakter Array-Vergleich in einem Test, keine URL-Prüfung | begründet dismissen |
+
+Regressionstests: `apps/server/test/codeql-fixes.test.mjs`.
