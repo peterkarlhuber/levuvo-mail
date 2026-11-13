@@ -16,8 +16,6 @@ test('replaceUntilStable wiederholt bis zum stabilen Ergebnis (verschachtelte Mu
   assert.equal(replaceUntilStable('<<b>b>text', /<b>/g, ''), 'text');
   assert.equal(replaceUntilStable('a<b>c', /<b>/g, ''), 'ac');
 });
-test(out), out);
-});
 test('htmlToText: kein Tag-Rest aus verschachtelten Mustern, Links bleiben lesbar', () => {
   const text = htmlToText('<p>Hallo <scr<b>ipt>x</b></p><a href="https://example.org/">Link</a>');
   assert.ok(!/<script/i.test(text), text);
