@@ -86,6 +86,24 @@ export async function listScheduled(client, preferredDrafts = '') {
   }
 }
 
+/** How long a scheduled message is retried after temporary errors before it counts as failed. */
+export const RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
+// SMTP stages before the message content is transferred: a failure here means nothing was sent.
+const SAFE_STAGES = new Set(['CONN', 'EHLO', 'HELO', 'LHLO', 'STARTTLS', 'AUTH', 'MAIL FROM', 'RCPT TO']);
+
+/**
+ * True for errors where the message certainly was not delivered and a retry is harmless:
+ * connection, TLS or login problems and temporary (4xx) refusals before DATA. Anything during
+ * or after DATA stays final, because a retry could send the message twice.
+ */
+export function isRetryableSubmitError(err) {
+  const stage = String(err?.command || '').toUpperCase();
+  const safe = SAFE_STAGES.has(stage) || stage.startsWith('AUTH');
+  if (!safe) return false;
+  const code = Number(err?.responseCode || 0);
+  return !(code >= 500 && code < 600);
+}
+
 /**
  * Sends every due message once. `submit(envelopeRecipients, raw)` must perform SMTP;
  * `saveSent(raw)` stores the copy. Returns a summary per message.
@@ -111,7 +129,13 @@ export async function sendDue(client, { preferredDrafts = '', now = Date.now(), 
       const raw = stripHeaders(current.source, ['bcc', 'x-levuvo-*']);
       try {
         await submit(recipients, raw);
-      } catch {
+      } catch (err) {
+        if (isRetryableSubmitError(err) && now - Date.parse(item.sendAt) < RETRY_WINDOW_MS) {
+          // Nothing reached the server's DATA phase: release the claim, the next run tries again.
+          await client.messageFlagsRemove(String(item.uid), [SENDING_FLAG], { uid: true }).catch(() => {});
+          results.push({ uid: item.uid, sent: false, retry: true });
+          continue;
+        }
         await client.messageFlagsAdd(String(item.uid), [FAILED_FLAG], { uid: true }).catch(() => {});
         results.push({ uid: item.uid, sent: false });
         continue;
