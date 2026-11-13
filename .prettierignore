@@ -1,0 +1,9 @@
+node_modules/
+apps/web/dist/
+release/
+coverage/
+package-lock.json
+*.md
+*.plist
+build/
+test/e2e/screenshots

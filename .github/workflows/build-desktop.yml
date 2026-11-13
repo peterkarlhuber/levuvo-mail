@@ -1,0 +1,147 @@
+name: Desktop-Build
+# Wiederverwendbarer Build für macOS ARM64, Windows ARM64 und Windows x64.
+# Aufrufer: ci.yml (unsignierte Test-Builds), release.yml, manuell (workflow_dispatch).
+on:
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: 'Signierter Build (benötigt Secrets im Environment "release-signing")'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      signed:
+        type: boolean
+        default: false
+      ref:
+        description: 'Zu bauender Commit (SHA)'
+        type: string
+        default: ''
+      retention-days:
+        type: number
+        default: 14
+    secrets:
+      LEVUVO_UPDATE_URL:
+        required: false
+      CSC_LINK:
+        required: false
+      CSC_KEY_PASSWORD:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_APP_SPECIFIC_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      LEVUVO_WIN_PUBLISHER:
+        required: false
+permissions:
+  contents: read
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              platform: macos-arm64,
+              runner: macos-15,
+              arch: arm64,
+              os: mac,
+              unsigned: 'desktop:mac',
+              signed: 'release:signed:mac'
+            }
+          - {
+              platform: windows-arm64,
+              runner: windows-11-arm,
+              arch: arm64,
+              os: win,
+              unsigned: 'desktop:win:arm64',
+              signed: 'release:signed:win:arm64'
+            }
+          - {
+              platform: windows-x64,
+              runner: windows-2022,
+              arch: x64,
+              os: win,
+              unsigned: 'desktop:win:x64',
+              signed: 'release:signed:win:x64'
+            }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 75
+    # Signierungs-Secrets nur über ein geschütztes Environment (Reviewer-Freigabe möglich)
+    environment: ${{ inputs.signed && 'release-signing' || null }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          architecture: ${{ matrix.arch }}
+          cache: npm
+      - name: Runner-Info
+        shell: bash
+        run: |
+          echo "runner=${{ matrix.runner }} platform=${{ matrix.platform }} target-arch=${{ matrix.arch }}"
+          node -p "'node ' + process.version + ' ' + process.platform + '/' + process.arch"
+          git rev-parse HEAD
+      - name: Install (exact lockfile)
+        run: npm ci --no-fund
+      - name: Tests auf der Zielplattform (inkl. natives Schlüsselbund-Modul)
+        run: npm test
+      - name: Unsigned test installer
+        if: ${{ !inputs.signed }}
+        run: npm run ${{ matrix.unsigned }}
+      - name: Signed installer with update feed
+        if: ${{ inputs.signed }}
+        run: npm run ${{ matrix.signed }}
+        env:
+          LEVUVO_UPDATE_URL: ${{ secrets.LEVUVO_UPDATE_URL }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          LEVUVO_WIN_PUBLISHER: ${{ secrets.LEVUVO_WIN_PUBLISHER }}
+      - name: Zielarchitektur der Binärdateien prüfen (PE/Mach-O)
+        run: node scripts/verify-app-arch.mjs ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Start-Test der entpackten Anwendung
+        run: node scripts/smoke-packaged.mjs ${{ matrix.os }} ${{ matrix.arch }} 20
+      - name: Windows Credential Manager (nur Testeintrag, danach gelöscht)
+        if: ${{ matrix.os == 'win' }}
+        run: npm run desktop:win:check:vault
+      - name: Signatur prüfen (Windows)
+        if: ${{ inputs.signed && matrix.os == 'win' }}
+        shell: pwsh
+        run: |
+          Get-ChildItem release/Levuvo-Mail-Setup-*.exe | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            "$($_.Name): $($s.Status) – $($s.SignerCertificate.Subject)"
+            if ($s.Status -ne 'Valid') { throw "Ungültige Signatur: $($_.Name)" }
+          }
+      - name: Signatur und Notarisierung prüfen (macOS)
+        if: ${{ inputs.signed && matrix.os == 'mac' }}
+        run: |
+          app="release/mac-arm64/Levuvo Mail.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          spctl --assess --type execute --verbose=4 "$app"
+          xcrun stapler validate "$app"
+      - name: Checksums und Manifest
+        shell: bash
+        run: npm run release:manifest -- --arch ${{ matrix.arch }} ${{ inputs.signed && '--signed' || '' }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Levuvo-Mail-${{ matrix.platform }}${{ inputs.signed && '-signed' || '-unsigned' }}
+          path: |
+            release/Levuvo-Mail-*.dmg
+            release/Levuvo-Mail-*.zip
+            release/Levuvo-Mail-Setup-*.exe
+            release/*.blockmap
+            release/latest*.yml
+            release/SHA256SUMS.txt
+            release/release-manifest.json
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days || 14 }}
