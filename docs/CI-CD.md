@@ -35,8 +35,8 @@ CodeQL bleibt als aktives Gate bestehen. Bearbeitung:
 | Polynomial regex (vCard-Import) | `routes-dav.mjs` | real (quadratisch bei vielen `BEGIN:VCARD` ohne `END`) | behoben: linearer `splitVcards` |
 | Insufficient password hash | `inbox-watcher.mjs` | kein Passwort-Hashing: In-Memory-Fingerprint zur Änderungserkennung, nie gespeichert | behoben: Hashing entfernt, direkter In-Memory-Vergleichswert (HMAC wurde von CodeQL weiterhin geflaggt) |
 | Replacement of a substring with itself | `test/integration/full.test.mjs` | Test-No-op | behoben (entfernt) |
-| Incomplete multi-character sanitization (Rest) | `previews.mjs` (Entity-Dekodierung nach Tag-Entfernung) | False Positive: Klartext-Vorschau; `&lt;script&gt;` soll als Text `<script>` erscheinen, die Oberfläche rendert Text escaped (React) | begründet dismissen |
+| Incomplete multi-character sanitization (Rest) | `previews.mjs` (Entity-Dekodierung nach Tag-Entfernung) | Klartext-Vorschau; `&lt;script&gt;` soll als Text erscheinen (React escaped) | umgebaut: Entities je Textabschnitt zwischen den Tags dekodiert; falls CodeQL weiter meldet: False Positive |
 | Missing rate limiting (3) | `app.mjs` ×2, `routes-accounts.mjs` | False Positive: Server bindet ausschließlich an `127.0.0.1`, mit Host-/Origin-Prüfung; Statische Dateien bzw. OAuth-Rückruf (zufälliger, einmaliger `state`) | begründet dismissen |
-| Incomplete URL substring sanitization | `test/cloud.test.mjs` | False Positive: exakter Array-Vergleich in einem Test, keine URL-Prüfung | begründet dismissen |
+| Incomplete URL substring sanitization | `test/cloud.test.mjs` | False Positive: exakter Mengenvergleich in einem Test, keine URL-Prüfung | auf `Set.has` umgestellt; sonst dismissen |
 
 Regressionstests: `apps/server/test/codeql-fixes.test.mjs`.

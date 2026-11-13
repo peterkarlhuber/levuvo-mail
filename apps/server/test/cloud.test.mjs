@@ -490,7 +490,7 @@ test('OAuth: Microsoft holt Mail- und Kalender-Token getrennt, Neuanmeldung für
   // Google: one token for all scopes.
   await oauth.accessToken('g1', 'google', 'grt', null, { resource: 'cloud' });
   assert.equal(requests.at(-1).scope, undefined);
-  assert.ok(PROVIDERS.google.scopes.includes('https://www.googleapis.com/auth/calendar'));
+  assert.ok(new Set(PROVIDERS.google.scopes).has('https://www.googleapis.com/auth/calendar'));
   const { authUrl, state } = oauth.start('microsoft', 'http://127.0.0.1:1/oauth/callback', 'm1');
   assert.match(new URL(authUrl).searchParams.get('scope'), /Contacts\.ReadWrite/);
   assert.equal(oauth.status(state).status, 'pending');

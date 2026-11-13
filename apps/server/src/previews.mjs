@@ -85,17 +85,25 @@ function decodeCharset(buffer, charset) {
 }
 
 const ENTITIES = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+function decodeEntities(text) {
+  return text.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (match, code) => {
+    if (code[0] === '#') {
+      const n = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isInteger(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : ' ';
+    }
+    return ENTITIES[code.toLowerCase()] ?? match;
+  });
+}
 function htmlToText(html) {
-  return replaceUntilStable(html, /<(style|script|head|title)[^>]*>[\s\S]*?(<\/\1>|$)/gi, ' ')
-    .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d|td|th|table|blockquote)>/gi, '\n')
-    .replace(/<[^>]*>?/g, '')
-    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (match, code) => {
-      if (code[0] === '#') {
-        const n = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
-        return Number.isInteger(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : ' ';
-      }
-      return ENTITIES[code.toLowerCase()] ?? match;
-    });
+  const withBreaks = replaceUntilStable(html, /<(style|script|head|title)[^>]*>[\s\S]*?(<\/\1>|$)/gi, ' ').replace(
+    /<br\s*\/?>|<\/(p|div|tr|li|h\d|td|th|table|blockquote)>/gi,
+    '\n'
+  );
+  // Entities werden je Textabschnitt zwischen den Tags dekodiert, nie über Tag-Grenzen hinweg.
+  return withBreaks
+    .split(/<[^>]*>?/)
+    .map(decodeEntities)
+    .join('');
 }
 
 /** Turns raw (possibly truncated) part bytes into a one-line preview. */

@@ -39,3 +39,10 @@ test('Account-Fingerprint: ändert sich bei Passwort-, Host- oder Benutzeränder
     accountFingerprint({ imap: { host: 'x', port: 993, user: 'u', password: 'a' } })
   );
 });
+
+test('Vorschau: Entities werden zu Text, Tags werden entfernt', async () => {
+  const { decodePreview } = await import('../src/previews.mjs');
+  const html = Buffer.from('<p>a &amp; b</p><b>fett</b> &lt;b&gt; 5 &lt; 6 <i>x</i>');
+  const out = decodePreview(html, { type: 'text/html', encoding: '7bit', charset: 'utf-8' });
+  assert.equal(out, 'a & b fett <b> 5 < 6 x');
+});
