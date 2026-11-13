@@ -12,13 +12,11 @@ test('stripTags entfernt auch verschachtelte Tag-Konstrukte vollständig', () =>
   }
   assert.equal(stripTags('a <b>fett</b> b'), 'a fett b');
 });
-test('replaceUntilStable entfernt verschachtelte script-Blöcke', () => {
-  const out = replaceUntilStable(
-    '<scr<script>x</script>ipt>evil()</script>ok',
-    /<script[^>]*>[\s\S]*?<\/script\s*>/gi,
-    ''
-  );
-  assert.ok(!/<script/i.test(out), out);
+test('replaceUntilStable wiederholt bis zum stabilen Ergebnis (verschachtelte Muster)', () => {
+  assert.equal(replaceUntilStable('<<b>b>text', /<b>/g, ''), 'text');
+  assert.equal(replaceUntilStable('a<b>c', /<b>/g, ''), 'ac');
+});
+test(out), out);
 });
 test('htmlToText: kein Tag-Rest aus verschachtelten Mustern, Links bleiben lesbar', () => {
   const text = htmlToText('<p>Hallo <scr<b>ipt>x</b></p><a href="https://example.org/">Link</a>');
