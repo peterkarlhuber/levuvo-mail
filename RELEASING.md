@@ -23,7 +23,7 @@ Existing tags and releases are never overwritten: if `vX.Y.Z` already exists, th
 | `Levuvo-Mail-Setup-<v>-x64.exe` | Windows x64 |
 | `SHA256SUMS.txt`, `release-manifest.json`, `RELEASE_NOTES.md` | all |
 
-The file names follow electron-builder (`-arm64`/`-x64`); the update metadata (`latest*.yml`) depends on them, so they are not renamed.
+The file names follow electron-builder (`-arm64`/`-x64`); the update metadata (`latest*.yml`) depends on them, so they are not renamed. Each Windows architecture has its own update channel (`latest-arm64.yml`, `latest-x64.yml`), macOS uses `latest-mac.yml`; the assembly step fails if two build jobs produce different files with the same name.
 
 ## Signing
 

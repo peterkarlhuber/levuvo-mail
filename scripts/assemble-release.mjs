@@ -30,7 +30,7 @@ const EXPECTED = [
 ];
 // Additional files that only signed builds with an update feed produce
 const EXTRA = new RegExp(
-  `^(?:Levuvo-Mail-${escapeRegExp(v)}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac)?\\.yml)$`
+  `^(?:Levuvo-Mail-${escapeRegExp(v)}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac|-arm64|-x64)?\\.yml)$`
 );
 
 function walk(dir, out = []) {
@@ -84,10 +84,15 @@ for (const mf of all.filter(f => basename(f) === 'release-manifest.json')) {
 const extras = [];
 if (signed) {
   for (const f of all) {
-    if (EXTRA.test(basename(f)) && !artifacts.some(a => a.file === basename(f)) && !extras.includes(basename(f))) {
-      copyFileSync(f, join(outDir, basename(f)));
-      extras.push(basename(f));
+    if (!EXTRA.test(basename(f)) || artifacts.some(a => a.file === basename(f))) continue;
+    if (extras.includes(basename(f))) {
+      // Two build jobs produced a file with the same name (e.g. update metadata): never pick one silently.
+      if (sha256(f) !== sha256(join(outDir, basename(f))))
+        problems.push(`Two different files named ${basename(f)} from separate build jobs`);
+      continue;
     }
+    copyFileSync(f, join(outDir, basename(f)));
+    extras.push(basename(f));
   }
 }
 if (problems.length && !allowPartial) {
