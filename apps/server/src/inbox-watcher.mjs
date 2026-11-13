@@ -12,8 +12,8 @@ const MAX_BACKOFF_MS = 5 * 60 * 1000;
 
 /**
  * Changes whenever host, user or password change, so the watcher reconnects.
- * Reiner Vergleichswert im Arbeitsspeicher (wird weder gespeichert noch ausgegeben) – kein Hashing nötig;
- * das Passwort liegt im selben Prozess ohnehin bereits im Konto-Objekt.
+ * Pure in-memory comparison value (never stored or output), so no hashing is needed;
+ * the password already lives in the account object within the same process anyway.
  */
 export function accountFingerprint(account) {
   const { host, port, user, password, oauth } = account.imap;

@@ -99,7 +99,7 @@ function htmlToText(html) {
     /<br\s*\/?>|<\/(p|div|tr|li|h\d|td|th|table|blockquote)>/gi,
     '\n'
   );
-  // Entities werden je Textabschnitt zwischen den Tags dekodiert, nie über Tag-Grenzen hinweg.
+  // Entities are decoded per text segment between tags, never across tag boundaries.
   return withBreaks
     .split(/<[^>]*>?/)
     .map(decodeEntities)

@@ -1,5 +1,5 @@
 // Converts the composer's plain text with light formatting into a safe HTML part.
-// Supported: **fett**, _kursiv_, [Text](https://…), automatische Links, Listen
+// Supported: **bold**, _italic_, [text](https://…), automatic links, lists
 // ("- " / "1. "), Zitate ("> "). All input is HTML-escaped first, so no markup
 // from the user (or from quoted mails) can reach the HTML part unescaped.
 

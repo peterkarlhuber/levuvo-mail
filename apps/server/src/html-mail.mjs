@@ -93,7 +93,7 @@ const decode = text =>
     return ENTITIES[code.toLowerCase()] ?? m;
   });
 
-/** Wendet eine Ersetzung wiederholt an, bis sich der Text nicht mehr ändert (verschachtelte Muster wie `<scr<script></script>ipt>`). */
+/** Applies a replacement repeatedly until the text no longer changes (nested patterns like `<scr<script></script>ipt>`). */
 export function replaceUntilStable(input, pattern, replacement = '') {
   let out = String(input ?? '');
   for (let i = 0; i < 20; i++) {
@@ -103,7 +103,7 @@ export function replaceUntilStable(input, pattern, replacement = '') {
   }
   return out;
 }
-/** Entfernt alle Tags, auch verschachtelte Konstrukte. */
+/** Removes all tags, including nested constructs. */
 export const stripTags = input => replaceUntilStable(input, /<[^>]*>/g, '');
 
 /** Readable plain text from (sanitized) HTML: paragraphs, lists, quotes and links survive. */

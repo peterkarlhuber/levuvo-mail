@@ -16,6 +16,6 @@ try {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
 } catch (err) {
-  console.error('[Levuvo Mail] API konnte nicht gestartet werden:', err.message);
+  console.error('[Levuvo Mail] API could not be started:', err.message);
   process.exitCode = 1;
 }

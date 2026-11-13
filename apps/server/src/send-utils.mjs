@@ -169,7 +169,7 @@ export function publicSendStatus(smtp, inbox) {
   return {
     configured: inbox.configured,
     mailbox: inbox.configured ? inbox.user : null,
-    readOnly: true, // Lesezugriff und bestehende Postfächer bleiben im Read-only-Modus.
+    readOnly: true, // Read access and existing mailboxes stay in read-only mode.
     smtpConfigured: smtp.configured,
     sendEnabled: Boolean(inbox.configured && smtp.configured && smtp.enabled)
   };

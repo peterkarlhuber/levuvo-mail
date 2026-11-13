@@ -62,7 +62,7 @@ export function buildAccounts(env = process.env) {
   return items;
 }
 
-// Die öffentliche Kontenliste enthält niemals Zugangsdaten oder Host-Interna.
+// The public account list never contains credentials or host internals.
 export function publicAccounts(accounts) {
   return accounts.map(account => ({
     id: account.id,
