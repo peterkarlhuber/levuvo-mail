@@ -6,7 +6,7 @@ dist/
 *.log
 coverage/
 
-# Lokale Installationsdateien und Profildaten
+# Local installer files and profile data
 release/
 *.exe
 *.dmg
@@ -15,6 +15,6 @@ accounts.json
 *.p12
 *.pem
 
-# Test-Fixtures (wertlose Testschlüssel)
+# Test fixtures (worthless test keys)
 !apps/server/test/fixtures/*.p12
 test/e2e/screenshots/

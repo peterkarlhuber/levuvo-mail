@@ -28,7 +28,7 @@ export async function createUpdater({ app, dialog, getWindow, beforeInstall, log
 
   autoUpdater.on('error', () => {
     lastStatus = 'error';
-    logger('Updateprüfung fehlgeschlagen.');
+    logger('Update check failed.');
   });
   autoUpdater.on('update-not-available', () => {
     lastStatus = 'current';

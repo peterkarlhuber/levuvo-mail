@@ -356,7 +356,7 @@ async function boot() {
       url,
       headers: { host: hostHeader, cookie: `levuvo_desktop_session=${secret}` }
     });
-    if (response.statusCode !== 200) throw new Error('Geschützte Abfrage fehlgeschlagen.');
+    if (response.statusCode !== 200) throw new Error('Protected request failed.');
     return response.json();
   };
   backgroundMonitor = createDesktopInboxMonitor({

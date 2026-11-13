@@ -24,7 +24,7 @@ export function createReminderMonitor({
       }
       lastCheck = current;
     } catch {
-      logger('Erinnerungen konnten nicht gelesen werden.');
+      logger('Reminders could not be read.');
     }
     for (const [key, at] of shown) if (current - at > 2 * 86_400_000) shown.delete(key);
   }
