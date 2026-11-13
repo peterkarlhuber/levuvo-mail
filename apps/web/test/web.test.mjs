@@ -139,3 +139,38 @@ test('Event editor: saving without changing the time keeps an event of another t
     end: '2026-11-17T10:00'
   });
 });
+
+test('Inbox sync: snapshots taken before a local change are not applied', async () => {
+  const { snapshotApplies } = await import('../src/mail-sync.ts');
+  // Delete sent at t=100; a snapshot that started reading at t=90 may still contain the message.
+  assert.equal(snapshotApplies(90, 0, 100), false);
+  assert.equal(snapshotApplies(100, 0, 100), false);
+  assert.equal(snapshotApplies(110, 0, 100), true);
+  // Never an older snapshot than the one already shown.
+  assert.equal(snapshotApplies(110, 120, 100), false);
+});
+
+test('Inbox sync: snapshot merge keeps one row per UID and older loaded pages', async () => {
+  const { mergeSnapshot } = await import('../src/mail-sync.ts');
+  const row = (uid, extra = {}) => ({ uid, subject: `S${uid}`, ...extra });
+  const merged = mergeSnapshot(
+    [row(5), row(4, { flagged: true }), row(2), row(1)],
+    [row(6), row(4), row(4), row(3), row(0), row(Number.NaN)]
+  );
+  assert.deepEqual(
+    merged.map(m => m.uid),
+    [6, 4, 3, 2, 1]
+  );
+  assert.equal(merged[1].flagged, true);
+  assert.deepEqual(mergeSnapshot([row(1)], []), []);
+});
+
+test('Inbox sync: a missing message is recognized, removal and flag actions are told apart', async () => {
+  const { isMissingMessage, removesMessages } = await import('../src/mail-sync.ts');
+  assert.equal(isMissingMessage(Object.assign(new Error('x'), { code: 'message_missing', status: 404 })), true);
+  assert.equal(isMissingMessage(Object.assign(new Error('x'), { code: 'imap_write_failed' })), false);
+  assert.equal(isMissingMessage(null), false);
+  assert.equal(isMissingMessage('message_missing'), false);
+  for (const action of ['trash', 'archive', 'move', 'spam', 'notSpam']) assert.equal(removesMessages(action), true);
+  for (const action of ['markRead', 'markUnread', 'flag', 'unflag']) assert.equal(removesMessages(action), false);
+});

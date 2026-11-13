@@ -25,36 +25,48 @@ function createWatcher(account, { clientFactory, prepare, previewCache, onSnapsh
   let client = null;
   let refreshTimer = null;
   let fallbackTimer = null;
-  let refreshing = false;
-  let refreshAgain = false;
+  // The refresh in progress and, at most one, the refresh queued behind it. A caller that asks
+  // for a refresh while one is running waits for the queued one: the running refresh may have
+  // read the mailbox before the caller's change landed.
+  let running = null;
+  let queued = null;
   let backoff = MIN_BACKOFF_MS;
   let wakeUp = null;
   const state = { snapshot: null, at: null, healthy: false, error: null, connected: false };
 
-  async function refresh() {
-    if (!client || stopped) return;
-    if (refreshing) {
-      refreshAgain = true;
-      return;
-    }
-    refreshing = true;
+  async function runRefresh() {
+    // The snapshot reflects the mailbox as of the start of the fetch, not its end: a change
+    // made while the fetch runs may or may not be included, so `at` must not claim it is.
+    const startedAt = Date.now();
     try {
       const snapshot = await monitorInbox(client, { previewCache, accountKey: account.id });
+      if (stopped) return;
       state.snapshot = snapshot;
-      state.at = Date.now();
+      state.at = startedAt;
       state.healthy = true;
       state.error = null;
       onSnapshot?.(account.id, snapshot);
     } catch (err) {
       state.healthy = false;
       state.error = publicImapFailure(err, { connected: true }).error;
-    } finally {
-      refreshing = false;
-      if (refreshAgain && !stopped) {
-        refreshAgain = false;
-        void refresh();
-      }
     }
+  }
+
+  /** Resolves once a refresh that started after this call has finished. */
+  function refresh() {
+    if (!client || stopped) return Promise.resolve();
+    if (!running) {
+      running = runRefresh().finally(() => {
+        running = null;
+      });
+      return running;
+    }
+    if (!queued)
+      queued = running.then(() => {
+        queued = null;
+        return refresh();
+      });
+    return queued;
   }
   function scheduleRefresh() {
     if (refreshTimer) timers.clearTimeout(refreshTimer);

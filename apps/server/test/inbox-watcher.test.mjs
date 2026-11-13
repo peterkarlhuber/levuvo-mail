@@ -74,3 +74,71 @@ test('Without a connection there is no (stale) snapshot', async () => {
   assert.match(pool.status('a').error, /nicht erreichbar/);
   pool.stopAll();
 });
+
+test('Snapshot time is the start of the IMAP read, not its end', async () => {
+  const state = { uids: [1, 2], connects: 0, opened: [], clients: [] };
+  let gate = null;
+  const pool = createWatcherPool({
+    clientFactory: () => {
+      const client = fakeImap(state);
+      const fetch = client.fetch;
+      client.fetch = async function* (range) {
+        if (gate) await gate.promise;
+        yield* fetch(range);
+      };
+      return client;
+    }
+  });
+  pool.sync([account('a')]);
+  await wait(30);
+  let open;
+  gate = { promise: new Promise(r => (open = r)) };
+  const before = Date.now();
+  const done = pool.refresh('a');
+  await wait(60);
+  gate = null;
+  open();
+  await done;
+  assert.ok(pool.snapshot('a').checkedAt <= before + 20, 'checkedAt must be the start time');
+  pool.stopAll();
+});
+
+test('refresh() waits for a refresh that started after the call', async () => {
+  const state = { uids: [1, 2], connects: 0, opened: [], clients: [] };
+  let gate = null;
+  let fetches = 0;
+  const pool = createWatcherPool({
+    clientFactory: () => {
+      const client = fakeImap(state);
+      const fetch = client.fetch;
+      client.fetch = async function* (range) {
+        if (typeof range === 'string') fetches++;
+        if (gate) await gate.promise;
+        yield* fetch(range);
+      };
+      return client;
+    }
+  });
+  pool.sync([account('a')]);
+  await wait(30);
+  const initial = fetches;
+  let open;
+  gate = { promise: new Promise(r => (open = r)) };
+  // A refresh is running (it read the mailbox before the change below) ...
+  const first = pool.refresh('a');
+  await wait(10);
+  state.uids.push(3);
+  // ... so a caller asking now must get a newer snapshot, not the running one.
+  let secondDone = false;
+  const second = pool.refresh('a').then(() => (secondDone = true));
+  const third = pool.refresh('a');
+  await wait(20);
+  assert.equal(secondDone, false);
+  gate = null;
+  open();
+  await Promise.all([first, second, third]);
+  assert.equal(pool.snapshot('a').highestUid, 3);
+  // The running refresh plus exactly one queued refresh for both waiting callers.
+  assert.equal(fetches - initial, 2);
+  pool.stopAll();
+});
