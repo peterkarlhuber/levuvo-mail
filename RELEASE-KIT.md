@@ -1,94 +1,93 @@
-# Levuvo Mail 2.2.0 – Release-Kit
+# Levuvo Mail 2.2.0 – release kit
 
-Das ZIP enthält den vollständigen Quellcode, die gesperrte Abhängigkeitsliste (`package-lock.json`)
-und die Build-Konfiguration für drei Plattformen. **Fertige DMG/EXE-Dateien sind nicht enthalten**:
-Sie müssen auf dem jeweiligen Betriebssystem gebaut werden (natives Schlüsselbund-Modul).
+The ZIP contains the complete source code, the locked dependency list (`package-lock.json`)
+and the build configuration for three platforms. **Finished DMG/EXE files are not included**:
+they must be built on the respective operating system (native keychain module).
 
-| Plattform | Datei | Build-Rechner |
+| Platform | File | Build machine |
 |---|---|---|
-| macOS Apple Silicon | `Levuvo-Mail-2.2.0-arm64.dmg` (+ `.zip` für Updates) | Mac mit Apple Silicon |
-| Windows 11 ARM64 | `Levuvo-Mail-Setup-2.2.0-arm64.exe` | Windows ARM64 (z. B. UTM) |
+| macOS Apple Silicon | `Levuvo-Mail-2.2.0-arm64.dmg` (+ `.zip` for updates) | Mac with Apple Silicon |
+| Windows 11 ARM64 | `Levuvo-Mail-Setup-2.2.0-arm64.exe` | Windows ARM64 (e.g. UTM) |
 | Windows x64 | `Levuvo-Mail-Setup-2.2.0-x64.exe` | Windows Intel/AMD |
 
-## A) Test-Installer (unsigniert, ohne Auto-Update)
+## A) Test installers (unsigned, without auto-update)
 
 ```bash
 npm ci
 npm run release:check
-npm run desktop:mac                      # bzw. desktop:win:arm64 / desktop:win:x64
-npm run release:manifest -- --arch arm64 # bzw. x64
+npm run desktop:mac                      # or desktop:win:arm64 / desktop:win:x64
+npm run release:manifest -- --arch arm64 # or x64
 ```
 
-Unsignierte Installer lösen Gatekeeper- bzw. SmartScreen-Warnungen aus und aktualisieren sich nicht selbst.
-Nur für interne Tests verwenden.
+Unsigned installers trigger Gatekeeper or SmartScreen warnings and do not update themselves.
+Use them for internal testing only.
 
-## B) Signierter Release mit automatischen Updates
+## B) Signed release with automatic updates
 
-### Einmalig besorgen
+### Obtain once
 
-| Wofür | Was | Hinweis |
+| For | What | Note |
 |---|---|---|
-| macOS | Apple Developer Program (99 USD/Jahr), Zertifikat **Developer ID Application** als `.p12` | Notarisierung über App-spezifisches Passwort |
-| Windows | Code-Signing-Zertifikat (OV/EV) als `.pfx` **oder** Azure Trusted Signing | ohne Signatur warnt SmartScreen |
-| Updates | HTTPS-Ordner, z. B. `https://levuvo.at/downloads/mail/` | statischer Webspace genügt |
+| macOS | Apple Developer Program (USD 99/year), **Developer ID Application** certificate as `.p12` | notarization via app-specific password |
+| Windows | code signing certificate (OV/EV) as `.pfx` **or** Azure Trusted Signing | without a signature SmartScreen warns |
+| Updates | HTTPS folder, e.g. `https://levuvo.at/downloads/mail/` | static web space is sufficient |
 
-### Umgebungsvariablen (niemals ins Repository!)
+### Environment variables (never in the repository!)
 
 ```bash
 LEVUVO_UPDATE_URL=https://…/mail/
 # macOS
-CSC_LINK=/pfad/developer-id.p12   CSC_KEY_PASSWORD=…
+CSC_LINK=/path/developer-id.p12   CSC_KEY_PASSWORD=…
 APPLE_ID=…   APPLE_APP_SPECIFIC_PASSWORD=…   APPLE_TEAM_ID=…
 # Windows
-CSC_LINK=C:\pfad\codesign.pfx   CSC_KEY_PASSWORD=…
-LEVUVO_WIN_PUBLISHER="Exakter Name aus dem Zertifikat (CN)"
+CSC_LINK=C:\path\codesign.pfx   CSC_KEY_PASSWORD=…
+LEVUVO_WIN_PUBLISHER="Exact name from the certificate (CN)"
 ```
 
-### Bauen
+### Build
 
 ```bash
 npm ci
 npm run release:check
-npm run release:signed:mac          # auf dem Mac
-npm run release:signed:win:x64      # auf Windows x64
-npm run release:signed:win:arm64    # auf Windows ARM64
+npm run release:signed:mac          # on the Mac
+npm run release:signed:win:x64      # on Windows x64
+npm run release:signed:win:arm64    # on Windows ARM64
 npm run release:manifest -- --signed
 ```
 
-Danach **alle** Dateien aus `release/` (Installer, `.zip`, `.blockmap`, `latest.yml`, `latest-mac.yml`)
-in den Ordner `LEVUVO_UPDATE_URL` hochladen. Installierte signierte Versionen finden das Update
-innerhalb von sechs Stunden (oder sofort über „Nach Updates suchen …“) und installieren es nach
-Rückfrage beim Neustart.
+Then upload **all** files from `release/` (installers, `.zip`, `.blockmap`, `latest.yml`, `latest-mac.yml`)
+to the `LEVUVO_UPDATE_URL` folder. Installed signed versions find the update within six hours
+(or immediately via “Check for updates …”) and install it on restart after asking.
 
-Signierte macOS-Builds verwenden `build/entitlements.mac.release.plist` (Library Validation aktiv),
-Test-Builds `build/entitlements.mac.plist`.
+Signed macOS builds use `build/entitlements.mac.release.plist` (library validation active),
+test builds use `build/entitlements.mac.plist`.
 
-## C) Über GitHub Actions
+## C) Via GitHub Actions
 
-- `ci.yml` läuft bei jedem Push: `npm ci` + `npm run release:check`.
-- `build-desktop.yml` startet man manuell. Ohne Häkchen „signed“ entstehen Test-Installer; mit Häkchen
-  signierte Releases. Dafür die Werte aus Abschnitt B als **Repository-Secrets** anlegen
-  (`CSC_LINK` als Base64 des Zertifikats). Alle Actions sind auf feste Commits gepinnt.
-- Artefakte bleiben private Actions-Artefakte (14 Tage).
+- `ci.yml` runs on every push: `npm ci` + `npm run release:check`.
+- `build-desktop.yml` is started manually. Without the “signed” checkbox it produces test installers; with it,
+  signed releases. For that, create the values from section B as **repository secrets**
+  (`CSC_LINK` as Base64 of the certificate). All actions are pinned to fixed commits.
+- Artifacts remain private Actions artifacts (14 days).
 
-## D) Vor dem ersten öffentlichen Release ausfüllen
+## D) Fill in before the first public release
 
-| Was | Wo | Hinweis |
+| What | Where | Note |
 |---|---|---|
-| Impressum und Verantwortlicher | `apps/web/src/Settings.tsx` (Über), `DATENSCHUTZ.md` | Vorlage: `docs/IMPRESSUM.md` |
-| Microsoft-/Google-Anmeldung | `package.json` → `levuvo.oauth` | Registrierung: `docs/OAUTH-SETUP.md` (Google: Verifizierung/CASA einplanen) |
-| Absturzberichte (optional) | `package.json` → `levuvo.crashReportUrl` (https) | z. B. eigener Crashpad-/Sentry-Minidump-Endpunkt; bleibt aus, bis Nutzer:innen zustimmen |
-| Update-Server | `LEVUVO_UPDATE_URL` | siehe Abschnitt B |
+| Legal notice (Impressum) and controller | `apps/web/src/Settings.tsx` (About), `PRIVACY.md` | template: `docs/IMPRESSUM.md` |
+| Microsoft/Google sign-in | `package.json` → `levuvo.oauth` | registration: `docs/OAUTH-SETUP.md` (Google: plan for verification/CASA) |
+| Crash reports (optional) | `package.json` → `levuvo.crashReportUrl` (https) | e.g. own Crashpad/Sentry minidump endpoint; stays off until users consent |
+| Update server | `LEVUVO_UPDATE_URL` | see section B |
 
-Ohne diese Angaben funktioniert die App vollständig – die OAuth-Schaltflächen erscheinen dann nicht,
-Absturzberichte sind technisch deaktiviert.
+Without these details the app works fully – the OAuth buttons then do not appear and
+crash reports are technically disabled.
 
-## Prüfsummen
+## Checksums
 
-`npm run release:manifest` schreibt `SHA256SUMS.txt` und `release-manifest.json` aus den echten Dateien,
-`npm run release:verify` prüft, dass alle drei Installer vorhanden sind und die Summen stimmen.
+`npm run release:manifest` writes `SHA256SUMS.txt` and `release-manifest.json` from the real files;
+`npm run release:verify` checks that all three installers are present and the checksums match.
 
-## Was nicht ins Paket gehört
+## What does not belong in the package
 
-Keine `.env`, kein `accounts.json`, keine Zertifikate (`*.p12`, `*.pfx` – Ausnahme: wertlose Testzertifikate unter `apps/server/test/fixtures/`, siehe dortige README), keine Mails. `.gitignore`
-und die `files`-Liste in `package.json` schließen das aus.
+No `.env`, no `accounts.json`, no certificates (`*.p12`, `*.pfx` – exception: worthless test certificates under `apps/server/test/fixtures/`, see the README there), no mails. `.gitignore`
+and the `files` list in `package.json` exclude them.

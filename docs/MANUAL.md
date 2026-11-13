@@ -291,5 +291,5 @@ passwords/tokens/keys only in the keychain, the app is only reachable from your 
 
 ## 16 Privacy
 
-See `DATENSCHUTZ.md` (German). In short: no telemetry, no advertising, no Levuvo servers in the data path;
+See `PRIVACY.md`. In short: no telemetry, no advertising, no Levuvo servers in the data path;
 crash reports only if you turn them on.

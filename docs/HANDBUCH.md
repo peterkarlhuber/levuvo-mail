@@ -319,5 +319,5 @@ Rückfrage, Passwörter/Token/Schlüssel nur im Schlüsselbund, die App ist nur 
 
 ## 16 Datenschutz
 
-Siehe `DATENSCHUTZ.md`. Kurz: keine Telemetrie, keine Werbung, keine Levuvo-Server im Datenweg;
+Siehe `PRIVACY.md` (englisch). Kurz: keine Telemetrie, keine Werbung, keine Levuvo-Server im Datenweg;
 Absturzberichte nur, wenn du sie einschaltest.

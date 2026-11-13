@@ -1,21 +1,21 @@
-# Levuvo Mail 2.2.0 – Windows ARM64 und x64
+# Levuvo Mail 2.2.0 – Windows ARM64 and x64
 
-Das Schlüsselbund-Modul ist nativ: **immer auf der Zielarchitektur bauen**.
+The keychain module is native: **always build on the target architecture**.
 
 ```powershell
-node -p "process.platform + ' ' + process.arch"   # erwartet: win32 arm64 bzw. win32 x64
+node -p "process.platform + ' ' + process.arch"   # expected: win32 arm64 or win32 x64
 npm.cmd ci
 npm.cmd run release:check
 npm.cmd run desktop:win:check:vault
-npm.cmd run desktop:win:arm64                      # bzw. desktop:win:x64
+npm.cmd run desktop:win:arm64                      # or desktop:win:x64
 ```
 
-Ergebnis: `release\Levuvo-Mail-Setup-2.2.0-arm64.exe` bzw. `-x64.exe`.
-Projekt lokal (z. B. `C:\Users\<Name>\Levuvo\levuvo-mail`) bauen, nicht von einem Netzlaufwerk.
+Result: `release\Levuvo-Mail-Setup-2.2.0-arm64.exe` or `-x64.exe`.
+Build the project locally (e.g. `C:\Users\<Name>\Levuvo\levuvo-mail`), not from a network drive.
 
-Signierter Build mit Auto-Update: `npm.cmd run release:signed:win:x64` – Voraussetzungen in `RELEASE-KIT.md`.
+Signed build with auto-update: `npm.cmd run release:signed:win:x64` – requirements in `RELEASE-KIT.md`.
 
-Hinweise:
-- Passwörter liegen in der Windows-Anmeldeinformationsverwaltung (Dienst `at.levuvo.mail`).
-- Der Installer installiert pro Benutzer, ohne Administratorrechte, und zeigt die Lizenz an.
-- Unsignierte Test-Installer lösen eine SmartScreen-Warnung aus. Keine Schutzfunktionen global abschalten.
+Notes:
+- Passwords are stored in Windows Credential Manager (service `at.levuvo.mail`).
+- The installer installs per user, without administrator rights, and shows the license.
+- Unsigned test installers trigger a SmartScreen warning. Do not disable protection features globally.

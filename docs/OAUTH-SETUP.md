@@ -1,11 +1,11 @@
-# „Mit Microsoft anmelden“ und „Mit Google anmelden“ freischalten
+# Enabling “Sign in with Microsoft” and “Sign in with Google”
 
-Levuvo Mail enthält die komplette OAuth-2.0-Anmeldung (Authorization Code mit PKCE, Rückleitung an
-`http://127.0.0.1:<Port>/oauth/callback`, IMAP/SMTP über XOAUTH2, Erneuerungstoken im Schlüsselbund).
-Damit die Schaltflächen erscheinen, braucht der Build eine **Client-ID je Anbieter**. Diese
-Registrierung kann nur Levuvo als Herausgeber vornehmen.
+Levuvo Mail contains the complete OAuth 2.0 sign-in (authorization code with PKCE, redirect to
+`http://127.0.0.1:<port>/oauth/callback`, IMAP/SMTP via XOAUTH2, refresh token in the keychain).
+For the buttons to appear, the build needs a **client ID per provider**. Only Levuvo, as the
+publisher, can carry out this registration.
 
-Eintragen in `package.json` (wird in die App eingebaut):
+Enter it in `package.json` (it is built into the app):
 
 ```json
 "levuvo": {
@@ -16,63 +16,63 @@ Eintragen in `package.json` (wird in die App eingebaut):
 }
 ```
 
-Für lokale Tests alternativ als Umgebungsvariablen: `LEVUVO_OAUTH_MICROSOFT_CLIENT_ID`,
+For local tests, alternatively as environment variables: `LEVUVO_OAUTH_MICROSOFT_CLIENT_ID`,
 `LEVUVO_OAUTH_GOOGLE_CLIENT_ID`, `LEVUVO_OAUTH_GOOGLE_CLIENT_SECRET`.
 
-Bei Desktop-Apps sind Client-ID und (bei Google) das „Client-Secret“ **nicht geheim** – sie stecken
-in jeder installierten App. Die Sicherheit kommt von PKCE und der lokalen Rückleitung.
+For desktop apps the client ID and (for Google) the “client secret” are **not secret** – they are
+contained in every installed app. Security comes from PKCE and the local redirect.
 
 ## Microsoft 365 / Outlook.com (Microsoft Entra ID)
 
-1. <https://entra.microsoft.com> → **App-Registrierungen** → **Neue Registrierung**.
-2. Name „Levuvo Mail“; Kontotypen: **Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten**.
-3. Plattform **Mobile und Desktopanwendungen**, Umleitungs-URI `http://127.0.0.1/oauth/callback`
-   (bei Loopback-Adressen ignoriert Microsoft den Port).
-4. **API-Berechtigungen** (delegiert): `offline_access`, `openid`, `email`, unter
-   „Office 365 Exchange Online“ `IMAP.AccessAsUser.All` und `SMTP.Send` sowie **ab 2.1** unter
-   „Microsoft Graph“ `Calendars.ReadWrite` und `Contacts.ReadWrite` (Kalender & Kontakte).
-   Levuvo Mail holt für Mail (Outlook-Ressource) und Kalender/Kontakte (Graph) getrennte
-   Zugriffstoken mit demselben Erneuerungstoken.
-5. Die **Anwendungs-ID (Client-ID)** in `package.json` eintragen. Ein Client-Secret wird nicht benötigt.
+1. <https://entra.microsoft.com> → **App registrations** → **New registration**.
+2. Name “Levuvo Mail”; account types: **Accounts in any organizational directory and personal Microsoft accounts**.
+3. Platform **Mobile and desktop applications**, redirect URI `http://127.0.0.1/oauth/callback`
+   (Microsoft ignores the port for loopback addresses).
+4. **API permissions** (delegated): `offline_access`, `openid`, `email`, under
+   “Office 365 Exchange Online” `IMAP.AccessAsUser.All` and `SMTP.Send`, and **from 2.1** under
+   “Microsoft Graph” `Calendars.ReadWrite` and `Contacts.ReadWrite` (calendar & contacts).
+   Levuvo Mail fetches separate access tokens for mail (Outlook resource) and calendar/contacts (Graph)
+   with the same refresh token.
+5. Enter the **Application (client) ID** in `package.json`. No client secret is needed.
 
-Hinweise für Kund:innen mit Microsoft 365:
-- Je nach Mandant muss ein:e Administrator:in der App einmalig zustimmen.
-- **IMAP und „Authentifiziertes SMTP“** müssen für das Postfach aktiviert sein (Microsoft 365 Admin Center → Benutzer → E-Mail → E-Mail-Apps verwalten). Ohne SMTP AUTH funktioniert der Empfang, aber nicht der Versand.
+Notes for customers with Microsoft 365:
+- Depending on the tenant, an administrator must consent to the app once.
+- **IMAP and “Authenticated SMTP”** must be enabled for the mailbox (Microsoft 365 admin center → Users → Mail → Manage email apps). Without SMTP AUTH receiving works, but sending does not.
 
 ## Google / Gmail
 
-1. <https://console.cloud.google.com> → Projekt anlegen → **APIs & Dienste** → **OAuth-Zustimmungsbildschirm** (Nutzertyp „Extern“), App-Name, Support-Adresse, Datenschutzerklärung (Link auf den Datenschutzhinweis).
-2. Bereiche: `openid`, `email`, `https://mail.google.com/` sowie **ab 2.1**
-   `https://www.googleapis.com/auth/calendar` und `https://www.googleapis.com/auth/contacts`.
-   Unter **APIs & Dienste → Bibliothek** die **Google Calendar API** und die **People API** aktivieren.
-3. **Anmeldedaten** → **OAuth-Client-ID** → Anwendungstyp **Desktop-App**. Client-ID und Client-Secret eintragen.
+1. <https://console.cloud.google.com> → create a project → **APIs & Services** → **OAuth consent screen** (user type “External”), app name, support address, privacy policy (link to the privacy notice).
+2. Scopes: `openid`, `email`, `https://mail.google.com/` and **from 2.1**
+   `https://www.googleapis.com/auth/calendar` and `https://www.googleapis.com/auth/contacts`.
+   Under **APIs & Services → Library**, enable the **Google Calendar API** and the **People API**.
+3. **Credentials** → **OAuth client ID** → application type **Desktop app**. Enter the client ID and client secret.
 
-Wichtig – bitte vor der Veröffentlichung einplanen:
-- `https://mail.google.com/` ist ein **eingeschränkter Bereich**. Solange die App im Status „Test“ ist,
-  können sich nur bis zu 100 eingetragene Testnutzer anmelden, und Google lässt deren Anmeldung
-  **nach 7 Tagen ablaufen** (Levuvo Mail fordert dann zur erneuten Anmeldung auf).
-- Für die Freigabe an alle Nutzer verlangt Google eine **Verifizierung** und eine jährliche
-  **Sicherheitsbewertung (CASA)** durch einen von Google anerkannten Prüfer (kostenpflichtig).
-- Bis dahin funktionieren Gmail-Konten zuverlässig mit **App-Passwort** (Google-Konto →
-  Sicherheit → Bestätigung in zwei Schritten → App-Passwörter) über die normale Einrichtung.
+Important – please plan for this before publication:
+- `https://mail.google.com/` is a **restricted scope**. As long as the app is in “Testing” status,
+  only up to 100 registered test users can sign in, and Google **expires their sign-in after 7 days**
+  (Levuvo Mail then asks them to sign in again).
+- To release it to all users, Google requires **verification** and an annual
+  **security assessment (CASA)** by a Google-approved assessor (paid).
+- Until then, Gmail accounts work reliably with an **app password** (Google Account →
+  Security → 2-Step Verification → App passwords) via the normal setup.
 
-## Prüfen
+## Verify
 
-1. `npm run desktop:dev` → Einstellungen → Konten: Die Schaltflächen „Mit Microsoft anmelden“ /
-   „Mit Google anmelden“ erscheinen nur, wenn eine Client-ID hinterlegt ist.
-2. Anmeldung im Browser abschließen; die App zeigt „Konto verbunden“, das Konto erscheint mit dem
-   Hinweis „OAuth“. Empfang (IDLE), Versand und Entwürfe testen.
-3. Automatisiert: `apps/server/test/integration/full.test.mjs` prüft den kompletten Ablauf gegen einen
-   lokalen OAuth-Testanbieter (`LEVUVO_IT_OAUTH_URL`).
+1. `npm run desktop:dev` → Settings → Accounts: the buttons “Sign in with Microsoft” /
+   “Sign in with Google” appear only if a client ID is configured.
+2. Complete the sign-in in the browser; the app shows “Account connected.” and the account appears with
+   the “OAuth” label. Test receiving (IDLE), sending and drafts.
+3. Automated: `apps/server/test/integration/full.test.mjs` checks the complete flow against a
+   local OAuth test provider (`LEVUVO_IT_OAUTH_URL`).
 
-## Kalender & Kontakte (ab 2.1)
+## Calendar & contacts (from 2.1)
 
-- Neue Konten erteilen die Kalender- und Kontaktberechtigung gleich bei der Anmeldung.
-- Konten aus 2.0 zeigen in Kalender und Kontakten den Hinweis **„Freigeben“**. Ein Klick öffnet die
-  Anmeldeseite des Anbieters für genau dieses Postfach; danach wird nur das Erneuerungstoken ersetzt
-  (Anmeldung mit einem anderen Postfach wird abgelehnt).
-- Fehlt die Freigabe oder ist eine API im Google-Projekt nicht aktiviert, bleiben E-Mail-Empfang und
-  -Versand unberührt; nur Kalender/Kontakte des Kontos zeigen den Hinweis.
-- Automatisiert geprüft mit Testservern für Graph (Integrationstest) und Google (Unit-Test mit
-  nachgebildeten Antworten). Ein Test gegen echte Microsoft-/Google-Konten ist nach dem Eintragen
-  der Client-IDs Teil der Abnahme (`RELEASE-CHECKLIST.md`).
+- New accounts grant the calendar and contacts permission right at sign-in.
+- Accounts from 2.0 show the notice **“Allow access”** in calendar and contacts. A click opens the
+  provider's sign-in page for exactly this mailbox; afterwards only the refresh token is replaced
+  (signing in with a different mailbox is rejected).
+- If consent is missing or an API is not enabled in the Google project, receiving and sending email
+  are unaffected; only the account's calendar/contacts show the notice.
+- Tested automatically with test servers for Graph (integration test) and Google (unit test with
+  simulated responses). A test against real Microsoft/Google accounts is part of acceptance after
+  entering the client IDs (`RELEASE-CHECKLIST.md`).

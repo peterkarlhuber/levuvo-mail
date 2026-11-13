@@ -1,29 +1,32 @@
-# Impressum – Vorlage
+# Imprint (Impressum) – template
 
-> Diese Vorlage füllt Levuvo vor der Veröffentlichung aus. Die gleichen Platzhalter stehen in der App
-> unter Einstellungen → Über (`apps/web/src/Settings.tsx`, Abschnitt „Impressum“) und im
-> Datenschutzhinweis (`DATENSCHUTZ.md`). Rechtliche Prüfung empfohlen.
+> Levuvo fills in this template before publication. The same placeholders appear in the app
+> under Settings → About (`apps/web/src/Settings.tsx`, “Legal notice” section) and in the
+> privacy notice (`PRIVACY.md`). Legal review recommended.
+>
+> The filename stays `IMPRESSUM.md` because the German app text refers to `docs/IMPRESSUM.md`.
+> Austrian law requires this disclosure; the German legal terms are kept in parentheses.
 
-**Offenlegung gemäß § 5 E-Commerce-Gesetz (ECG), § 14 Unternehmensgesetzbuch (UGB) und § 25 Mediengesetz**
+**Disclosure pursuant to § 5 E-Commerce Act (E-Commerce-Gesetz, ECG), § 14 Commercial Code (Unternehmensgesetzbuch, UGB) and § 25 Media Act (Mediengesetz)**
 
-| Angabe | Wert |
+| Item | Value |
 |---|---|
-| Medieninhaber und Hersteller | [Firmenname] [Rechtsform, z. B. e.U. / GmbH] |
-| Anschrift | [Straße Hausnummer], [PLZ Ort], Österreich |
-| Kontakt | E-Mail: [kontakt@levuvo.at] · Telefon: [+43 …] |
-| Unternehmensgegenstand | [z. B. Entwicklung und Vertrieb von Software] |
-| Firmenbuchnummer / -gericht | [FN …] / [Landesgericht …] (falls eingetragen) |
-| UID-Nummer | [ATU…] (falls vorhanden) |
-| Mitgliedschaft / Gewerbebehörde | [Wirtschaftskammer …] / [Bezirkshauptmannschaft bzw. Magistrat …] |
-| Berufsrecht | Gewerbeordnung, www.ris.bka.gv.at |
-| Grundlegende Richtung (§ 25 MedienG) | Information über Levuvo Mail und Levuvo-Produkte |
+| Media owner and manufacturer (Medieninhaber und Hersteller) | [Company name] [legal form, e.g. e.U. / GmbH] |
+| Address | [Street number], [postcode city], Austria |
+| Contact | Email: [kontakt@levuvo.at] · Phone: [+43 …] |
+| Business purpose (Unternehmensgegenstand) | [e.g. development and distribution of software] |
+| Company register number / court (Firmenbuchnummer / -gericht) | [FN …] / [Regional Court …] (if registered) |
+| VAT ID (UID-Nummer) | [ATU…] (if available) |
+| Membership / trade authority | [Austrian Economic Chamber (Wirtschaftskammer) …] / [district authority or municipal office …] |
+| Professional law | Trade Regulation Act (Gewerbeordnung), www.ris.bka.gv.at |
+| Basic orientation (§ 25 MedienG) | Information about Levuvo Mail and Levuvo products |
 
-**Verbraucherstreitbeilegung:** [Hinweis auf die OS-Plattform der EU bzw. ob Bereitschaft zur Teilnahme an Streitbeilegungsverfahren besteht – rechtlich prüfen lassen.]
+**Consumer dispute resolution:** [Reference to the EU ODR platform and whether there is willingness to participate in dispute resolution proceedings – have this reviewed legally.]
 
-**Haftung für Links:** Links in E-Mails stammen von den jeweiligen Absendern; Levuvo Mail fragt vor dem Öffnen nach.
+**Liability for links:** Links in emails come from the respective senders; Levuvo Mail asks for confirmation before opening them.
 
-## In der App ersetzen
+## Replace in the app
 
-1. `apps/web/src/Settings.tsx` → Komponente `About` → Block `legal-block` mit den echten Angaben füllen.
-2. `DATENSCHUTZ.md` → Abschnitt „Verantwortlicher“ und die Platzhalter für Update-Server und Absturzberichte.
-3. `npm run release:check` und Release bauen.
+1. `apps/web/src/Settings.tsx` → component `About` → fill the `legal-block` with the real details.
+2. `PRIVACY.md` → section “Controller” and the placeholders for the update server and crash reports.
+3. Run `npm run release:check` and build the release.
