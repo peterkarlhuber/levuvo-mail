@@ -27,6 +27,7 @@ import {
   layoutDay,
   localizeCalendars,
   monthMatrix,
+  editorTimes,
   movedEventModel,
   parseYmd,
   snapMinutes,
@@ -185,14 +186,15 @@ function EventEditor({
 
   function model() {
     const endDate = d.allDay ? ymd(addDays(parseYmd(d.endDate), 1)) : d.endDate;
+    const timed = editorTimes(e, { start: `${d.startDate}T${d.startTime}`, end: `${endDate}T${d.endTime}` });
     return {
       summary: d.summary.trim(),
       location: d.location,
       description: d.description,
       allDay: d.allDay,
-      tzid: d.allDay ? undefined : e?.tzid || TZ,
-      start: d.allDay ? d.startDate : `${d.startDate}T${d.startTime}`,
-      end: d.allDay ? endDate : `${endDate}T${d.endTime}`,
+      tzid: d.allDay ? undefined : timed.tzid,
+      start: d.allDay ? d.startDate : timed.start,
+      end: d.allDay ? endDate : timed.end,
       rrule: d.repeat
         ? {
             freq: d.repeat,
@@ -422,7 +424,7 @@ function EventEditor({
                 )}
               </span>
             </label>
-            {!d.allDay && <small className="muted">{t('Zeitzone: {tz}', { tz: e?.tzid || TZ })}</small>}
+            {!d.allDay && <small className="muted">{t('Zeitzone: {tz}', { tz: TZ })}</small>}
           </div>
           <label>
             {t('Ort')}

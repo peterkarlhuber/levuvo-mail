@@ -25,6 +25,52 @@ export function eventRange(e: Pick<CalendarEvent, 'start' | 'end' | 'allDay'>) {
   return { start: new Date(e.start), end: new Date(e.end || e.start) };
 }
 
+/** Wall-clock date (YYYY-MM-DD) and time (HH:MM) of an instant in a given IANA time zone. */
+export function wallTime(d: Date, timeZone: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    })
+      .formatToParts(d)
+      .map(p => [p.type, p.value])
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+/**
+ * Start, end and time zone the editor saves for a timed event. The editor shows local times
+ * of this computer. If they were not changed, an event of another time zone keeps its zone and
+ * its original wall-clock times; otherwise the entered local times are saved in the local zone.
+ * Mixing both (local times labelled with the event's zone) shifted events on every edit.
+ */
+export function editorTimes(
+  e: Pick<CalendarEvent, 'start' | 'end' | 'allDay' | 'tzid'> | undefined,
+  entered: { start: string; end: string },
+  localZone: string = TZ
+) {
+  if (e && !e.allDay && e.tzid && e.tzid !== localZone) {
+    const r = eventRange(e);
+    const unchanged =
+      entered.start === `${ymd(r.start)}T${hm(r.start)}` && entered.end === `${ymd(r.end)}T${hm(r.end)}`;
+    if (unchanged) {
+      try {
+        const s = wallTime(r.start, e.tzid);
+        const en = wallTime(r.end, e.tzid);
+        return { tzid: e.tzid, start: `${s.date}T${s.time}`, end: `${en.date}T${en.time}` };
+      } catch {
+        /* unknown zone name: fall back to the local zone */
+      }
+    }
+  }
+  return { tzid: localZone, start: entered.start, end: entered.end };
+}
+
 /** Columns for overlapping timed events in one day. */
 export function layoutDay(events: { start: Date; end: Date }[]) {
   const sorted = events
