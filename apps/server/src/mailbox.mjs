@@ -75,7 +75,7 @@ export async function listMessages(client, folder, { limit, beforeUid = null, pr
     let hasMore;
     if (beforeUid === null) {
       const start = Math.max(1, total - limit + 1);
-      messages = await fetchInfos(client, `${start}:${total}`, { previewCache, keyPrefix });
+      messages = (await fetchInfos(client, `${start}:*`, { previewCache, keyPrefix })).slice(0, limit);
       hasMore = start > 1;
     } else {
       const { uids, more } = await uidsBefore(client, beforeUid, limit);
@@ -139,6 +139,10 @@ export async function monitorInbox(client, { limit = 40, previewCache, accountKe
   const capped = Number.isInteger(limit) ? Math.max(1, Math.min(limit, 40)) : 40;
   const lock = await client.getMailboxLock('INBOX', { readOnly: true });
   try {
+    // On the long-lived IDLE connection the message count can lag behind when the server does not
+    // push EXISTS right away (seen after deletes from another connection): NOOP collects pending
+    // updates, otherwise the newest message was missing from the range below.
+    await client.noop?.().catch(() => {});
     const status = client.mailbox || {};
     const validity = safeImapInteger(status.uidValidity);
     if (validity === null || validity < 1 || validity > 4294967295) {
@@ -148,9 +152,14 @@ export async function monitorInbox(client, { limit = 40, previewCache, accountKe
     }
     const total = Number(status.exists || 0);
     const keyPrefix = `${accountKey}:INBOX:${validity}`;
+    // `*` instead of the known count: if the count is behind the server (missing or misordered
+    // EXISTS/EXPUNGE updates), the newest messages are still included.
     const messages =
       total > 0
-        ? await fetchInfos(client, `${Math.max(1, total - capped + 1)}:${total}`, { previewCache, keyPrefix })
+        ? (await fetchInfos(client, `${Math.max(1, total - capped + 1)}:*`, { previewCache, keyPrefix })).slice(
+            0,
+            capped
+          )
         : [];
     let unseen = null;
     try {

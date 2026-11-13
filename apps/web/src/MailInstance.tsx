@@ -103,6 +103,8 @@ type Props = {
   accounts: AccountItem[];
   visible: boolean;
   inboxSnapshot?: InboxSnapshot;
+  /** Asks for a fresh inbox snapshot (after a local change made the cached one outdated). */
+  onLocalChange?: () => void;
   pollState: Record<string, { checkedAt: number | null; error?: string }>;
   initialOpen: { uid: number; folder: string | null } | null;
   pendingCompose: { initial: ComposeInitial; nonce: number } | null;
@@ -122,6 +124,7 @@ export default function MailInstance({
   accounts,
   visible,
   inboxSnapshot,
+  onLocalChange,
   pollState,
   initialOpen,
   pendingCompose,
@@ -386,8 +389,14 @@ export default function MailInstance({
 
   // Live updates: the IDLE snapshot replaces the top of the inbox list.
   const appliedSnapshot = useRef(0);
+  // Time of the last change made here (move, delete, read state). A snapshot taken before it
+  // still shows the old state: applied, a deleted message came back and deleting it again failed.
+  const localChangeAt = useRef(0);
+  const onLocalChangeRef = useRef(onLocalChange);
+  onLocalChangeRef.current = onLocalChange;
   useEffect(() => {
     if (!accountReady || !inboxSnapshot || inboxSnapshot.checkedAt <= appliedSnapshot.current) return;
+    if (inboxSnapshot.checkedAt <= localChangeAt.current) return;
     if (inboxSnapshot.unseen !== null)
       setFolders(old => old.map(f => (f.path.toUpperCase() === 'INBOX' ? { ...f, unseen: inboxSnapshot.unseen } : f)));
     if (folder.toUpperCase() !== 'INBOX' || query.trim() || busy || actionBusy) return;
@@ -464,12 +473,15 @@ export default function MailInstance({
   }, [folder, detailKey, accountReady, reloadDetail, accountId]);
 
   useEffect(() => {
-    if (!detail || !prefs.markReadOnOpen || !writeEnabled || isDraftFolder || detail.stale) return;
+    // Not while another action runs: a message being deleted must not get a late "mark read".
+    if (!detail || !prefs.markReadOnOpen || !writeEnabled || isDraftFolder || detail.stale || actionBusy) return;
     const item = messages.find(m => m.uid === detail.uid);
     if (!item?.unread) return;
     const timer = window.setTimeout(() => {
       postAction(`/api/messages/${detail.uid}/action`, { folder, action: 'markRead' }, accountId)
         .then(() => {
+          localChangeAt.current = Date.now();
+          onLocalChangeRef.current?.();
           setMessages(old => old.map(m => (m.uid === detail.uid ? { ...m, unread: false } : m)));
           setFolders(old =>
             old.map(f =>
@@ -482,7 +494,7 @@ export default function MailInstance({
         });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [detail, prefs.markReadOnOpen, writeEnabled, isDraftFolder, folder, accountId, messages]);
+  }, [detail, prefs.markReadOnOpen, writeEnabled, isDraftFolder, folder, accountId, messages, actionBusy]);
 
   const stopSearch = () => {
     if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
@@ -667,6 +679,8 @@ export default function MailInstance({
         { folder: source, action, uids, ...(action === 'move' ? { destination } : {}) },
         accountId
       );
+      localChangeAt.current = Date.now();
+      onLocalChangeRef.current?.();
       if (['markRead', 'markUnread', 'flag', 'unflag'].includes(action)) {
         const patch: Partial<Message> =
           action === 'markRead'
@@ -711,7 +725,9 @@ export default function MailInstance({
         if (selectedUid !== null && uids.includes(selectedUid)) selectUid(nextAfterRemoval(uids), false);
         setMessages(old => old.filter(m => !uids.includes(m.uid)));
         const destination = folders.find(f => f.path === data.destination);
-        const target = destination ? folderLabel(destination) : data.destination;
+        // A trash folder the server just created is not in the list yet.
+        if (!destination && data.destination) void loadFolders(false);
+        const target = destination ? folderLabel(destination) : action === 'trash' ? t('Papierkorb') : data.destination;
         const undo = data.undo;
         toast({
           text:
@@ -1193,7 +1209,7 @@ export default function MailInstance({
                     {writeEnabled && (
                       <button
                         className="folder-more"
-                        aria-label={t('Ordneraktionen: {folder}', { folder: f.name })}
+                        aria-label={t('Ordneraktionen: {folder}', { folder: folderLabel(f) })}
                         onClick={e => {
                           const r = e.currentTarget.getBoundingClientRect();
                           setFolderMenu({ path: f.path, x: r.left, y: r.bottom });

@@ -38,7 +38,7 @@ function fakeClient(n, { gaps = [] } = {}) {
       let list;
       if (opts?.uid) list = range;
       else {
-        const [a, b] = range.split(':').map(Number);
+        const [a, b] = range.split(':').map(v => (v === '*' ? uids.length : Number(v)));
         list = uids.slice(a - 1, b);
       }
       log.push(['fetch', opts?.uid ? 'uid' : 'seq', list.length]);
@@ -140,4 +140,17 @@ test('completeFetchResults keeps one complete entry per requested UID', () => {
     kept.map(m => m.uid),
     [7]
   );
+});
+
+test('A message count that lags behind the server still includes the newest messages', async () => {
+  const c = fakeClient(12);
+  c.mailbox.exists = 10; // EXISTS for the two newest messages not processed yet
+  const state = await monitorInbox(c, { limit: 5 });
+  assert.deepEqual(
+    state.messages.map(m => m.uid),
+    [12, 11, 10, 9, 8]
+  );
+  const page = await listMessages(c, 'INBOX', { limit: 5 });
+  assert.equal(page.messages[0].uid, 12);
+  assert.equal(page.messages.length, 5);
 });
