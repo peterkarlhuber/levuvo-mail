@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+*.log
+coverage/
+
+# Lokale Installationsdateien und Profildaten
+release/
+*.exe
+*.dmg
+accounts.json
+*.pfx
+*.p12
+*.pem
+
+# Test-Fixtures (wertlose Testschlüssel)
+!apps/server/test/fixtures/*.p12
+test/e2e/screenshots/

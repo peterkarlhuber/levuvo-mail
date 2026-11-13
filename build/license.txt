@@ -1,0 +1,16 @@
+Levuvo Mail
+Copyright (c) 2026 Levuvo. Alle Rechte vorbehalten.
+
+Diese Software einschließlich Quellcode, Grafiken und Dokumentation ist urheberrechtlich
+geschützt. Nutzung, Vervielfältigung, Änderung oder Weitergabe sind nur mit ausdrücklicher
+schriftlicher Zustimmung von Levuvo erlaubt.
+
+Die Software wird ohne Gewähr bereitgestellt, soweit gesetzlich zulässig. Die Haftung für
+leichte Fahrlässigkeit ist ausgeschlossen, ausgenommen bei Verletzung von Leben, Körper
+oder Gesundheit.
+
+Enthaltene Open-Source-Komponenten (u. a. Electron, React, Fastify, ImapFlow, Nodemailer,
+DOMPurify, postal-mime, @napi-rs/keyring) unterliegen ihren eigenen Lizenzen. Die
+Lizenztexte werden mit der installierten Anwendung ausgeliefert.
+
+Kontakt: https://levuvo.at

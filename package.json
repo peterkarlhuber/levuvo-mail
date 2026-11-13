@@ -1,0 +1,189 @@
+{
+  "name": "levuvo-mail",
+  "version": "2.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others -n API,WEB -c cyan,white \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node apps/server/src/server.mjs",
+    "dev:web": "vite --config apps/web/vite.config.ts --host 127.0.0.1",
+    "build": "vite build --config apps/web/vite.config.ts",
+    "test": "node --test apps/server/test/*.test.mjs apps/web/test/*.test.mjs",
+    "test:integration": "node --test apps/server/test/integration/*.test.mjs",
+    "typecheck": "tsc --noEmit --project apps/web/tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "release:check": "npm audit --omit=dev --audit-level=high && npm run check:syntax && npm run lint && npm run format:check && npm test && npm run typecheck && npm run build && npm run notices",
+    "audit:runtime": "npm audit --omit=dev",
+    "audit:strict": "npm audit --audit-level=moderate",
+    "desktop:dev": "npm run build && electron .",
+    "desktop:dir": "npm run build && electron-builder --dir",
+    "desktop:mac": "npm run build && electron-builder --mac dmg --arm64 --publish never",
+    "desktop:mac:dir": "npm run build && electron-builder --mac dir --publish never",
+    "desktop:win": "node scripts/windows-build.mjs native",
+    "desktop:win:arm64": "node scripts/windows-build.mjs arm64",
+    "desktop:win:x64": "node scripts/windows-build.mjs x64",
+    "desktop:win:dir": "node scripts/windows-build.mjs dir",
+    "desktop:win:check": "node scripts/windows-preflight.mjs",
+    "desktop:win:check:vault": "node scripts/windows-credential-check.mjs",
+    "release:signed:mac": "node scripts/release-signed.mjs mac",
+    "release:signed:win:x64": "node scripts/release-signed.mjs win-x64",
+    "release:signed:win:arm64": "node scripts/release-signed.mjs win-arm64",
+    "release:manifest": "node scripts/generate-release-manifest.mjs",
+    "release:verify": "node scripts/verify-release-artifacts.mjs",
+    "notices": "node scripts/third-party-notices.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "test:e2e": "node --test test/e2e/ui.e2e.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/keyring": "2.1.2",
+    "asn1js": "4.0.0",
+    "electron-updater": "6.8.11",
+    "fastify": "5.12.8",
+    "ical.js": "2.2.1",
+    "imapflow": "1.7.8",
+    "nodemailer": "10.5.0",
+    "openpgp": "6.3.2",
+    "pkijs": "4.0.1",
+    "postal-mime": "4.2.1",
+    "sanitize-html": "2.18.2",
+    "timezones-ical-library": "3.0.0",
+    "tsdav": "2.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tiptap/extension-image": "3.33.1",
+    "@tiptap/pm": "3.33.1",
+    "@tiptap/react": "3.33.1",
+    "@tiptap/starter-kit": "3.33.1",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "concurrently": "9.2.5",
+    "dompurify": "3.4.17",
+    "electron": "45.3.1",
+    "electron-builder": "26.18.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "lucide-react": "0.400.0",
+    "prettier": "3.10.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "7.3.8"
+  },
+  "productName": "Levuvo Mail",
+  "description": "Levuvo Mail – Desktop-Mailclient für macOS und Windows",
+  "main": "apps/desktop/main.mjs",
+  "build": {
+    "appId": "at.levuvo.mail",
+    "productName": "Levuvo Mail",
+    "directories": {
+      "output": "release"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "files": [
+      "package.json",
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.txt",
+      "apps/desktop/**/*",
+      "apps/server/src/**/*",
+      "apps/web/dist/**/*",
+      "!**/.env",
+      "!**/.env.*",
+      "!**/test/**/*",
+      "!**/*.map"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "apps/desktop/assets/levuvo.icns",
+      "target": [
+        "dmg"
+      ],
+      "identity": "-",
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "notarize": false,
+      "minimumSystemVersion": "12.0",
+      "artifactName": "Levuvo-Mail-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "icon": "apps/desktop/assets/levuvo.ico",
+      "target": [
+        "nsis"
+      ],
+      "legalTrademarks": "Levuvo"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Levuvo Mail",
+      "uninstallDisplayName": "Levuvo Mail",
+      "artifactName": "Levuvo-Mail-Setup-${version}-${arch}.${ext}",
+      "runAfterFinish": true,
+      "license": "build/license.txt"
+    },
+    "dmg": {
+      "title": "Levuvo Mail – Installation",
+      "artifactName": "Levuvo-Mail-${version}-${arch}.dmg",
+      "background": "build/dmg-background.png",
+      "window": {
+        "width": 600,
+        "height": 400
+      },
+      "iconSize": 110,
+      "contents": [
+        {
+          "x": 166,
+          "y": 235,
+          "type": "file"
+        },
+        {
+          "x": 432,
+          "y": 235,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "copyright": "© Levuvo",
+    "extraMetadata": {
+      "main": "apps/desktop/main.mjs"
+    },
+    "publish": null
+  },
+  "author": {
+    "name": "Levuvo",
+    "url": "https://levuvo.at"
+  },
+  "homepage": "https://levuvo.at",
+  "license": "SEE LICENSE IN LICENSE",
+  "levuvo": {
+    "oauth": {
+      "microsoft": {
+        "clientId": ""
+      },
+      "google": {
+        "clientId": "",
+        "clientSecret": ""
+      }
+    },
+    "crashReportUrl": ""
+  }
+}

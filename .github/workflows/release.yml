@@ -1,0 +1,131 @@
+name: Release
+# Erzeugt einen DRAFT-Release (nie automatisch öffentlich) aus einem geprüften Commit.
+# Auslöser: Tag vX.Y.Z (muss zu package.json passen) oder manuell (workflow_dispatch).
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: 'Signierter Release (benötigt Secrets im Environment "release-signing")'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+# Nie zwei Releases gleichzeitig; laufende Releases werden nicht abgebrochen.
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    name: Version und Tag prüfen
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="v$version"
+          if [ "$EVENT" = push ] && [ "$REF_NAME" != "$tag" ]; then
+            echo "::error::Tag $REF_NAME passt nicht zu package.json ($tag)"; exit 1
+          fi
+          if [ "$EVENT" = push ]; then
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/master 2>/dev/null \
+              || git merge-base --is-ancestor "$GITHUB_SHA" origin/main 2>/dev/null \
+              || { echo "::error::Tag-Commit liegt nicht auf dem Standardbranch"; exit 1; }
+          fi
+          # Bestehende Releases/Tags werden nie überschrieben.
+          if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
+            echo "::error::Release $tag existiert bereits. Version in package.json erhöhen oder Draft bewusst löschen."; exit 1
+          fi
+          if [ "$EVENT" = workflow_dispatch ] && git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            tagsha=$(git rev-parse "refs/tags/$tag^{commit}" 2>/dev/null || true)
+            [ "$tagsha" = "$GITHUB_SHA" ] || { echo "::error::Tag $tag existiert auf anderem Commit"; exit 1; }
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Qualitätsprüfung
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Release-Checks (Audit, Syntax, Lint, Format, Tests, Typecheck, Build)
+        run: npm run release:check
+      - run: node scripts/check-workflows.mjs
+      - run: node scripts/secret-scan.mjs
+
+  build:
+    name: Build
+    needs: [prepare, quality]
+    uses: ./.github/workflows/build-desktop.yml
+    with:
+      signed: ${{ github.event_name == 'workflow_dispatch' && inputs.signed }}
+      ref: ${{ github.sha }}
+      retention-days: 30
+    secrets: inherit
+    permissions:
+      contents: read
+
+  publish:
+    name: Draft-Release erstellen
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Nur dieser Job darf schreiben.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+      - name: Release-Verzeichnis zusammenstellen und prüfen
+        env:
+          SIGNED: ${{ github.event_name == 'workflow_dispatch' && inputs.signed }}
+        run: |
+          flags=""
+          [ "$SIGNED" = true ] && flags="--signed"
+          node scripts/assemble-release.mjs --in artifacts --out release-assets --commit "$GITHUB_SHA" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" $flags
+          (cd release-assets && sha256sum -c SHA256SUMS.txt)
+          ls -l release-assets
+      - name: Draft-Release anlegen (nie automatisch veröffentlicht)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          SIGNED: ${{ github.event_name == 'workflow_dispatch' && inputs.signed }}
+        run: |
+          extra=""
+          title="Levuvo Mail $VERSION"
+          if [ "$SIGNED" != true ]; then extra="--prerelease"; title="$title (unsignierte interne Testversion)"; fi
+          # --target legt den Commit fest; das Tag entsteht erst bei der Veröffentlichung.
+          gh release create "$TAG" release-assets/* \
+            --draft $extra --target "$GITHUB_SHA" --title "$title" \
+            --notes-file release-assets/RELEASE_NOTES.md
+          gh release view "$TAG" --json url,isDraft,assets --jq '{url,isDraft,assets:[.assets[].name]}'
