@@ -1344,6 +1344,9 @@ h4 {
 .reader-toolbar select {
   font-size: 12.5px;
   padding: 6px 8px;
+  /* Chromium sizes a select by its options in the system font; without a floor the
+     placeholder "Verschieben …" was clipped to "Verschieben ." */
+  min-width: 132px;
   max-width: 160px;
 }
 .reader-content > h2 {
@@ -1390,10 +1393,15 @@ h4 {
 .sender-name {
   font-weight: 650;
 }
+.sender-name,
+.sender-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sender-email {
   font-size: 12.5px;
   color: var(--muted);
-  overflow-wrap: anywhere;
 }
 .reader-date {
   font-size: 12px;
@@ -3982,7 +3990,9 @@ h4 {
 .reader-column {
   container: reader / inline-size;
 }
-@container reader (min-width: 520px) {
+/* One toolbar row only when all actions fit; below that it wraps instead of cutting off the
+   "more" menu at the right edge. */
+@container reader (min-width: 640px) {
   .reader-toolbar,
   .reader-primary-actions,
   .reader-secondary-actions {
@@ -3991,7 +4001,7 @@ h4 {
 }
 @container reader (max-width: 860px) {
   .reader-toolbar select {
-    max-width: 118px;
+    max-width: 132px;
   }
 }
 @container reader (max-width: 780px) {

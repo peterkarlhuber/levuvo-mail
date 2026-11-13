@@ -134,3 +134,28 @@ test(
     assert.deepEqual(result, { saved: false, folder: 'Gesendet', reason: 'append_failed' });
   }
 );
+
+test(
+  'Without a Sent folder one is created and the copy is stored there',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
+  async () => {
+    const calls = [];
+    const result = await service.appendToSent(
+      async fn =>
+        fn({
+          list: async () => [{ path: 'INBOX', delimiter: '/' }],
+          mailboxCreate: async path => calls.push(['create', path]) && { path },
+          append: async path => {
+            calls.push(['append', path]);
+            return { uid: 3 };
+          }
+        }),
+      Buffer.from('test')
+    );
+    assert.equal(result.saved, true);
+    assert.deepEqual(calls, [
+      ['create', 'INBOX/Sent'],
+      ['append', 'INBOX/Sent']
+    ]);
+  }
+);

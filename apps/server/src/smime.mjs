@@ -155,10 +155,10 @@ export function createSmime({ meta, vault }) {
   }
   function certFor(email) {
     const e = String(email || '').toLowerCase();
-    const all = [...data().own, ...data().public].filter(
-      c => c.emails.includes(e) && Date.parse(c.notAfter) > Date.now()
-    );
-    return all.sort((a, b) => b.notAfter.localeCompare(a.notAfter))[0] || null;
+    const usable = c => c.emails.includes(e) && Date.parse(c.notAfter) > Date.now();
+    // Own certificate first, then the first certificate stored for the address. A certificate
+    // that shows up later must not silently replace a known one just by expiring later.
+    return data().own.find(usable) || data().public.find(usable) || null;
   }
   async function rememberPublic(der) {
     const info = describeCert(der);
@@ -311,7 +311,6 @@ export function createSmime({ meta, vault }) {
     const certs = (signed.certificates || []).filter(c => c instanceof pkijs.Certificate).map(derOf);
     const signerDer = signer ? derOf(signer) : null;
     const cert = signerDer ? describeCert(signerDer) : null;
-    if (signerDer && valid) await rememberPublic(signerDer);
     const trusted = signerDer
       ? chainTrusted(
           signerDer,
@@ -319,6 +318,10 @@ export function createSmime({ meta, vault }) {
           (data().trusted || []).map(t => Buffer.from(t, 'base64'))
         )
       : false;
+    const matchesSender = Boolean(cert && fromEmail && cert.emails.includes(String(fromEmail).toLowerCase()));
+    // Collect a sender certificate for later encryption only if the chain is trusted and the
+    // certificate belongs to the From address; otherwise anyone could plant a key for any address.
+    if (signerDer && valid && trusted && matchesSender) await rememberPublic(signerDer);
     return {
       content: contentBytes,
       signature: {
@@ -326,7 +329,7 @@ export function createSmime({ meta, vault }) {
         trusted,
         signer: cert?.emails?.[0] || cert?.subject || null,
         issuer: cert?.issuer || null,
-        matchesSender: Boolean(cert && fromEmail && cert.emails.includes(String(fromEmail).toLowerCase()))
+        matchesSender
       }
     };
   }

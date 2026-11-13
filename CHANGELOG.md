@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.1 – 13 November 2026
+
+### Fixes
+- **Inbox:** no more empty extra messages when new mail arrives. Flag updates the server pushes during a refresh were listed as messages without sender or subject that could not be deleted.
+- **Inbox:** a deleted message no longer reappears for a moment (and then fails to delete again); new mail now shows up within about five seconds; the newest messages are listed even when the server reports changes late.
+- **Mailboxes without Trash, Drafts or Sent:** these folders are created on first use, so deleting, saving drafts and storing sent copies work.
+- **Device calendar:** if the keychain key is missing or different, the calendar stays locked instead of being replaced by an empty one; a damaged file is kept as a backup.
+- **S/MIME:** certificates from signed mail are only remembered when the chain is trusted and the address matches the sender; a known certificate is no longer replaced by a newer one from an unknown source.
+- **Calendar:** editing an event from another time zone no longer shifts it; reminders keep working after more than two days of sleep.
+- **Send later:** temporary connection or login problems are retried for up to 24 hours instead of marking the message as failed.
+- **Reading pane:** opening a message no longer waits for a slow CardDAV server; toolbar and sender line fit at medium window widths; blocked remote images show no broken-image icon.
+
+### Performance
+- The encrypted search index is only rewritten when something changed, and compression no longer blocks the app.
+
+### Build & Release
+- Windows ARM64 and x64 get separate update channels (`latest-arm64.yml`, `latest-x64.yml`); the release assembly fails if two build jobs produce different files with the same name.
+
 ## 2.2.0 – 13 November 2026
 
 ### New: password-protected messages

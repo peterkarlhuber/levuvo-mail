@@ -9,7 +9,7 @@ import {
   parseAuthenticationResults,
   baseDomain
 } from '../src/security-analysis.mjs';
-import { stripHeaders, validateSendAt, sendDue } from '../src/scheduled.mjs';
+import { stripHeaders, validateSendAt, sendDue, isRetryableSubmitError } from '../src/scheduled.mjs';
 import { newFolderPath, manageFolder, validFolderName } from '../src/folders.mjs';
 import { validateSieveConfig, buildSieveScript, parseLevuvoScript } from '../src/sieve.mjs';
 import { createOAuthManager, emailFromIdToken, oauthConfigFrom } from '../src/oauth.mjs';
@@ -302,4 +302,47 @@ test('Attachments get the matching content type (preview at the recipient)', asy
   );
   assert.equal(attachmentType('setup.exe'), 'application/octet-stream');
   assert.equal(attachmentType('ohne-endung'), 'application/octet-stream');
+});
+
+test('Scheduled send: only errors before DATA are retried, everything else stays final', () => {
+  assert.equal(isRetryableSubmitError({ code: 'ECONNECTION', command: 'CONN' }), true);
+  assert.equal(isRetryableSubmitError({ code: 'EAUTH', command: 'AUTH PLAIN', responseCode: 454 }), true);
+  assert.equal(isRetryableSubmitError({ code: 'EENVELOPE', command: 'RCPT TO', responseCode: 451 }), true);
+  assert.equal(isRetryableSubmitError({ code: 'EENVELOPE', command: 'RCPT TO', responseCode: 550 }), false);
+  assert.equal(isRetryableSubmitError({ code: 'ETIMEDOUT', command: 'DATA' }), false);
+  assert.equal(isRetryableSubmitError(new Error('unknown')), false);
+});
+
+test('Scheduled send: a connection error releases the claim so the next run sends the message', async () => {
+  const at = new Date(Date.now() - 60_000).toISOString();
+  const flags = new Set(['\\Draft', '$LevuvoScheduled']);
+  const src = Buffer.from(`From: a@b.at\r\nTo: x@y.at\r\nX-Levuvo-Send-At: ${at}\r\nSubject: S\r\n\r\nHi\r\n`);
+  const client = {
+    capabilities: new Set(['MOVE']),
+    list: async () => [{ path: 'Drafts', specialUse: '\\Drafts', flags: new Set() }],
+    getMailboxLock: async () => ({ release() {} }),
+    search: async () => [9],
+    async *fetch() {
+      yield {
+        uid: 9,
+        envelope: { subject: 'S', to: [{ address: 'x@y.at' }] },
+        flags,
+        headers: Buffer.from(`X-Levuvo-Send-At: ${at}`)
+      };
+    },
+    fetchOne: async () => ({ uid: 9, flags, source: src }),
+    messageFlagsAdd: async (_uid, f) => f.forEach(x => flags.add(x)),
+    messageFlagsRemove: async (_uid, f) => f.forEach(x => flags.delete(x)),
+    messageFlagsSet: async () => {},
+    messageMove: async () => true
+  };
+  const offline = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNECTION', command: 'CONN' });
+  const first = await sendDue(client, { submit: async () => Promise.reject(offline), saveSent: async () => {} });
+  assert.deepEqual(first.results, [{ uid: 9, sent: false, retry: true }]);
+  assert.equal(flags.has('$LevuvoSending'), false);
+  assert.equal(flags.has('$LevuvoFailed'), false);
+  let sent = 0;
+  const second = await sendDue(client, { submit: async () => sent++, saveSent: async () => {} });
+  assert.equal(sent, 1);
+  assert.equal(second.results[0].sent, true);
 });

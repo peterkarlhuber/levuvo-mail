@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { addDays, eventRange, layoutDay, parseYmd, startOfWeek, ymd } from '../src/calendar-utils.ts';
+import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek, ymd } from '../src/calendar-utils.ts';
 import { orderFolders } from '../src/folder-utils.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 
@@ -116,4 +116,26 @@ test('Command palette: matches regardless of umlauts, word starts first', async 
   assert.ok(matchScore('dark', 'Dunkles Design', 'theme dark') > 0);
   assert.ok(matchScore('neu mail', 'Neue E-Mail schreiben') > 0);
   assert.equal(matchScore('', 'egal'), 0);
+});
+
+test('Event editor: saving without changing the time keeps an event of another time zone in place', () => {
+  const e = {
+    start: '2026-11-16T15:00:00.000Z',
+    end: '2026-11-16T16:00:00.000Z',
+    allDay: false,
+    tzid: 'America/New_York'
+  };
+  const r = eventRange(e);
+  const shown = { start: `${ymd(r.start)}T${hm(r.start)}`, end: `${ymd(r.end)}T${hm(r.end)}` };
+  assert.deepEqual(editorTimes(e, shown, 'Europe/Vienna'), {
+    tzid: 'America/New_York',
+    start: '2026-11-16T10:00',
+    end: '2026-11-16T11:00'
+  });
+  // A changed time is what the user typed, in the user's own zone.
+  assert.deepEqual(editorTimes(e, { start: '2026-11-17T09:00', end: '2026-11-17T10:00' }, 'Europe/Vienna'), {
+    tzid: 'Europe/Vienna',
+    start: '2026-11-17T09:00',
+    end: '2026-11-17T10:00'
+  });
 });

@@ -69,12 +69,18 @@ export function registerMailRoutes(ctx) {
     }
     return entry.promise;
   }
-  async function davContactEmails() {
-    try {
-      return new Set((await ctx.davService.contacts()).contacts.flatMap(c => c.emails.map(e => e.value.toLowerCase())));
-    } catch {
-      return new Set();
+  // Opening a message must not wait for a slow CardDAV server: the address set is cached for a
+  // minute and a lookup that takes longer than 1.5 s counts as "unknown" (it keeps loading).
+  let davEmails = null;
+  function davContactEmails() {
+    if (!davEmails || Date.now() - davEmails.at > 60_000) {
+      const promise = Promise.resolve()
+        .then(() => ctx.davService.contacts())
+        .then(r => new Set(r.contacts.flatMap(c => c.emails.map(e => e.value.toLowerCase()))))
+        .catch(() => new Set());
+      davEmails = { at: Date.now(), promise };
     }
+    return Promise.race([davEmails.promise, new Promise(resolve => setTimeout(() => resolve(new Set()), 1500))]);
   }
   function readContext(account) {
     return {
@@ -993,7 +999,7 @@ export function registerMailRoutes(ctx) {
           account,
           { retryConnect: false }
         );
-        for (const r of result.results) diagnostics.record('scheduled', r.sent ? 'sent' : 'failed');
+        for (const r of result.results) diagnostics.record('scheduled', r.sent ? 'sent' : r.retry ? 'retry' : 'failed');
         if (result.next) next = Math.min(next, Date.parse(result.next));
       } catch {
         diagnostics.record('scheduled', 'check_failed');

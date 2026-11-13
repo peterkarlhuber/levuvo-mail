@@ -56,6 +56,28 @@ test('Desktop: event reminder is shown exactly once, even with overlapping polls
   assert.deepEqual(shown, ['Jour fixe']);
 });
 
+test('Desktop: reminders keep working after a sleep longer than the two-day API window', async () => {
+  let now = Date.parse('2026-11-13T18:00:00Z');
+  const windows = [];
+  const monitor = createReminderMonitor({
+    now: () => now,
+    readAlarms: async (from, to) => {
+      const span = Date.parse(to) - Date.parse(from);
+      windows.push(span);
+      if (span > 2 * 86_400_000) throw new Error('400');
+      return { alarms: [] };
+    },
+    notify: () => {}
+  });
+  await monitor.check();
+  now += 3 * 86_400_000; // weekend in standby
+  await monitor.check();
+  now += 60_000;
+  await monitor.check();
+  assert.ok(windows.every(span => span <= 2 * 86_400_000));
+  assert.ok(windows.at(-1) < 5 * 60_000, 'the window shrinks back to normal after a successful read');
+});
+
 test('Desktop: menu and dialog texts complete in German and English', () => {
   assert.deepEqual(Object.keys(DESKTOP_TEXTS.en).sort(), Object.keys(DESKTOP_TEXTS.de).sort());
   assert.equal(createTranslator('de-AT')('quit'), 'Beenden');

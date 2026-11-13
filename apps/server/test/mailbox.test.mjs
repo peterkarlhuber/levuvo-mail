@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listMessages, searchFolder, monitorInbox, validateSearchQuery } from '../src/mailbox.mjs';
+import {
+  listMessages,
+  searchFolder,
+  monitorInbox,
+  validateSearchQuery,
+  completeFetchResults
+} from '../src/mailbox.mjs';
 
 // Fake IMAP mailbox with UIDs 1..n; exposes the calls the code makes.
 function fakeClient(n, { gaps = [] } = {}) {
@@ -32,7 +38,7 @@ function fakeClient(n, { gaps = [] } = {}) {
       let list;
       if (opts?.uid) list = range;
       else {
-        const [a, b] = range.split(':').map(Number);
+        const [a, b] = range.split(':').map(v => (v === '*' ? uids.length : Number(v)));
         list = uids.slice(a - 1, b);
       }
       log.push(['fetch', opts?.uid ? 'uid' : 'seq', list.length]);
@@ -101,4 +107,50 @@ test('Inbox status contains UIDVALIDITY, highest UID and unread count', async ()
   const broken = fakeClient(3);
   broken.mailbox.uidValidity = null;
   await assert.rejects(monitorInbox(broken), /UIDVALIDITY/);
+});
+
+test('Unsolicited FETCH responses during a listing never become empty extra messages', async () => {
+  const c = fakeClient(5);
+  const original = c.fetch;
+  c.fetch = async function* (range, query, opts) {
+    for await (const message of original.call(this, range, query, opts)) {
+      yield message;
+      // The server pushes flag updates for new mail while our FETCH runs.
+      if (message.uid === 3) {
+        yield { seq: 6, flags: new Set(['\\Recent']) };
+        yield { seq: 3, uid: 3, flags: new Set(['\\Seen']) };
+      }
+    }
+  };
+  const state = await monitorInbox(c);
+  assert.deepEqual(
+    state.messages.map(m => m.uid),
+    [5, 4, 3, 2, 1]
+  );
+  assert.ok(state.messages.every(m => m.subject.startsWith('S')));
+});
+
+test('completeFetchResults keeps one complete entry per requested UID', () => {
+  const env = { subject: 'x' };
+  const kept = completeFetchResults(
+    [{ uid: 7, envelope: env }, { uid: 7 }, { seq: 2 }, { uid: 0, envelope: env }, { uid: 9, envelope: env }],
+    [7, 8]
+  );
+  assert.deepEqual(
+    kept.map(m => m.uid),
+    [7]
+  );
+});
+
+test('A message count that lags behind the server still includes the newest messages', async () => {
+  const c = fakeClient(12);
+  c.mailbox.exists = 10; // EXISTS for the two newest messages not processed yet
+  const state = await monitorInbox(c, { limit: 5 });
+  assert.deepEqual(
+    state.messages.map(m => m.uid),
+    [12, 11, 10, 9, 8]
+  );
+  const page = await listMessages(c, 'INBOX', { limit: 5 });
+  assert.equal(page.messages[0].uid, 12);
+  assert.equal(page.messages.length, 5);
 });

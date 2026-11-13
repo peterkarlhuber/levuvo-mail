@@ -30,7 +30,8 @@ export type SettingsTab =
   | 'privacy'
   | 'help'
   | 'about';
-const POLL_MS = 20_000;
+// Served from the IMAP IDLE cache on localhost, so a short interval is cheap and keeps "Live" honest.
+const POLL_MS = 5_000;
 const CURSOR_PREFIX = 'levuvo-mail-notification-v072:';
 
 const notificationState = (): NotificationState =>
@@ -571,6 +572,7 @@ function Shell() {
             accounts={accounts}
             visible={module === 'mail'}
             inboxSnapshot={snapshots[active.id]}
+            onLocalChange={() => pollNow.current()}
             pollState={pollState}
             initialOpen={active.openUid !== null ? { uid: active.openUid, folder: active.openFolder || null } : null}
             pendingCompose={pendingCompose?.accountId === active.id ? pendingCompose : null}

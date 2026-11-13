@@ -253,3 +253,13 @@ test('Undo: move returns new UIDs (COPYUID), flags return the inverse action', a
   const flagged = await performMessageAction(fakeClient(), act('flag'));
   assert.deepEqual(flagged.undo, { folder: 'INBOX', action: 'unflag', uids: ['123'] });
 });
+
+test('Deleting in a mailbox without any trash folder creates one instead of failing', async () => {
+  const client = fakeClient({
+    folders: sampleFolders.filter(f => f.specialUse !== '\\Trash' && !/trash/i.test(f.path))
+  });
+  const result = await performMessageAction(client, act('trash'));
+  assert.equal(result.destination, 'INBOX.Trash');
+  assert.deepEqual(client.calls[0], ['create', 'INBOX.Trash']);
+  assert.ok(client.calls.some(c => c[0] === 'move'));
+});

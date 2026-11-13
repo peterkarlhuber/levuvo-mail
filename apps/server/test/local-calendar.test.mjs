@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createLocalCalendar, LOCAL_ACCOUNT } from '../src/local-calendar.mjs';
@@ -92,4 +92,51 @@ test('Local calendar: available immediately without an account, stored encrypted
   await assert.rejects(again.deleteCalendar(personal.url), { code: 'calendar_last' });
   await again.deleteCalendarObject(url, null);
   assert.deepEqual(again.findAllByUid(uid), []);
+});
+
+test('Local calendar: a missing or wrong keychain key never wipes the encrypted file', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-local-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, 'calendar-local.json');
+  const keys = vault();
+  const cal = await createLocalCalendar({ filename: file, vault: keys });
+  const [personal] = cal.listCalendars().calendars;
+  const { uid, ics } = createEventIcs(
+    validateEventInput({
+      summary: 'Keep me',
+      allDay: false,
+      tzid: 'UTC',
+      start: '2026-11-16T09:00',
+      end: '2026-11-16T10:00'
+    })
+  );
+  await cal.createCalendarObject(personal.url, uid, ics);
+  await cal.flush();
+  const before = readFileSync(file, 'utf8');
+
+  // Keychain reset: no key at all.
+  const emptyVault = vault();
+  await assert.rejects(createLocalCalendar({ filename: file, vault: emptyVault }), { code: 'local_locked' });
+  assert.equal(emptyVault.get(LOCAL_ACCOUNT, 'calendar-key'), '', 'no new key is generated for existing data');
+  // A different key: decryption fails.
+  const otherVault = vault();
+  otherVault.set(LOCAL_ACCOUNT, 'calendar-key', '11'.repeat(32));
+  await assert.rejects(createLocalCalendar({ filename: file, vault: otherVault }), { code: 'local_locked' });
+  assert.equal(readFileSync(file, 'utf8'), before, 'file unchanged');
+
+  // With the original key everything is back.
+  const again = await createLocalCalendar({ filename: file, vault: keys });
+  assert.equal(again.events(Date.parse('2026-11-16T00:00:00Z'), Date.parse('2026-11-17T00:00:00Z')).events.length, 1);
+});
+
+test('Local calendar: a corrupt plain file is kept as a backup instead of being overwritten', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-local-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, 'calendar-local.json');
+  writeFileSync(file, '{"calendars": [broken');
+  const cal = await createLocalCalendar({ filename: file, vault: null });
+  assert.equal(cal.listCalendars().calendars.length, 1);
+  const backups = readdirSync(dir).filter(n => n.startsWith('calendar-local.json.corrupt-'));
+  assert.equal(backups.length, 1);
+  assert.equal(readFileSync(join(dir, backups[0]), 'utf8'), '{"calendars": [broken');
 });

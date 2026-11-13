@@ -136,3 +136,20 @@ test('Invalid payload and attachments are blocked', { skip }, () => {
   assert.throws(() => drafts.validateDraft({ ...fresh(), attachments: [{ name: 'bad' }] }), /ungültig/i);
   assert.throws(() => drafts.validateDraft({ ...fresh(), previousUid: '0', uidValidity: '100' }));
 });
+
+test('Without a drafts folder the first save creates one next to the inbox', { skip }, async () => {
+  const c = client({
+    folders: [
+      { path: 'INBOX', delimiter: '.' },
+      { path: 'INBOX.Trash', specialUse: '\\Trash' }
+    ]
+  });
+  c.mailboxCreate = async path => {
+    c.calls.push(['create', path]);
+    return { path, created: true };
+  };
+  const result = await drafts.saveDraft(c, 'peter@example.at', fresh());
+  assert.equal(result.uid, 24);
+  assert.deepEqual(c.calls[0], ['create', 'INBOX.Drafts']);
+  assert.equal(c.calls.find(x => x[0] === 'append')[1], 'INBOX.Drafts');
+});

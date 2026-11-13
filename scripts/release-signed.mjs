@@ -63,6 +63,9 @@ if (target === 'mac') {
     '--win',
     'nsis',
     target === 'win-arm64' ? '--arm64' : '--x64',
+    // One update channel per architecture: both builds would otherwise write latest.yml and
+    // one architecture would be offered the other one's installer.
+    `-c.publish.channel=${target === 'win-arm64' ? 'latest-arm64' : 'latest-x64'}`,
     `-c.win.signtoolOptions.publisherName=${env.LEVUVO_WIN_PUBLISHER}`
   );
 }

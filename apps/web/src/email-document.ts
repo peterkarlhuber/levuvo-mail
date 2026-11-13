@@ -63,6 +63,8 @@ export function sanitizedEmailDocument(html: string, { allowRemoteImages = false
     `<meta http-equiv="Content-Security-Policy" content="${csp}">` +
     '<meta name="referrer" content="no-referrer">' +
     '<style>html,body{background:#fff;color:#181818;font:14px/1.6 Arial,Helvetica,sans-serif;overflow-wrap:anywhere;margin:0;padding:14px}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}a{color:#1b4f9c}</style>' +
+    // Blocked remote images would otherwise show the browser's broken-image icon.
+    (allowRemoteImages ? '' : '<style>img:not([src^="data:"]){visibility:hidden}</style>') +
     `</head><body>${safe}</body></html>`
   );
 }

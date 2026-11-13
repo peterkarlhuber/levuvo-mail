@@ -1238,6 +1238,8 @@ export const EN: Record<string, string> = {
   'Kalender löschen': 'Delete calendar',
   'Auf diesem Gerät': 'On this device',
   Persönlich: 'Personal',
+  'Der lokale Kalender lässt sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'The device calendar cannot be opened with the key from the keychain.',
   'Der lokale Kalender ist gesperrt (Schlüsselbund nicht verfügbar).':
     'The device calendar is locked (keychain not available).',
   'Höchstens 20 lokale Kalender.': 'At most 20 device calendars.',

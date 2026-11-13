@@ -27,10 +27,9 @@ export function findSpecialFolder(folders, specialUse) {
   return valid.find(f => names.test(f.name || '') || names.test(f.path.split(/[./]/).at(-1) || '')) || null;
 }
 
-export function archiveCreationPath(folders) {
+/** Path for a new folder `name` next to the INBOX children, or an error if the delimiter is unknown. */
+export function childFolderPath(folders, name, label) {
   const valid = selectableFolders(folders);
-  const existing = findSpecialFolder(valid, '\\Archive');
-  if (existing) return null;
   const inbox = valid.find(f => f.path.toUpperCase() === 'INBOX');
   if (!inbox) throw err('Posteingang fehlt.', 409, 'inbox_missing');
   // Only create where we can derive the hierarchy delimiter from LIST or known children.
@@ -43,11 +42,18 @@ export function archiveCreationPath(folders) {
         : null;
   if (!suffix)
     throw err(
-      'Ordner-Trennzeichen ist unbekannt. Archiv bitte im Webmail deines Anbieters anlegen.',
+      `Ordner-Trennzeichen ist unbekannt. ${label} bitte im Webmail deines Anbieters anlegen.`,
       409,
       'delimiter_unknown'
     );
-  const path = `${inbox.path}${suffix}Archive`;
+  return `${inbox.path}${suffix}${name}`;
+}
+
+export function archiveCreationPath(folders) {
+  const valid = selectableFolders(folders);
+  const existing = findSpecialFolder(valid, '\\Archive');
+  if (existing) return null;
+  const path = childFolderPath(valid, 'Archive', 'Archiv');
   if (valid.some(f => f.path.toLowerCase() === path.toLowerCase()))
     throw err('Archivordner existiert bereits.', 409, 'archive_exists');
   return path;
@@ -111,12 +117,28 @@ const MISSING = {
   move: ['Zielordner nicht gefunden.', 'destination_missing']
 };
 
+/**
+ * Accounts without any trash folder (new or minimal mailboxes) could not delete at all.
+ * Like other mail clients, create one on first use; null if the server refuses.
+ */
+async function createTrashFolder(client, folders) {
+  let path;
+  try {
+    path = childFolderPath(folders, 'Trash', 'Papierkorb');
+  } catch {
+    return null;
+  }
+  const created = await client.mailboxCreate(path).catch(() => null);
+  return created ? { path } : null;
+}
+
 export async function performMessageAction(client, input) {
   const uids = input.uids || [String(input.uid)];
   const folders = selectableFolders(await client.list());
   const source = folders.find(f => f.path === input.folder);
   if (!source) throw err('Quellordner nicht gefunden.', 404, 'source_not_found');
-  const target = targetFor(input.action, folders, input.destination);
+  let target = targetFor(input.action, folders, input.destination);
+  if (input.action === 'trash' && !target) target = await createTrashFolder(client, folders);
   if (MOVING.has(input.action)) {
     if (!target) throw err(MISSING[input.action][0], 409, MISSING[input.action][1]);
     if (target.path === source.path) throw err('Quelle und Ziel sind identisch.', 409, 'same_folder');

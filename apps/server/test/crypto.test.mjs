@@ -97,6 +97,22 @@ test('OpenPGP: generate keys, sign, encrypt, open, detect tampering', async () =
   );
 });
 
+test('S/MIME: certificates from signed mail are only collected when trusted and matching the sender', async () => {
+  const { meta, vault } = memory();
+  const smime = createSmime({ meta, vault });
+  // Untrusted chain: valid signature, but the certificate is not stored for encryption.
+  const untrusted = await smime.open(fixture('openssl-signed.eml'), 'anna@example.org');
+  assert.deepEqual([untrusted.signatures[0].valid, untrusted.signatures[0].trusted], [true, false]);
+  assert.deepEqual(smime.missingCertificates(['anna@example.org']), ['anna@example.org']);
+  await smime.importCertificate(fixture('ca.crt').toString(), { trust: true });
+  // Trusted chain, but the From address does not match the certificate.
+  await smime.open(fixture('openssl-signed.eml'), 'someone-else@example.org');
+  assert.deepEqual(smime.missingCertificates(['anna@example.org']), ['anna@example.org']);
+  // Trusted and matching: collected.
+  await smime.open(fixture('openssl-signed.eml'), 'anna@example.org');
+  assert.deepEqual(smime.missingCertificates(['anna@example.org']), []);
+});
+
 test('S/MIME: .p12 import, signing and encryption, reading OpenSSL messages', async () => {
   const { meta, vault } = memory();
   const smime = createSmime({ meta, vault });

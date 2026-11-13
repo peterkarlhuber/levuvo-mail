@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { findSentFolder } from './send-utils.mjs';
+import { childFolderPath } from './mail-actions.mjs';
 
 // Compose exactly once so the MIME submitted by SMTP is the same copy saved via IMAP.
 export async function composeRawEmail(from, data, { headers = {}, keepBcc = false } = {}) {
@@ -69,7 +70,18 @@ export async function appendToSent(withImap, raw, preferredPath = '') {
     return await withImap(async client => {
       phase = 'list';
       const folders = await client.list();
-      const selected = findSentFolder(folders, preferredPath);
+      let selected = findSentFolder(folders, preferredPath);
+      if (!selected && !preferredPath) {
+        // Mailboxes without a sent folder get one, like in other mail clients.
+        phase = 'create';
+        let path = null;
+        try {
+          path = childFolderPath(folders, 'Sent', 'Gesendet');
+        } catch {
+          /* delimiter unknown: report below */
+        }
+        if (path && (await client.mailboxCreate(path).catch(() => null))) selected = { path };
+      }
       if (!selected) {
         return {
           saved: false,
