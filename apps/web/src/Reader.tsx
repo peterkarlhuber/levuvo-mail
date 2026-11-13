@@ -1126,7 +1126,11 @@ export default function Reader(props: Props) {
             </div>
             <div className="reader-sender">
               <div className="sender-name">{header.fromName}</div>
-              <div className="sender-email">{header.fromEmail}</div>
+              {header.fromEmail && header.fromEmail.toLowerCase() !== header.fromName.toLowerCase() && (
+                <div className="sender-email" title={header.fromEmail}>
+                  {header.fromEmail}
+                </div>
+              )}
             </div>
             <time className="reader-date" title={fullDateLabel(header.date)}>
               {fullDateLabel(header.date)}
