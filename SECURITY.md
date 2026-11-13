@@ -1,20 +1,20 @@
-# Sicherheit
+# Security
 
-## Meldung von Schwachstellen
+## Reporting vulnerabilities
 
-Bitte **nicht** öffentlich als Issue melden. Nutzen Sie _Security → Report a vulnerability_ (GitHub Private Vulnerability Reporting) in diesem Repository oder schreiben Sie an die auf <https://levuvo.at> genannte Kontaktadresse. Wir bestätigen den Eingang zeitnah.
+Please do **not** report them publicly as an issue. Use _Security → Report a vulnerability_ (GitHub Private Vulnerability Reporting) in this repository or write to the contact address listed on <https://levuvo.at>. We will acknowledge receipt promptly.
 
-## Unterstützte Versionen
+## Supported versions
 
-Es wird jeweils die neueste veröffentlichte Version unterstützt.
+Only the latest published version is supported.
 
-## Maßnahmen in diesem Repository
+## Measures in this repository
 
-- CI: `npm audit` (Runtime blockierend ab _high_; Gesamtabhängigkeiten ab _high_ blockierend, Rest im Job-Summary), Secret-Scan, CodeQL, Workflow-Richtlinien-Check.
-- Workflows: `contents: read` als Standard, Schreibrechte nur im Publish-Job, SHA-gepinnte Actions, kein `pull_request_target`, Secrets nur im geschützten Environment `release-signing`.
-- Dependabot für npm und GitHub Actions.
-- Zugangsdaten liegen ausschließlich im Betriebssystem-Schlüsselbund, nie im Repository oder Installer.
+- CI: `npm audit` (runtime blocking from _high_; all dependencies blocking from _high_, the rest in the job summary), secret scan, CodeQL, workflow policy check.
+- Workflows: `contents: read` by default, write permissions only in the publish job, SHA-pinned actions, no `pull_request_target`, secrets only in the protected `release-signing` environment.
+- Dependabot for npm and GitHub Actions.
+- Credentials are stored exclusively in the operating system keychain, never in the repository or the installer.
 
-## Bekannte offene Punkte
+## Known open items
 
-Siehe `docs/CI-CD.md` → „Offene Sicherheitsbefunde“.
+See `docs/CI-CD.md` → “Open security findings”.

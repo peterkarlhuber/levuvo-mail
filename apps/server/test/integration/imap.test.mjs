@@ -21,7 +21,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
 test(
   'Echter Mailserver: Einrichtung, Liste, Paging, Push, Versand',
-  { skip: !enabled && 'LEVUVO_IT_* nicht gesetzt', timeout: 90_000 },
+  { skip: !enabled && 'LEVUVO_IT_* not set', timeout: 90_000 },
   async t => {
     const dir = mkdtempSync(join(tmpdir(), 'lv-it-'));
     const store = new Map();
@@ -104,7 +104,7 @@ test(
       const now = (await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}`, headers: H })).json();
       pushed = now.highestUid > before.highestUid;
     }
-    assert.ok(pushed, 'neue Nachricht kommt per IDLE innerhalb von 10 s an');
+    assert.ok(pushed, 'new message arrives via IDLE within 10 s');
 
     const sent = await s.api.inject({
       method: 'POST',

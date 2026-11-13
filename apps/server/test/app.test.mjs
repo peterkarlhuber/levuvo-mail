@@ -92,7 +92,7 @@ async function addAccount(s) {
   return r.json().account.id;
 }
 
-test('Desktop-API verlangt Sitzungscookie, richtigen Host und Origin', async t => {
+test('Desktop API requires session cookie, correct Host and Origin', async t => {
   const { s } = await server(t);
   assert.equal((await s.api.inject({ method: 'GET', url: '/api/accounts', headers: { host: HOST } })).statusCode, 401);
   assert.equal(
@@ -125,7 +125,7 @@ test('Desktop-API verlangt Sitzungscookie, richtigen Host und Origin', async t =
       })
     ).statusCode,
     403,
-    'POST ohne Origin'
+    'POST without Origin'
   );
   assert.equal((await s.api.inject({ method: 'GET', url: '/api/accounts', headers: GET })).statusCode, 200);
 });
@@ -144,7 +144,7 @@ test('Schreibende Endpunkte verlangen ihren Aktions-Header', async t => {
   }
 });
 
-test('App-Dokument wird mit Content-Security-Policy ausgeliefert', async t => {
+test('App document is served with a Content-Security-Policy', async t => {
   const { s, dir } = await server(t);
   mkdirSync(join(dir, 'dist'));
   writeFileSync(join(dir, 'dist', 'index.html'), '<!doctype html><title>x</title>');
@@ -156,7 +156,7 @@ test('App-Dokument wird mit Content-Security-Policy ausgeliefert', async t => {
   assert.equal(missing.statusCode, 404);
 });
 
-test('Ohne Server: zuletzt geladene Liste wird als Offline-Stand geliefert', async t => {
+test('Without server: the last loaded list is served as offline state', async t => {
   const { s, state } = await server(t);
   const id = await addAccount(s);
   const online = await s.api.inject({ method: 'GET', url: `/api/messages?account=${id}&folder=INBOX`, headers: GET });
@@ -175,7 +175,7 @@ test('Ohne Server: zuletzt geladene Liste wird als Offline-Stand geliefert', asy
   assert.equal(neverLoaded.statusCode, 502);
 });
 
-test('Ordner liefern Ungelesen-Zähler; ungültige Seitenzeiger werden abgelehnt', async t => {
+test('Folders return unread counts; invalid page cursors are rejected', async t => {
   const { s } = await server(t);
   const id = await addAccount(s);
   const folders = await s.api.inject({ method: 'GET', url: `/api/folders?account=${id}`, headers: GET });
@@ -184,7 +184,7 @@ test('Ordner liefern Ungelesen-Zähler; ungültige Seitenzeiger werden abgelehnt
   assert.equal(bad.statusCode, 400);
 });
 
-test('Gemeinsamer Posteingang kennzeichnet das Konto jeder Nachricht', async t => {
+test('Unified inbox marks the account of each message', async t => {
   const { s } = await server(t);
   const id = await addAccount(s);
   const r = await s.api.inject({ method: 'GET', url: '/api/unified', headers: GET });
@@ -192,7 +192,7 @@ test('Gemeinsamer Posteingang kennzeichnet das Konto jeder Nachricht', async t =
   assert.ok(r.json().messages.every(m => m.accountId === id && m.accountLabel === 'Test'));
 });
 
-test('Desktop ignoriert Zugangsdaten aus Umgebungsvariablen', async t => {
+test('Desktop ignores credentials from environment variables', async t => {
   assert.deepEqual(
     withoutLegacyEnv({ IMAP_USER: 'a', SMTP_PASSWORD: 'b', MAIL_ACCOUNT_2_USER: 'c', ENABLE_SEND: 'x', PATH: '/bin' }),
     { PATH: '/bin' }
@@ -202,7 +202,7 @@ test('Desktop ignoriert Zugangsdaten aus Umgebungsvariablen', async t => {
   assert.deepEqual(r.json().accounts, []);
 });
 
-test('Desktop-Modus startet nicht ohne gültigen Sitzungsschlüssel', async () => {
+test('Desktop mode does not start without a valid session key', async () => {
   await assert.rejects(
     createMailServer({ desktop: true, sessionSecret: 'kurz', vault: vault(), watch: false }),
     /Sitzungsschlüssel/

@@ -22,7 +22,7 @@ const vault = () => {
   };
 };
 
-test('Lokaler Kalender: ohne Konto sofort da, verschlüsselt gespeichert, Serien und Erinnerungen', async t => {
+test('Local calendar: available immediately without an account, stored encrypted, series and reminders', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-local-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const file = join(dir, 'calendar-local.json');
@@ -46,11 +46,11 @@ test('Lokaler Kalender: ohne Konto sofort da, verschlüsselt gespeichert, Serien
   const { url } = await cal.createCalendarObject(personal.url, uid, ics);
   await cal.flush();
   const raw = readFileSync(file, 'utf8');
-  assert.doesNotMatch(raw, /Fokuszeit/, 'Inhalt ist verschlüsselt');
+  assert.doesNotMatch(raw, /Fokuszeit/, 'content is encrypted');
   assert.match(raw, /"v":1/);
 
   const week = cal.events(Date.parse('2026-11-16T00:00:00Z'), Date.parse('2026-11-23T00:00:00Z')).events;
-  assert.equal(week.length, 2, 'Montag und Mittwoch');
+  assert.equal(week.length, 2, 'Monday and Wednesday');
   assert.equal(week[0].start, '2026-11-16T08:00:00.000Z');
   assert.equal(week[0].url, url);
   assert.equal(dueAlarms(week, Date.parse('2026-11-16T07:45:00Z'), Date.parse('2026-11-16T07:55:00Z')).length, 1);

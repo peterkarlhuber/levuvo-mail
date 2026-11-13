@@ -3,17 +3,17 @@
 import { spawnSync } from 'node:child_process';
 const target = process.argv[2] || 'native';
 if (process.platform !== 'win32') {
-  console.error('Windows-Installer bitte in Windows 11 bauen, nicht in macOS/Linux.');
+  console.error('Please build the Windows installer on Windows 11, not on macOS/Linux.');
   process.exit(1);
 }
 const arch = target === 'native' || target === 'dir' ? process.arch : target;
 if (!['arm64', 'x64'].includes(arch)) {
-  console.error('Nur ARM64 und x64 unterstützt.');
+  console.error('Only ARM64 and x64 are supported.');
   process.exit(1);
 }
 if (arch !== process.arch) {
   console.error(
-    `Host Node=${process.arch}, Ziel=${arch}. Wegen des nativen Schlüsselbundmoduls bitte auf einem passenden Windows-System bauen bzw. die passende Node.js-Architektur verwenden.`
+    `Host Node=${process.arch}, target=${arch}. Because of the native keychain module, build on a matching Windows system or use the matching Node.js architecture.`
   );
   process.exit(1);
 }
@@ -34,4 +34,4 @@ run(
     ? ['electron-builder', '--win', '--dir', `--${arch}`, '--publish', 'never']
     : ['electron-builder', '--win', 'nsis', `--${arch}`, '--publish', 'never']
 );
-console.log('Windows-Paket erstellt – siehe release/');
+console.log('Windows package created – see release/');

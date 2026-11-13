@@ -26,7 +26,7 @@ const folders = [
   { path: 'INBOX.Projekte', delimiter: '.' }
 ];
 
-test('Zeitpunkte: Zukunft, höchstens ein Jahr', () => {
+test('Times: in the future, at most one year', () => {
   const now = Date.parse('2026-11-13T10:00:00Z');
   assert.equal(validateWhen('2026-11-14T08:00:00Z', now), '2026-11-14T08:00:00.000Z');
   assert.throws(() => validateWhen('2026-11-13T10:00:30Z', now), /Zukunft/);
@@ -34,7 +34,7 @@ test('Zeitpunkte: Zukunft, höchstens ein Jahr', () => {
   assert.throws(() => validateWhen('morgen', now), /Ungültiger/);
 });
 
-test('Message-ID aus der versendeten Nachricht, Kennungen aus References', () => {
+test('Message-ID from the sent message, identifiers from References', () => {
   const raw = Buffer.from(
     'From: a@b.at\r\nMessage-ID: <abc.123@levuvo.test>\r\nSubject: x\r\n\r\nMessage-ID: <falsch@body>'
   );
@@ -42,7 +42,7 @@ test('Message-ID aus der versendeten Nachricht, Kennungen aus References', () =>
   assert.deepEqual(parseIds('<a@x> <b@y>\r\n <a@x>'), ['<a@x>', '<b@y>']);
 });
 
-test('Konversation sucht im aktuellen Ordner, Posteingang, Gesendet und Archiv', () => {
+test('Conversation searches the current folder, inbox, Sent and Archive', () => {
   assert.deepEqual(
     threadFolders(folders, 'INBOX.Projekte').map(f => f.path),
     ['INBOX.Projekte', 'INBOX', 'INBOX.Sent', 'INBOX.Archiv']
@@ -100,7 +100,7 @@ function fakeImap() {
   };
 }
 
-test('Zurückstellen: Ordner wird bei Bedarf angelegt, Nachricht kommt ungelesen zurück', async () => {
+test('Snooze: folder is created when needed, message comes back unread', async () => {
   const client = fakeImap();
   delete client.boxes['INBOX.Zurückgestellt'];
   const result = await snoozeMessages(client, { folder: 'INBOX', uids: ['5'] });
@@ -123,7 +123,7 @@ test('Zurückstellen: Ordner wird bei Bedarf angelegt, Nachricht kommt ungelesen
   assert.equal(store.snoozed().length, 0);
 });
 
-test('Nachfassen: Einträge anlegen, fällig setzen, beim Kontoentfernen löschen', async () => {
+test('Follow-up: create entries, mark due, delete when the account is removed', async () => {
   const store = createFollowupStore(memoryFile({}));
   const f = await store.addFollowup({
     accountId: 'a',

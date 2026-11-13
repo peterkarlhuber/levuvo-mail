@@ -1,4 +1,4 @@
-// "Zurückstellen" (snooze) and "Nachfassen" (follow-up when no reply arrives).
+// Snooze ("Zurückstellen") and follow-up ("Nachfassen": remind when no reply arrives).
 // Snoozed messages are moved to a server folder "Zurückgestellt" and come back to the
 // inbox – unread – at the chosen time. Both lists live in followups.json in the app data
 // folder (no message content, only IDs, subject, addresses and times).

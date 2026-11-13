@@ -6,26 +6,26 @@ const inbox = (uid, ids = [uid], validity = '10') => ({
   highestUid: uid,
   messages: ids.map(x => ({ uid: x, unread: false }))
 });
-test('Start setzt Ausgangsstand; erneute Prüfung meldet nichts', () => {
+test('Start sets the baseline; a repeated check reports nothing', () => {
   const first = detectNewDesktopMessages(inbox(30), null);
   assert.equal(first.count, 0);
   assert.equal(detectNewDesktopMessages(inbox(30), first.next).count, 0);
 });
-test('Neue UID wird unabhängig vom Lesestatus gemeldet', () => {
+test('New UID is reported regardless of read status', () => {
   const next = detectNewDesktopMessages(inbox(32, [32, 31]), { uidValidity: '10', highestUid: 30 });
   assert.equal(next.count, 2);
   assert.equal(next.reason, 'new');
 });
-test('UIDVALIDITY-Wechsel setzt Baseline ohne Falschalarm', () => {
+test('UIDVALIDITY change resets the baseline without a false alarm', () => {
   assert.equal(detectNewDesktopMessages(inbox(100, [100], '11'), { uidValidity: '10', highestUid: 32 }).count, 0);
 });
-test('Lücke in 40-UID-Fenster erzeugt keine Phantom-Benachrichtigung', () => {
+test('Gap in the 40-UID window produces no phantom notification', () => {
   assert.equal(detectNewDesktopMessages(inbox(50, [45]), { uidValidity: '10', highestUid: 46 }).count, 0);
 });
-test('Fehlerhafte Postfachstatusdaten werden abgelehnt', () => {
+test('Malformed mailbox status data is rejected', () => {
   assert.throws(() => detectNewDesktopMessages({ uidValidity: '?', highestUid: 0, messages: [] }, null));
 });
-test('Beide Konten werden separat beobachtet, bei wiederholtem Check kein Duplikat', async () => {
+test('Both accounts are watched separately, no duplicate on a repeated check', async () => {
   let ids = { primary: 4, account2: 9 };
   const events = [];
   const service = createDesktopInboxMonitor({
@@ -47,7 +47,7 @@ test('Beide Konten werden separat beobachtet, bei wiederholtem Check kein Duplik
   );
   service.stop();
 });
-test('Temporärer Netzfehler führt zu keiner gefälschten UID-Quittierung', async () => {
+test('Temporary network error does not lead to a fake UID acknowledgement', async () => {
   let uid = 5,
     fail = false;
   const events = [];
@@ -69,7 +69,7 @@ test('Temporärer Netzfehler führt zu keiner gefälschten UID-Quittierung', asy
   assert.equal(events.length, 1);
   service.stop();
 });
-test('Bei Mitteilungsfehler wird nicht doppelt benachrichtigt', async () => {
+test('No duplicate notification after a notification error', async () => {
   let uid = 5;
   let calls = 0;
   const service = createDesktopInboxMonitor({

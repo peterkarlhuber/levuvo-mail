@@ -11,7 +11,7 @@ import {
   MAX_MESSAGE_BYTES
 } from '../src/message-utils.mjs';
 
-test('Nur gültige Ordnernamen zulassen', () => {
+test('Allow only valid folder names', () => {
   assert.equal(validFolder('INBOX/Entwürfe'), true);
   for (const invalid of ['', 'x\0y', 'x\ny', 'x\ry', 'a'.repeat(256), 17]) assert.equal(validFolder(invalid), false);
 });
@@ -21,7 +21,7 @@ test('UID korrekt im 32-Bit-Bereich validieren', () => {
   for (const value of ['0', '-1', '2.4', '01', '1:*', '99999999999', 'a', 5]) assert.equal(validUid(value), false);
 });
 
-test('Anhangindex wird begrenzt und Pfade bereinigt', () => {
+test('Attachment index is limited and paths are sanitized', () => {
   assert.equal(validAttachmentIndex('0'), true);
   assert.equal(validAttachmentIndex('1001'), false);
   assert.equal(validAttachmentIndex('-1'), false);
@@ -29,7 +29,7 @@ test('Anhangindex wird begrenzt und Pfade bereinigt', () => {
   assert.equal(cleanFilename('\\r', 1).includes('\\'), false);
 });
 
-test('Downloadheaders enthalten keine Header-Injektion und erzwingen Download', () => {
+test('Download headers contain no header injection and force download', () => {
   const headers = downloadHeaders(cleanFilename('angebot\r\nX-Bad: 1.pdf', 0));
   assert.match(headers['Content-Disposition'], /^attachment;/);
   assert.equal(headers['Content-Type'], 'application/octet-stream');
@@ -37,7 +37,7 @@ test('Downloadheaders enthalten keine Header-Injektion und erzwingen Download', 
   assert.equal(headers['Content-Disposition'].includes('\n'), false);
 });
 
-test('E-Mail-Antwort verrät keine Rohdaten oder Anhangbytes', () => {
+test('Email response reveals no raw data or attachment bytes', () => {
   const parsed = {
     from: { name: 'Anna', address: 'anna@example.com' },
     to: [{ name: 'Team', address: 'team@example.com' }],
@@ -54,7 +54,7 @@ test('E-Mail-Antwort verrät keine Rohdaten oder Anhangbytes', () => {
   assert.equal(result.readOnly, true);
 });
 
-test('Anhangbytes werden verlustfrei übernommen', () => {
+test('Attachment bytes are taken over losslessly', () => {
   assert.deepEqual(attachmentBytes({ content: Uint8Array.of(7, 8, 9) }), Buffer.from([7, 8, 9]));
   assert.ok(MAX_MESSAGE_BYTES >= 1024 * 1024);
 });

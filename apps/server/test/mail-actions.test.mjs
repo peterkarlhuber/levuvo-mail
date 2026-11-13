@@ -65,13 +65,13 @@ const act = (action, folder = 'INBOX', destination = null) => ({
   destination
 });
 
-test('Schreibfunktionen standardmäßig deaktiviert; nur exakt true aktiviert', () => {
+test('Write functions disabled by default; only exactly true enables them', () => {
   assert.equal(imapWriteEnabled({}), false);
   assert.equal(imapWriteEnabled({ ENABLE_IMAP_WRITE: 'TRUE' }), false);
   assert.equal(imapWriteEnabled({ ENABLE_IMAP_WRITE: 'true' }), true);
 });
 
-test('IMAP-Liste verwirft unselektierbare und ungültige Ordner', () => {
+test('IMAP list discards unselectable and invalid folders', () => {
   assert.deepEqual(
     selectableFolders([
       ...sampleFolders,
@@ -82,22 +82,22 @@ test('IMAP-Liste verwirft unselektierbare und ungültige Ordner', () => {
   );
 });
 
-test('Hetzner Trash per Special-Use und deutscher Bezeichnung gefunden', () => {
+test('Hetzner Trash found via special-use and German name', () => {
   assert.equal(findSpecialFolder(sampleFolders, '\\Trash').path, 'INBOX.Trash');
   assert.equal(findSpecialFolder([{ path: 'INBOX.Papierkorb' }], '\\Trash').path, 'INBOX.Papierkorb');
 });
 
-test('Archivname wird aus tatsächlicher INBOX-Hierarchie abgeleitet', () => {
+test('Archive name is derived from the actual INBOX hierarchy', () => {
   assert.equal(archiveCreationPath(sampleFolders), 'INBOX.Archive');
   assert.equal(archiveCreationPath([{ path: 'INBOX', delimiter: '/' }, { path: 'INBOX/Sent' }]), 'INBOX/Archive');
   assert.equal(archiveCreationPath([...sampleFolders, { path: 'INBOX.Archive' }]), null);
 });
 
-test('Unbekanntes Delimiter führt zu einer sicheren Fehlermeldung', () => {
+test('Unknown delimiter leads to a safe error message', () => {
   assert.throws(() => archiveCreationPath([{ path: 'INBOX' }]), { code: 'delimiter_unknown' });
 });
 
-test('Schreibaktionen akzeptieren nur UID, bekannten Action-Typ und Pfad', () => {
+test('Write actions accept only UID, known action type and path', () => {
   assert.deepEqual(validateActionInput('123', { folder: 'INBOX', action: 'markRead' }), act('markRead'));
   assert.throws(() => validateActionInput('0', { folder: 'INBOX', action: 'markRead' }));
   assert.throws(() => validateActionInput('1:*', { folder: 'INBOX', action: 'trash' }));
@@ -106,7 +106,7 @@ test('Schreibaktionen akzeptieren nur UID, bekannten Action-Typ und Pfad', () =>
   assert.throws(() => validateActionInput('1', { folder: 'INBOX', action: 'move' }));
 });
 
-test('Gelesen markiert exakt eine UID, nicht einen Sequenzbereich', async () => {
+test('Mark as read targets exactly one UID, not a sequence range', async () => {
   const client = fakeClient();
   const response = await performMessageAction(client, act('markRead'));
   assert.equal(response.ok, true);
@@ -117,7 +117,7 @@ test('Gelesen markiert exakt eine UID, nicht einen Sequenzbereich', async () => 
   assert.equal(client.calls.at(-1)[0], 'unlock');
 });
 
-test('Ungelesen entfernt nur Seen-Flag', async () => {
+test('Mark as unread removes only the Seen flag', async () => {
   const client = fakeClient();
   await performMessageAction(client, act('markUnread'));
   assert.deepEqual(
@@ -126,7 +126,7 @@ test('Ungelesen entfernt nur Seen-Flag', async () => {
   );
 });
 
-test('Papierkorb verschiebt in korrektes INBOX.Trash, niemals endgültig löschen', async () => {
+test('Trash moves to the correct INBOX.Trash, never deletes permanently', async () => {
   const client = fakeClient();
   const result = await performMessageAction(client, act('trash'));
   assert.equal(result.destination, 'INBOX.Trash');
@@ -137,26 +137,26 @@ test('Papierkorb verschiebt in korrektes INBOX.Trash, niemals endgültig lösche
   assert.equal('messageDelete' in client, false);
 });
 
-test('Archiv ohne Ordner verweigert Änderung', async () => {
+test('Archive without folder refuses the change', async () => {
   const client = fakeClient();
   await assert.rejects(performMessageAction(client, act('archive')), { statusCode: 409, code: 'archive_missing' });
   assert.deepEqual(client.calls, []);
 });
 
-test('Archiv mit bestehendem Ordner verschiebt zuverlässig', async () => {
+test('Archive with an existing folder moves reliably', async () => {
   const client = fakeClient({ folders: [...sampleFolders, { path: 'INBOX.Archive', specialUse: '\\Archive' }] });
   const result = await performMessageAction(client, act('archive'));
   assert.equal(result.destination, 'INBOX.Archive');
 });
 
-test('Verschieben verweigert ungültiges Ziel und identische Quelle', async () => {
+test('Move refuses an invalid target and an identical source', async () => {
   const client = fakeClient();
   await assert.rejects(performMessageAction(client, act('move', 'INBOX', 'FAKE')), { code: 'destination_missing' });
   await assert.rejects(performMessageAction(client, act('move', 'INBOX', 'INBOX')), { code: 'same_folder' });
   assert.equal(client.calls.length, 0);
 });
 
-test('Ohne IMAP MOVE wird keine COPY-EXPUNGE-Fallbackaktion gestartet', async () => {
+test('Without IMAP MOVE no COPY-EXPUNGE fallback is started', async () => {
   const client = fakeClient({ moveSupported: false });
   await assert.rejects(performMessageAction(client, act('trash')), { code: 'move_unsupported' });
   assert.equal(
@@ -166,7 +166,7 @@ test('Ohne IMAP MOVE wird keine COPY-EXPUNGE-Fallbackaktion gestartet', async ()
   assert.equal(client.calls.at(-1)[0], 'unlock');
 });
 
-test('Nicht vorhandene UID ändert keine Flags und verschiebt nicht', async () => {
+test('Non-existent UID changes no flags and does not move', async () => {
   const client = fakeClient({ missing: true });
   await assert.rejects(performMessageAction(client, act('markRead')), { code: 'message_missing' });
   assert.equal(
@@ -176,19 +176,19 @@ test('Nicht vorhandene UID ändert keine Flags und verschiebt nicht', async () =
   assert.equal(client.calls.at(-1)[0], 'unlock');
 });
 
-test('Schreibgeschützter Ordner lässt keine Mutationen zu', async () => {
+test('Read-only folder allows no mutations', async () => {
   const client = fakeClient({ readOnly: true });
   await assert.rejects(performMessageAction(client, act('trash')), { code: 'mailbox_readonly' });
   assert.equal(client.calls.at(-1)[0], 'unlock');
 });
 
-test('Ablehnung durch den Server wird gemeldet und Lock freigegeben', async () => {
+test('Server rejection is reported and the lock is released', async () => {
   const client = fakeClient({ flagResult: false });
   await assert.rejects(performMessageAction(client, act('markRead')), { code: 'flags_rejected' });
   assert.equal(client.calls.at(-1)[0], 'unlock');
 });
 
-test('Archivordner wird nur bewusst und einmal erstellt', async () => {
+test('Archive folder is created only deliberately and once', async () => {
   const client = fakeClient();
   assert.deepEqual(await createArchiveFolder(client), { created: true, folder: 'INBOX.Archive' });
   assert.deepEqual(client.calls, [['create', 'INBOX.Archive']]);
@@ -197,7 +197,7 @@ test('Archivordner wird nur bewusst und einmal erstellt', async () => {
   assert.deepEqual(client2.calls, []);
 });
 
-test('Sammelaktion: ein Befehl mit UID-Menge, nur noch vorhandene UIDs', async () => {
+test('Bulk action: one command with a UID set, only UIDs that still exist', async () => {
   const input = validateBatchInput({ folder: 'INBOX', action: 'trash', uids: ['5', '7', '9', '7'] });
   assert.deepEqual(input.uids, ['5', '7', '9']);
   const client = fakeClient({ gone: ['7'] });
@@ -214,7 +214,7 @@ test('Sammelaktion: ein Befehl mit UID-Menge, nur noch vorhandene UIDs', async (
   assert.throws(() => validateBatchInput({ folder: 'INBOX', action: 'trash', uids: ['1:*'] }));
 });
 
-test('Markieren setzt bzw. entfernt nur \\Flagged', async () => {
+test('Flagging sets or removes only \\Flagged', async () => {
   const client = fakeClient();
   await performMessageAction(client, act('flag'));
   await performMessageAction(client, act('unflag'));
@@ -227,7 +227,7 @@ test('Markieren setzt bzw. entfernt nur \\Flagged', async () => {
   );
 });
 
-test('Spam verschiebt in den Junk-Ordner, „Kein Spam“ zurück in den Posteingang', async () => {
+test('Spam moves to the Junk folder, "Not spam" back to the inbox', async () => {
   const client = fakeClient();
   const spam = await performMessageAction(client, act('spam'));
   assert.equal(spam.destination, 'INBOX.spambucket');
@@ -237,7 +237,7 @@ test('Spam verschiebt in den Junk-Ordner, „Kein Spam“ zurück in den Postein
   await assert.rejects(performMessageAction(noJunk, act('spam')), { code: 'junk_missing' });
 });
 
-test('Rückgängig: Verschieben liefert neue UIDs (COPYUID), Markierungen die Umkehraktion', async () => {
+test('Undo: move returns new UIDs (COPYUID), flags return the inverse action', async () => {
   const moved = await performMessageAction(
     fakeClient({ moveResult: { destination: 'Trash', uidMap: new Map([[123, 980]]) } }),
     act('trash')
@@ -249,7 +249,7 @@ test('Rückgängig: Verschieben liefert neue UIDs (COPYUID), Markierungen die Um
   );
   assert.equal(spam.undo.action, 'notSpam');
   const noMap = await performMessageAction(fakeClient(), act('trash'));
-  assert.equal(noMap.undo, null, 'ohne UIDPLUS kein sicheres Rückgängig');
+  assert.equal(noMap.undo, null, 'no safe undo without UIDPLUS');
   const flagged = await performMessageAction(fakeClient(), act('flag'));
   assert.deepEqual(flagged.undo, { folder: 'INBOX', action: 'unflag', uids: ['123'] });
 });

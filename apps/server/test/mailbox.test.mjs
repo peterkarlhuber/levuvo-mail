@@ -51,7 +51,7 @@ function fakeClient(n, { gaps = [] } = {}) {
   };
 }
 
-test('Erste Seite liefert die neuesten Nachrichten, lesend gesperrt', async () => {
+test('First page returns the newest messages, locked read-only', async () => {
   const c = fakeClient(75);
   const page = await listMessages(c, 'INBOX', { limit: 40 });
   assert.equal(page.messages.length, 40);
@@ -64,7 +64,7 @@ test('Erste Seite liefert die neuesten Nachrichten, lesend gesperrt', async () =
   assert.equal(c.log.at(-1)[0], 'release');
 });
 
-test('Folgeseiten nutzen UIDs und bleiben bei Lücken korrekt', async () => {
+test('Following pages use UIDs and stay correct with gaps', async () => {
   const c = fakeClient(75, { gaps: [30, 31, 32] });
   const page = await listMessages(c, 'INBOX', { limit: 40, beforeUid: 36 });
   assert.equal(page.messages.length, 32);
@@ -74,7 +74,7 @@ test('Folgeseiten nutzen UIDs und bleiben bei Lücken korrekt', async () => {
   assert.equal(page.nextBeforeUid, null);
 });
 
-test('Leerer Ordner und Suche mit Paging', async () => {
+test('Empty folder and search with paging', async () => {
   assert.deepEqual((await listMessages(fakeClient(0), 'X', { limit: 10 })).messages, []);
   const result = await searchFolder(fakeClient(90), 'INBOX', 'Angebot', { limit: 10 });
   assert.equal(result.total, 30);
@@ -85,14 +85,14 @@ test('Leerer Ordner und Suche mit Paging', async () => {
   assert.equal(next.messages[0].uid, 60);
 });
 
-test('Suchbegriffe werden geprüft', () => {
+test('Search terms are validated', () => {
   assert.equal(validateSearchQuery('  Rechnung '), 'Rechnung');
   assert.throws(() => validateSearchQuery('a'));
   assert.throws(() => validateSearchQuery('a\u0000b'));
   assert.throws(() => validateSearchQuery('x'.repeat(81)));
 });
 
-test('Posteingangsstatus enthält UIDVALIDITY, höchste UID und Ungelesen-Zahl', async () => {
+test('Inbox status contains UIDVALIDITY, highest UID and unread count', async () => {
   const state = await monitorInbox(fakeClient(50));
   assert.equal(state.uidValidity, '42');
   assert.equal(state.highestUid, 50);

@@ -48,7 +48,7 @@ export const isCloud = value => String(value || '').startsWith(CLOUD_PREFIX);
 const rawId = value => String(value || '').slice(CLOUD_PREFIX.length);
 const ymd = d => d.toISOString().slice(0, 10);
 const addDays = (date, n) => ymd(new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000));
-// &amp; muss zuletzt dekodiert werden, sonst wird aus „&amp;lt;“ fälschlich „<“.
+// &amp; must be decoded last, otherwise "&amp;lt;" would wrongly become "<".
 const stripHtml = html =>
   stripTags(String(html || '').replace(/<(br|\/p|\/div|\/li)[^>]*>/gi, '\n'))
     .replace(/&nbsp;/g, ' ')

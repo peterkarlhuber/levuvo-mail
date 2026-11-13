@@ -1,4 +1,4 @@
-// "Später senden": the finished message is stored in the Drafts folder with
+// Send later ("Später senden"): the finished message is stored in the Drafts folder with
 // X-Levuvo-Send-At. While Levuvo Mail runs, due messages are claimed with the
 // $LevuvoSending keyword, submitted once via SMTP, copied to Sent and moved to Trash.
 // No automatic retry after an uncertain SMTP result (same policy as normal sending).

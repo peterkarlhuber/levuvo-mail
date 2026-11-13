@@ -29,7 +29,7 @@ function mailbox(messages) {
   };
 }
 
-test('Index ist verschlüsselt, findet ohne Umlaute/Groß-Klein, entfernt gelöschte Nachrichten', async () => {
+test('Index is encrypted, matches without umlauts/case, removes deleted messages', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-index-'));
   try {
     const key = randomBytes(32);
@@ -46,7 +46,7 @@ test('Index ist verschlüsselt, findet ohne Umlaute/Groß-Klein, entfernt gelös
     const bytes = readFileSync(join(dir, file));
     assert.ok(
       !bytes.includes(Buffer.from('Olivenöl')) && !bytes.includes(Buffer.from('Rechnung')),
-      'Klartext nicht in der Datei'
+      'plain text not in the file'
     );
     assert.deepEqual(
       (await index.search(['acc'], 'MULLER olivenol')).map(h => h.uid),
@@ -61,14 +61,14 @@ test('Index ist verschlüsselt, findet ohne Umlaute/Groß-Klein, entfernt gelös
     await reopened.sync(mailbox(msgs.slice(0, 1)), 'acc', [{ path: 'INBOX', flags: new Set() }]);
     assert.deepEqual(await reopened.search(['acc'], 'rechnung'), []);
     const wrongKey = createLocalIndex({ dir, getKey: async () => randomBytes(32) });
-    assert.equal((await wrongKey.status('acc')).messages, 0, 'falscher Schlüssel → leerer Index');
+    assert.equal((await wrongKey.status('acc')).messages, 0, 'wrong key → empty index');
     assert.equal((await createLocalIndex({ dir, getKey: async () => null }).status('acc')).enabled, false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('Verschlüsselung erkennt Manipulation; Normalisierung', () => {
+test('Encryption detects tampering; normalization', () => {
   const key = randomBytes(32);
   const blob = encrypt(key, { a: 1 });
   assert.deepEqual(decrypt(key, blob), { a: 1 });

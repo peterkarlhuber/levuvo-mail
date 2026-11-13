@@ -7,7 +7,7 @@ const h = (list, post) => [
   ...(post ? [{ key: 'list-unsubscribe-post', value: post }] : [])
 ];
 
-test('Abmelden: List-Unsubscribe wird sicher gelesen (https, mailto, One-Click)', () => {
+test('Unsubscribe: List-Unsubscribe is parsed safely (https, mailto, one-click)', () => {
   const both = parseUnsubscribe(
     h('<mailto:leave@news.test?subject=stop>, <https://news.test/u/123>', 'List-Unsubscribe=One-Click')
   );
@@ -34,11 +34,11 @@ test('Abmelden: List-Unsubscribe wird sicher gelesen (https, mailto, One-Click)'
   });
   assert.equal(publicUnsubscribe(parseUnsubscribe(h('<mailto:a@b.test>'))).method, 'mail');
   assert.equal(parseUnsubscribe([]), null);
-  assert.equal(parseMailto('mailto:a@b.test,c@d.test'), null, 'nur ein Empfänger');
+  assert.equal(parseMailto('mailto:a@b.test,c@d.test'), null, 'only one recipient');
   assert.equal(parseMailto('mailto:x@y.test?subject=a%0D%0ABcc:%20z@z.test').subject.includes('\n'), false);
 });
 
-test('Abmelden: One-Click-POST ohne Cookies, keine internen Adressen, Fehler verständlich', async () => {
+test('Unsubscribe: one-click POST without cookies, no internal addresses, clear errors', async () => {
   const seen = [];
   const fetchImpl = async (url, init) => {
     seen.push({ url: String(url), init });

@@ -11,7 +11,7 @@ export function detectNewDesktopMessages(current, previous) {
     highest > 4294967295 ||
     !Array.isArray(current?.messages)
   )
-    throw new Error('Ungültiger IMAP-Monitorstatus.');
+    throw new Error('Invalid IMAP monitor status.');
   const next = { uidValidity: validity, highestUid: highest };
   if (!previous) return { reason: 'baseline', count: 0, next };
   if (previous.uidValidity !== validity) return { reason: 'uidvalidity-reset', count: 0, next };
@@ -45,7 +45,7 @@ export function createDesktopInboxMonitor({
     const reports = {};
     try {
       const accounts = await listAccounts();
-      if (!Array.isArray(accounts)) throw new Error('Kontenliste ungültig.');
+      if (!Array.isArray(accounts)) throw new Error('Account list invalid.');
       for (const account of accounts.filter(a => a.configured)) {
         const key = `${account.id}\u0000${String(account.mailbox || '').toLowerCase()}`;
         try {
@@ -57,12 +57,12 @@ export function createDesktopInboxMonitor({
             try {
               await notify({ id: account.id, label: account.label, count: result.count });
             } catch {
-              logger('Systemmitteilung fehlgeschlagen; keine erneute Benachrichtigung für dieselbe UID.');
+              logger('System notification failed; no repeated notification for the same UID.');
             }
           }
         } catch {
           reports[account.id] = { reason: 'error', newCount: 0, healthy: false };
-          logger('Postfachüberwachung vorübergehend fehlgeschlagen.');
+          logger('Mailbox monitoring temporarily failed.');
           // Retain prior cursor for later recovery, but do not claim successful poll.
         }
       }
@@ -73,8 +73,8 @@ export function createDesktopInboxMonitor({
       for (const key of cursors.keys()) if (!currentKeys.has(key)) cursors.delete(key);
       lastStatus = { checkedAt: now, accounts: reports, running: true };
     } catch {
-      logger('Kontenliste für Desktop-Benachrichtigungen nicht verfügbar.');
-      lastStatus = { checkedAt: now, accounts: reports, running: true, error: 'Kontenprüfung fehlgeschlagen' };
+      logger('Account list for desktop notifications not available.');
+      lastStatus = { checkedAt: now, accounts: reports, running: true, error: 'Account check failed' };
     } finally {
       busy = false;
       onStatus(lastStatus);

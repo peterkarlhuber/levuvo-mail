@@ -23,24 +23,24 @@ const alternative = {
   ]
 };
 
-test('Vorschau nutzt Text vor HTML und nie Anhänge', () => {
+test('Preview uses text before HTML and never attachments', () => {
   assert.deepEqual(findPreviewPart(alternative), {
     part: '1.1',
     type: 'text/plain',
     encoding: 'quoted-printable',
     charset: 'utf-8'
   });
-  assert.equal(findPreviewPart({ type: 'text/plain' }).part, '1', 'Einteilige Nachricht → Teil 1');
+  assert.equal(findPreviewPart({ type: 'text/plain' }).part, '1', 'single-part message → part 1');
   assert.equal(findPreviewPart({ type: 'image/png' }), null);
   assert.equal(findPreviewPart({ childNodes: [{ part: '1', type: 'text/plain', disposition: 'attachment' }] }), null);
 });
 
-test('Anhänge werden in der Struktur erkannt', () => {
+test('Attachments are detected in the structure', () => {
   assert.equal(hasAttachments(alternative), true);
   assert.equal(hasAttachments({ type: 'text/plain' }), false);
 });
 
-test('Quoted-printable, Base64, abgeschnittene Bytes und HTML werden sauber dekodiert', () => {
+test('Quoted-printable, Base64, truncated bytes and HTML are decoded cleanly', () => {
   assert.equal(
     decodePreview(Buffer.from('Gr=C3=BC=C3=9Fe aus Wien=\r\n weiter =C3'), {
       type: 'text/plain',
@@ -80,7 +80,7 @@ test('Quoted-printable, Base64, abgeschnittene Bytes und HTML werden sauber deko
   );
 });
 
-test('Vorschauen werden gruppiert abgerufen und gecacht', async () => {
+test('Previews are fetched in groups and cached', async () => {
   const calls = [];
   const client = {
     async *fetch(uids, query) {
@@ -99,14 +99,14 @@ test('Vorschauen werden gruppiert abgerufen und gecacht', async () => {
     items.map(i => i.preview),
     ['Text 1', 'Text 2', 'Text 3']
   );
-  assert.equal(calls.length, 2, 'ein FETCH pro Teilnummer');
+  assert.equal(calls.length, 2, 'one FETCH per part number');
   assert.equal(calls[0][1].maxLength, 3072);
   const again = [{ uid: 1, bodyStructure: { type: 'text/plain' } }];
   await attachPreviews(client, again, { cache, keyPrefix: 'a:INBOX:7' });
-  assert.equal(calls.length, 2, 'zweiter Aufruf kommt aus dem Cache');
+  assert.equal(calls.length, 2, 'second call comes from the cache');
 });
 
-test('Fehler beim Vorschauabruf lassen die Liste unbeschädigt', async () => {
+test('Errors while fetching previews leave the list intact', async () => {
   const client = {
     fetch() {
       return {

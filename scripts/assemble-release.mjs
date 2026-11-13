@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Führt die Build-Artefakte der drei Plattformen zu einem Release-Verzeichnis zusammen:
-// prüft Vollständigkeit, berechnet SHA-256 aus den tatsächlichen Dateien, schreibt
-// SHA256SUMS.txt, release-manifest.json und RELEASE_NOTES.md.
-//   node scripts/assemble-release.mjs --in <artefakt-ordner> --out <release-ordner>
+// Combines the build artifacts of the three platforms into one release directory:
+// checks completeness, computes SHA-256 from the actual files, writes
+// SHA256SUMS.txt, release-manifest.json and RELEASE_NOTES.md.
+//   node scripts/assemble-release.mjs --in <artifact-dir> --out <release-dir>
 //        [--signed] [--commit <sha>] [--allow-partial] [--run-url <url>]
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
@@ -21,15 +21,16 @@ const commit = opt('--commit') || process.env.GITHUB_SHA || 'unknown';
 const runUrl = opt('--run-url') || '';
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const v = pkg.version;
+const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const EXPECTED = [
   { file: `Levuvo-Mail-${v}-arm64.dmg`, platform: 'macos', architecture: 'arm64', label: 'macOS (Apple Silicon)' },
   { file: `Levuvo-Mail-Setup-${v}-arm64.exe`, platform: 'windows', architecture: 'arm64', label: 'Windows ARM64' },
   { file: `Levuvo-Mail-Setup-${v}-x64.exe`, platform: 'windows', architecture: 'x64', label: 'Windows x64' }
 ];
-// Zusätzliche Dateien, die nur signierte Builds mit Update-Feed erzeugen
+// Additional files that only signed builds with an update feed produce
 const EXTRA = new RegExp(
-  `^(?:Levuvo-Mail-${v.replace(/\./g, '\\.')}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac)?\\.yml)$`
+  `^(?:Levuvo-Mail-${escapeRegExp(v)}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac)?\\.yml)$`
 );
 
 function walk(dir, out = []) {
@@ -50,11 +51,11 @@ const artifacts = [];
 for (const item of EXPECTED) {
   const matches = all.filter(f => basename(f) === item.file);
   if (matches.length !== 1) {
-    problems.push(matches.length ? `MEHRFACH: ${item.file}` : `FEHLT: ${item.file}`);
+    problems.push(matches.length ? `DUPLICATE: ${item.file}` : `MISSING: ${item.file}`);
     continue;
   }
   const src = matches[0];
-  if (statSync(src).size < 10_000_000) problems.push(`VERDÄCHTIG KLEIN (<10 MB): ${item.file}`);
+  if (statSync(src).size < 10_000_000) problems.push(`SUSPICIOUSLY SMALL (<10 MB): ${item.file}`);
   copyFileSync(src, join(outDir, item.file));
   artifacts.push({
     file: item.file,
@@ -64,12 +65,12 @@ for (const item of EXPECTED) {
     sha256: sha256(join(outDir, item.file)),
     signedForDistribution: signed,
     signingStatus: signed
-      ? 'signiert (Signatur im Build-Job geprüft)'
-      : 'unsigned – interne Testversion, nicht für die Verteilung',
+      ? 'signed (signature verified in the build job)'
+      : 'unsigned – internal test build, not for distribution',
     notarized: false
   });
 }
-// Plattform-Manifeste gegen die tatsächlichen Dateien abgleichen
+// Check the platform manifests against the actual files
 for (const mf of all.filter(f => basename(f) === 'release-manifest.json')) {
   const m = JSON.parse(readFileSync(mf, 'utf8'));
   if (m.version !== v) problems.push(`Manifest ${mf}: Version ${m.version} ≠ ${v}`);
@@ -77,8 +78,7 @@ for (const mf of all.filter(f => basename(f) === 'release-manifest.json')) {
     problems.push(`Manifest ${mf}: Commit ${m.commit} ≠ ${commit}`);
   for (const a of m.artifacts || []) {
     const mine = artifacts.find(x => x.file === a.file);
-    if (mine && mine.sha256 !== a.sha256)
-      problems.push(`SHA-256-Abweichung zwischen Build-Job und Zusammenführung: ${a.file}`);
+    if (mine && mine.sha256 !== a.sha256) problems.push(`SHA-256 mismatch between build job and assembly: ${a.file}`);
   }
 }
 const extras = [];
@@ -91,7 +91,7 @@ if (signed) {
   }
 }
 if (problems.length && !allowPartial) {
-  console.error('✗ Release unvollständig oder inkonsistent:\n' + problems.map(p => ' - ' + p).join('\n'));
+  console.error('✗ Release incomplete or inconsistent:\n' + problems.map(p => ' - ' + p).join('\n'));
   process.exit(1);
 }
 const builtAt = new Date().toISOString();
@@ -107,11 +107,11 @@ writeFileSync(
   ) + '\n'
 );
 
-// Release Notes: CHANGELOG-Abschnitt der Version + feste Hinweise
-let changes = '_Kein CHANGELOG-Eintrag für diese Version gefunden._';
+// Release notes: CHANGELOG section of the version + fixed notes
+let changes = '_No CHANGELOG entry found for this version._';
 if (existsSync('CHANGELOG.md')) {
   const text = readFileSync('CHANGELOG.md', 'utf8');
-  const m = new RegExp(`^## \\[?${v.replace(/\./g, '\\.')}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^## |\\Z)`, 'm').exec(text);
+  const m = new RegExp(`^## \\[?${escapeRegExp(v)}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm').exec(text);
   if (m) changes = m[1].trim();
 }
 const rows = artifacts
@@ -119,37 +119,37 @@ const rows = artifacts
   .join('\n');
 const notes = `# Levuvo Mail ${v}
 
-${signed ? '' : '> ⚠️ **Unsignierte interne Testversion.** Nicht öffentlich verteilen. Gatekeeper (macOS) und SmartScreen (Windows) warnen; automatische Updates sind in diesen Builds deaktiviert.\n'}
-## Änderungen
+${signed ? '' : '> ⚠️ **Unsigned internal test build.** Do not distribute publicly. Gatekeeper (macOS) and SmartScreen (Windows) will warn; automatic updates are disabled in these builds.\n'}
+## Changes
 
 ${changes}
 
 ## Downloads
 
-| Plattform | Datei | SHA-256 |
+| Platform | File | SHA-256 |
 |---|---|---|
 ${rows}
 
-Prüfsummen: \`SHA256SUMS.txt\` (\`shasum -a 256 -c SHA256SUMS.txt\` bzw. \`Get-FileHash\`). Maschinenlesbar: \`release-manifest.json\`.
+Checksums: \`SHA256SUMS.txt\` (\`shasum -a 256 -c SHA256SUMS.txt\` or \`Get-FileHash\`). Machine-readable: \`release-manifest.json\`.
 
 ## Installation
 
-- **macOS (Apple Silicon):** DMG öffnen, „Levuvo Mail“ in „Programme“ ziehen. ${signed ? '' : 'Unsigniert: Rechtsklick → „Öffnen“ bzw. Systemeinstellungen → Datenschutz & Sicherheit → „Trotzdem öffnen“.'}
-- **Windows (ARM64 bzw. x64):** passenden Installer wählen und ausführen (pro Benutzer, ohne Administratorrechte). ${signed ? '' : 'Unsigniert: SmartScreen → „Weitere Informationen“ → „Trotzdem ausführen“.'}
+- **macOS (Apple Silicon):** open the DMG and drag “Levuvo Mail” to “Applications”. ${signed ? '' : 'Unsigned: right-click → “Open”, or System Settings → Privacy & Security → “Open Anyway”.'}
+- **Windows (ARM64 or x64):** choose and run the matching installer (per user, no administrator rights). ${signed ? '' : 'Unsigned: SmartScreen → “More info” → “Run anyway”.'}
 
-## Signierung & Prüfstatus
+## Signing & verification status
 
-- Signierung: ${signed ? '**signiert** (Signatur im Build geprüft)' : '**nicht signiert**, macOS nicht notarisiert'}
-- Build-Verifikation: Tests, Typecheck, Build, Architekturprüfung der Binärdateien (PE/Mach-O) und Start-Test des entpackten Programms in GitHub Actions.
-- **Nicht** enthalten: echte Plattform-Abnahme auf Zielgeräten (siehe \`RELEASE-CHECKLIST.md\`) und Tests mit echten Postfächern.
+- Signing: ${signed ? '**signed** (signature verified in the build)' : '**not signed**, macOS not notarized'}
+- Build verification: tests, typecheck, build, architecture check of the binaries (PE/Mach-O) and startup test of the unpacked program in GitHub Actions.
+- **Not** included: real platform acceptance on target devices (see \`RELEASE-CHECKLIST.md\`) and tests with real mailboxes.
 
-## Herkunft
+## Provenance
 
 - Commit: \`${commit}\`
-${runUrl ? `- Build-Lauf: ${runUrl}\n` : ''}- Zusammengestellt: ${builtAt}
-${complete ? '' : `\n> ❌ **Unvollständig:** ${problems.join('; ')}\n`}`;
+${runUrl ? `- Build run: ${runUrl}\n` : ''}- Assembled: ${builtAt}
+${complete ? '' : `\n> ❌ **Incomplete:** ${problems.join('; ')}\n`}`;
 writeFileSync(join(outDir, 'RELEASE_NOTES.md'), notes);
 console.log(
-  `Release-Verzeichnis ${outDir}: ${artifacts.length}/${EXPECTED.length} Installer, ${extras.length} Zusatzdateien${complete ? '' : ' – UNVOLLSTÄNDIG'}`
+  `Release directory ${outDir}: ${artifacts.length}/${EXPECTED.length} installers, ${extras.length} additional files${complete ? '' : ' – INCOMPLETE'}`
 );
 for (const a of artifacts) console.log(`- ${a.file}  ${a.sha256}`);

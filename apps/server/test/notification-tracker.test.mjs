@@ -12,7 +12,7 @@ try {
 } catch (error) {
   if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
 }
-const onlyWithTs = { skip: !tracker && 'typescript ist erst nach npm install verfügbar' };
+const onlyWithTs = { skip: !tracker && 'typescript is only available after npm install' };
 const snapshot = (highestUid, messages = [], uidValidity = '10') => ({ highestUid, uidValidity, messages });
 const cursor = (lastUid, uidValidity = '10', accountKey = 'primary:k') => ({
   version: 1,
@@ -22,13 +22,13 @@ const cursor = (lastUid, uidValidity = '10', accountKey = 'primary:k') => ({
   updatedAt: 1
 });
 
-test('Erstaufruf baut Basis ohne Rückblick-Benachrichtigung auf', onlyWithTs, () => {
+test('First call builds the baseline without retroactive notifications', onlyWithTs, () => {
   const result = tracker.detectArrivals('primary:k', snapshot(20, [{ uid: 20, unread: true }]), null, 123);
   assert.equal(result.reason, 'baseline');
   assert.equal(result.newCount, 0);
   assert.equal(result.next.lastUid, 20);
 });
-test('Neue, bereits gelesene E-Mail wird dennoch erkannt', onlyWithTs, () => {
+test('New email that is already read is still detected', onlyWithTs, () => {
   const result = tracker.detectArrivals(
     'primary:k',
     snapshot(23, [
@@ -42,14 +42,14 @@ test('Neue, bereits gelesene E-Mail wird dennoch erkannt', onlyWithTs, () => {
   assert.equal(result.reason, 'new');
   assert.equal(result.newCount, 3);
 });
-test('Doppelte Abfrage derselben UID liefert keine zweite Benachrichtigung', onlyWithTs, () => {
+test('Repeated query of the same UID produces no second notification', onlyWithTs, () => {
   const first = tracker.detectArrivals('primary:k', snapshot(25, [{ uid: 25, unread: true }]), cursor(20), 123);
   const second = tracker.detectArrivals('primary:k', snapshot(25, [{ uid: 25, unread: true }]), first.next, 124);
   assert.equal(first.newCount, 1);
   assert.equal(second.reason, 'unchanged');
   assert.equal(second.newCount, 0);
 });
-test('Änderung der UIDVALIDITY setzt die Basis ohne Fehlalarm zurück', onlyWithTs, () => {
+test('UIDVALIDITY change resets the baseline without a false alarm', onlyWithTs, () => {
   const result = tracker.detectArrivals(
     'primary:k',
     snapshot(400, [{ uid: 400, unread: true }], '11'),
@@ -59,7 +59,7 @@ test('Änderung der UIDVALIDITY setzt die Basis ohne Fehlalarm zurück', onlyWit
   assert.equal(result.reason, 'uidvalidity-reset');
   assert.equal(result.newCount, 0);
 });
-test('Kontowechsel wird nicht mit altem Cursor vermischt', onlyWithTs, () => {
+test('Account switch is not mixed with an old cursor', onlyWithTs, () => {
   const result = tracker.detectArrivals('office:x', snapshot(400, [{ uid: 400, unread: true }]), cursor(20), 123);
   assert.equal(result.reason, 'baseline');
   assert.notEqual(
@@ -67,13 +67,13 @@ test('Kontowechsel wird nicht mit altem Cursor vermischt', onlyWithTs, () => {
     tracker.accountMarkerKey('account2', 'office@levuvo.at')
   );
 });
-test('UIDNEXT-Fortschritt ohne vorhandene neue Nachricht ist kein Fehlalarm', onlyWithTs, () => {
+test('UIDNEXT progress without an existing new message is no false alarm', onlyWithTs, () => {
   const result = tracker.detectArrivals('primary:k', snapshot(40, [{ uid: 19, unread: false }]), cursor(20), 123);
   assert.equal(result.reason, 'outside-window');
   assert.equal(result.newCount, 0);
   assert.equal(result.next.lastUid, 40);
 });
-test('Regressions- oder ungültiger Status löst keinen Versand aus', onlyWithTs, () => {
+test('Regressed or invalid status triggers no notification', onlyWithTs, () => {
   const result = tracker.detectArrivals('primary:k', snapshot(10, [{ uid: 10, unread: true }]), cursor(20), 123);
   assert.equal(result.reason, 'uid-regression');
   assert.equal(result.newCount, 0);

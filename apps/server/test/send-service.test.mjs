@@ -19,8 +19,8 @@ const draft = {
 };
 
 test(
-  'SMTP-MIME hat Inhalt/Anhang, aber keinen sichtbaren BCC-Header',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'SMTP MIME has content/attachment but no visible BCC header',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const raw = await service.composeRawEmail('info@levuvo.com', draft);
     const mime = raw.toString('utf8');
@@ -28,13 +28,13 @@ test(
     assert.match(mime, /In-Reply-To:\s*<original@example.org>/i);
     assert.match(mime, /filename="?demo\.txt"?/i);
     assert.doesNotMatch(mime, /(?:^|\r?\n)Bcc\s*:/i);
-    assert.doesNotMatch(mime, /blind@example\.org/i); // Auch die BCC-Adresse selbst darf nicht im MIME stehen.
+    assert.doesNotMatch(mime, /blind@example\.org/i); // The BCC address itself must not appear in the MIME either.
   }
 );
 
 test(
-  'SMTP-Submission verwendet Envelope mit BCC (ohne Header)',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'SMTP submission uses an envelope with BCC (without header)',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const calls = [];
     const fake = {
@@ -55,8 +55,8 @@ test(
 );
 
 test(
-  'Nach erfolgreichem SMTP wird eine identische Kopie in Gesendet eingefügt',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'After successful SMTP an identical copy is appended to Sent',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const calls = [];
     const raw = Buffer.from('Testnachricht');
@@ -79,8 +79,8 @@ test(
 );
 
 test(
-  'Fehlgeschlagenes Speichern löst niemals einen zweiten SMTP-Versand aus',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'Failed saving never triggers a second SMTP send',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const saved = await service.appendToSent(async () => {
       throw Error('IMAP nicht erreichbar');
@@ -90,8 +90,8 @@ test(
 );
 
 test(
-  'Fehlender Gesendet-Ordner liefert einen konkreten Diagnosecode',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'Missing Sent folder returns a specific diagnostic code',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const result = await service.appendToSent(
       async fn => fn({ list: async () => [{ path: 'INBOX' }] }),
@@ -102,8 +102,8 @@ test(
 );
 
 test(
-  'IMAP APPEND mit false gilt nicht als gespeicherte Nachricht',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'IMAP APPEND returning false does not count as a saved message',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const result = await service.appendToSent(
       async fn =>
@@ -118,8 +118,8 @@ test(
 );
 
 test(
-  'IMAP APPEND-Ausnahme wird als Speicherproblem gemeldet',
-  { skip: !service && 'nodemailer muss installiert sein (npm install)' },
+  'IMAP APPEND exception is reported as a save problem',
+  { skip: !service && 'nodemailer must be installed (npm install)' },
   async () => {
     const result = await service.appendToSent(
       async fn =>

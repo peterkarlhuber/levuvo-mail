@@ -4,7 +4,7 @@ on:
     branches: [master, main]
   pull_request:
   workflow_dispatch:
-# Standard: nur lesen. Kein Job in dieser Datei benötigt Schreibrechte.
+# Default: read-only. No job in this file needs write permissions.
 permissions:
   contents: read
 concurrency:
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check:
-    name: Qualität (Syntax, Lint, Format, Tests, Typecheck, Build)
+    name: Quality (syntax, lint, format, tests, typecheck, build)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -27,25 +27,25 @@ jobs:
         run: npm ci --no-fund
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      - name: package-lock.json konsistent mit package.json
+      - name: package-lock.json consistent with package.json
         run: npm ls --all --package-lock-only > /dev/null
-      - name: Workflow-Richtlinien (Berechtigungen, SHA-Pins)
+      - name: Workflow policy (permissions, SHA pins)
         run: node scripts/check-workflows.mjs
       - run: npm run check:syntax
       - run: npm run lint
       - run: npm run format:check
-      - name: Tests (Server, Oberfläche, Desktop-Konfiguration, i18n)
+      - name: Tests (server, UI, desktop configuration, i18n)
         run: npm test
       - run: npm run check:i18n
       - run: npm run typecheck
       - run: npm run build
-      - name: Lizenzhinweise aktuell
+      - name: License notices up to date
         run: |
           npm run notices
           git diff --exit-code THIRD-PARTY-NOTICES.txt
 
   security:
-    name: Sicherheit (Audit, Secrets)
+    name: Security (audit, secrets)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -57,30 +57,30 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-fund --ignore-scripts
-      - name: Runtime-Audit (alles, was in der App läuft) – Pflicht, ab high blockierend
+      - name: Runtime audit (everything that runs in the app) – required, blocking from high
         run: npm audit --omit=dev --audit-level=high
-      - name: Vollständiger Audit inkl. Build-Werkzeuge – ab high blockierend, Rest im Summary
+      - name: Full audit incl. build tools – blocking from high, rest in the summary
         run: |
           set +e
           npm audit --audit-level=high
           rc=$?
           {
-            echo '### npm audit (alle Abhängigkeiten, inkl. dev/build)'
+            echo '### npm audit (all dependencies, incl. dev/build)'
             echo '```'
             npm audit 2>&1 | tail -n 60
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
-      - name: Secret-Scan (versionierte Dateien)
+      - name: Secret scan (tracked files)
         run: node scripts/secret-scan.mjs
-      - name: Keine lokalen Maildaten / Profile versioniert
+      - name: No local mail data / profiles tracked
         run: |
           if git ls-files | grep -Ei '(^|/)(accounts\.json|\.env(\..*)?|.*\.(pfx|pem|keychain))$'; then
-            echo '::error::Lokale Konto-/Zugangsdaten sind versioniert'; exit 1
+            echo '::error::Local account data / credentials are tracked in git'; exit 1
           fi
 
   desktop-build:
-    name: Desktop-Build (unsigniert)
+    name: Desktop build (unsigned)
     needs: [check]
     uses: ./.github/workflows/build-desktop.yml
     with:
@@ -91,12 +91,12 @@ jobs:
       contents: read
 
   ci-ok:
-    name: CI bestanden
+    name: CI passed
     if: ${{ always() }}
     needs: [check, security, desktop-build]
     runs-on: ubuntu-24.04
     steps:
-      - name: Alle Pflichtprüfungen erfolgreich?
+      - name: All required checks successful?
         run: |
           echo '${{ toJSON(needs) }}' | node -e "
             const n = JSON.parse(require('fs').readFileSync(0,'utf8'));

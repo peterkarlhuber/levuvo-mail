@@ -5,7 +5,7 @@ import { parseVCard, buildVCard, validateContact } from '../src/vcard.mjs';
 
 const base = { summary: 'Jour fixe', start: '2026-10-19T09:00', end: '2026-10-19T10:00', tzid: 'Europe/Vienna' };
 
-test('Wöchentliche Serie bleibt über die Zeitumstellung um 9:00 Wiener Zeit', () => {
+test('Weekly series stays at 9:00 Vienna time across the DST change', () => {
   const { ics } = C.createEventIcs(C.validateEventInput({ ...base, rrule: { freq: 'WEEKLY', interval: 1, count: 4 } }));
   assert.match(ics, /BEGIN:VTIMEZONE/);
   assert.match(ics, /DTSTART;TZID=Europe\/Vienna:20261019T090000/);
@@ -16,7 +16,7 @@ test('Wöchentliche Serie bleibt über die Zeitumstellung um 9:00 Wiener Zeit', 
   );
 });
 
-test('Einzeltermin einer Serie ändern bzw. löschen', () => {
+test('Change or delete a single occurrence of a series', () => {
   const { ics } = C.createEventIcs(C.validateEventInput({ ...base, rrule: { freq: 'WEEKLY', interval: 1, count: 4 } }));
   const occ = C.expandObject(ics, '2026-10-01', '2026-12-01');
   const moved = C.updateEventIcs(
@@ -42,7 +42,7 @@ test('Einzeltermin einer Serie ändern bzw. löschen', () => {
   assert.match(series, /SEQUENCE:2/);
 });
 
-test('Ganztägig, Zeitraumfilter und Erinnerungen', () => {
+test('All-day, time range filter and reminders', () => {
   const allDay = C.createEventIcs(
     C.validateEventInput({ summary: 'Urlaub', allDay: true, start: '2026-12-24', end: '2026-12-27' })
   );
@@ -58,14 +58,14 @@ test('Ganztägig, Zeitraumfilter und Erinnerungen', () => {
   assert.equal(alarms[0].at, Date.parse('2026-10-19T06:45:00Z'));
 });
 
-test('Eingaben werden geprüft', () => {
+test('Inputs are validated', () => {
   assert.throws(() => C.validateEventInput({ ...base, summary: ' ' }), /Titel/);
   assert.throws(() => C.validateEventInput({ ...base, end: '2026-10-19T08:00' }), /Ende/);
   assert.throws(() => C.validateEventInput({ ...base, tzid: 'Mars/Olympus' }), /Zeitzone/);
   assert.throws(() => C.validateEventInput({ ...base, attendees: [{ email: 'kein-mail' }] }), /Teilnehmer/);
 });
 
-test('Einladung: REQUEST → REPLY → Teilnahmestatus beim Organisator', () => {
+test('Invitation: REQUEST → REPLY → attendance status at the organizer', () => {
   const organizer = { email: 'peter@example.org', name: 'Peter' };
   const { ics } = C.createEventIcs(
     C.validateEventInput({ ...base, alarms: [10], attendees: [{ email: 'anna@example.org', name: 'Anna' }] }),
@@ -107,7 +107,7 @@ test('vCard: erstellen, Sonderzeichen, Faltung, Einlesen', () => {
   assert.throws(() => validateContact({}), /Namen/);
 });
 
-test('Ganze Serie von einem späteren Termin aus verschieben: Serie behält ihren Beginn', () => {
+test('Move whole series from a later occurrence: series keeps its start', () => {
   const rule = { freq: 'WEEKLY', interval: 1, count: 4 };
   const { ics } = C.createEventIcs(C.validateEventInput({ ...base, rrule: rule }));
   const occ = C.expandObject(ics, '2026-10-01', '2026-12-01');

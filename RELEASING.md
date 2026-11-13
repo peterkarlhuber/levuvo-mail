@@ -1,47 +1,47 @@
-# Release-Prozess
+# Release process
 
-Releases entstehen **ausschließlich in GitHub Actions** aus einem geprüften Commit auf `master` – keine manuellen ZIP-Dateien.
+Releases are created **exclusively in GitHub Actions** from a verified commit on `master` – no manual ZIP files.
 
-## Ablauf
+## Procedure
 
-1. Feature-Branch → Pull Request → CI (`CI`-Workflow) muss grün sein → Merge in `master`.
-2. Release-PR: `version` in `package.json` und `package-lock.json` erhöhen (`npm version X.Y.Z --no-git-tag-version`), `CHANGELOG.md` um `## X.Y.Z` ergänzen, mergen.
-3. Release starten – eine der beiden Varianten:
-   - **Tag:** `git tag vX.Y.Z <commit-auf-master> && git push origin vX.Y.Z` (Tag muss exakt zu `package.json` passen).
-   - **Manuell:** Actions → _Release_ → _Run workflow_ (Branch `master`; Option `signed` nur mit Zertifikaten).
-4. Der Workflow prüft Version/Tag, führt `release:check` aus, baut parallel macOS ARM64, Windows ARM64 und Windows x64, verifiziert die Binär-Architektur (PE/Mach-O), startet die entpackte App kurz, bildet Prüfsummen und legt einen **Draft-Release** an.
-5. Draft prüfen, `RELEASE-CHECKLIST.md` auf Zielgeräten abarbeiten, erst dann manuell veröffentlichen.
+1. Feature branch → pull request → CI (`CI` workflow) must be green → merge into `master`.
+2. Release PR: bump `version` in `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`), add `## X.Y.Z` to `CHANGELOG.md`, merge.
+3. Start the release – one of two variants:
+   - **Tag:** `git tag vX.Y.Z <commit-on-master> && git push origin vX.Y.Z` (the tag must match `package.json` exactly).
+   - **Manual:** Actions → _Release_ → _Run workflow_ (branch `master`; option `signed` only with certificates).
+4. The workflow checks version/tag, runs `release:check`, builds macOS ARM64, Windows ARM64 and Windows x64 in parallel, verifies the binary architecture (PE/Mach-O), briefly starts the unpacked app, computes checksums and creates a **draft release**.
+5. Review the draft, work through `RELEASE-CHECKLIST.md` on target devices, and only then publish manually.
 
-Bestehende Tags und Releases werden nie überschrieben: existiert `vX.Y.Z` bereits, bricht der Workflow ab.
+Existing tags and releases are never overwritten: if `vX.Y.Z` already exists, the workflow aborts.
 
-## Artefakte
+## Artifacts
 
-| Datei | Plattform |
+| File | Platform |
 |---|---|
 | `Levuvo-Mail-<v>-arm64.dmg` | macOS Apple Silicon |
 | `Levuvo-Mail-Setup-<v>-arm64.exe` | Windows ARM64 |
 | `Levuvo-Mail-Setup-<v>-x64.exe` | Windows x64 |
-| `SHA256SUMS.txt`, `release-manifest.json`, `RELEASE_NOTES.md` | alle |
+| `SHA256SUMS.txt`, `release-manifest.json`, `RELEASE_NOTES.md` | all |
 
-Die Dateinamen folgen electron-builder (`-arm64`/`-x64`); sie sind von den Update-Metadaten (`latest*.yml`) abhängig und werden deshalb nicht umbenannt.
+The file names follow electron-builder (`-arm64`/`-x64`); the update metadata (`latest*.yml`) depends on them, so they are not renamed.
 
-## Signierung
+## Signing
 
-Ohne Zertifikate entstehen **unsignierte interne Testversionen** (Draft als _Pre-release_ markiert, Auto-Update aus). Signierte Releases brauchen im GitHub-Environment `release-signing` (Reviewer-Freigabe empfohlen) folgende Secrets:
+Without certificates, **unsigned internal test builds** are produced (draft marked as _pre-release_, auto-update off). Signed releases need the following secrets in the GitHub environment `release-signing` (reviewer approval recommended):
 
-| Secret | Zweck |
+| Secret | Purpose |
 |---|---|
-| `LEVUVO_UPDATE_URL` | https-Update-Feed (z. B. `https://levuvo.at/downloads/mail/`) |
-| `CSC_LINK`, `CSC_KEY_PASSWORD` | Zertifikat (.p12 für macOS Developer ID, .pfx für Windows; base64 bzw. Pfad) |
-| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Notarisierung |
-| `LEVUVO_WIN_PUBLISHER` | exakter Zertifikats-CN |
+| `LEVUVO_UPDATE_URL` | https update feed (e.g. `https://levuvo.at/downloads/mail/`) |
+| `CSC_LINK`, `CSC_KEY_PASSWORD` | certificate (.p12 for macOS Developer ID, .pfx for Windows; base64 or path) |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | notarization |
+| `LEVUVO_WIN_PUBLISHER` | exact certificate CN |
 
-Signierte Builds prüfen die Signatur (`Get-AuthenticodeSignature`, `codesign`, `spctl`, `stapler`) und scheitern bei Fehlern. Da macOS- und Windows-Zertifikate getrennte Dateien sind, ist ggf. je Plattform ein eigenes Secret nötig (`WIN_CSC_LINK`) – siehe `scripts/release-signed.mjs`.
+Signed builds verify the signature (`Get-AuthenticodeSignature`, `codesign`, `spctl`, `stapler`) and fail on errors. Since macOS and Windows certificates are separate files, a separate secret per platform may be needed (`WIN_CSC_LINK`) – see `scripts/release-signed.mjs`.
 
 ## Updates
 
-`electron-updater` wird nur aktiv, wenn der Build einen Update-Feed enthält (`app-update.yml`) – also nur bei signierten Builds. Unsignierte Builds aktualisieren sich nie selbst. Zum Ausrollen alle Dateien des signierten Releases (inkl. `latest*.yml`, `.blockmap`, `.zip`) auf `LEVUVO_UPDATE_URL` hochladen; GitHub-Drafts dienen nicht als Update-Feed.
+`electron-updater` only becomes active if the build contains an update feed (`app-update.yml`) – i.e. only for signed builds. Unsigned builds never update themselves. To roll out, upload all files of the signed release (incl. `latest*.yml`, `.blockmap`, `.zip`) to `LEVUVO_UPDATE_URL`; GitHub drafts do not serve as an update feed.
 
-## Build vs. Abnahme
+## Build vs. acceptance
 
-Ein erfolgreicher Workflow belegt: Tests, Build, Architektur, Prüfsummen, App-Start. **Er ersetzt keine Abnahme** (Schlüsselbund im Alltag, Benachrichtigungen, Tray, Autostart, echte Postfächer) – siehe `RELEASE-CHECKLIST.md`.
+A successful workflow proves: tests, build, architecture, checksums, app startup. **It does not replace acceptance testing** (keychain in daily use, notifications, tray, autostart, real mailboxes) – see `RELEASE-CHECKLIST.md`.

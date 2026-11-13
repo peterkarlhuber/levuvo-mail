@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Prüft die tatsächliche CPU-Architektur des entpackten App-Verzeichnisses (Hauptprogramm und
-// alle nativen *.node-Module) anhand der PE- bzw. Mach-O-Header. Verhindert, dass ein
-// umbenanntes Paket der falschen Architektur als Installer ausgeliefert wird.
+// Checks the actual CPU architecture of the unpacked app directory (main executable and
+// all native *.node modules) using the PE or Mach-O headers. Prevents a renamed package
+// of the wrong architecture from being shipped as an installer.
 //   node scripts/verify-app-arch.mjs <win|mac> <arm64|x64>
 import { closeSync, openSync, readSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -19,7 +19,7 @@ function readBytes(file, length, position = 0) {
     closeSync(fd);
   }
 }
-/** @returns {string[]} Architekturen der Datei (leer = unbekanntes Format) */
+/** @returns {string[]} Architectures of the file (empty = unknown format) */
 export function detectArchitectures(file) {
   const head = readBytes(file, 4096);
   if (head.length >= 64 && head.readUInt16LE(0) === 0x5a4d) {
@@ -50,7 +50,7 @@ function walk(dir, out = []) {
 if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
   const [platform, arch] = process.argv.slice(2);
   if (!['win', 'mac'].includes(platform) || !['arm64', 'x64'].includes(arch)) {
-    console.error('Aufruf: node scripts/verify-app-arch.mjs <win|mac> <arm64|x64>');
+    console.error('Usage: node scripts/verify-app-arch.mjs <win|mac> <arm64|x64>');
     process.exit(2);
   }
   const release = resolve('release');
@@ -60,7 +60,7 @@ if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
       : [arch === 'arm64' ? 'mac-arm64' : 'mac'];
   const root = candidates.map(name => join(release, name)).find(dir => existsSync(dir) && statSync(dir).isDirectory());
   if (!root) {
-    console.error(`✗ Entpacktes App-Verzeichnis nicht gefunden (${candidates.join(' / ')}) in ${release}`);
+    console.error(`✗ Unpacked app directory not found (${candidates.join(' / ')}) in ${release}`);
     process.exit(1);
   }
   const files = walk(root);
@@ -71,19 +71,19 @@ if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
   const natives = files.filter(f => f.endsWith('.node'));
   const targets = [main, ...natives].filter(Boolean);
   let failed = !main;
-  if (!main) console.error('✗ Hauptprogramm „Levuvo Mail“ nicht gefunden');
+  if (!main) console.error('✗ Main executable “Levuvo Mail” not found');
   if (!natives.length) {
-    console.error('✗ Kein natives .node-Modul (Schlüsselbund) gefunden');
+    console.error('✗ No native .node module (keychain) found');
     failed = true;
   }
   for (const file of targets) {
     const found = detectArchitectures(file);
     const ok = found.length > 0 && found.every(a => a === arch);
     console.log(
-      `${ok ? '✓' : '✗'} ${file.slice(root.length + 1)} → ${found.join(',') || 'unbekannt'} (erwartet ${arch})`
+      `${ok ? '✓' : '✗'} ${file.slice(root.length + 1)} → ${found.join(',') || 'unknown'} (expected ${arch})`
     );
     if (!ok) failed = true;
   }
   if (failed) process.exit(1);
-  console.log(`Architektur ${platform}/${arch} verifiziert (${targets.length} Binärdateien).`);
+  console.log(`Architecture ${platform}/${arch} verified (${targets.length} binaries).`);
 }

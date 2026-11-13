@@ -38,14 +38,14 @@ const message = () =>
     }
   );
 
-test('MIME: Inhalt und äußere Kopfzeilen werden sauber getrennt', async () => {
+test('MIME: content and outer headers are cleanly separated', async () => {
   const { inner, outer } = innerAndOuter(await message());
   assert.match(inner, /^Content-Type: multipart\/mixed/);
   assert.ok(outer.some(h => h.startsWith('Subject:')));
   assert.ok(!outer.some(h => /^content-type/i.test(h)));
 });
 
-test('OpenPGP: Schlüssel erzeugen, signieren, verschlüsseln, öffnen, Manipulation erkennen', async () => {
+test('OpenPGP: generate keys, sign, encrypt, open, detect tampering', async () => {
   const { meta, vault } = memory();
   const peter = createPgp({ meta, vault });
   await assert.rejects(peter.generate({ name: 'P', email: 'peter@example.org', passphrase: 'kurz' }), {
@@ -97,7 +97,7 @@ test('OpenPGP: Schlüssel erzeugen, signieren, verschlüsseln, öffnen, Manipula
   );
 });
 
-test('S/MIME: .p12-Import, Signatur und Verschlüsselung, OpenSSL-Nachrichten lesen', async () => {
+test('S/MIME: .p12 import, signing and encryption, reading OpenSSL messages', async () => {
   const { meta, vault } = memory();
   const smime = createSmime({ meta, vault });
   await assert.rejects(smime.importP12(fixture('peter.p12'), 'falsch'), { code: 'smime_p12_password' });

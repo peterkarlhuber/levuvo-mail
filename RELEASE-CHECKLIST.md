@@ -1,66 +1,68 @@
-# Levuvo Mail 2.2.0 – Abnahme pro Plattform
+# Levuvo Mail 2.2.0 – acceptance per platform
 
-Auf **macOS arm64, Windows arm64 und Windows x64** jeweils abhaken. Automatisch bereits geprüft
-(siehe `VALIDATION-REPORT.md`) ist alles, was ohne das native Betriebssystem testbar ist.
+Tick off on **macOS arm64, Windows arm64 and Windows x64** each. Everything that can be tested without
+the native operating system has already been checked automatically (see `VALIDATION-REPORT.md`).
 
-## Technik
-- [ ] `npm ci` ohne Fehler
-- [ ] `npm run release:check` grün (Audit, Syntax, Lint, Format, Tests, Typecheck, Build, Lizenzhinweise)
-- [ ] Optional mit Testservern: `npm run test:integration` und `npm run test:e2e`
-- [ ] Installer startet; bei signierten Builds keine Gatekeeper-/SmartScreen-Warnung
-- [ ] Einstellungen → Über zeigt 2.2.0, Impressum ausgefüllt
+UI labels are given in English with the German label in parentheses where useful; check both languages.
 
-## Ersteinrichtung (frisches Benutzerprofil)
-- [ ] Willkommensseite in Systemsprache (Deutsch bzw. Englisch), Design folgt dem System
-- [ ] Falsches Passwort → klare Meldung, nichts gespeichert; „Verbindung testen“ grün
-- [ ] Falls OAuth freigeschaltet: „Mit Microsoft anmelden“ / „Mit Google anmelden“ → Browser → Konto verbunden
-- [ ] Nach Neustart ist das Konto da, Passwort/Token nur im Schlüsselbund
+## Technical
+- [ ] `npm ci` without errors
+- [ ] `npm run release:check` green (audit, syntax, lint, format, tests, typecheck, build, license notices)
+- [ ] Optionally with test servers: `npm run test:integration` and `npm run test:e2e`
+- [ ] Installer starts; no Gatekeeper/SmartScreen warning for signed builds
+- [ ] Settings → About shows 2.2.0, legal notice (Impressum) filled in
 
-## Upgrade von 2.0 (und 1.2)
-- [ ] Bestehende Konten ohne neue Passworteingabe, Status „Live“
-- [ ] Microsoft-/Google-Konto aus 2.0: Kalender zeigt „Freigeben“ → Browser → Kalender und Kontakte erscheinen, E-Mail läuft unverändert weiter
+## First setup (fresh user profile)
+- [ ] Welcome page in the system language (German or English), theme follows the system
+- [ ] Wrong password → clear message, nothing saved; “Test connection” green
+- [ ] If OAuth is enabled: “Sign in with Microsoft” / “Sign in with Google” → browser → account connected
+- [ ] After a restart the account is there, password/token only in the keychain
 
-## E-Mail
-- [ ] Neue Mail mit Formatierung, Bild und Anhang → beim Empfänger (Outlook, Gmail-Web, Apple Mail) korrekt
-- [ ] Signatur mit Logo, Wechsel der Absenderadresse tauscht die Signatur
-- [ ] Senden rückgängig; Später senden (App im Hintergrund lassen) → kommt pünktlich an
-- [ ] Antworten / Allen / Weiterleiten, Entwurf automatisch gespeichert
-- [ ] Ordner anlegen/umbenennen/löschen, Drag & Drop, Stern, Filter, Spam, Sammelaktionen
-- [ ] Drucken/PDF, .eml speichern, Anhangsvorschau (Bild, **PDF im nativen Fenster**, Text)
-- [ ] Phishing-Testmail (gefälschter Link) → rote Warnung; .exe-Anhang → Rückfrage
-- [ ] Suche im Ordner und „Überall“; Netzwerk trennen → Offline-Hinweis, Suche „Überall“ funktioniert
-- [ ] Neue Mail bei geschlossenem Fenster → Systemmitteilung, Klick öffnet das Konto
-- [ ] Konversation zeigt eigene Antwort aus „Gesendet“; Rückgängig nach Löschen/Archivieren/Verschieben
-- [ ] Zurückstellen (App im Hintergrund lassen) → Nachricht kommt pünktlich ungelesen zurück
-- [ ] Nachfassen nach 1 Tag ohne Antwort → Eintrag unter „Nachfassen“ + Systemmitteilung; mit Antwort → verschwindet
-- [ ] Vorlage speichern, mit Platzhaltern einfügen; Befehlspalette (Strg/⌘ + K) auf allen Plattformen
-- [ ] Newsletter mit One-Click-Abmeldung (z. B. echter Newsletter) → „Abgemeldet“
+## Upgrade from 2.0 (and 1.2)
+- [ ] Existing accounts without entering the password again, status “Live”
+- [ ] Microsoft/Google account from 2.0: calendar shows “Allow access” (Freigeben) → browser → calendars and contacts appear, email keeps working unchanged
 
-## Filter & Abwesenheit
-- [ ] Regel und Abwesenheitsnotiz speichern (Anbieter mit ManageSieve) → Testmail wird verschoben bzw. beantwortet
+## Email
+- [ ] New mail with formatting, image and attachment → correct at the recipient (Outlook, Gmail web, Apple Mail)
+- [ ] Signature with logo, switching the sender address swaps the signature
+- [ ] Undo send; send later (leave the app in the background) → arrives on time
+- [ ] Reply / reply all / forward, draft saved automatically
+- [ ] Create/rename/delete folders, drag & drop, star, filters, spam, bulk actions
+- [ ] Print/PDF, save .eml, attachment preview (image, **PDF in the native window**, text)
+- [ ] Phishing test mail (fake link) → red warning; .exe attachment → confirmation prompt
+- [ ] Search in the folder and “Everywhere”; disconnect the network → offline notice, “Everywhere” search works
+- [ ] New mail with the window closed → system notification, click opens the account
+- [ ] Conversation shows your own reply from “Sent”; undo after delete/archive/move
+- [ ] Snooze (leave the app in the background) → message comes back unread on time
+- [ ] Follow-up after 1 day without a reply → entry under “Follow-up” + system notification; with a reply → disappears
+- [ ] Save a template, insert it with placeholders; command palette (Ctrl/⌘ + K) on all platforms
+- [ ] Newsletter with one-click unsubscribe (e.g. a real newsletter) → “Unsubscribed”
 
-## Kalender & Kontakte
-- [ ] CalDAV/CardDAV (z. B. Nextcloud) verbinden
-- [ ] **Microsoft 365** (echtes Konto, nach Eintragen der Client-ID): Kalender, Termin anlegen/verschieben/löschen, Einladung beantworten, Kontakte anlegen
-- [ ] **Google** (echtes Konto, Calendar- und People-API im Projekt aktiviert): dasselbe
-- [ ] Termin per Drag & Drop verschieben (Woche, Tag, Monat, ganztägig), Rückgängig
-- [ ] Ohne Kalenderkonto: Termin „Auf diesem Gerät“ mit Erinnerung → Systemmitteilung; .ics exportieren und in Apple Kalender/Outlook öffnen; Termin in verbundenen Kalender verschieben
-- [ ] Termin, Serientermin, „nur diesen“/„alle“ ändern und löschen, Zeitzone über Sommerzeit
-- [ ] Erinnerung erscheint als Systemmitteilung (auch Fenster geschlossen), Klick öffnet den Kalender
-- [ ] Einladung an Outlook-/Gmail-Adresse → Annahme dort → Status in Levuvo übernehmen
-- [ ] Einladung aus Outlook/Google empfangen → Zusagen → Termin im Kalender, Organisator erhält Antwort
-- [ ] Kontakte anlegen, vCard-Import aus Outlook/Apple, Export, „E-Mail schreiben“
+## Filters & vacation reply
+- [ ] Save a rule and a vacation reply (provider with ManageSieve) → test mail is moved or answered
 
-## Verschlüsselung
-- [ ] Mit Passwort geschützte Nachricht an Gmail, Outlook.com und ein Firmenpostfach → Datei kommt an, öffnet in Chrome/Edge/Safari (Desktop) und Safari/Chrome (Handy, „In Safari öffnen“); falsches Passwort wird abgelehnt
-- [ ] OpenPGP mit Thunderbird: Schlüssel austauschen, verschlüsselt + signiert in beide Richtungen
-- [ ] S/MIME mit Outlook: .p12 importieren, signiert + verschlüsselt in beide Richtungen
+## Calendar & contacts
+- [ ] Connect CalDAV/CardDAV (e.g. Nextcloud)
+- [ ] **Microsoft 365** (real account, after entering the client ID): calendars, create/move/delete an event, answer an invitation, create contacts
+- [ ] **Google** (real account, Calendar and People API enabled in the project): the same
+- [ ] Move an event via drag & drop (week, day, month, all-day), undo
+- [ ] Without a calendar account: event “On this device” with a reminder → system notification; export .ics and open it in Apple Calendar/Outlook; move the event to a connected calendar
+- [ ] Change and delete an event, a recurring event, “Only this event”/“All events in the series”, time zone across DST
+- [ ] Reminder appears as a system notification (also with the window closed), click opens the calendar
+- [ ] Invitation to an Outlook/Gmail address → accept there → apply the status in Levuvo
+- [ ] Receive an invitation from Outlook/Google → accept → event in the calendar, organizer receives the reply
+- [ ] Create contacts, vCard import from Outlook/Apple, export, “Write email”
 
-## Darstellung
-- [ ] Hell und Dunkel, Deutsch und Englisch: keine abgeschnittenen Texte
-- [ ] 1440×900, 1280×800, Mindestgröße 900×600
+## Encryption
+- [ ] Password-protected message to Gmail, Outlook.com and a company mailbox → file arrives, opens in Chrome/Edge/Safari (desktop) and Safari/Chrome (phone, “Open in Safari”); a wrong password is rejected
+- [ ] OpenPGP with Thunderbird: exchange keys, encrypted + signed in both directions
+- [ ] S/MIME with Outlook: import .p12, signed + encrypted in both directions
+
+## Display
+- [ ] Light and dark, German and English: no truncated texts
+- [ ] 1440×900, 1280×800, minimum size 900×600
 
 ## Release
-- [ ] `release:manifest` und `release:verify` erfolgreich
-- [ ] Signierte Builds: Update-Dateien hochgeladen, Testupdate 2.2.0 → 2.2.1 einmal durchgespielt
-- [ ] Datenschutzhinweis rechtlich geprüft, Impressum eingesetzt
+- [ ] `release:manifest` and `release:verify` successful
+- [ ] Signed builds: update files uploaded, test update 2.2.0 → 2.2.1 run through once
+- [ ] Privacy notice reviewed legally, legal notice (Impressum) filled in

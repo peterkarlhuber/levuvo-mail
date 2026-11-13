@@ -684,7 +684,7 @@ export function registerMailRoutes(ctx) {
     return reply.code(result.status).send(result.body);
   });
 
-  // "Später senden": stored in Drafts; sent by the scheduler below.
+  // Send later ("Später senden"): stored in Drafts; sent by the scheduler below.
   api.post('/api/messages/schedule', { bodyLimit: 12 * 1024 * 1024 }, async (request, reply) => {
     const account = request.mailAccount;
     if (!account.smtp.configured || !account.smtp.enabled)

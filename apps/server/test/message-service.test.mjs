@@ -30,8 +30,8 @@ function fakeImap(raw, size = raw.length) {
 }
 
 test(
-  'RFC-822-Nachricht inklusive Anhang über UID nur lesend auswerten',
-  { skip: !service && 'postal-mime muss installiert sein (npm install)' },
+  'Parse an RFC 822 message including attachment via UID, read-only',
+  { skip: !service && 'postal-mime must be installed (npm install)' },
   async () => {
     const raw = Buffer.from(
       'From: Anna <anna@example.com>\r\nTo: info@example.com\r\nSubject: Hallo\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="b"\r\n\r\n--b\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nNachrichteninhalt\r\n--b\r\nContent-Type: text/plain; name="test.txt"\r\nContent-Disposition: attachment; filename="test.txt"\r\nContent-Transfer-Encoding: base64\r\n\r\nSGFsbG8=\r\n--b--\r\n'
@@ -49,8 +49,8 @@ test(
 );
 
 test(
-  'Zu große Nachrichten werden vor dem Download abgewiesen',
-  { skip: !service && 'postal-mime muss installiert sein (npm install)' },
+  'Messages that are too large are rejected before download',
+  { skip: !service && 'postal-mime must be installed (npm install)' },
   async () => {
     const client = fakeImap(Buffer.from('Subject: Test\r\n\r\nHi'), MAX_MESSAGE_BYTES + 1);
     await assert.rejects(service.loadParsedMessage(client, 'INBOX', 1), { statusCode: 413 });

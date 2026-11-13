@@ -61,17 +61,17 @@ function client(opts = {}) {
   };
 }
 
-test('Entwurfsspeicherung ist standardmäßig ausgeschaltet', { skip }, () => {
+test('Draft saving is off by default', { skip }, () => {
   assert.equal(drafts.draftEnabled({}), false);
   assert.equal(drafts.draftEnabled({ ENABLE_DRAFTS: 'true' }), true);
   assert.equal(drafts.findDraftFolder(folders).path, 'INBOX.Drafts');
 });
-test('MIME eines Entwurfs enthält gespeicherte Kennung und Flag', { skip }, async () => {
+test('MIME of a draft contains the stored identifier and flag', { skip }, async () => {
   const raw = await drafts.composeDraft('peter@example.at', fresh());
   assert.equal(drafts.parseDraftId(raw), uuid);
   assert.match(raw.toString(), /Levuvo Entwurf/);
 });
-test('Erster Entwurf wird angehängt ohne andere Nachricht zu löschen', { skip }, async () => {
+test('First draft is appended without deleting any other message', { skip }, async () => {
   const c = client();
   const result = await drafts.saveDraft(c, 'peter@example.at', fresh());
   assert.equal(result.uid, 24);
@@ -83,7 +83,7 @@ test('Erster Entwurf wird angehängt ohne andere Nachricht zu löschen', { skip 
   assert.deepEqual(c.calls.find(x => x[0] === 'append').slice(1, 3), ['INBOX.Drafts', ['\\Draft', '\\Seen']]);
   assert.equal(c.calls.at(-1)[0], 'unlock');
 });
-test('Entwurfsrevision ist APPEND vor UID-MOVE in den Papierkorb', { skip }, async () => {
+test('Draft revision is APPEND before UID MOVE to the trash', { skip }, async () => {
   const c = client();
   const result = await drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' });
   assert.equal(result.previousRemoved, true);
@@ -96,7 +96,7 @@ test('Entwurfsrevision ist APPEND vor UID-MOVE in den Papierkorb', { skip }, asy
     ['move', '23', 'INBOX.Trash', { uid: true }]
   );
 });
-test('Alte UID oder UIDVALIDITY-Kollision stoppt alle Schreibaktionen', { skip }, async () => {
+test('Stale UID or UIDVALIDITY collision stops all write actions', { skip }, async () => {
   const c = client();
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '999' }), {
     code: 'draft_conflict'
@@ -106,12 +106,12 @@ test('Alte UID oder UIDVALIDITY-Kollision stoppt alle Schreibaktionen', { skip }
     false
   );
 });
-test('UIDPLUS ist erforderlich, nichts wird geschrieben, falls nicht vorhanden', { skip }, async () => {
+test('UIDPLUS is required, nothing is written if it is missing', { skip }, async () => {
   const c = client({ noUidplus: true });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', fresh()), { code: 'uidplus_required' });
   assert.equal(c.calls.length, 0);
 });
-test('Nach unklarem APPEND wird niemals der alte Entwurf gelöscht', { skip }, async () => {
+test('After an unclear APPEND the old draft is never deleted', { skip }, async () => {
   const c = client({ appendResult: false });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' }), {
     code: 'draft_save_uncertain'
@@ -121,7 +121,7 @@ test('Nach unklarem APPEND wird niemals der alte Entwurf gelöscht', { skip }, a
     false
   );
 });
-test('Unbekannter oder größerer Entwurf wird nicht überschrieben', { skip }, async () => {
+test('Unknown or larger draft is not overwritten', { skip }, async () => {
   const c = client({ previousMissing: true });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' }), {
     code: 'draft_conflict'
@@ -131,7 +131,7 @@ test('Unbekannter oder größerer Entwurf wird nicht überschrieben', { skip }, 
     false
   );
 });
-test('Invalide Payload und Anhänge werden blockiert', { skip }, () => {
+test('Invalid payload and attachments are blocked', { skip }, () => {
   assert.throws(() => drafts.validateDraft({ ...fresh(), to: ['header\r\n@example.org'] }));
   assert.throws(() => drafts.validateDraft({ ...fresh(), attachments: [{ name: 'bad' }] }), /ungültig/i);
   assert.throws(() => drafts.validateDraft({ ...fresh(), previousUid: '0', uidValidity: '100' }));

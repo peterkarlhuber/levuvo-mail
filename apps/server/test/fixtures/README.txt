@@ -1,1 +1,1 @@
-Nur Testmaterial (Testschlüssel ohne Wert, Passwort test-only).
+Test material only (worthless test keys, password test-only).

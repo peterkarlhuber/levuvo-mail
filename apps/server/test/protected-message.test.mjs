@@ -11,7 +11,7 @@ import {
 } from '../src/protected-message.mjs';
 import { readSecurity } from '../src/send-utils.mjs';
 
-test('Mit Passwort schützen: Eingaben werden geprüft', () => {
+test('Protect with password: inputs are validated', () => {
   assert.throws(() => readPasswordProtection({ password: 'kurz' }), /mindestens 10/);
   assert.throws(() => readPasswordProtection({ password: 'x'.repeat(201) }), /zu lang/);
   assert.throws(
@@ -28,7 +28,7 @@ test('Mit Passwort schützen: Eingaben werden geprüft', () => {
   assert.throws(() => readSecurity({ method: 'password', password: '123' }), /mindestens 10/);
 });
 
-test('Mit Passwort schützen: Verschlüsseln, Öffnen, falsches Passwort, Größenlimit', () => {
+test('Protect with password: encrypt, open, wrong password, size limit', () => {
   const box = sealPayload({ hello: 'Grüße €' }, 'Ein langes Passwort', { iterations: 1000 });
   assert.deepEqual(openPayload(box, 'Ein langes Passwort'), { hello: 'Grüße €' });
   assert.throws(
@@ -51,7 +51,7 @@ test('Mit Passwort schützen: Verschlüsseln, Öffnen, falsches Passwort, Größ
   );
 });
 
-test('Mit Passwort schützen: Datei ist eigenständig, im Browser (WebCrypto) entschlüsselbar und wird erkannt', async () => {
+test('Protect with password: file is self-contained, decryptable in the browser (WebCrypto) and is detected', async () => {
   const { file, box } = buildProtectedFile(
     {
       from: { name: 'Peter Karlhuber', address: 'peter@levuvo.test' },
@@ -62,9 +62,9 @@ test('Mit Passwort schützen: Datei ist eigenständig, im Browser (WebCrypto) en
     },
     { password: 'Pferd-Batterie-Klammer', hint: 'Die drei Wörter vom Workshop' }
   );
-  assert.doesNotMatch(file, /admin|Zugangsdaten|vertrag\.pdf/, 'kein Klartext in der Datei');
+  assert.doesNotMatch(file, /admin|Zugangsdaten|vertrag\.pdf/, 'no plain text in the file');
   assert.match(file, /Content-Security-Policy" content="default-src 'none'/);
-  assert.doesNotMatch(file, /https?:\/\/(?!www\.w3)/, 'keine externen Adressen');
+  assert.doesNotMatch(file, /https?:\/\/(?!www\.w3)/, 'no external addresses');
   assert.match(file, /Die drei Wörter vom Workshop/);
 
   // Same algorithm as the viewer script, through WebCrypto (what the recipient's browser does).

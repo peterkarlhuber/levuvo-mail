@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { textToHtml, textForPlainPart } from '../src/compose-format.mjs';
 
-test('Formatierung wird in sicheres HTML übersetzt', () => {
+test('Formatting is translated into safe HTML', () => {
   const html = textToHtml(
     'Hallo **Max**,\n\n- eins\n- _zwei_\n\n1. erstens\n\nSiehe https://levuvo.at/a?b=1&c=2 und [Doku](https://levuvo.at/doku).\n\n> Zitat'
   );
@@ -14,7 +14,7 @@ test('Formatierung wird in sicheres HTML übersetzt', () => {
   assert.match(html, /<blockquote[^>]*><p[^>]*>Zitat<\/p><\/blockquote>/);
 });
 
-test('Eingaben können kein HTML oder Skript einschleusen', () => {
+test('Inputs cannot inject HTML or script', () => {
   const html = textToHtml('<script>alert(1)</script> <img src=x onerror=alert(1)> [x](javascript:alert(1)) "quote"');
   assert.ok(!html.includes('<script'));
   assert.ok(!html.includes('<img'));
@@ -23,6 +23,6 @@ test('Eingaben können kein HTML oder Skript einschleusen', () => {
   assert.match(html, /&quot;quote&quot;/);
 });
 
-test('Textversion entfernt nur Formatierungszeichen', () => {
+test('Text version removes only formatting characters', () => {
   assert.equal(textForPlainPart('**fett** und [Link](https://a.at)'), 'fett und Link <https://a.at>');
 });

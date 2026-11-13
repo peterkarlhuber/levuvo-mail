@@ -1,11 +1,11 @@
-name: Desktop-Build
-# Wiederverwendbarer Build für macOS ARM64, Windows ARM64 und Windows x64.
-# Aufrufer: ci.yml (unsignierte Test-Builds), release.yml, manuell (workflow_dispatch).
+name: Desktop build
+# Reusable build for macOS ARM64, Windows ARM64 and Windows x64.
+# Callers: ci.yml (unsigned test builds), release.yml, manual (workflow_dispatch).
 on:
   workflow_dispatch:
     inputs:
       signed:
-        description: 'Signierter Build (benötigt Secrets im Environment "release-signing")'
+        description: 'Signed build (requires secrets in the "release-signing" environment)'
         type: boolean
         default: false
   workflow_call:
@@ -14,7 +14,7 @@ on:
         type: boolean
         default: false
       ref:
-        description: 'Zu bauender Commit (SHA)'
+        description: 'Commit to build (SHA)'
         type: string
         default: ''
       retention-days:
@@ -70,7 +70,7 @@ jobs:
             }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 75
-    # Signierungs-Secrets nur über ein geschütztes Environment (Reviewer-Freigabe möglich)
+    # Signing secrets only via a protected environment (reviewer approval possible)
     environment: ${{ inputs.signed && 'release-signing' || null }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,7 +82,7 @@ jobs:
           node-version: '22'
           architecture: ${{ matrix.arch }}
           cache: npm
-      - name: Runner-Info
+      - name: Runner info
         shell: bash
         run: |
           echo "runner=${{ matrix.runner }} platform=${{ matrix.platform }} target-arch=${{ matrix.arch }}"
@@ -90,7 +90,7 @@ jobs:
           git rev-parse HEAD
       - name: Install (exact lockfile)
         run: npm ci --no-fund
-      - name: Tests auf der Zielplattform (inkl. natives Schlüsselbund-Modul)
+      - name: Tests on the target platform (incl. native keychain module)
         run: npm test
       - name: Unsigned test installer
         if: ${{ !inputs.signed }}
@@ -106,30 +106,30 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           LEVUVO_WIN_PUBLISHER: ${{ secrets.LEVUVO_WIN_PUBLISHER }}
-      - name: Zielarchitektur der Binärdateien prüfen (PE/Mach-O)
+      - name: Verify target architecture of the binaries (PE/Mach-O)
         run: node scripts/verify-app-arch.mjs ${{ matrix.os }} ${{ matrix.arch }}
-      - name: Start-Test der entpackten Anwendung
+      - name: Startup test of the unpacked application
         run: node scripts/smoke-packaged.mjs ${{ matrix.os }} ${{ matrix.arch }} 20
-      - name: Windows Credential Manager (nur Testeintrag, danach gelöscht)
+      - name: Windows Credential Manager (test entry only, deleted afterwards)
         if: ${{ matrix.os == 'win' }}
         run: npm run desktop:win:check:vault
-      - name: Signatur prüfen (Windows)
+      - name: Verify signature (Windows)
         if: ${{ inputs.signed && matrix.os == 'win' }}
         shell: pwsh
         run: |
           Get-ChildItem release/Levuvo-Mail-Setup-*.exe | ForEach-Object {
             $s = Get-AuthenticodeSignature $_.FullName
             "$($_.Name): $($s.Status) – $($s.SignerCertificate.Subject)"
-            if ($s.Status -ne 'Valid') { throw "Ungültige Signatur: $($_.Name)" }
+            if ($s.Status -ne 'Valid') { throw "Invalid signature: $($_.Name)" }
           }
-      - name: Signatur und Notarisierung prüfen (macOS)
+      - name: Verify signature and notarization (macOS)
         if: ${{ inputs.signed && matrix.os == 'mac' }}
         run: |
           app="release/mac-arm64/Levuvo Mail.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           spctl --assess --type execute --verbose=4 "$app"
           xcrun stapler validate "$app"
-      - name: Checksums und Manifest
+      - name: Checksums and manifest
         shell: bash
         run: npm run release:manifest -- --arch ${{ matrix.arch }} ${{ inputs.signed && '--signed' || '' }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
