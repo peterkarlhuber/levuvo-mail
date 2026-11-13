@@ -43,29 +43,51 @@ function decrypt(key, raw) {
  * @param {{ available: boolean, get(id, kind): string, set(id, kind, v): void } | null} o.vault
  */
 export async function createLocalCalendar({ filename, vault }) {
+  let raw = null;
+  try {
+    raw = await readFile(filename, 'utf8');
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  const encrypted = raw !== null && raw.trimStart().startsWith('{"v":1');
   let key = null;
   if (vault?.available) {
     try {
       let hex = vault.get(LOCAL_ACCOUNT, 'calendar-key');
-      if (!hex) {
+      // A new key only for a calendar that has no encrypted data yet: a fresh key for an existing
+      // encrypted file would make it unreadable and the next save would overwrite every event.
+      if (!hex && !encrypted) {
         hex = randomBytes(32).toString('hex');
         vault.set(LOCAL_ACCOUNT, 'calendar-key', hex);
       }
-      key = Buffer.from(hex, 'hex');
+      key = hex ? Buffer.from(hex, 'hex') : null;
     } catch {
       key = null;
     }
   }
   let state = { calendars: [], objects: [] };
-  try {
-    const raw = await readFile(filename, 'utf8');
-    const text = raw.trimStart().startsWith('{"v":1') ? (key ? decrypt(key, raw) : null) : raw;
-    if (text === null)
-      throw fail('Der lokale Kalender ist gesperrt (Schlüsselbund nicht verfügbar).', 'local_locked', 423);
+  if (encrypted) {
+    // Never fall back to an empty calendar here: the file stays untouched until the key is back.
+    if (!key) throw fail('Der lokale Kalender ist gesperrt (Schlüsselbund nicht verfügbar).', 'local_locked', 423);
+    let text;
+    try {
+      text = decrypt(key, raw);
+    } catch {
+      throw fail(
+        'Der lokale Kalender lässt sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.',
+        'local_locked',
+        423
+      );
+    }
     state = { calendars: [], objects: [], ...JSON.parse(text) };
-  } catch (err) {
-    if (err.code === 'local_locked') throw err;
-    if (err.code !== 'ENOENT') state = { calendars: [], objects: [] };
+  } else if (raw !== null) {
+    try {
+      state = { calendars: [], objects: [], ...JSON.parse(raw) };
+    } catch {
+      // Unreadable plain file: keep a copy before starting over, so nothing is lost silently.
+      await rename(filename, `${filename}.corrupt-${Date.now()}`);
+      state = { calendars: [], objects: [] };
+    }
   }
   if (!state.calendars.length)
     state.calendars.push({ id: randomUUID(), name: 'Persönlich', color: COLORS[0], hidden: false });
