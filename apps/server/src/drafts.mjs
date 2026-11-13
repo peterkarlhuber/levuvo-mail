@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { isEmail, MAX_SUBJECT_CHARS, MAX_BODY_CHARS, parseAttachments } from './send-utils.mjs';
 import { validUid } from './message-utils.mjs';
-import { selectableFolders, findSpecialFolder } from './mail-actions.mjs';
+import { selectableFolders, findSpecialFolder, childFolderPath } from './mail-actions.mjs';
 import { readBody, readFromAddress } from './message-body.mjs';
 
 const problem = (message, code = 'draft_invalid', statusCode = 400) =>
@@ -97,12 +97,25 @@ export async function composeDraft(mailbox, data) {
   return built.message;
 }
 
+/** Mailboxes without any drafts folder get one on first save, like in other mail clients. */
+async function createDraftsFolder(client, folders) {
+  let path;
+  try {
+    path = childFolderPath(folders, 'Drafts', 'Entwürfe-Ordner');
+  } catch {
+    return null;
+  }
+  const created = await client.mailboxCreate(path).catch(() => null);
+  return created ? { path } : null;
+}
+
 // APPEND first; previous version is moved to Trash only after APPEND returns a concrete UID.
 // No permanent deletion or EXPUNGE is performed. UIDPLUS is required for verifiable APPENDUID.
 export async function saveDraft(client, mailbox, input, preferredPath = '') {
   const data = validateDraft(input);
   const folders = await client.list();
-  const folder = findDraftFolder(folders, preferredPath);
+  let folder = findDraftFolder(folders, preferredPath);
+  if (!folder && !preferredPath) folder = await createDraftsFolder(client, folders);
   if (!folder)
     throw problem(
       'Entwürfe-Ordner fehlt. Bitte im Webmail deines Anbieters anlegen oder in den Kontoeinstellungen angeben.',
