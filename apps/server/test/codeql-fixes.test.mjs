@@ -16,7 +16,7 @@ test('stripTags entfernt auch verschachtelte Tag-Konstrukte vollständig', () =>
 test('replaceUntilStable entfernt verschachtelte script-Blöcke', () => {
   const out = replaceUntilStable(
     '<scr<script>x</script>ipt>evil()</script>ok',
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
+    /<script[^>]*>[\s\S]*?<\/script\s*>/gi,
     ''
   );
   assert.ok(!/<script/i.test(out), out);
