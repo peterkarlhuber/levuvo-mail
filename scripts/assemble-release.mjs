@@ -21,6 +21,7 @@ const commit = opt('--commit') || process.env.GITHUB_SHA || 'unknown';
 const runUrl = opt('--run-url') || '';
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const v = pkg.version;
+const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const EXPECTED = [
   { file: `Levuvo-Mail-${v}-arm64.dmg`, platform: 'macos', architecture: 'arm64', label: 'macOS (Apple Silicon)' },
@@ -29,7 +30,7 @@ const EXPECTED = [
 ];
 // Additional files that only signed builds with an update feed produce
 const EXTRA = new RegExp(
-  `^(?:Levuvo-Mail-${v.replace(/\./g, '\\.')}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac)?\\.yml)$`
+  `^(?:Levuvo-Mail-${escapeRegExp(v)}-arm64\\.zip(?:\\.blockmap)?|.*\\.exe\\.blockmap|.*\\.dmg\\.blockmap|latest(?:-mac)?\\.yml)$`
 );
 
 function walk(dir, out = []) {
@@ -110,7 +111,7 @@ writeFileSync(
 let changes = '_No CHANGELOG entry found for this version._';
 if (existsSync('CHANGELOG.md')) {
   const text = readFileSync('CHANGELOG.md', 'utf8');
-  const m = new RegExp(`^## \\[?${v.replace(/\./g, '\\.')}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^## |\\Z)`, 'm').exec(text);
+  const m = new RegExp(`^## \\[?${escapeRegExp(v)}\\]?[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm').exec(text);
   if (m) changes = m[1].trim();
 }
 const rows = artifacts
