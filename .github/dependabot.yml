@@ -1,15 +1,21 @@
 version: 2
 updates:
+  # Monthly, one grouped PR for minor/patch updates. Major version jumps are
+  # not proposed automatically; they are evaluated deliberately when preparing
+  # a feature release. Security alerts are reported independently of this file.
   - package-ecosystem: npm
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
     groups:
       actions:
         patterns: ['*']
