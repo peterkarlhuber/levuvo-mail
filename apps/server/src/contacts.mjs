@@ -11,7 +11,8 @@ async function envelopes(client, path) {
     if (!total) return [];
     const out = [];
     for await (const m of client.fetch(`${Math.max(1, total - SCAN + 1)}:${total}`, { envelope: true })) {
-      if (m.envelope) out.push(m.envelope);
+      // Unsolicited FETCH responses (e.g. flag updates) carry no envelope and are skipped.
+      if (m?.envelope && typeof m.envelope === 'object') out.push(m.envelope);
     }
     return out;
   } finally {

@@ -4,6 +4,7 @@ import { parseDraftId } from './drafts.mjs';
 import { analyzeMessage } from './security-analysis.mjs';
 import { parseItip } from './calendar-model.mjs';
 import { findProtectedBox } from './protected-message.mjs';
+import { fetchUidOne } from './imap-fetch.mjs';
 
 const PARSE_OPTIONS = {
   attachmentEncoding: 'arraybuffer',
@@ -45,12 +46,12 @@ export function findCalendarPart(parsed) {
 export async function loadParsedMessage(client, folder, uid, { crypto = null, context = {} } = {}) {
   const lock = await client.getMailboxLock(folder, { readOnly: true });
   try {
-    const meta = await client.fetchOne(String(uid), { size: true, flags: true }, { uid: true });
+    const meta = await fetchUidOne(client, uid, { size: true, flags: true });
     if (!meta) return null;
     if (!Number.isSafeInteger(meta.size) || meta.size < 0 || meta.size > MAX_MESSAGE_BYTES) {
       throw tooLarge('Nachricht ist zu groß oder konnte nicht sicher geprüft werden (max. 12 MiB).');
     }
-    const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
+    const msg = await fetchUidOne(client, uid, { source: true });
     if (!msg?.source) return null;
     if (msg.source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Nachricht überschreitet 12 MiB.');
 

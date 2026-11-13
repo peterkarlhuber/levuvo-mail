@@ -3,6 +3,7 @@ import { isEmail, MAX_SUBJECT_CHARS, MAX_BODY_CHARS, parseAttachments } from './
 import { validUid } from './message-utils.mjs';
 import { selectableFolders, findSpecialFolder, childFolderPath } from './mail-actions.mjs';
 import { readBody, readFromAddress } from './message-body.mjs';
+import { fetchUidOne } from './imap-fetch.mjs';
 
 const problem = (message, code = 'draft_invalid', statusCode = 400) =>
   Object.assign(new Error(message), { code, statusCode });
@@ -144,7 +145,7 @@ export async function saveDraft(client, mailbox, input, preferredPath = '') {
     if (data.previousUid !== null) {
       if (data.uidValidity !== validity)
         throw problem('Der Entwürfe-Ordner wurde geändert. Bitte Entwurf erneut öffnen.', 'draft_conflict', 409);
-      const meta = await client.fetchOne(data.previousUid, { uid: true, size: true, flags: true }, { uid: true });
+      const meta = await fetchUidOne(client, data.previousUid, { size: true, flags: true });
       if (!meta || !meta.flags?.has('\\Draft') || !Number.isInteger(meta.size) || meta.size > DRAFT_MAX_BYTES) {
         throw problem(
           'Vorheriger Entwurf wurde verändert oder gelöscht. Bitte Ordner neu laden.',
@@ -152,7 +153,7 @@ export async function saveDraft(client, mailbox, input, preferredPath = '') {
           409
         );
       }
-      const previous = await client.fetchOne(data.previousUid, { uid: true, source: true }, { uid: true });
+      const previous = await fetchUidOne(client, data.previousUid, { source: true });
       if (!previous?.source || parseDraftId(previous.source) !== data.draftId) {
         throw problem(
           'Vorheriger Entwurf wurde verändert oder gelöscht. Bitte Ordner neu laden.',
@@ -213,7 +214,7 @@ export async function retireDraft(client, ref, preferredPath = '') {
   const lock = await client.getMailboxLock(folder.path);
   try {
     if (String(client.mailbox?.uidValidity || '') !== ref.uidValidity) return { removed: false };
-    const previous = await client.fetchOne(ref.uid, { uid: true, source: true, flags: true }, { uid: true });
+    const previous = await fetchUidOne(client, ref.uid, { source: true, flags: true });
     if (!previous?.source || !previous.flags?.has('\\Draft') || parseDraftId(previous.source) !== ref.draftId)
       return { removed: false };
     return { removed: (await client.messageMove(ref.uid, trash.path, { uid: true })) !== false };

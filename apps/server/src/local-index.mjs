@@ -167,8 +167,11 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
               { uid: true, bodyParts: [{ key, maxLength: TEXT_CHARS * 3 }] },
               { uid: true }
             )) {
+              // Unsolicited FETCH responses (flag updates) carry no body part and are skipped.
+              if (!parts.has(m?.uid) || !folder.items[m.uid]) continue;
               const raw = m.bodyParts?.get(key) || m.bodyParts?.get(key.toLowerCase());
-              if (folder.items[m.uid]) folder.items[m.uid].x = decodePreview(raw, parts.get(m.uid), TEXT_CHARS);
+              if (raw === undefined) continue;
+              folder.items[m.uid].x = decodePreview(raw, parts.get(m.uid), TEXT_CHARS);
             }
           } catch {
             /* text is optional */

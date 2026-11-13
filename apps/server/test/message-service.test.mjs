@@ -21,9 +21,11 @@ function fakeImap(raw, size = raw.length) {
         }
       };
     },
-    async fetchOne(uid, query, options) {
-      calls.push({ method: 'fetchOne', uid, query, options });
-      return query.size ? { size } : { source: Buffer.from(raw) };
+    async *fetch(uid, query, options) {
+      calls.push({ method: 'fetch', uid, query, options });
+      // An unsolicited flag update for another message arrives first.
+      yield { seq: 3, uid: 999, flags: new Set(['\\Seen']) };
+      yield query.size ? { uid: Number(uid), size, flags: new Set() } : { uid: Number(uid), source: Buffer.from(raw) };
     }
   };
   return client;
@@ -43,7 +45,7 @@ test(
     assert.equal(loaded.detail.attachments[0].filename, 'test.txt');
     assert.equal(loaded.detail.attachments[0].size, 5);
     assert.equal(client.calls[0].options.readOnly, true);
-    assert.ok(client.calls.filter(c => c.method === 'fetchOne').every(c => c.uid === '150' && c.options.uid === true));
+    assert.ok(client.calls.filter(c => c.method === 'fetch').every(c => c.uid === '150' && c.options.uid === true));
     assert.equal(client.calls.at(-1).method, 'release');
   }
 );
@@ -54,7 +56,7 @@ test(
   async () => {
     const client = fakeImap(Buffer.from('Subject: Test\r\n\r\nHi'), MAX_MESSAGE_BYTES + 1);
     await assert.rejects(service.loadParsedMessage(client, 'INBOX', 1), { statusCode: 413 });
-    assert.equal(client.calls.filter(c => c.method === 'fetchOne').length, 1);
+    assert.equal(client.calls.filter(c => c.method === 'fetch').length, 1);
     assert.equal(client.calls.at(-1).method, 'release');
   }
 );

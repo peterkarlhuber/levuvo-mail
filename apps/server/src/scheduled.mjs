@@ -5,6 +5,7 @@
 import PostalMime from 'postal-mime';
 import { findDraftFolder } from './drafts.mjs';
 import { findSpecialFolder } from './mail-actions.mjs';
+import { fetchUidOne, isRequestedFetchResult, uidSet } from './imap-fetch.mjs';
 
 export const SCHEDULED_FLAG = '$LevuvoScheduled';
 export const SENDING_FLAG = '$LevuvoSending';
@@ -64,11 +65,13 @@ export async function listScheduled(client, preferredDrafts = '') {
     const uids = await client.search({ header: { 'x-levuvo-send-at': '' } }, { uid: true });
     if (!Array.isArray(uids) || !uids.length) return { folder: folder.path, items: [] };
     const items = [];
-    for await (const m of client.fetch(
-      uids,
-      { uid: true, envelope: true, flags: true, headers: ['x-levuvo-send-at'] },
-      { uid: true }
-    )) {
+    const query = { uid: true, envelope: true, flags: true, headers: ['x-levuvo-send-at'] };
+    const wanted = uidSet(uids);
+    const seen = new Set();
+    for await (const m of client.fetch(uids, query, { uid: true })) {
+      // Skip unsolicited FETCH responses (flag updates, foreign UIDs) and duplicates.
+      if (!isRequestedFetchResult(m, query, wanted) || seen.has(m.uid)) continue;
+      seen.add(m.uid);
       const header = m.headers?.toString('utf8') || '';
       const sendAt = /x-levuvo-send-at:\s*([^\r\n]+)/i.exec(header)?.[1]?.trim();
       if (!sendAt || Number.isNaN(Date.parse(sendAt))) continue;
@@ -118,7 +121,7 @@ export async function sendDue(client, { preferredDrafts = '', now = Date.now(), 
   try {
     for (const item of due) {
       // Claim first: a second Levuvo instance sees $LevuvoSending and skips the message.
-      const current = await client.fetchOne(String(item.uid), { uid: true, flags: true, source: true }, { uid: true });
+      const current = await fetchUidOne(client, item.uid, { flags: true, source: true });
       if (!current?.source || current.flags?.has(SENDING_FLAG) || current.flags?.has(FAILED_FLAG)) continue;
       await client.messageFlagsAdd(String(item.uid), [SENDING_FLAG], { uid: true });
       const parsed = await PostalMime.parse(current.source);

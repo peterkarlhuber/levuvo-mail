@@ -1,6 +1,7 @@
 // Conversations across folders: messages are linked by Message-ID, In-Reply-To and
 // References (RFC 5322 §3.6.4) – not by subject – including the own replies in "Sent".
 import { fetchInfos } from './mailbox.mjs';
+import { fetchUidOne } from './imap-fetch.mjs';
 import { findSpecialFolder, selectableFolders } from './mail-actions.mjs';
 
 const MAX_IDS = 30;
@@ -45,10 +46,13 @@ export async function loadThread(client, folder, uid, { previewCache, accountKey
   let seed;
   let lock = await client.getMailboxLock(folder, { readOnly: true });
   try {
-    seed = await client.fetchOne(
-      String(uid),
-      { uid: true, envelope: true, headers: ['references', 'in-reply-to', 'message-id'] },
-      { uid: true }
+    // The seed must be our own answer for this UID with an envelope; an unsolicited
+    // flags-only FETCH would otherwise yield an empty thread or a foreign message.
+    seed = await fetchUidOne(
+      client,
+      uid,
+      { envelope: true, headers: ['references', 'in-reply-to', 'message-id'] },
+      { optional: ['headers'] }
     );
   } finally {
     lock.release();

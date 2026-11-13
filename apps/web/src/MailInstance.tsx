@@ -38,6 +38,7 @@ import { bodyText, fullDateLabel, replyAllRecipients, replyRecipient } from './f
 import { useT } from './i18n';
 import { publishFolders, type MailCommand } from './command-bus';
 import { isInbox, isSnoozeFolder, orderFolders, special } from './folder-utils';
+import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } from './mail-sync';
 import FollowupList from './FollowupList';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
@@ -69,22 +70,6 @@ function folderIcon(folder: Folder) {
       return folder.path.toUpperCase() === 'INBOX' ? Inbox : Mail;
   }
 }
-/** Newest snapshot replaces the top of the list; older pages that were loaded stay. */
-function mergeSnapshot(current: Message[], incoming: Message[]) {
-  // One row per valid UID: an incomplete or repeated entry must never appear as an extra empty message.
-  const seen = new Set<number>();
-  const snapshot = incoming.filter(
-    m => Number.isSafeInteger(m.uid) && m.uid > 0 && !seen.has(m.uid) && seen.add(m.uid)
-  );
-  if (!snapshot.length) return [];
-  const oldestInSnapshot = Math.min(...snapshot.map(m => m.uid));
-  const flags = new Map(current.map(m => [m.uid, m.flagged]));
-  return [
-    ...snapshot.map(m => (m.flagged === undefined && flags.has(m.uid) ? { ...m, flagged: flags.get(m.uid) } : m)),
-    ...current.filter(m => m.uid < oldestInSnapshot)
-  ];
-}
-
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 function quotedHtml(d: Detail) {
@@ -389,14 +374,16 @@ export default function MailInstance({
 
   // Live updates: the IDLE snapshot replaces the top of the inbox list.
   const appliedSnapshot = useRef(0);
-  // Time of the last change made here (move, delete, read state). A snapshot taken before it
-  // still shows the old state: applied, a deleted message came back and deleting it again failed.
+  // Time the last change made here (move, delete, read state) was sent. A snapshot taken before it
+  // may still show the old state: applied, a deleted message came back and deleting it again failed.
+  // Recorded before the request goes out, because the server may apply the change before the
+  // response arrives and a snapshot started in between must not count as newer.
   const localChangeAt = useRef(0);
   const onLocalChangeRef = useRef(onLocalChange);
   onLocalChangeRef.current = onLocalChange;
   useEffect(() => {
-    if (!accountReady || !inboxSnapshot || inboxSnapshot.checkedAt <= appliedSnapshot.current) return;
-    if (inboxSnapshot.checkedAt <= localChangeAt.current) return;
+    if (!accountReady || !inboxSnapshot) return;
+    if (!snapshotApplies(inboxSnapshot.checkedAt, appliedSnapshot.current, localChangeAt.current)) return;
     if (inboxSnapshot.unseen !== null)
       setFolders(old => old.map(f => (f.path.toUpperCase() === 'INBOX' ? { ...f, unseen: inboxSnapshot.unseen } : f)));
     if (folder.toUpperCase() !== 'INBOX' || query.trim() || busy || actionBusy) return;
@@ -478,9 +465,9 @@ export default function MailInstance({
     const item = messages.find(m => m.uid === detail.uid);
     if (!item?.unread) return;
     const timer = window.setTimeout(() => {
+      localChangeAt.current = Date.now();
       postAction(`/api/messages/${detail.uid}/action`, { folder, action: 'markRead' }, accountId)
         .then(() => {
-          localChangeAt.current = Date.now();
           onLocalChangeRef.current?.();
           setMessages(old => old.map(m => (m.uid === detail.uid ? { ...m, unread: false } : m)));
           setFolders(old =>
@@ -489,8 +476,10 @@ export default function MailInstance({
             )
           );
         })
-        .catch(() => {
-          /* stays unread */
+        .catch(e => {
+          // Gone on the server (stale row): no error, a fresh snapshot removes the row.
+          if (isMissingMessage(e)) onLocalChangeRef.current?.();
+          /* otherwise it stays unread */
         });
     }, 600);
     return () => window.clearTimeout(timer);
@@ -672,6 +661,7 @@ export default function MailInstance({
     if ((action === 'archive' && !archiveExists) || (action === 'trash' && isTrash && source === folder)) return false;
     setActionBusy(true);
     setError('');
+    localChangeAt.current = Date.now();
     try {
       type Undo = { folder: string; action: ReaderAction; uids: string[]; destination?: string } | null;
       const data = await postAction<{ destination: string | null; count: number; undo?: Undo }>(
@@ -679,9 +669,8 @@ export default function MailInstance({
         { folder: source, action, uids, ...(action === 'move' ? { destination } : {}) },
         accountId
       );
-      localChangeAt.current = Date.now();
       onLocalChangeRef.current?.();
-      if (['markRead', 'markUnread', 'flag', 'unflag'].includes(action)) {
+      if (!removesMessages(action)) {
         const patch: Partial<Message> =
           action === 'markRead'
             ? { unread: false }
@@ -757,6 +746,20 @@ export default function MailInstance({
       setCheckedUids(old => old.filter(u => !uids.includes(u)));
       return true;
     } catch (e) {
+      if (isMissingMessage(e)) {
+        // None of the messages exist on the server any more: the rows were stale (e.g. from an
+        // outdated snapshot). Not an error for the user; drop them and fetch the current state.
+        onLocalChangeRef.current?.();
+        if (source === folder) {
+          if (removesMessages(action)) {
+            if (selectedUid !== null && uids.includes(selectedUid)) selectUid(nextAfterRemoval(uids), false);
+            setMessages(old => old.filter(m => !uids.includes(m.uid)));
+            setCheckedUids(old => old.filter(u => !uids.includes(u)));
+          } else if (!searching) void loadMessages(folder);
+          void loadFolders(false);
+        }
+        return false;
+      }
       setError((e as Error).message);
       return false;
     } finally {

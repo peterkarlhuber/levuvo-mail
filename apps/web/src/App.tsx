@@ -152,8 +152,15 @@ function Shell() {
     if (!accounts.length || runtime === null) return;
     let cancelled = false;
     let running = false;
-    const poll = async (fresh = false) => {
-      if (cancelled || running) return;
+    // A fresh poll requested while another poll runs: that poll may predate a local change,
+    // so the fresh one runs right after it instead of being dropped.
+    let freshPending = false;
+    const poll = async (fresh = false): Promise<void> => {
+      if (cancelled) return;
+      if (running) {
+        if (fresh) freshPending = true;
+        return;
+      }
       running = true;
       try {
         await Promise.all(
@@ -204,6 +211,10 @@ function Shell() {
         );
       } finally {
         running = false;
+      }
+      if (freshPending && !cancelled) {
+        freshPending = false;
+        await poll(true);
       }
     };
     pollNow.current = () => void poll(true);

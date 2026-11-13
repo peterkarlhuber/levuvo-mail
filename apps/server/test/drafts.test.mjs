@@ -42,13 +42,15 @@ function client(opts = {}) {
       calls.push(['lock', path]);
       return { release: () => calls.push(['unlock']) };
     },
-    fetchOne: async (_uid, fetch) => {
+    async *fetch(_uid, fetch) {
       calls.push(['fetch', fetch]);
-      return opts.previousMissing
-        ? false
-        : fetch.source
-          ? { uid: 23, source: Buffer.from(`X-Levuvo-Draft-ID: ${uuid}\r\nSubject: Test\r\n\r\nHallo`) }
-          : { uid: 23, size: 90, flags: new Set(['\\Draft']) };
+      // Unsolicited flag updates (without and with a UID) must be ignored.
+      yield { seq: 1, flags: new Set(['\\Seen']) };
+      yield { seq: 2, uid: 23, flags: new Set(['\\Seen', '\\Draft']) };
+      if (opts.previousMissing) return;
+      yield fetch.source
+        ? { uid: 23, source: Buffer.from(`X-Levuvo-Draft-ID: ${uuid}\r\nSubject: Test\r\n\r\nHallo`) }
+        : { uid: 23, size: 90, flags: new Set(['\\Draft']) };
     },
     append: async (path, raw, flags) => {
       calls.push(['append', path, flags, raw]);
