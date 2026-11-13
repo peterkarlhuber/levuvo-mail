@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { htmlToText, stripTags, replaceUntilStable } from '../src/html-mail.mjs';
 import { splitVcards } from '../src/vcard.mjs';
 import { accountFingerprint } from '../src/inbox-watcher.mjs';
-import { createHash } from 'node:crypto';
 
 test('stripTags entfernt auch verschachtelte Tag-Konstrukte vollständig', () => {
   for (const input of ['<scr<b>ipt>alert(1)</scr</b>ipt>', '<<x>script>boom', '<<<a>b>c>d']) {
@@ -35,12 +34,12 @@ test('splitVcards: korrekt, ohne Backtracking bei vielen BEGIN ohne END', () => 
   assert.equal(splitVcards(evil).length, 0);
   assert.ok(Date.now() - t0 < 1000, 'muss linear laufen');
 });
-test('Account-Fingerprint: ändert sich bei Passwortänderung, ist kein SHA-256 des Passworts', () => {
+test('Account-Fingerprint: ändert sich bei Passwort-, Host- oder Benutzeränderung', () => {
   const acc = pw => ({ imap: { host: 'h', port: 993, user: 'u', password: pw } });
   assert.equal(accountFingerprint(acc('a')), accountFingerprint(acc('a')));
   assert.notEqual(accountFingerprint(acc('a')), accountFingerprint(acc('b')));
-  const plain = createHash('sha256')
-    .update(JSON.stringify(['h', 993, 'u', 'a', '']))
-    .digest('hex');
-  assert.notEqual(accountFingerprint(acc('a')), plain);
+  assert.notEqual(
+    accountFingerprint(acc('a')),
+    accountFingerprint({ imap: { host: 'x', port: 993, user: 'u', password: 'a' } })
+  );
 });

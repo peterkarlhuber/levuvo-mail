@@ -2,7 +2,6 @@
 // The server pushes EXISTS/EXPUNGE/FETCH notifications; we then refresh a cached
 // inbox snapshot. UI and background notifications read that cache instead of
 // opening a new TLS login every few seconds.
-import { createHmac, randomBytes } from 'node:crypto';
 import { monitorInbox } from './mailbox.mjs';
 import { publicImapFailure } from './imap-diagnostics.mjs';
 
@@ -11,15 +10,14 @@ const FALLBACK_REFRESH_MS = 3 * 60 * 1000;
 const MIN_BACKOFF_MS = 2000;
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 
-const FINGERPRINT_KEY = randomBytes(32);
-
-/** Changes whenever host, user or password change, so the watcher reconnects. */
+/**
+ * Changes whenever host, user or password change, so the watcher reconnects.
+ * Reiner Vergleichswert im Arbeitsspeicher (wird weder gespeichert noch ausgegeben) – kein Hashing nötig;
+ * das Passwort liegt im selben Prozess ohnehin bereits im Konto-Objekt.
+ */
 export function accountFingerprint(account) {
   const { host, port, user, password, oauth } = account.imap;
-  // Nur Änderungs-Erkennung im Arbeitsspeicher (nie gespeichert): HMAC mit zufälligem Prozess-Schlüssel.
-  return createHmac('sha256', FINGERPRINT_KEY)
-    .update(JSON.stringify([host, port, user, password, oauth || '']))
-    .digest('hex');
+  return JSON.stringify([host, port, user, password, oauth || '']);
 }
 
 function createWatcher(account, { clientFactory, prepare, previewCache, onSnapshot, logger, timers }) {
