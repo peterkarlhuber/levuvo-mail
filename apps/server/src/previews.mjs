@@ -1,4 +1,5 @@
 import { createLru } from './memory-cache.mjs';
+import { replaceUntilStable } from './html-mail.mjs';
 
 // Short text previews for the message list.
 // Only the first few KiB of the first readable text part are fetched (BODY.PEEK,
@@ -85,8 +86,7 @@ function decodeCharset(buffer, charset) {
 
 const ENTITIES = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 function htmlToText(html) {
-  return html
-    .replace(/<(style|script|head|title)[^>]*>[\s\S]*?(<\/\1>|$)/gi, ' ')
+  return replaceUntilStable(html, /<(style|script|head|title)[^>]*>[\s\S]*?(<\/\1>|$)/gi, ' ')
     .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d|td|th|table|blockquote)>/gi, '\n')
     .replace(/<[^>]*>?/g, '')
     .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (match, code) => {

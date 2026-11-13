@@ -93,13 +93,25 @@ const decode = text =>
     return ENTITIES[code.toLowerCase()] ?? m;
   });
 
+/** Wendet eine Ersetzung wiederholt an, bis sich der Text nicht mehr ändert (verschachtelte Muster wie `<scr<script></script>ipt>`). */
+export function replaceUntilStable(input, pattern, replacement = '') {
+  let out = String(input ?? '');
+  for (let i = 0; i < 20; i++) {
+    const next = out.replace(pattern, replacement);
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+/** Entfernt alle Tags, auch verschachtelte Konstrukte. */
+export const stripTags = input => replaceUntilStable(input, /<[^>]*>/g, '');
+
 /** Readable plain text from (sanitized) HTML: paragraphs, lists, quotes and links survive. */
 export function htmlToText(html) {
-  let out = String(html || '')
-    .replace(/<(style|script|head|title)[^>]*>[\s\S]*?<\/\1>/gi, '')
+  let out = replaceUntilStable(html, /<(style|script|head|title)[^>]*>[\s\S]*?<\/\1>/gi, '')
     .replace(/<img[^>]*>/gi, '')
     .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href, text) => {
-      const label = text.replace(/<[^>]+>/g, '').trim();
+      const label = stripTags(text).trim();
       const target = decode(href);
       return !label || label === target || `mailto:${label}` === target ? target : `${label} \uE000${target}\uE001`;
     })
@@ -115,9 +127,8 @@ export function htmlToText(html) {
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<hr[^>]*>/gi, '\n----\n')
     .replace(/<\/(p|div|h\d|tr|ul|ol|table|pre)>/gi, '\n\n')
-    .replace(/<\/t[dh]>/gi, '\t')
-    .replace(/<[^>]+>/g, '');
-  out = decode(out)
+    .replace(/<\/t[dh]>/gi, '\t');
+  out = decode(stripTags(out))
     .replace(/\uE000/g, '<')
     .replace(/\uE001/g, '>')
     .replace(/[ \t]+\n/g, '\n')

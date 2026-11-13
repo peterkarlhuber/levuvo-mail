@@ -3,6 +3,8 @@
 // to the same shapes as CalDAV/CardDAV (see dav.mjs), so the user interface treats both alike.
 // Invitations to attendees are sent by the provider itself (Exchange / Google).
 
+import { stripTags } from './html-mail.mjs';
+
 export const CLOUD_PREFIX = 'cloud:';
 export const GRAPH_SCOPES = [
   'offline_access',
@@ -46,14 +48,13 @@ export const isCloud = value => String(value || '').startsWith(CLOUD_PREFIX);
 const rawId = value => String(value || '').slice(CLOUD_PREFIX.length);
 const ymd = d => d.toISOString().slice(0, 10);
 const addDays = (date, n) => ymd(new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000));
+// &amp; muss zuletzt dekodiert werden, sonst wird aus „&amp;lt;“ fälschlich „<“.
 const stripHtml = html =>
-  String(html || '')
-    .replace(/<(br|\/p|\/div|\/li)[^>]*>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+  stripTags(String(html || '').replace(/<(br|\/p|\/div|\/li)[^>]*>/gi, '\n'))
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 

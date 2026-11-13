@@ -144,3 +144,23 @@ export function buildVCard(contact, uid = randomUUID()) {
   lines.push(`REV:${new Date().toISOString().replace(/\.\d{3}/, '')}`, 'END:VCARD');
   return `${lines.map(fold).join('\r\n')}\r\n`;
 }
+
+/**
+ * Zerlegt eine .vcf-Datei in einzelne Karten in linearer Zeit (kein Backtracking).
+ * Ein BEGIN:VCARD ohne passendes END:VCARD wird ignoriert.
+ */
+export function splitVcards(text) {
+  const src = String(text || '');
+  const lower = src.toLowerCase();
+  const cards = [];
+  let pos = 0;
+  while (pos < lower.length) {
+    const start = lower.indexOf('begin:vcard', pos);
+    if (start < 0) break;
+    const end = lower.indexOf('end:vcard', start + 11);
+    if (end < 0) break;
+    cards.push(src.slice(start, end + 9));
+    pos = end + 9;
+  }
+  return cards;
+}

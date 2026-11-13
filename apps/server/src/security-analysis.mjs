@@ -2,6 +2,8 @@
 // Authentication-Results header added by the receiving mail server plus heuristics.
 // Result levels: ok < info < warning < danger.
 
+import { stripTags } from './html-mail.mjs';
+
 const LEVEL = { ok: 0, info: 1, warning: 2, danger: 3 };
 const DANGEROUS_EXT =
   /\.(exe|scr|com|pif|bat|cmd|vbs|vbe|js|jse|wsf|wsh|hta|msi|msix|ps1|psm1|jar|lnk|reg|iso|img|vhd|cpl|appx|dmg|pkg|app|sh)$/i;
@@ -48,10 +50,7 @@ export function findDeceptiveLinks(html) {
   while ((m = anchor.exec(html || '')) && checked < 500) {
     checked++;
     const href = m[1].trim();
-    const text = m[2]
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&')
-      .trim();
+    const text = stripTags(m[2]).replace(/&amp;/g, '&').trim();
     let target;
     try {
       target = new URL(href);

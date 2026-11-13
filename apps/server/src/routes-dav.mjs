@@ -13,7 +13,7 @@ import {
   parseItip,
   dueAlarms
 } from './calendar-model.mjs';
-import { validateContact, buildVCard } from './vcard.mjs';
+import { validateContact, buildVCard, splitVcards } from './vcard.mjs';
 import { loadParsedMessage } from './message-service.mjs';
 import { validFolder, validUid } from './message-utils.mjs';
 import { submitEmail, appendToSent } from './send-service.mjs';
@@ -568,7 +568,7 @@ export function registerDavRoutes(ctx) {
     'contacts-v1',
     async request => {
       const vcf = String(request.body?.vcf || '');
-      const cards = vcf.match(/BEGIN:VCARD[\s\S]*?END:VCARD/gi) || [];
+      const cards = splitVcards(vcf);
       if (!cards.length) throw fail('Die Datei enthält keine Kontakte (vCard).', 'contact_invalid');
       if (cards.length > 2000) throw fail('Höchstens 2000 Kontakte pro Import.', 'contact_invalid');
       let imported = 0;

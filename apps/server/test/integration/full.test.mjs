@@ -804,7 +804,7 @@ test(
     authUrl.searchParams.set('login_hint', env.LEVUVO_IT_USER);
     const redirect = await fetch(authUrl, { redirect: 'manual' });
     const callback = new URL(redirect.headers.get('location'));
-    const page = await call('GET', `${callback.pathname}${callback.search}`.replace(/^/, ''));
+    const page = await call('GET', `${callback.pathname}${callback.search}`);
     assert.match(String(page.body), /Anmeldung abgeschlossen/);
     const status = (await call('GET', `/api/oauth/status?state=${startRes.body.state}`)).body;
     assert.equal(status.status, 'done');

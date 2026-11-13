@@ -1,6 +1,6 @@
 // Text templates ("Textbausteine") with placeholders, stored in templates.json (app data).
 import { randomUUID } from 'node:crypto';
-import { sanitizeOutgoingHtml } from './html-mail.mjs';
+import { sanitizeOutgoingHtml, stripTags } from './html-mail.mjs';
 
 const MAX_TEMPLATES = 100;
 const MAX_HTML = 200 * 1024;
@@ -16,7 +16,7 @@ export function validateTemplate(input) {
   const html = String(input.html ?? '');
   if (html.length > MAX_HTML) throw fail('Die Vorlage ist zu groß.');
   const clean = sanitizeOutgoingHtml(html);
-  if (!clean.replace(/<[^>]*>/g, '').trim() && !/<img/i.test(clean)) throw fail('Die Vorlage ist leer.');
+  if (!stripTags(clean).trim() && !/<img/i.test(clean)) throw fail('Die Vorlage ist leer.');
   return { name, subject, html: clean };
 }
 
