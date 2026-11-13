@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createTemplateStore, validateTemplate } from '../src/templates.mjs';
 
-test('Vorlagen: bereinigt, geprüft, gespeichert und gelöscht', async () => {
+test('Templates: sanitized, validated, saved and deleted', async () => {
   assert.throws(() => validateTemplate({ name: '', html: '<p>x</p>' }), /Namen/);
   assert.throws(() => validateTemplate({ name: 'Leer', html: '<p> </p>' }), /leer/);
   assert.throws(() => validateTemplate({ name: 'X', subject: 'a\r\nBcc: x@y', html: '<p>x</p>' }), /Betreff/);

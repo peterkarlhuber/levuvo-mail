@@ -4,7 +4,7 @@ import { classifyExternalUrl, isPreviewFrameUrl } from '../../desktop/links.mjs'
 import { createReminderMonitor } from '../../desktop/reminders.mjs';
 import { createTranslator, DESKTOP_TEXTS } from '../../desktop/i18n.mjs';
 
-test('Desktop: Anmeldeseiten von Microsoft/Google öffnen ohne Rückfrage, sonst Bestätigung', () => {
+test('Desktop: Microsoft/Google sign-in pages open without asking, others need confirmation', () => {
   assert.equal(classifyExternalUrl('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?x=1').trusted, true);
   assert.equal(classifyExternalUrl('https://accounts.google.com/o/oauth2/v2/auth').trusted, true);
   assert.equal(classifyExternalUrl('http://accounts.google.com/').trusted, false);
@@ -19,7 +19,7 @@ test('Desktop: Anmeldeseiten von Microsoft/Google öffnen ohne Rückfrage, sonst
   assert.equal(classifyExternalUrl('javascript:alert(1)'), null);
 });
 
-test('Desktop: nur Anhangsvorschauen der eigenen Herkunft dürfen in Frames laden', () => {
+test('Desktop: only attachment previews of the own origin may load in frames', () => {
   const origin = 'http://127.0.0.1:41234';
   assert.equal(isPreviewFrameUrl(`${origin}/api/messages/12/attachments/0?folder=INBOX&inline=1`, origin), true);
   assert.equal(isPreviewFrameUrl(`${origin}/api/messages/12/attachments/0?folder=INBOX`, origin), false);
@@ -32,7 +32,7 @@ test('Desktop: nur Anhangsvorschauen der eigenen Herkunft dürfen in Frames lade
   assert.equal(isPreviewFrameUrl('chrome-extension://abcdefghijklmnopabcdefghijklmnop/index.html', origin), false);
 });
 
-test('Desktop: Terminerinnerung wird genau einmal gezeigt, auch bei überlappenden Abfragen', async () => {
+test('Desktop: event reminder is shown exactly once, even with overlapping polls', async () => {
   let now = Date.parse('2026-11-13T08:00:00Z');
   const shown = [];
   const alarm = {
@@ -56,7 +56,7 @@ test('Desktop: Terminerinnerung wird genau einmal gezeigt, auch bei überlappend
   assert.deepEqual(shown, ['Jour fixe']);
 });
 
-test('Desktop: Menü- und Dialogtexte auf Deutsch und Englisch vollständig', () => {
+test('Desktop: menu and dialog texts complete in German and English', () => {
   assert.deepEqual(Object.keys(DESKTOP_TEXTS.en).sort(), Object.keys(DESKTOP_TEXTS.de).sort());
   assert.equal(createTranslator('de-AT')('quit'), 'Beenden');
   assert.equal(createTranslator('en-US')('quit'), 'Quit');

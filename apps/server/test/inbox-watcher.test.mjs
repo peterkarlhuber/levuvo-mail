@@ -32,7 +32,7 @@ const account = (id, password = 'p') => ({
 });
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-test('Watcher hält eine lesende IDLE-Verbindung und aktualisiert bei EXISTS', async () => {
+test('Watcher keeps a read-only IDLE connection and refreshes on EXISTS', async () => {
   const state = { uids: [1, 2, 3], connects: 0, opened: [], clients: [] };
   const pool = createWatcherPool({ clientFactory: () => fakeImap(state) });
   pool.sync([account('a')]);
@@ -50,7 +50,7 @@ test('Watcher hält eine lesende IDLE-Verbindung und aktualisiert bei EXISTS', a
   pool.stopAll();
 });
 
-test('Geänderte Zugangsdaten erzeugen eine neue Verbindung, entfernte Konten werden beendet', async () => {
+test('Changed credentials create a new connection, removed accounts are stopped', async () => {
   const state = { uids: [1], connects: 0, opened: [], clients: [] };
   const pool = createWatcherPool({ clientFactory: () => fakeImap(state) });
   pool.sync([account('a'), account('b')]);
@@ -64,7 +64,7 @@ test('Geänderte Zugangsdaten erzeugen eine neue Verbindung, entfernte Konten we
   pool.stopAll();
 });
 
-test('Ohne Verbindung gibt es keinen (veralteten) Snapshot', async () => {
+test('Without a connection there is no (stale) snapshot', async () => {
   const state = { uids: [1], connects: 0, opened: [], clients: [], failConnect: true };
   const pool = createWatcherPool({ clientFactory: () => fakeImap(state) });
   pool.sync([account('a')]);

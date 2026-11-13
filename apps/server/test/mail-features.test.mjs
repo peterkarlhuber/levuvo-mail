@@ -14,7 +14,7 @@ import { newFolderPath, manageFolder, validFolderName } from '../src/folders.mjs
 import { validateSieveConfig, buildSieveScript, parseLevuvoScript } from '../src/sieve.mjs';
 import { createOAuthManager, emailFromIdToken, oauthConfigFrom } from '../src/oauth.mjs';
 
-test('Ausgehendes HTML: nur sichere Elemente, Bilder als data/cid, kein Skript', () => {
+test('Outgoing HTML: only safe elements, images as data/cid, no script', () => {
   const html = sanitizeOutgoingHtml(
     '<p style="color:red;position:fixed" onclick="x()">Hi <b>du</b><script>alert(1)</script><a href="javascript:alert(1)">x</a><a href="https://levuvo.at">L</a><img src="data:image/png;base64,AAAA"><img src="data:image/svg+xml;base64,AAAA"><iframe src="https://x"></iframe></p>'
   );
@@ -24,7 +24,7 @@ test('Ausgehendes HTML: nur sichere Elemente, Bilder als data/cid, kein Skript',
   assert.match(html, /data:image\/png/);
 });
 
-test('Textversion aus HTML: Absätze, Listen, Zitate und Links', () => {
+test('Text version from HTML: paragraphs, lists, quotes and links', () => {
   const text = htmlToText(
     '<p>Hallo <b>Max</b>,</p><ul><li>eins</li><li>zwei</li></ul><blockquote><p>Zitat</p></blockquote><p><a href="https://levuvo.at">Webseite</a> &amp; mehr</p>'
   );
@@ -34,7 +34,7 @@ test('Textversion aus HTML: Absätze, Listen, Zitate und Links', () => {
   assert.match(text, /Webseite <https:\/\/levuvo.at> & mehr/);
 });
 
-test('Nachrichtentext: HTML-Modus, Textmodus, leere Nachricht', () => {
+test('Message body: HTML mode, text mode, empty message', () => {
   assert.equal(readBody({ html: '<p>Hi</p>' }).text, 'Hi');
   assert.match(readBody({ html: '<p>Hi</p>' }).html, /<!doctype html>/);
   assert.equal(readBody({ text: 'Nur Text' }).html, null);
@@ -43,7 +43,7 @@ test('Nachrichtentext: HTML-Modus, Textmodus, leere Nachricht', () => {
   assert.equal(readBody({ text: '' }, { allowEmpty: true }).text, '');
 });
 
-test('Versanddaten: Absender-Alias und Verschlüsselungswahl werden geprüft', () => {
+test('Send data: sender alias and encryption choice are validated', () => {
   const base = {
     requestId: '11111111-1111-4111-8111-111111111111',
     confirm: 'SEND',
@@ -98,7 +98,7 @@ test('Phishing-Erkennung', () => {
   assert.deepEqual(findDeceptiveLinks('<a href="https://1.2.3.4/x">Bank</a>'), [{ shown: 'Bank', actual: '1.2.3.4' }]);
 });
 
-test('Später senden: Zeitpunkt, Kopfzeilen entfernen, genau einmal senden', async () => {
+test('Send later: time, strip headers, send exactly once', async () => {
   assert.throws(() => validateSendAt(new Date(Date.now() - 1000).toISOString()), /Zukunft/);
   assert.throws(() => validateSendAt('kein Datum'), /Ungültig/);
   const raw = Buffer.from(
@@ -168,7 +168,7 @@ test('Später senden: Zeitpunkt, Kopfzeilen entfernen, genau einmal senden', asy
   assert.equal(again.results.length, 0);
 });
 
-test('Ordner: Namen, Pfade unter INBOX, Schutz der Systemordner, nur leere löschen', async () => {
+test('Folders: names, paths under INBOX, protection of system folders, delete only empty ones', async () => {
   const folders = [
     { path: 'INBOX', delimiter: '.', flags: new Set() },
     { path: 'INBOX.Sent', specialUse: '\\Sent', delimiter: '.', flags: new Set() },
@@ -196,7 +196,7 @@ test('Ordner: Namen, Pfade unter INBOX, Schutz der Systemordner, nur leere lösc
   });
 });
 
-test('Filterregeln: Prüfung, Skript mit eingebettetem Modell', () => {
+test('Filter rules: validation, script with embedded model', () => {
   const config = validateSieveConfig(
     {
       rules: [
@@ -220,7 +220,7 @@ test('Filterregeln: Prüfung, Skript mit eingebettetem Modell', () => {
   const script = buildSieveScript(config, { trashFolder: 'INBOX.Trash' });
   assert.match(script, /require \["fileinto", "imap4flags", "vacation", "date", "relational"\];/);
   assert.match(script, /header :contains "subject" "Rechnung \\"2026\\""/);
-  assert.ok(script.indexOf('addflag') < script.indexOf('fileinto "'), 'Markierung vor dem Verschieben');
+  assert.ok(script.indexOf('addflag') < script.indexOf('fileinto "'), 'flag before moving');
   assert.match(script, /currentdate :value "ge" "date" "2026-12-20"/);
   assert.deepEqual(parseLevuvoScript(script), config);
   assert.throws(
@@ -241,7 +241,7 @@ test('Filterregeln: Prüfung, Skript mit eingebettetem Modell', () => {
   assert.throws(() => validateSieveConfig({ rules: [], vacation: { enabled: true, body: '' } }), /Text/);
 });
 
-test('OAuth: PKCE-Start, einmalige Rückmeldung, Token-Erneuerung mit Rotation', async () => {
+test('OAuth: PKCE start, one-time callback, token refresh with rotation', async () => {
   const requests = [];
   const fetchImpl = async (url, init) => {
     const body = Object.fromEntries(new URLSearchParams(String(init.body)));
@@ -292,7 +292,7 @@ test('OAuth: PKCE-Start, einmalige Rückmeldung, Token-Erneuerung mit Rotation',
   );
 });
 
-test('Anhänge erhalten den passenden Inhaltstyp (Vorschau beim Empfänger)', async () => {
+test('Attachments get the matching content type (preview at the recipient)', async () => {
   const { attachmentType } = await import('../src/send-utils.mjs');
   assert.equal(attachmentType('Rechnung.PDF'), 'application/pdf');
   assert.equal(attachmentType('foto.jpeg'), 'image/jpeg');

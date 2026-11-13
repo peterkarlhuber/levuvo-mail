@@ -18,7 +18,7 @@ const draft = {
   previousUid: null,
   uidValidity: null
 };
-test('Entwürfe speichern MIME-Anhänge mit identischen Bytes', { skip }, async () => {
+test('Drafts store MIME attachments with identical bytes', { skip }, async () => {
   const content = Buffer.from([0, 1, 2, 0, 250, 255]);
   const item = { name: 'prüfung.txt', contentBase64: content.toString('base64') };
   const data = draftLib.validateDraft({ ...draft, attachments: [item] });
@@ -27,7 +27,7 @@ test('Entwürfe speichern MIME-Anhänge mit identischen Bytes', { skip }, async 
   assert.equal(parsed.attachments.length, 1);
   assert.deepEqual(Buffer.from(parsed.attachments[0].content), content);
 });
-test('Ungültiges Base64 und übergroße Anhänge werden blockiert', { skip }, () => {
+test('Invalid Base64 and oversized attachments are blocked', { skip }, () => {
   assert.throws(() => draftLib.validateDraft({ ...draft, attachments: [{ name: 'x', contentBase64: '!!!=' }] }));
   assert.throws(() =>
     draftLib.validateDraft({

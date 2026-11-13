@@ -14,7 +14,7 @@ const basic = {
   attachments: []
 };
 
-test('SMTP-Standard ist verschlüsselte Hetzner-Verbindung auf 587 und Versand bleibt aus', () => {
+test('SMTP default is an encrypted Hetzner connection on 587 and sending stays off', () => {
   const c = smtpConfig({ IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'secret' });
   assert.equal(c.host, 'mail.your-server.de');
   assert.equal(c.port, 587);
@@ -22,7 +22,7 @@ test('SMTP-Standard ist verschlüsselte Hetzner-Verbindung auf 587 und Versand b
   assert.equal(c.enabled, false);
 });
 
-test('Aktivierung benötigt explizit ENABLE_SEND=true', () => {
+test('Enabling requires explicit ENABLE_SEND=true', () => {
   assert.equal(smtpConfig({ IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'x', ENABLE_SEND: 'TRUE' }).enabled, false);
   assert.equal(smtpConfig({ IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'x', ENABLE_SEND: 'true' }).enabled, true);
   assert.equal(
@@ -31,18 +31,18 @@ test('Aktivierung benötigt explizit ENABLE_SEND=true', () => {
   );
 });
 
-test('E-Mail-Validierung blockiert Injektion und ungültige Adressen', () => {
+test('Email validation blocks injection and invalid addresses', () => {
   assert.equal(isEmail('kunde@example.org'), true);
   for (const bad of ['a@example.org\r\nBcc:evil@example.org', 'hello', 'a@localhost', 'a@@example.org'])
     assert.equal(isEmail(bad), false);
 });
 
-test('Nachricht benötigt ausdrückliche Versandfreigabe', () => {
+test('Message requires explicit send confirmation', () => {
   assert.throws(() => validateSendPayload({ ...basic, confirm: 'NO' }), /bestätigt/);
   assert.throws(() => validateSendPayload({ ...basic, confirm: undefined }), /bestätigt/);
 });
 
-test('Gültige Nachricht erhält sichere Felder und Puffern für Attachments', () => {
+test('Valid message gets safe fields and buffers for attachments', () => {
   const parsed = validateSendPayload({
     ...basic,
     cc: ['team@example.org'],
@@ -55,19 +55,19 @@ test('Gültige Nachricht erhält sichere Felder und Puffern für Attachments', (
   assert.deepEqual(parsed.attachments[0].content, Buffer.from('test'));
 });
 
-test('Bcc, CC und An müssen Arrays aus reinen Adressen sein', () => {
+test('Bcc, CC and To must be arrays of plain addresses', () => {
   assert.throws(() => validateSendPayload({ ...basic, cc: 'hacker@example.org' }), /CC/);
   assert.throws(() => validateSendPayload({ ...basic, to: [] }), /Empfänger/);
   assert.throws(() => validateSendPayload({ ...basic, bcc: ['a@example.org\r\nX-Injection: yes'] }), /BCC/);
 });
 
-test('Grenzen für Nachrichtentext und Betreff', () => {
+test('Limits for message body and subject', () => {
   assert.throws(() => validateSendPayload({ ...basic, subject: 'a\r\nBcc: x' }), /Betreff/);
   assert.throws(() => validateSendPayload({ ...basic, text: ' '.repeat(5) }), /Nachrichtentext/);
   assert.throws(() => validateSendPayload({ ...basic, text: 'x'.repeat(100001) }), /Nachrichtentext/);
 });
 
-test('Unzulässiges Base64 und große Anhänge werden blockiert', () => {
+test('Invalid Base64 and large attachments are blocked', () => {
   assert.throws(
     () => validateSendPayload({ ...basic, attachments: [{ name: 'evil', contentBase64: 'not-valid==!' }] }),
     /Anhang/
@@ -90,7 +90,7 @@ test('Unzulässiges Base64 und große Anhänge werden blockiert', () => {
   );
 });
 
-test('Antwortreferenz darf keine neuen Header injizieren', () => {
+test('Reply reference must not inject new headers', () => {
   assert.equal(validateSendPayload({ ...basic, inReplyTo: '<id@example.org>' }).inReplyTo, '<id@example.org>');
   assert.throws(
     () => validateSendPayload({ ...basic, inReplyTo: '<id@example.org>\r\nBcc: a@example.org' }),
@@ -98,13 +98,13 @@ test('Antwortreferenz darf keine neuen Header injizieren', () => {
   );
 });
 
-test('Sent-Ordner wird per Special-Use oder bekannten Namen gefunden', () => {
+test('Sent folder is found via special-use or known names', () => {
   assert.equal(findSentFolder([{ path: 'INBOX' }, { path: 'INBOX.Sent', specialUse: '\\Sent' }]).path, 'INBOX.Sent');
   assert.equal(findSentFolder([{ path: 'Gesendet' }]).path, 'Gesendet');
   assert.equal(findSentFolder([{ path: 'INBOX' }]), null);
 });
 
-test('Expliziter SENT_FOLDER wird nicht still auf anderen Ordner umgebogen', () => {
+test('Explicit SENT_FOLDER is not silently redirected to another folder', () => {
   const folders = [{ path: 'Sent', specialUse: '\\Sent' }, { path: 'Gesendet' }];
   assert.equal(findSentFolder(folders, 'Gesendet')?.path, 'Gesendet');
   assert.equal(findSentFolder(folders, 'INBOX.Sent'), null);

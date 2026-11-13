@@ -9,17 +9,17 @@ import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
-test('Englische Oberfläche: jeder Text hat eine Übersetzung mit denselben Platzhaltern', () => {
+test('English UI: every text has a translation with the same placeholders', () => {
   assert.deepEqual(missingTranslations(root), []);
   const en = loadDictionary(root);
   for (const [de, english] of Object.entries(en)) {
     const vars = s => (s.match(/\{\w+\}/g) || []).sort().join();
     assert.equal(vars(english), vars(de), `Platzhalter: ${de}`);
-    assert.ok(english.trim(), `leer: ${de}`);
+    assert.ok(english.trim(), `empty: ${de}`);
   }
 });
 
-test('Kalender: ganztägige Termine (exklusives Ende), Wochenbeginn Montag', () => {
+test('Calendar: all-day events (exclusive end), week starts on Monday', () => {
   const r = eventRange({ start: '2026-11-13', end: '2026-11-15', allDay: true });
   assert.equal(ymd(r.start), '2026-11-13');
   assert.equal(ymd(r.end), '2026-11-15');
@@ -30,7 +30,7 @@ test('Kalender: ganztägige Termine (exklusives Ende), Wochenbeginn Montag', () 
   assert.equal(ymd(addDays(parseYmd('2026-03-28'), 2)), '2026-03-30'); // across DST
 });
 
-test('Kalender: überlappende Termine werden nebeneinander angeordnet', () => {
+test('Calendar: overlapping events are arranged side by side', () => {
   const at = (h, m = 0) => new Date(2026, 10, 13, h, m);
   const layout = layoutDay([
     { start: at(9), end: at(10) },
@@ -48,7 +48,7 @@ test('Kalender: überlappende Termine werden nebeneinander angeordnet', () => {
   assert.equal(layout[3].col, 0);
 });
 
-test('Ordner: Systemordner zuerst, Unterordner eingerückt', () => {
+test('Folders: system folders first, subfolders indented', () => {
   const f = (path, specialUse = null) => ({ path, name: path.split('.').at(-1), specialUse, delimiter: '.' });
   const ordered = orderFolders([
     f('Projekte.Alpha'),
@@ -71,7 +71,7 @@ test('Ordner: Systemordner zuerst, Unterordner eingerückt', () => {
   );
 });
 
-test('Vorlagen: Platzhalter werden ersetzt, unbekannte bleiben sichtbar, HTML wird maskiert', async () => {
+test('Templates: placeholders are replaced, unknown ones stay visible, HTML is escaped', async () => {
   const { fillTemplate, nameParts } = await import('../src/templates.ts');
   const vars = { ...nameParts('Anna Berger'), sender: 'Peter <Chef>', date: '13. November 2026' };
   assert.equal(
@@ -82,7 +82,7 @@ test('Vorlagen: Platzhalter werden ersetzt, unbekannte bleiben sichtbar, HTML wi
   assert.deepEqual(nameParts('anna@x.at'), {});
 });
 
-test('Kalender: Verschieben per Drag & Drop behält Dauer, Monatsübersicht beginnt am Montag', async () => {
+test('Calendar: drag & drop keeps the duration, month view starts on Monday', async () => {
   const { movedEventModel, monthMatrix, snapMinutes } = await import('../src/calendar-utils.ts');
   const timed = {
     start: new Date(2026, 10, 16, 9, 0).toISOString(),
@@ -107,7 +107,7 @@ test('Kalender: Verschieben per Drag & Drop behält Dauer, Monatsübersicht begi
   assert.ok(grid.some(d => d.getDate() === 30 && d.getMonth() === 10));
 });
 
-test('Befehlspalette: Treffer unabhängig von Umlauten, Wortanfänge zuerst', async () => {
+test('Command palette: matches regardless of umlauts, word starts first', async () => {
   const { matchScore, normalize } = await import('../src/command-bus.ts');
   assert.equal(normalize('Entwürfe'), 'entwurfe');
   assert.ok(matchScore('entw', 'Entwürfe') > matchScore('entw', 'Neue Entwürfe-Vorlage'));

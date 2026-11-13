@@ -52,7 +52,7 @@ async function setup(override = {}) {
   return { manager, filename, vault };
 }
 
-test('Neue UI-Konten speichern nur Metadaten, nie IMAP- oder SMTP-Passwörter im JSON', async () => {
+test('New UI accounts store only metadata, never IMAP or SMTP passwords in the JSON', async () => {
   const { manager, filename, vault } = await setup();
   const item = await manager.create(extra);
   assert.match(item.id, /^managed-[a-f0-9]{12}$/);
@@ -65,7 +65,7 @@ test('Neue UI-Konten speichern nur Metadaten, nie IMAP- oder SMTP-Passwörter im
   assert.equal(manager.all().length, 3);
 });
 
-test('Import eines bestehenden .env-Kontos ist rückwärtskompatibel und funktioniert auch ohne .env-Passwörter', async () => {
+test('Import of an existing .env account is backward compatible and also works without .env passwords', async () => {
   const { manager, filename, vault } = await setup();
   const adopted = await manager.adopt('account2');
   assert.equal(adopted.id, 'account2');
@@ -86,7 +86,7 @@ test('Import eines bestehenden .env-Kontos ist rückwärtskompatibel und funktio
   assert.equal(newManager.all().find(a => a.id === 'account2').imap.password, 'office-secret');
 });
 
-test('Primärpostfach kann über den Schlüsselbund weitergeführt werden, auch wenn .env leer ist', async () => {
+test('Primary mailbox can be continued via the keychain even if .env is empty', async () => {
   const { manager, filename, vault } = await setup();
   await manager.adopt('primary');
   const after = await createAccountManager({ filename, vault, env: {} });
@@ -94,7 +94,7 @@ test('Primärpostfach kann über den Schlüsselbund weitergeführt werden, auch 
   assert.equal(after.all().find(a => a.id === 'primary').smtp.password, 'legacy-secret');
 });
 
-test('Neue Konten sind von Alt-Konten isoliert; Duplikate und mehr als fünf Konten blockiert', async () => {
+test('New accounts are isolated from legacy accounts; duplicates and more than five accounts are blocked', async () => {
   const { manager } = await setup();
   await assert.rejects(() => manager.create({ ...extra, user: 'peter@levuvo.at' }), /bereits/);
   await manager.create(extra);
@@ -104,7 +104,7 @@ test('Neue Konten sind von Alt-Konten isoliert; Duplikate und mehr als fünf Kon
   await assert.rejects(() => manager.create({ ...extra, user: 'c@levuvo.at' }), /fünf/);
 });
 
-test('Änderung ohne Passwort ersetzt das Secret nicht; Entfernen berührt kein Remote-Postfach', async () => {
+test('Update without password does not replace the secret; removing does not touch the remote mailbox', async () => {
   const { manager, vault } = await setup();
   const account = await manager.create(extra);
   await manager.update(account.id, { label: 'Support NEU', signature: 'Danke', password: '', smtpPassword: '' });
@@ -115,7 +115,7 @@ test('Änderung ohne Passwort ersetzt das Secret nicht; Entfernen berührt kein 
   assert.equal(manager.all().length, 2);
 });
 
-test('Ohne Betriebssystem-Schlüsselbund gibt es keinen Klartext-Fallback', async () => {
+test('Without an OS keychain there is no plain-text fallback', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'levuvo-no-vault-'));
   const manager = await createAccountManager({
     env,
@@ -126,7 +126,7 @@ test('Ohne Betriebssystem-Schlüsselbund gibt es keinen Klartext-Fallback', asyn
   await assert.rejects(() => manager.adopt('primary'), /nicht verfügbar/);
 });
 
-test('Gemeinsam verwendetes IMAP/SMTP-Passwort wird synchron aktualisiert', async () => {
+test('Shared IMAP/SMTP password is updated in sync', async () => {
   const { manager, vault } = await setup();
   const a = await manager.create(extra);
   await manager.update(a.id, { password: 'rotated', smtpPassword: '' });
@@ -134,14 +134,14 @@ test('Gemeinsam verwendetes IMAP/SMTP-Passwort wird synchron aktualisiert', asyn
   assert.equal(vault.get(a.id, 'smtp'), 'rotated');
 });
 
-test('Eingaben verhindern falsche Ports, Header-Zeilenumbrüche und ungültige Postfachadressen', () => {
+test('Inputs prevent wrong ports, header line breaks and invalid mailbox addresses', () => {
   assert.throws(() => normalizeAccount({ ...extra, imapPort: 143 }), /Port/);
   assert.throws(() => normalizeAccount({ ...extra, user: 'bad address' }), /E-Mail/);
   assert.throws(() => normalizeAccount({ ...extra, imapHost: 'bad\rhost' }), /Textwert/);
   assert.throws(() => normalizeAccount({ ...extra, sentFolder: 'INBOX\nSent' }), /Textwert|Ordnerpfad/);
 });
 
-test('Passwort-Update ist atomar zur Metadaten-Datei; Fehler rollt geänderte Secrets zurück', async () => {
+test('Password update is atomic with the metadata file; an error rolls back changed secrets', async () => {
   const { manager, vault } = await setup();
   const account = await manager.create(extra);
   // Force an invalid location for persistence by renaming not possible with manager; instead
@@ -157,7 +157,7 @@ test('Passwort-Update ist atomar zur Metadaten-Datei; Fehler rollt geänderte Se
   assert.equal(manager.all().find(a => a.id === account.id).label, 'Support');
 });
 
-test('Speicherpfad verwendet das OS-Benutzerprofil und keine ZIP-Projektdatei', () => {
+test('Storage path uses the OS user profile and not a ZIP project file', () => {
   assert.match(
     settingsPath({}, '/Users/test', 'darwin').replaceAll('\\', '/'),
     /Library\/Application Support\/Levuvo Mail\/accounts.json$/

@@ -13,7 +13,7 @@ const config = {
 const imapOk = () => ({ connect: async () => {}, logout: async () => {}, close() {} });
 const smtpOk = () => ({ verify: async () => true, close() {} });
 
-test('Login-Prüfung meldet IMAP- und SMTP-Fehler getrennt', async () => {
+test('Login check reports IMAP and SMTP errors separately', async () => {
   assert.deepEqual(await verifyAccountConfig(config, { imapFactory: imapOk, smtpFactory: smtpOk }), { ok: true });
   await assert.rejects(
     verifyAccountConfig(config, {
@@ -62,7 +62,7 @@ const input = {
   smtpHost: 'mail.example.org'
 };
 
-test('Konto wird erst nach erfolgreicher Prüfung gespeichert', async () => {
+test('Account is saved only after a successful check', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-verify-'));
   try {
     const v = vault();
@@ -77,12 +77,12 @@ test('Konto wird erst nach erfolgreicher Prüfung gespeichert', async () => {
       }
     });
     await assert.rejects(manager.create(input), /falsch/);
-    assert.equal(v.m.size, 0, 'nichts im Schlüsselbund');
+    assert.equal(v.m.size, 0, 'nothing in the keychain');
     assert.equal(manager.all().length, 0);
     await assert.rejects(
       manager.create({ ...input, allowUnverified: true }),
       /falsch/,
-      'Passwortfehler lassen sich nicht übergehen'
+      'password errors cannot be skipped'
     );
     assert.equal(calls, 2);
   } finally {
@@ -90,7 +90,7 @@ test('Konto wird erst nach erfolgreicher Prüfung gespeichert', async () => {
   }
 });
 
-test('Netzwerkfehler dürfen ausdrücklich übergangen werden; Passwort bleibt aus der Datei', async () => {
+test('Network errors may be explicitly skipped; password stays out of the file', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-verify-'));
   try {
     const manager = await createAccountManager({
@@ -110,7 +110,7 @@ test('Netzwerkfehler dürfen ausdrücklich übergangen werden; Passwort bleibt a
   }
 });
 
-test('Änderung nur der Signatur löst keine erneute Prüfung aus', async () => {
+test('Changing only the signature does not trigger a new check', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-verify-'));
   try {
     let calls = 0;
@@ -128,7 +128,7 @@ test('Änderung nur der Signatur löst keine erneute Prüfung aus', async () => 
     await manager.update(created.id, { password: 'neu' });
     assert.equal(calls, 2);
     await manager.verifyInput({ id: created.id, ...input, password: '' });
-    assert.equal(calls, 3, 'Test mit gespeichertem Passwort');
+    assert.equal(calls, 3, 'test with stored password');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

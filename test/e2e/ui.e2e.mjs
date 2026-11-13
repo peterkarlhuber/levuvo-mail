@@ -42,8 +42,8 @@ function memoryVault() {
 }
 
 test(
-  'Oberfläche Ende-zu-Ende (Browser, echte Server)',
-  { skip: (!enabled && 'LEVUVO_IT_* nicht gesetzt') || (!playwright && 'Playwright fehlt'), timeout: 600_000 },
+  'UI end-to-end (browser, real servers)',
+  { skip: (!enabled && 'LEVUVO_IT_* not set') || (!playwright && 'Playwright missing'), timeout: 600_000 },
   async t => {
     mkdirSync(shots, { recursive: true });
     const dir = mkdtempSync(join(tmpdir(), 'lv-e2e-'));
@@ -209,7 +209,7 @@ test(
     await page.locator('.rail').waitFor();
     await page.locator('.message-title-row h1', { hasText: 'Posteingang' }).waitFor();
 
-    await step('Verfassen mit Formatierung, Rückgängig, Senden, Empfang mit HTML', async () => {
+    await step('Compose with formatting, undo, send, receive with HTML', async () => {
       await page.getByRole('button', { name: 'Neue Nachricht' }).click();
       await page.locator('.compose-panel').getByLabel('An', { exact: true }).fill(env.LEVUVO_IT_USER2);
       await page.locator('.compose-row', { hasText: 'Betreff' }).locator('input').fill(`UI-Test ${stamp}`);
@@ -235,7 +235,7 @@ test(
       await shot('02-reader');
     });
 
-    await step('Antworten zitiert die Nachricht und nutzt die Signatur', async () => {
+    await step('Reply quotes the message and uses the signature', async () => {
       await call(
         'POST',
         '/api/accounts/update',
@@ -256,7 +256,7 @@ test(
       await closeComposer();
     });
 
-    await step('Markieren, Filter, Ordner anlegen und per Drag & Drop verschieben', async () => {
+    await step('Flag, filter, create a folder and move via drag & drop', async () => {
       await openMessage(`UI-Test ${stamp}`);
       await page.locator('.reader-secondary-actions').getByRole('button', { name: 'Markieren', exact: true }).click();
       await page.locator('.filter-chips button', { hasText: 'Markiert' }).click();
@@ -277,7 +277,7 @@ test(
       await shot('03-folder');
     });
 
-    await step('Phishing-Warnung und Anhangsvorschau', async () => {
+    await step('Phishing warning and attachment preview', async () => {
       const sent = await sendAs(peter.id, {
         to: [env.LEVUVO_IT_USER2],
         subject: `Konto gesperrt ${stamp}`,
@@ -304,7 +304,7 @@ test(
       await page.keyboard.press('Escape');
     });
 
-    await step('Später senden legt die Nachricht geplant in den Entwürfen ab', async () => {
+    await step('Send later stores the message as scheduled in Drafts', async () => {
       await page.getByRole('button', { name: 'Neue Nachricht' }).click();
       await page.locator('.compose-panel').getByLabel('An', { exact: true }).fill(env.LEVUVO_IT_USER);
       await page.locator('.compose-row', { hasText: 'Betreff' }).locator('input').fill(`Geplant ${stamp}`);
@@ -320,7 +320,7 @@ test(
       await page.locator('.reader-security.scheduled').waitFor();
     });
 
-    await step('Kalender: Termin mit Einladung, Antwort aus der E-Mail', async () => {
+    await step('Calendar: event with invitation, reply from the email', async () => {
       await switchAccount(peter.id);
       await page.getByRole('button', { name: 'Kalender' }).first().click();
       await page.locator('.calendar-toolbar').waitFor();
@@ -381,7 +381,7 @@ test(
       await closeComposer();
     });
 
-    await step('OpenPGP: Schlüssel erzeugen, verschlüsselt an sich selbst senden und lesen', async () => {
+    await step('OpenPGP: generate a key, send encrypted to yourself and read', async () => {
       await page.getByRole('button', { name: 'Einstellungen' }).last().click();
       await page.locator('.settings-nav button', { hasText: 'Sicherheit' }).click();
       await page.getByRole('button', { name: 'Schlüssel erzeugen' }).click();
@@ -416,7 +416,7 @@ test(
       await page.locator('.compose-panel').getByLabel('Ende-zu-Ende-Schutz').selectOption('pgp');
       await page.locator('.security-options label', { hasText: 'Verschlüsseln' }).locator('input').check();
       await page.waitForTimeout(800);
-      assert.equal(await page.locator('.compose-warning').count(), 0, 'kein fehlender Schlüssel');
+      assert.equal(await page.locator('.compose-warning').count(), 0, 'no missing key');
       await page.locator('.compose-controls .btn.primary', { hasText: 'Senden' }).click();
       await toast('Nachricht gesendet').waitFor({ timeout: 30_000 });
       await openMessage(`Vertraulich ${stamp}`);
@@ -430,7 +430,7 @@ test(
       await shot('08-pgp');
     });
 
-    await step('Filter & Abwesenheit werden auf dem Server gespeichert', async () => {
+    await step('Filters & vacation reply are saved on the server', async () => {
       await page.getByRole('button', { name: 'Einstellungen' }).last().click();
       await page.locator('.settings-nav button', { hasText: 'Filter & Abwesenheit' }).click();
       await page
@@ -454,7 +454,7 @@ test(
       await shot('09-filters');
     });
 
-    await step('2.1: Konversation, Schnellaktion mit Rückgängig, Zurückstellen', async () => {
+    await step('2.1: Conversation, quick action with undo, snooze', async () => {
       await sendAs(anna.id, { to: [env.LEVUVO_IT_USER], subject: `Faden UI ${stamp}`, text: 'Erste Frage?' });
       let first = null;
       for (let i = 0; i < 30 && !first; i++) {
@@ -465,7 +465,7 @@ test(
         first = r.body.messages?.find(m => m.subject === `Faden UI ${stamp}`);
         if (!first) await new Promise(r => setTimeout(r, 500));
       }
-      assert.ok(first?.messageId, 'erste Nachricht angekommen');
+      assert.ok(first?.messageId, 'first message arrived');
       await sendAs(peter.id, {
         to: [env.LEVUVO_IT_USER2],
         subject: `Re: Faden UI ${stamp}`,
@@ -524,7 +524,7 @@ test(
         .waitFor();
     });
 
-    await step('2.1: Nachfassen, Vorlagen und Befehlspalette', async () => {
+    await step('2.1: Follow-up, templates and command palette', async () => {
       await page.getByRole('button', { name: 'Neue Nachricht' }).click();
       await page.locator('.compose-panel').getByLabel('An', { exact: true }).fill('niemand@levuvo.test');
       await page.locator('.compose-row', { hasText: 'Betreff' }).locator('input').fill(`Angebot ${stamp}`);
@@ -613,10 +613,10 @@ test(
         mail = r.body.messages?.find(m => m.subject === `unsubscribe-${stamp}`);
         if (!mail) await new Promise(r => setTimeout(r, 500));
       }
-      assert.ok(mail, 'Abmelde-E-Mail beim Absender angekommen');
+      assert.ok(mail, 'unsubscribe email arrived at the sender');
     });
 
-    await step('2.1.1: Kalender auf diesem Gerät, Termin per Drag & Drop verschieben', async () => {
+    await step('2.1.1: Calendar on this device, move an event via drag & drop', async () => {
       await page.getByRole('button', { name: 'Kalender' }).first().click();
       await page.locator('.calendar-toolbar').waitFor();
       await page.locator('.calendar-toolbar').getByRole('radio', { name: 'Woche' }).click();
@@ -626,7 +626,7 @@ test(
       const select = page.locator('.event-editor select').first();
       const options = await select.locator('option').allInnerTexts();
       const localIndex = options.findIndex(o => o.includes('Auf diesem Gerät'));
-      assert.ok(localIndex >= 0, `Gerätekalender wählbar: ${options.join(' | ')}`);
+      assert.ok(localIndex >= 0, `device calendar selectable: ${options.join(' | ')}`);
       await select.selectOption({ index: localIndex });
       await page.locator('.event-editor button[type=submit]').click();
       await toast('Termin gespeichert').waitFor();
@@ -660,7 +660,7 @@ test(
       await call('POST', '/api/calendar/events/delete', { accountId: 'local', url: events[0].url }, 'calendar-v1');
     });
 
-    await step('2.2: Mit Passwort geschützte Nachricht – senden, in der App und im Browser öffnen', async () => {
+    await step('2.2: Password-protected message – send, open in the app and in the browser', async () => {
       await page.getByRole('button', { name: 'E-Mail' }).first().click();
       await switchAccount(peter.id);
       await page.getByRole('button', { name: 'Neue Nachricht' }).click();
@@ -720,7 +720,7 @@ test(
       await viewer.close();
     });
 
-    await step('Suche „Überall“ über den lokalen Index', async () => {
+    await step('Search "Everywhere" via the local index', async () => {
       await server.ctx.runIndexer(true);
       await page.getByRole('button', { name: 'E-Mail' }).first().click();
       await page.locator('.scope-toggle').click();
@@ -733,7 +733,7 @@ test(
       await page.getByLabel('Suche löschen').click();
     });
 
-    await step('Englisch und helles Design', async () => {
+    await step('English and light theme', async () => {
       await page.getByRole('button', { name: 'Einstellungen' }).last().click();
       await page.locator('.settings-nav button', { hasText: 'Allgemein' }).click();
       await page.getByRole('radio', { name: 'English' }).click();
@@ -753,6 +753,6 @@ test(
     });
 
     writeFileSync(join(shots, 'errors.json'), JSON.stringify(errors, null, 2));
-    assert.deepEqual(errors, [], 'keine JavaScript-Fehler in der Oberfläche');
+    assert.deepEqual(errors, [], 'no JavaScript errors in the UI');
   }
 );

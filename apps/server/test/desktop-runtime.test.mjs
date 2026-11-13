@@ -4,14 +4,14 @@ import path from 'node:path';
 import { validDesktopCookie, safeStaticFile, contentTypeForAsset, DESKTOP_COOKIE } from '../src/desktop-runtime.mjs';
 const secret = 'abcd1234'.repeat(8);
 
-test('Desktop-API verlangt exakten Sitzungsschlüssel', () => {
+test('Desktop API requires the exact session key', () => {
   assert.equal(validDesktopCookie(`${DESKTOP_COOKIE}=${secret}`, secret), true);
   assert.equal(validDesktopCookie(`foo=x; ${DESKTOP_COOKIE}=${secret}; bar=y`, secret), true);
   assert.equal(validDesktopCookie(`${DESKTOP_COOKIE}=${'e'.repeat(64)}`, secret), false);
   assert.equal(validDesktopCookie(`${DESKTOP_COOKIE}=${secret}; ${DESKTOP_COOKIE}=${secret}`, secret), false);
   assert.equal(validDesktopCookie('', secret), false);
 });
-test('Statische Dateien nur in erlaubten Verzeichnissen und Typen', () => {
+test('Static files only from allowed directories and types', () => {
   const root = path.resolve('/tmp/levuvo-desktop/dist');
   assert.equal(safeStaticFile(root, '/assets/index-abc123.js'), path.join(root, 'assets/index-abc123.js'));
   assert.equal(safeStaticFile(root, '/favicon.png'), path.join(root, 'favicon.png'));
@@ -29,7 +29,7 @@ test('Statische Dateien nur in erlaubten Verzeichnissen und Typen', () => {
     assert.equal(safeStaticFile(root, bad), null, bad);
   }
 });
-test('MIME Types für Frontend-Bundle', () => {
+test('MIME types for the frontend bundle', () => {
   assert.match(contentTypeForAsset('index.js'), /javascript/);
   assert.match(contentTypeForAsset('index.css'), /css/);
 });

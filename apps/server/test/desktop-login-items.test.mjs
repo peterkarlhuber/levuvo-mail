@@ -25,14 +25,14 @@ function fakeApp(_platform = 'darwin') {
     }
   };
 }
-test('Autostart nur für installierte Desktop-App verfügbar', () => {
+test('Autostart available only for the installed desktop app', () => {
   const a = fakeApp();
   a.isPackaged = false;
   assert.equal(getLoginItemState(a, 'darwin').available, false);
   assert.equal(changeLoginItemState(a, true, 'darwin').ok, false);
   assert.equal(a.calls.length, 0);
 });
-test('macOS: Opt-in Autostart setzt LoginItem, bewahrt Ausgangsstatus', () => {
+test('macOS: opt-in autostart sets LoginItem, preserves initial state', () => {
   const a = fakeApp();
   assert.equal(getLoginItemState(a, 'darwin').enabled, false);
   assert.equal(changeLoginItemState(a, true, 'darwin').ok, true);
@@ -40,7 +40,7 @@ test('macOS: Opt-in Autostart setzt LoginItem, bewahrt Ausgangsstatus', () => {
   assert.equal(changeLoginItemState(a, false, 'darwin').ok, true);
   assert.equal(getLoginItemState(a, 'darwin').enabled, false);
 });
-test('Windows: --hidden wird beim Autostart und Abfragen identisch benutzt', () => {
+test('Windows: --hidden is used identically for autostart and queries', () => {
   const a = fakeApp();
   assert.equal(changeLoginItemState(a, true, 'win32', 'C:/Levuvo Mail.exe').ok, true);
   assert.deepEqual(a.calls.find(([name]) => name === 'set')[1], {
@@ -52,7 +52,7 @@ test('Windows: --hidden wird beim Autostart und Abfragen identisch benutzt', () 
     a.calls.some(([name, opts]) => name === 'get' && opts.path === 'C:/Levuvo Mail.exe' && opts.args[0] === '--hidden')
   );
 });
-test('Versteckter Login-Start, aber normaler Start zeigt das Fenster', () => {
+test('Hidden login start, but a normal start shows the window', () => {
   const a = fakeApp();
   assert.equal(isHiddenLoginLaunch(a, [], 'darwin'), false);
   a.launched();
@@ -60,7 +60,7 @@ test('Versteckter Login-Start, aber normaler Start zeigt das Fenster', () => {
   assert.equal(isHiddenLoginLaunch(a, ['app', '--hidden'], 'win32'), true);
   assert.equal(isHiddenLoginLaunch(a, ['app'], 'win32'), false);
 });
-test('API-Fehler deaktiviert den Autostart ohne Ausnahme', () => {
+test('API error disables autostart without throwing', () => {
   const a = {
     isPackaged: true,
     getLoginItemSettings() {

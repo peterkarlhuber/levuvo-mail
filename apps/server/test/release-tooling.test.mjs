@@ -13,7 +13,7 @@ function pe(machine) {
   b.writeUInt16LE(machine, 0x84);
   return b;
 }
-test('PE-/Mach-O-Architekturerkennung unterscheidet x64, arm64 und ia32', () => {
+test('PE/Mach-O architecture detection distinguishes x64, arm64 and ia32', () => {
   const dir = mkdtempSync(join(tmpdir(), 'arch-'));
   try {
     const f = (name, buf) => {

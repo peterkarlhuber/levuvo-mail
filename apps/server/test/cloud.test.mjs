@@ -49,7 +49,7 @@ const gg = {
 };
 const pw = { id: 'p1', label: 'IMAP', auth: 'password', imap: { user: 'x@y.test' } };
 
-test('Cloud: Wiederholungen werden zwischen Graph, RRULE und Levuvo übersetzt', () => {
+test('Cloud: recurrences are translated between Graph, RRULE and Levuvo', () => {
   const weekly = { freq: 'WEEKLY', interval: 2, count: 5, until: null, byday: ['MO', 'WE'] };
   const g = toGraphRecurrence(weekly, '2026-11-16');
   assert.deepEqual(g.pattern.daysOfWeek, ['monday', 'wednesday']);
@@ -77,7 +77,7 @@ test('Cloud: Wiederholungen werden zwischen Graph, RRULE und Levuvo übersetzt',
   assert.equal(toGraphRecurrence(null), null);
 });
 
-test('Cloud: Serie wird um die an einem Vorkommen vorgenommene Verschiebung verschoben', () => {
+test('Cloud: series is shifted by the shift applied to one occurrence', () => {
   const m = { allDay: false, tzid: 'Europe/Vienna', start: '2026-11-20T10:30', end: '2026-11-20T11:30' };
   // Occurrence originally 20.11. 10:00 Vienna (09:00Z), series starts 06.11. 10:00 Vienna.
   const shifted = shiftModel(m, '2026-11-06T09:00:00.000Z', '2026-11-20T09:00:00.000Z');
@@ -87,7 +87,7 @@ test('Cloud: Serie wird um die an einem Vorkommen vorgenommene Verschiebung vers
   assert.deepEqual([day.start, day.end], ['2026-11-07', '2026-11-08']);
 });
 
-test('Cloud: Microsoft 365 – Kalender, Termine, Speichern, Einladung beantworten, Kontakte', async () => {
+test('Cloud: Microsoft 365 – calendars, events, saving, answering invitations, contacts', async () => {
   const created = [];
   const { fetchImpl, calls } = fakeFetch({
     [`GET ${E.graph}/me/calendars`]: () => [
@@ -274,7 +274,7 @@ test('Cloud: Microsoft 365 – Kalender, Termine, Speichern, Einladung beantwort
   assert.ok(tokens.every(id => id === 'm1'));
 });
 
-test('Cloud: Google – Termine, Einladungen mit sendUpdates, Antwort, Kontakte über People API', async () => {
+test('Cloud: Google – events, invitations with sendUpdates, reply, contacts via People API', async () => {
   const sent = [];
   const { fetchImpl } = fakeFetch({
     [`GET ${E.googleCalendar}/users/me/calendarList`]: () => [
@@ -434,7 +434,7 @@ test('Cloud: Google – Termine, Einladungen mit sendUpdates, Antwort, Kontakte 
   await cloud.deleteContact({ accountId: 'g1', url: 'cloud:people/c1' });
 });
 
-test('Cloud: fehlende Freigabe und Fehler werden verständlich gemeldet, ohne andere Konten zu blockieren', async () => {
+test('Cloud: missing consent and errors are reported clearly without blocking other accounts', async () => {
   const { fetchImpl } = fakeFetch({
     [`GET ${E.graph}/me/calendars`]: () => [403, { error: { code: 'Forbidden' } }],
     [`GET ${E.googleCalendar}/users/me/calendarList`]: () => [200, { items: [] }]
@@ -464,7 +464,7 @@ test('Cloud: fehlende Freigabe und Fehler werden verständlich gemeldet, ohne an
   assert.equal((await offline.listCalendars()).errors[0].code, 'cloud_unreachable');
 });
 
-test('OAuth: Microsoft holt Mail- und Kalender-Token getrennt, Neuanmeldung für bestehendes Konto', async () => {
+test('OAuth: Microsoft fetches mail and calendar tokens separately, re-sign-in for an existing account', async () => {
   const requests = [];
   const fetchImpl = async (_url, init) => {
     const p = Object.fromEntries(new URLSearchParams(String(init.body)));
