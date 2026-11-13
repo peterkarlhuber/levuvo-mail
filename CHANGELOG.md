@@ -1,6 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## 2.2.0 – 13 November 2026
+
+### New: password-protected messages
+- Choose **“Protect with password”** when composing: text and attachments are encrypted with a password (AES-256-GCM, key derived from the password via PBKDF2-SHA256 with 600,000 iterations).
+- **Works for any recipient** – no account, no installation: they open the attached file “Geschuetzte-Nachricht.html” in a current browser and enter the password. Decryption happens only in their browser; the file loads nothing from the internet.
+- Levuvo Mail suggests a strong password (copy, change, regenerate), optionally with a hint. The password is not stored anywhere.
+- Recipients with Levuvo Mail open the message directly in the reading pane; your own copy in “Sent” is protected as well. After five wrong attempts there is a short waiting period.
+- Only sender, recipients and subject remain visible. Attachments up to 5 MiB in total.
 
 ### Build & Release
 - GitHub Actions CI/CD: quality and security checks, CodeQL, desktop builds for macOS ARM64, Windows ARM64 and Windows x64, draft releases with SHA-256 checksums and manifest (see `RELEASING.md`, `docs/CI-CD.md`).
@@ -10,15 +17,6 @@
 ### Repository
 - The repository is now in English: code comments, tests, scripts, CI workflow and job names, documentation and LICENSE. `DATENSCHUTZ.md` was renamed to `PRIVACY.md`. The app itself is unchanged: German (default) and English.
 - CI job names changed (e.g. `CI bestanden` → `CI passed`); required status checks in branch protection must be updated accordingly.
-
-## 2.2.0 – 13 November 2026
-
-### New: password-protected messages
-- Choose **“Protect with password”** when composing: text and attachments are encrypted with a password (AES-256-GCM, key derived from the password via PBKDF2-SHA256 with 600,000 iterations).
-- **Works for any recipient** – no account, no installation: they open the attached file “Geschuetzte-Nachricht.html” in a current browser and enter the password. Decryption happens only in their browser; the file loads nothing from the internet.
-- Levuvo Mail suggests a strong password (copy, change, regenerate), optionally with a hint. The password is not stored anywhere.
-- Recipients with Levuvo Mail open the message directly in the reading pane; your own copy in “Sent” is protected as well. After five wrong attempts there is a short waiting period.
-- Only sender, recipients and subject remain visible. Attachments up to 5 MiB in total.
 
 ## 2.1.1 – 13 November 2026
 
