@@ -146,8 +146,8 @@ export function buildVCard(contact, uid = randomUUID()) {
 }
 
 /**
- * Zerlegt eine .vcf-Datei in einzelne Karten in linearer Zeit (kein Backtracking).
- * Ein BEGIN:VCARD ohne passendes END:VCARD wird ignoriert.
+ * Splits a .vcf file into individual cards in linear time (no backtracking).
+ * A BEGIN:VCARD without a matching END:VCARD is ignored.
  */
 export function splitVcards(text) {
   const src = String(text || '');
