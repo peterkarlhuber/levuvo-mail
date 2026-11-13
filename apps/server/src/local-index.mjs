@@ -5,8 +5,13 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, unlink, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { gzipSync, gunzipSync } from 'node:zlib';
+import { gzip, gzipSync, gunzip, gunzipSync } from 'node:zlib';
+import { promisify } from 'node:util';
 import { findPreviewPart, decodePreview, hasAttachments } from './previews.mjs';
+import { completeFetchResults } from './mailbox.mjs';
+
+const gzipAsync = promisify(gzip);
+const gunzipAsync = promisify(gunzip);
 
 const VERSION = 1;
 const MAGIC = Buffer.from('LVX1');
@@ -36,6 +41,22 @@ export function decrypt(key, buffer) {
   );
 }
 
+// Same format as encrypt/decrypt, but compression runs in the libuv thread pool: a full index
+// can be tens of megabytes and the server shares its event loop with the desktop app.
+export async function encryptAsync(key, json) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const body = Buffer.concat([cipher.update(await gzipAsync(Buffer.from(JSON.stringify(json)))), cipher.final()]);
+  return Buffer.concat([MAGIC, iv, cipher.getAuthTag(), body]);
+}
+export async function decryptAsync(key, buffer) {
+  if (!buffer.subarray(0, 4).equals(MAGIC)) throw new Error('Unbekanntes Indexformat.');
+  const decipher = createDecipheriv('aes-256-gcm', key, buffer.subarray(4, 16));
+  decipher.setAuthTag(buffer.subarray(16, 32));
+  const zipped = Buffer.concat([decipher.update(buffer.subarray(32)), decipher.final()]);
+  return JSON.parse((await gunzipAsync(zipped)).toString('utf8'));
+}
+
 const SKIP = new Set(['\\Trash', '\\Junk', '\\Drafts']);
 export function indexableFolders(folders) {
   return folders.filter(f => !f.flags?.has('\\Noselect') && !SKIP.has(f.specialUse) && typeof f.path === 'string');
@@ -53,13 +74,15 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
     const key = await getKey(id);
     if (!key) return null;
     let data = { version: VERSION, folders: {}, updatedAt: null };
+    let stored = false;
     try {
-      data = decrypt(key, await readFile(file(id)));
-      if (data.version !== VERSION) data = { version: VERSION, folders: {}, updatedAt: null };
+      data = await decryptAsync(key, await readFile(file(id)));
+      stored = data.version === VERSION;
+      if (!stored) data = { version: VERSION, folders: {}, updatedAt: null };
     } catch {
       /* missing or unreadable: start fresh */
     }
-    const entry = { data, key, haystacks: new Map() };
+    const entry = { data, key, haystacks: new Map(), stored };
     loaded.set(id, entry);
     return entry;
   }
@@ -68,8 +91,9 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
     if (!entry) return;
     await mkdir(dir, { recursive: true, mode: 0o700 });
     const tmp = `${file(id)}.${randomBytes(4).toString('hex')}.tmp`;
-    await writeFile(tmp, encrypt(entry.key, entry.data), { mode: 0o600 });
+    await writeFile(tmp, await encryptAsync(entry.key, entry.data), { mode: 0o600 });
     await rename(tmp, file(id));
+    entry.stored = true;
   }
   const count = data => Object.values(data.folders).reduce((n, f) => n + Object.keys(f.items).length, 0);
 
@@ -81,8 +105,8 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
     try {
       const uidValidity = String(client.mailbox?.uidValidity || '');
       let folder = entry.data.folders[folderPath];
-      if (!folder || folder.uidValidity !== uidValidity)
-        folder = entry.data.folders[folderPath] = { uidValidity, items: {} };
+      const reset = !folder || folder.uidValidity !== uidValidity;
+      if (reset) folder = entry.data.folders[folderPath] = { uidValidity, items: {} };
       const all = Number(client.mailbox?.exists || 0) ? await client.search({ all: true }, { uid: true }) : [];
       const present = new Set((Array.isArray(all) ? all : []).map(String));
       let removed = 0;
@@ -101,13 +125,14 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
       let added = 0;
       for (let i = 0; i < missing.length; i += BATCH) {
         const batch = missing.slice(i, i + BATCH);
-        const metas = [];
+        const raw = [];
         for await (const m of client.fetch(
           batch,
           { uid: true, envelope: true, internalDate: true, flags: true, bodyStructure: true },
           { uid: true }
         ))
-          metas.push(m);
+          raw.push(m);
+        const metas = completeFetchResults(raw, batch);
         const byPart = new Map();
         for (const m of metas) {
           const env = m.envelope || {};
@@ -150,7 +175,7 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
           }
         }
       }
-      return { added, removed };
+      return { added, removed, reset };
     } finally {
       lock.release();
     }
@@ -162,7 +187,12 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
       const entry = await open(id);
       if (!entry) return { enabled: false };
       const valid = indexableFolders(folders);
-      for (const p of Object.keys(entry.data.folders)) if (!valid.some(f => f.path === p)) delete entry.data.folders[p];
+      let changed = !entry.stored;
+      for (const p of Object.keys(entry.data.folders))
+        if (!valid.some(f => f.path === p)) {
+          delete entry.data.folders[p];
+          changed = true;
+        }
       let left = budget;
       let added = 0;
       let removed = 0;
@@ -170,11 +200,15 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
         const result = await syncFolder(client, id, f.path, left);
         added += result.added;
         removed += result.removed;
+        if (result.reset) changed = true;
         left -= result.added;
         if (left <= 0) break;
       }
-      entry.data.updatedAt = new Date().toISOString();
-      await save(id);
+      // Rewriting the whole encrypted index every 15 minutes without a change only costs time.
+      if (changed || added || removed) {
+        entry.data.updatedAt = new Date().toISOString();
+        await save(id);
+      }
       return { enabled: true, added, removed, complete: left > 0, total: count(entry.data) };
     },
 

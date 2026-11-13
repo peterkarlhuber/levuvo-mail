@@ -76,3 +76,29 @@ test('Encryption detects tampering; normalization', () => {
   assert.throws(() => decrypt(key, blob));
   assert.equal(normalize('Größe Ärger'), 'grosse arger');
 });
+
+test('Index file is only rewritten when something changed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-index-'));
+  try {
+    const key = randomBytes(32);
+    const index = createLocalIndex({ dir, getKey: async () => key });
+    const msgs = [{ uid: 1, subject: 'Hallo', from: 'Anna', text: 'Text', date: '2026-10-01' }];
+    const folders = [{ path: 'INBOX', flags: new Set() }];
+    await index.sync(mailbox(msgs), 'acc', folders);
+    const file = join(
+      dir,
+      readdirSync(dir).find(f => f.endsWith('.lvx'))
+    );
+    const first = readFileSync(file);
+    await index.sync(mailbox(msgs), 'acc', folders);
+    assert.ok(readFileSync(file).equals(first), 'unchanged index is not re-encrypted and rewritten');
+    await index.sync(
+      mailbox([...msgs, { uid: 2, subject: 'Neu', from: 'Max', text: 'x', date: '2026-10-02' }]),
+      'acc',
+      folders
+    );
+    assert.ok(!readFileSync(file).equals(first), 'a new message is saved');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
