@@ -70,7 +70,12 @@ function folderIcon(folder: Folder) {
   }
 }
 /** Newest snapshot replaces the top of the list; older pages that were loaded stay. */
-function mergeSnapshot(current: Message[], snapshot: Message[]) {
+function mergeSnapshot(current: Message[], incoming: Message[]) {
+  // One row per valid UID: an incomplete or repeated entry must never appear as an extra empty message.
+  const seen = new Set<number>();
+  const snapshot = incoming.filter(
+    m => Number.isSafeInteger(m.uid) && m.uid > 0 && !seen.has(m.uid) && seen.add(m.uid)
+  );
   if (!snapshot.length) return [];
   const oldestInSnapshot = Math.min(...snapshot.map(m => m.uid));
   const flags = new Map(current.map(m => [m.uid, m.flagged]));

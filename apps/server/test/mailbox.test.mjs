@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listMessages, searchFolder, monitorInbox, validateSearchQuery } from '../src/mailbox.mjs';
+import {
+  listMessages,
+  searchFolder,
+  monitorInbox,
+  validateSearchQuery,
+  completeFetchResults
+} from '../src/mailbox.mjs';
 
 // Fake IMAP mailbox with UIDs 1..n; exposes the calls the code makes.
 function fakeClient(n, { gaps = [] } = {}) {
@@ -101,4 +107,37 @@ test('Inbox status contains UIDVALIDITY, highest UID and unread count', async ()
   const broken = fakeClient(3);
   broken.mailbox.uidValidity = null;
   await assert.rejects(monitorInbox(broken), /UIDVALIDITY/);
+});
+
+test('Unsolicited FETCH responses during a listing never become empty extra messages', async () => {
+  const c = fakeClient(5);
+  const original = c.fetch;
+  c.fetch = async function* (range, query, opts) {
+    for await (const message of original.call(this, range, query, opts)) {
+      yield message;
+      // The server pushes flag updates for new mail while our FETCH runs.
+      if (message.uid === 3) {
+        yield { seq: 6, flags: new Set(['\\Recent']) };
+        yield { seq: 3, uid: 3, flags: new Set(['\\Seen']) };
+      }
+    }
+  };
+  const state = await monitorInbox(c);
+  assert.deepEqual(
+    state.messages.map(m => m.uid),
+    [5, 4, 3, 2, 1]
+  );
+  assert.ok(state.messages.every(m => m.subject.startsWith('S')));
+});
+
+test('completeFetchResults keeps one complete entry per requested UID', () => {
+  const env = { subject: 'x' };
+  const kept = completeFetchResults(
+    [{ uid: 7, envelope: env }, { uid: 7 }, { seq: 2 }, { uid: 0, envelope: env }, { uid: 9, envelope: env }],
+    [7, 8]
+  );
+  assert.deepEqual(
+    kept.map(m => m.uid),
+    [7]
+  );
 });

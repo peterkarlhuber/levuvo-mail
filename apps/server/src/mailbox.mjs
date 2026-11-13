@@ -13,12 +13,33 @@ export function safeImapInteger(value) {
   return Number.isSafeInteger(number) && number >= 0 && number <= 4294967296 ? number : null;
 }
 
+/**
+ * Keeps only complete answers to our own FETCH: a valid UID and the requested envelope,
+ * one entry per UID. ImapFlow hands every untagged FETCH that arrives while the command
+ * runs to the iterator, including unsolicited flag updates the server pushes for new or
+ * changed mail (e.g. `* 12 FETCH (FLAGS (\Recent))`). Those carry no envelope and often
+ * no UID; listed as is, they showed up as empty "(no subject)" messages that could not
+ * be deleted.
+ */
+export function completeFetchResults(raw, requestedUids = null) {
+  const wanted = requestedUids ? new Set(requestedUids.map(Number)) : null;
+  const byUid = new Map();
+  for (const message of raw) {
+    const uid = message?.uid;
+    if (!Number.isSafeInteger(uid) || uid < 1 || !message.envelope) continue;
+    if (wanted && !wanted.has(uid)) continue;
+    if (!byUid.has(uid)) byUid.set(uid, message);
+  }
+  return [...byUid.values()];
+}
+
 export async function fetchInfos(client, range, { uidRange = false, previewCache, keyPrefix }) {
   const raw = [];
   for await (const message of client.fetch(range, LIST_QUERY, uidRange ? { uid: true } : undefined)) {
     raw.push(message);
   }
-  const infos = raw.map(message => ({
+  const requested = uidRange && Array.isArray(range) ? range : null;
+  const infos = completeFetchResults(raw, requested).map(message => ({
     ...toMessageInfo(message),
     hasAttachments: hasAttachments(message.bodyStructure),
     bodyStructure: message.bodyStructure
