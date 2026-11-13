@@ -20,11 +20,11 @@ const commit =
   })();
 const builtAt = new Date().toISOString();
 if (onlyArch !== null && !['arm64', 'x64'].includes(onlyArch)) {
-  console.error('Nur --arch arm64 oder --arch x64 erlaubt');
+  console.error('Only --arch arm64 or --arch x64 allowed');
   process.exit(1);
 }
 if (!existsSync(releaseDir)) {
-  console.error('release/ fehlt – zuerst Installer bauen');
+  console.error('release/ missing – build the installers first');
   process.exit(1);
 }
 const files = readdirSync(releaseDir)
@@ -33,7 +33,7 @@ const files = readdirSync(releaseDir)
   .filter(name => !onlyArch || name.includes(`-${onlyArch}.`))
   .sort();
 if (!files.length) {
-  console.error('Keine passenden Installer-Dateien für Version ' + pkg.version + ' gefunden');
+  console.error('No matching installer files found for version ' + pkg.version);
   process.exit(1);
 }
 const artifacts = [];
@@ -51,8 +51,8 @@ for (const file of files) {
     sha256: hash.digest('hex'),
     signedForDistribution: signed,
     signingStatus: signed
-      ? 'signed (Signatur separat prüfen, siehe Build-Log)'
-      : 'unsigned – interne Testversion, nicht für die Verteilung',
+      ? 'signed (verify the signature separately, see build log)'
+      : 'unsigned – internal test build, not for distribution',
     notarized: false
   });
 }
@@ -62,6 +62,6 @@ writeFileSync(
   join(releaseDir, 'release-manifest.json'),
   JSON.stringify({ product: 'Levuvo Mail', version: pkg.version, commit, builtAt, artifacts }, null, 2) + '\n'
 );
-console.log('Release-Manifeste erzeugt:');
+console.log('Release manifests generated:');
 for (const item of artifacts)
   console.log(`- ${item.file} (${item.platform}/${item.architecture}, SHA-256 ${item.sha256})`);

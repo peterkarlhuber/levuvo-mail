@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Start-Test der entpackten (noch nicht installierten) Anwendung: Das Programm muss starten
-// und mindestens SECONDS Sekunden ohne Absturz laufen; danach wird es beendet.
-// Das ist ein Start-Test, KEIN Funktionstest (kein Konto, keine Maildaten).
-//   node scripts/smoke-packaged.mjs <win|mac> <arm64|x64> [sekunden]
+// Startup test of the unpacked (not yet installed) application: the program must start
+// and run for at least SECONDS seconds without crashing; it is then terminated.
+// This is a startup test, NOT a functional test (no account, no mail data).
+//   node scripts/smoke-packaged.mjs <win|mac> <arm64|x64> [seconds]
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -21,7 +21,7 @@ const exe =
         'Levuvo Mail'
       );
 if (!existsSync(exe)) {
-  console.error(`✗ Programm nicht gefunden: ${exe}`);
+  console.error(`✗ Program not found: ${exe}`);
   process.exit(1);
 }
 const child = spawn(exe, [], {
@@ -36,13 +36,15 @@ child.on('exit', (code, signal) => (exited = { code, signal }));
 await new Promise(r => setTimeout(r, seconds * 1000));
 if (exited) {
   console.error(
-    `✗ Anwendung hat sich nach <${seconds}s beendet (Code ${exited.code}, Signal ${exited.signal}).\n${log.slice(-3000)}`
+    `✗ Application exited after <${seconds}s (code ${exited.code}, signal ${exited.signal}).\n${log.slice(-3000)}`
   );
   process.exit(1);
 }
 if (platform === 'win') spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F']);
 else child.kill('SIGTERM');
 await new Promise(r => setTimeout(r, 2000));
-console.log(`✓ ${platform}/${arch}: Anwendung lief ${seconds}s ohne Absturz und wurde kontrolliert beendet.`);
-if (log.trim()) console.log('--- Ausgabe ---\n' + log.slice(-1500));
+console.log(
+  `✓ ${platform}/${arch}: application ran ${seconds}s without crashing and was shut down in a controlled way.`
+);
+if (log.trim()) console.log('--- Output ---\n' + log.slice(-1500));
 process.exit(0);

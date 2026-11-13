@@ -19,18 +19,18 @@ const fail = message => {
 };
 const need = names => {
   const missing = names.filter(name => !env[name]);
-  if (missing.length) fail(`Fehlende Umgebungsvariablen: ${missing.join(', ')}`);
+  if (missing.length) fail(`Missing environment variables: ${missing.join(', ')}`);
 };
 
-if (!['mac', 'win-x64', 'win-arm64'].includes(target)) fail('Ziel angeben: mac | win-x64 | win-arm64');
+if (!['mac', 'win-x64', 'win-arm64'].includes(target)) fail('Specify a target: mac | win-x64 | win-arm64');
 need(['LEVUVO_UPDATE_URL']);
 let feed;
 try {
   feed = new URL(env.LEVUVO_UPDATE_URL);
 } catch {
-  fail('LEVUVO_UPDATE_URL ist keine gültige URL.');
+  fail('LEVUVO_UPDATE_URL is not a valid URL.');
 }
-if (feed.protocol !== 'https:') fail('LEVUVO_UPDATE_URL muss https verwenden.');
+if (feed.protocol !== 'https:') fail('LEVUVO_UPDATE_URL must use https.');
 
 const args = [
   'electron-builder',
@@ -41,8 +41,8 @@ const args = [
 ];
 
 if (target === 'mac') {
-  if (process.platform !== 'darwin') fail('macOS-Releases müssen auf macOS gebaut werden.');
-  if (!env.CSC_LINK && !env.CSC_NAME) fail('CSC_LINK (Zertifikat) oder CSC_NAME (Schlüsselbund-Identität) fehlt.');
+  if (process.platform !== 'darwin') fail('macOS releases must be built on macOS.');
+  if (!env.CSC_LINK && !env.CSC_NAME) fail('CSC_LINK (certificate) or CSC_NAME (keychain identity) missing.');
   need(['APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID']);
   args.push(
     '--mac',
@@ -56,8 +56,8 @@ if (target === 'mac') {
     '-c.mac.entitlementsInherit=build/entitlements.mac.release.plist'
   );
 } else {
-  if (process.platform !== 'win32') fail('Windows-Releases müssen auf Windows gebaut werden (Signatur).');
-  if (!env.CSC_LINK && !env.WIN_CSC_LINK) fail('CSC_LINK bzw. WIN_CSC_LINK (Signaturzertifikat) fehlt.');
+  if (process.platform !== 'win32') fail('Windows releases must be built on Windows (signing).');
+  if (!env.CSC_LINK && !env.WIN_CSC_LINK) fail('CSC_LINK or WIN_CSC_LINK (signing certificate) missing.');
   need(['LEVUVO_WIN_PUBLISHER']);
   args.push(
     '--win',
@@ -71,10 +71,10 @@ const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run'
   stdio: 'inherit',
   shell: process.platform === 'win32'
 });
-if (build.status !== 0) fail('Frontend-Build fehlgeschlagen.');
+if (build.status !== 0) fail('Frontend build failed.');
 const run = spawnSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', args, {
   stdio: 'inherit',
   shell: process.platform === 'win32'
 });
-if (run.status !== 0) fail('electron-builder ist fehlgeschlagen.');
-console.log(`\n✓ Signierter Build fertig. Alle Dateien aus release/ (inkl. latest*.yml) nach ${feed} hochladen.\n`);
+if (run.status !== 0) fail('electron-builder failed.');
+console.log(`\n✓ Signed build finished. Upload all files from release/ (incl. latest*.yml) to ${feed}.\n`);

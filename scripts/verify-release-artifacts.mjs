@@ -11,7 +11,7 @@ const targets = [
 let problems = [];
 for (const file of targets) {
   const f = join(dir, file);
-  if (!existsSync(f) || statSync(f).size < 10000) problems.push(`FEHLT ODER ZU KLEIN: ${file}`);
+  if (!existsSync(f) || statSync(f).size < 10000) problems.push(`MISSING OR TOO SMALL: ${file}`);
   else console.log(`OK ${file} (${statSync(f).size} bytes)`);
 }
 const sums = join(dir, 'SHA256SUMS.txt');
@@ -27,11 +27,11 @@ if (existsSync(sums)) {
     const f = join(dir, file);
     if (!existsSync(f)) continue;
     const hash = createHash('sha256').update(readFileSync(f)).digest('hex');
-    if (map.get(file) !== hash) problems.push(`SHA256 FEHLT ODER FALSCH: ${file}`);
+    if (map.get(file) !== hash) problems.push(`SHA256 MISSING OR WRONG: ${file}`);
   }
-} else problems.push('SHA256SUMS.txt fehlt');
+} else problems.push('SHA256SUMS.txt missing');
 if (problems.length) {
   console.error(problems.join('\n'));
   process.exit(1);
 }
-console.log('3/3 geprüfte Artefakte vorhanden. Signierung und OS-Praxistests sind separat zu prüfen.');
+console.log('3/3 verified artifacts present. Signing and real-OS tests must be checked separately.');

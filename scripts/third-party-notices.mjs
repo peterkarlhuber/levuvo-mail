@@ -78,7 +78,7 @@ for (const { name, version } of [...found.values()].sort((a, b) => a.name.locale
 }
 writeFileSync(join(root, 'THIRD-PARTY-NOTICES.txt'), `${out.join('\n')}\n`);
 console.log(
-  `THIRD-PARTY-NOTICES.txt: ${found.size} Pakete · ${Object.entries(summary)
+  `THIRD-PARTY-NOTICES.txt: ${found.size} packages · ${Object.entries(summary)
     .map(([l, n]) => `${l} ${n}`)
     .join(', ')}`
 );

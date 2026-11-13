@@ -12,7 +12,7 @@ for (const dir of dirs) {
   }
 }
 if (failed) {
-  console.error(`${failed} Datei(en) mit Syntaxfehlern.`);
+  console.error(`${failed} file(s) with syntax errors.`);
   process.exit(1);
 }
-console.log('Syntaxprüfung: alle Module in Ordnung.');
+console.log('Syntax check: all modules OK.');

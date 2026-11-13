@@ -1,7 +1,7 @@
-## Änderung
-<!-- Was und warum? -->
+## Change
+<!-- What and why? -->
 
-## Prüfung
-- [ ] `npm run release:check` lokal grün
-- [ ] CHANGELOG ergänzt
-- [ ] Keine Zugangsdaten / Maildaten im Diff
+## Verification
+- [ ] `npm run release:check` green locally
+- [ ] CHANGELOG updated
+- [ ] No credentials / mail data in the diff
