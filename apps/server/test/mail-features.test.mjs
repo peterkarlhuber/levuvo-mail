@@ -126,7 +126,15 @@ test('Send later: time, strip headers, send exactly once', async () => {
     ],
     getMailboxLock: async () => ({ release() {} }),
     search: async () => [5, 6],
-    async *fetch(uids) {
+    async *fetch(uids, query) {
+      // An unsolicited flag update is interleaved with every answer.
+      yield { seq: 1, uid: 77, flags: new Set(['\\Seen']) };
+      if (query.source) {
+        const uid = Number(uids);
+        yield { seq: 2, uid, flags: new Set(['\\Seen']) };
+        yield { uid, flags: flags.get(uid), source: sources[uid] };
+        return;
+      }
       for (const uid of uids)
         yield {
           uid,
@@ -140,7 +148,6 @@ test('Send later: time, strip headers, send exactly once', async () => {
           )
         };
     },
-    fetchOne: async uid => ({ uid: Number(uid), flags: flags.get(Number(uid)), source: sources[uid] }),
     messageFlagsAdd: async (uid, f) => {
       f.forEach(x => flags.get(Number(uid)).add(x));
       return true;
@@ -322,7 +329,12 @@ test('Scheduled send: a connection error releases the claim so the next run send
     list: async () => [{ path: 'Drafts', specialUse: '\\Drafts', flags: new Set() }],
     getMailboxLock: async () => ({ release() {} }),
     search: async () => [9],
-    async *fetch() {
+    async *fetch(_uids, query) {
+      yield { seq: 4, flags: new Set(['\\Recent']) };
+      if (query.source) {
+        yield { uid: 9, flags, source: src };
+        return;
+      }
       yield {
         uid: 9,
         envelope: { subject: 'S', to: [{ address: 'x@y.at' }] },
@@ -330,7 +342,6 @@ test('Scheduled send: a connection error releases the claim so the next run send
         headers: Buffer.from(`X-Levuvo-Send-At: ${at}`)
       };
     },
-    fetchOne: async () => ({ uid: 9, flags, source: src }),
     messageFlagsAdd: async (_uid, f) => f.forEach(x => flags.add(x)),
     messageFlagsRemove: async (_uid, f) => f.forEach(x => flags.delete(x)),
     messageFlagsSet: async () => {},

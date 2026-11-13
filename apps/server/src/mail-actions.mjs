@@ -149,7 +149,9 @@ export async function performMessageAction(client, input) {
     // Only UIDs that still exist are touched; never a sequence range.
     const existing = [];
     for await (const m of client.fetch(uids.join(','), { uid: true }, { uid: true })) {
-      if (uids.includes(String(m.uid))) existing.push(String(m.uid));
+      // Unsolicited FETCH responses may carry no UID or a foreign one; count each UID once.
+      const uid = String(m?.uid);
+      if (uids.includes(uid) && !existing.includes(uid)) existing.push(uid);
     }
     if (!existing.length) throw err('Nachricht nicht mehr vorhanden. Bitte aktualisieren.', 404, 'message_missing');
     const set = existing.join(',');

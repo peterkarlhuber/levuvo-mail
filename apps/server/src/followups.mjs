@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { newFolderPath } from './folders.mjs';
 import { findSpecialFolder, selectableFolders } from './mail-actions.mjs';
+import { isRequestedFetchResult, uidSet } from './imap-fetch.mjs';
 
 export const SNOOZE_FOLDER_NAMES = ['Zurückgestellt', 'Snoozed'];
 const MAX_ENTRIES = 2000;
@@ -49,7 +50,13 @@ export async function snoozeMessages(client, { folder, uids }) {
   const lock = await client.getMailboxLock(folder);
   try {
     const items = [];
-    for await (const m of client.fetch(uids.join(','), { uid: true, envelope: true }, { uid: true })) {
+    const query = { uid: true, envelope: true };
+    const wanted = uidSet(uids);
+    const seen = new Set();
+    for await (const m of client.fetch(uids.join(','), query, { uid: true })) {
+      // Skip unsolicited FETCH responses (flag updates, foreign UIDs) and duplicates.
+      if (!isRequestedFetchResult(m, query, wanted) || seen.has(m.uid)) continue;
+      seen.add(m.uid);
       items.push({
         uid: String(m.uid),
         messageId: m.envelope?.messageId || null,

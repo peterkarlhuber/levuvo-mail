@@ -155,9 +155,12 @@ export async function attachPreviews(client, items, { cache, keyPrefix }) {
         { uid: true, bodyParts: [{ key: partKey, maxLength: PREVIEW_BYTES }] },
         { uid: true }
       )) {
-        const entry = byUid.get(msg.uid);
+        const entry = byUid.get(msg?.uid);
         if (!entry) continue;
         const raw = msg.bodyParts?.get(partKey) || msg.bodyParts?.get(partKey.toLowerCase());
+        // An unsolicited FETCH (e.g. a flag update for this UID) carries no body part:
+        // skip it instead of caching an empty preview forever.
+        if (raw === undefined) continue;
         const preview = decodePreview(raw, entry.part);
         entry.item.preview = preview;
         cache?.set(entry.key, preview);
@@ -165,6 +168,7 @@ export async function attachPreviews(client, items, { cache, keyPrefix }) {
     } catch {
       // A preview must never break the message list.
     }
+    // Not cached: the next listing tries again.
     for (const entry of entries) if (entry.item.preview === undefined) entry.item.preview = '';
   }
   return items;

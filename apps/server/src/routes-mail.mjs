@@ -25,6 +25,7 @@ import {
 import { findDraftFolder, saveDraft, validateReplaceDraft, retireDraft } from './drafts.mjs';
 import { listMessages, searchFolder, monitorInbox } from './mailbox.mjs';
 import { publicImapFailure } from './imap-diagnostics.mjs';
+import { fetchUidOne } from './imap-fetch.mjs';
 import { collectContacts, filterContacts } from './contacts.mjs';
 import { manageFolder, validateFolderInput } from './folders.mjs';
 import { scheduleMessage, listScheduled, sendDue, validateSendAt, stripHeaders } from './scheduled.mjs';
@@ -104,8 +105,10 @@ export function registerMailRoutes(ctx) {
     if (ctx.watch && fresh) await watchers.refresh(account.id);
     const cached = ctx.watch ? watchers.snapshot(account.id) : null;
     if (cached) return cached;
+    // Taken before the IMAP read: the snapshot must never claim to include changes made while it ran.
+    const checkedAt = Date.now();
     const live = await withImap(client => monitorInbox(client, { previewCache, accountKey: account.id }), account);
-    return { ...live, checkedAt: Date.now(), source: 'poll' };
+    return { ...live, checkedAt, source: 'poll' };
   }
 
   /** Builds the final MIME (identity, HTML, optional PGP/S/MIME). */
@@ -459,11 +462,7 @@ export function registerMailRoutes(ctx) {
       return await withImap(async client => {
         const lock = await client.getMailboxLock(folder, { readOnly: true });
         try {
-          const msg = await client.fetchOne(
-            String(request.params.uid),
-            { source: true, envelope: true },
-            { uid: true }
-          );
+          const msg = await fetchUidOne(client, request.params.uid, { source: true, envelope: true });
           if (!msg?.source) return reply.code(404).send({ error: 'Nachricht nicht gefunden.' });
           const name = `${
             String(msg.envelope?.subject || 'Nachricht')
