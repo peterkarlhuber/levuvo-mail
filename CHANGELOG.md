@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.2 – 13 November 2026
+
+### Fixes
+- **Inbox:** opening a newly arrived message no longer leaves an empty or wrong entry behind. Single-message reads (reading pane, raw source, drafts, conversations, scheduled mail) only accept the server's answer for exactly that message; flag updates the server pushes in between (e.g. after reading on another device) are ignored. Previews are no longer left empty by such updates.
+- **Inbox:** an inbox snapshot that was read before your own delete, move or read change is no longer applied, and "check now" waits for a fresh read. A list entry for a message that no longer exists is removed quietly instead of showing an error.
+
+### Tests
+- Regression tests drive the real IMAP client against a server that pushes flag updates in the middle of answers, and a browser test (opt-in, `test/e2e/inbox-live.e2e.mjs`) runs "new mail arrives, is opened, read and deleted" against Dovecot.
+
 ## 2.2.1 – 13 November 2026
 
 ### Fixes

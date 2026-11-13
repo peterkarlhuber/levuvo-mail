@@ -1,4 +1,4 @@
-# Levuvo Mail 2.2.1 – release kit
+# Levuvo Mail 2.2.2 – release kit
 
 The ZIP contains the complete source code, the locked dependency list (`package-lock.json`)
 and the build configuration for three platforms. **Finished DMG/EXE files are not included**:
@@ -6,9 +6,9 @@ they must be built on the respective operating system (native keychain module).
 
 | Platform | File | Build machine |
 |---|---|---|
-| macOS Apple Silicon | `Levuvo-Mail-2.2.1-arm64.dmg` (+ `.zip` for updates) | Mac with Apple Silicon |
-| Windows 11 ARM64 | `Levuvo-Mail-Setup-2.2.1-arm64.exe` | Windows ARM64 (e.g. UTM) |
-| Windows x64 | `Levuvo-Mail-Setup-2.2.1-x64.exe` | Windows Intel/AMD |
+| macOS Apple Silicon | `Levuvo-Mail-2.2.2-arm64.dmg` (+ `.zip` for updates) | Mac with Apple Silicon |
+| Windows 11 ARM64 | `Levuvo-Mail-Setup-2.2.2-arm64.exe` | Windows ARM64 (e.g. UTM) |
+| Windows x64 | `Levuvo-Mail-Setup-2.2.2-x64.exe` | Windows Intel/AMD |
 
 ## A) Test installers (unsigned, without auto-update)
 
