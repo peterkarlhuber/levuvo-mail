@@ -5,11 +5,18 @@
 // Crypto: PBKDF2-HMAC-SHA256 (600 000 iterations, OWASP 2023) → AES-256-GCM. Both run in every
 // current browser through WebCrypto, so no server, no account and no installation is needed.
 // Nothing is stored by Levuvo; the password never leaves the sender's device in readable form.
-import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, pbkdf2, pbkdf2Sync, randomBytes } from 'node:crypto';
+import { promisify } from 'node:util';
+
+const pbkdf2Async = promisify(pbkdf2);
 
 export const PROTECTED_FILENAME = 'Geschuetzte-Nachricht.html';
 export const PBKDF2_ITERATIONS = 600_000;
 export const MAX_PROTECTED_BYTES = 5 * 1024 * 1024;
+// Bounds for boxes from received mail: the iteration count comes from the (untrusted) file.
+export const MIN_OPEN_ITERATIONS = 100_000;
+export const MAX_OPEN_ITERATIONS = 2_000_000;
+const MAX_BOX_CT_CHARS = Math.ceil(((MAX_PROTECTED_BYTES * 4) / 3) * 1.5) + 1024 * 1024;
 const MARKER = 'levuvo-protected';
 const fail = (message, code = 'protected_invalid', statusCode = 400) => {
   throw Object.assign(new Error(message), { code, statusCode });
@@ -44,10 +51,39 @@ export function sealPayload(payload, password, { iterations = PBKDF2_ITERATIONS 
   };
 }
 
-export function openPayload(box, password) {
-  if (!box || box.v !== 1 || box.kdf !== 'PBKDF2-SHA256' || !Number.isInteger(box.iter) || box.iter > 5_000_000)
+/** Checks a box from a received message before any expensive work is done. */
+export function validateBox(box) {
+  const b64 = (v, min, max) =>
+    typeof v === 'string' && v.length >= min && v.length <= max && /^[A-Za-z0-9+/]+={0,2}$/.test(v);
+  if (
+    !box ||
+    typeof box !== 'object' ||
+    box.v !== 1 ||
+    box.kdf !== 'PBKDF2-SHA256' ||
+    !Number.isInteger(box.iter) ||
+    box.iter < MIN_OPEN_ITERATIONS ||
+    box.iter > MAX_OPEN_ITERATIONS ||
+    !b64(box.salt, 16, 64) ||
+    !b64(box.iv, 16, 16) ||
+    !b64(box.ct, 24, MAX_BOX_CT_CHARS)
+  )
     fail('Unbekanntes Format der geschützten Nachricht.');
-  const key = pbkdf2Sync(String(password).normalize('NFC'), Buffer.from(box.salt, 'base64'), box.iter, 32, 'sha256');
+  return box;
+}
+
+/**
+ * Opens a box. The key derivation runs in the libuv thread pool, so a box with a high
+ * iteration count does not block the API event loop.
+ */
+export async function openPayload(box, password) {
+  validateBox(box);
+  const key = await pbkdf2Async(
+    String(password).normalize('NFC'),
+    Buffer.from(box.salt, 'base64'),
+    box.iter,
+    32,
+    'sha256'
+  );
   const data = Buffer.from(box.ct, 'base64');
   try {
     const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));

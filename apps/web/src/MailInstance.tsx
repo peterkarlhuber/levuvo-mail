@@ -158,7 +158,9 @@ export default function MailInstance({
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
   const resizeAnchor = useRef<{ x: number; width: number } | null>(null);
   const [listWidth, setListWidth] = useState(prefs.listWidth);
-  const [snoozed, setSnoozed] = useState<{ id: string; messageId: string | null; until: string }[]>([]);
+  const [snoozed, setSnoozed] = useState<
+    { id: string; messageId: string | null; snoozeUid?: string | null; until: string }[]
+  >([]);
   const [followupsDue, setFollowupsDue] = useState(0);
   const [bulkSnooze, setBulkSnooze] = useState(false);
 
@@ -575,7 +577,10 @@ export default function MailInstance({
       return;
     }
     let active = true;
-    getJson<{ items: { id: string; messageId: string | null; until: string }[] }>('/api/snoozed', accountId)
+    getJson<{ items: { id: string; messageId: string | null; snoozeUid?: string | null; until: string }[] }>(
+      '/api/snoozed',
+      accountId
+    )
       .then(d => {
         if (active) setSnoozed(d.items);
       })
@@ -647,7 +652,13 @@ export default function MailInstance({
     }
   }
   const snoozedEntry =
-    detail && inSnoozeFolder ? snoozed.find(s => s.messageId && s.messageId === detail.messageId) : undefined;
+    detail && inSnoozeFolder
+      ? snoozed.find(
+          s =>
+            (s.messageId && s.messageId === detail.messageId) ||
+            (!s.messageId && s.snoozeUid && s.snoozeUid === String(detail.uid))
+        )
+      : undefined;
 
   const nextAfterRemoval = (uids: number[]) => {
     const index = visibleMessages.findIndex(m => uids.includes(m.uid));

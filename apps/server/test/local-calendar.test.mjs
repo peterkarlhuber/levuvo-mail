@@ -134,9 +134,58 @@ test('Local calendar: a corrupt plain file is kept as a backup instead of being 
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const file = join(dir, 'calendar-local.json');
   writeFileSync(file, '{"calendars": [broken');
-  const cal = await createLocalCalendar({ filename: file, vault: null });
+  const cal = await createLocalCalendar({ filename: file, vault: vault() });
   assert.equal(cal.listCalendars().calendars.length, 1);
   const backups = readdirSync(dir).filter(n => n.startsWith('calendar-local.json.corrupt-'));
   assert.equal(backups.length, 1);
   assert.equal(readFileSync(join(dir, backups[0]), 'utf8'), '{"calendars": [broken');
+});
+
+test('Local calendar: never stored in plain text; a plain file from before is encrypted (AUD-010)', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-local-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, 'calendar-local.json');
+  // No keychain: refused instead of a readable file on disk.
+  await assert.rejects(createLocalCalendar({ filename: file, vault: null }), { code: 'local_locked' });
+  await assert.rejects(createLocalCalendar({ filename: file, vault: { available: false } }), { code: 'local_locked' });
+  assert.equal(readdirSync(dir).length, 0, 'nothing written');
+  // A plain file written by an older version is migrated right away.
+  const plain = JSON.stringify({
+    calendars: [{ id: 'c1', name: 'Geheim', color: '#000', hidden: false }],
+    objects: []
+  });
+  writeFileSync(file, plain);
+  const keys = vault();
+  const cal = await createLocalCalendar({ filename: file, vault: keys });
+  assert.equal(cal.listCalendars().calendars[0].name, 'Geheim');
+  const stored = readFileSync(file, 'utf8');
+  assert.match(stored, /^\{"v":1/);
+  assert.doesNotMatch(stored, /Geheim/);
+});
+
+test('Local calendar: one failed write does not block later saves (AUD-009)', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-local-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const file = join(dir, 'calendar-local.json');
+  const keys = vault();
+  const cal = await createLocalCalendar({ filename: file, vault: keys });
+  const [personal] = cal.listCalendars().calendars;
+  const event = summary =>
+    createEventIcs(
+      validateEventInput({ summary, allDay: false, tzid: 'UTC', start: '2026-11-20T10:00', end: '2026-11-20T11:00' })
+    );
+  // The target directory disappears and a file takes its place: the next write fails (ENOTDIR).
+  rmSync(dir, { recursive: true, force: true });
+  writeFileSync(dir, 'blocker');
+  const first = event('Erster');
+  await assert.rejects(cal.createCalendarObject(personal.url, first.uid, first.ics));
+  rmSync(dir, { force: true });
+  const second = event('Zweiter');
+  await cal.createCalendarObject(personal.url, second.uid, second.ics);
+  const again = await createLocalCalendar({ filename: file, vault: keys });
+  const titles = again
+    .events(Date.parse('2026-11-20T00:00:00Z'), Date.parse('2026-11-21T00:00:00Z'))
+    .events.map(e => e.summary)
+    .sort();
+  assert.deepEqual(titles, ['Erster', 'Zweiter']);
 });

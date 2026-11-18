@@ -102,3 +102,85 @@ test('Index file is only rewritten when something changed', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+function flagMailbox(messages, { condstore = false } = {}) {
+  const state = { modseq: 10n, fetches: [] };
+  const client = {
+    enabled: new Set(condstore ? ['CONDSTORE'] : []),
+    get mailbox() {
+      return {
+        exists: messages.length,
+        uidValidity: 7,
+        ...(condstore ? { highestModseq: state.modseq } : {})
+      };
+    },
+    getMailboxLock: async () => ({ release() {} }),
+    search: async () => messages.map(m => m.uid),
+    async *fetch(range, query, options = {}) {
+      state.fetches.push({ range, changedSince: options.changedSince });
+      const list =
+        range === '1:*'
+          ? messages.filter(m => !options.changedSince || m.modseq > options.changedSince)
+          : messages.filter(m => range.includes(m.uid));
+      for (const m of list) {
+        if (query.bodyParts) yield { uid: m.uid, bodyParts: new Map([['1', Buffer.from(m.text)]]) };
+        else
+          yield {
+            uid: m.uid,
+            envelope: { subject: m.subject, from: [{ name: 'A', address: 'a@x.at' }], to: [] },
+            internalDate: new Date('2026-11-18T10:00:00Z'),
+            flags: new Set(m.flags),
+            bodyStructure: { type: 'text/plain' }
+          };
+      }
+    }
+  };
+  return { client, state };
+}
+
+test('Index: read/unread changes from other devices reach the offline search (AUD-007)', async t => {
+  for (const condstore of [false, true]) {
+    const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const key = randomBytes(32);
+    const index = createLocalIndex({ dir, getKey: async () => key });
+    const messages = [{ uid: 1, subject: 'Rechnung Oktober', text: 'x', flags: [], modseq: 5n }];
+    const { client, state } = flagMailbox(messages, { condstore });
+    await index.sync(client, 'acc', [{ path: 'INBOX', flags: new Set() }]);
+    assert.equal((await index.search(['acc'], 'rechnung'))[0].unread, true);
+    // Read on the phone: same UID, new flags.
+    messages[0].flags = ['\\Seen'];
+    messages[0].modseq = 11n;
+    state.modseq = 11n;
+    await index.sync(client, 'acc', [{ path: 'INBOX', flags: new Set() }]);
+    assert.equal((await index.search(['acc'], 'rechnung'))[0].unread, false, `condstore=${condstore}`);
+    if (condstore) assert.equal(state.fetches.at(-1).changedSince, 10n, 'only changes since the last run');
+    // Survives a restart (the change was saved).
+    const again = createLocalIndex({ dir, getKey: async () => key });
+    assert.equal((await again.search(['acc'], 'rechnung'))[0].unread, false);
+  }
+});
+
+test('Index: data of a previous mailbox never shows up after the account changes (AUD-003)', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const key = randomBytes(32);
+  let identity = 'mailbox-A';
+  const index = createLocalIndex({ dir, getKey: async () => key, getIdentity: () => identity });
+  // Mailbox A and mailbox B use the same folder, UIDVALIDITY and UID.
+  const a = flagMailbox([{ uid: 1, subject: 'Vertraulich Gehalt', text: 'a', flags: [] }]);
+  await index.sync(a.client, 'acc', [{ path: 'INBOX', flags: new Set() }]);
+  assert.equal((await index.search(['acc'], 'gehalt')).length, 1);
+  // Same account ID, now pointing to another login.
+  identity = 'mailbox-B';
+  index.unload('acc');
+  assert.equal((await index.search(['acc'], 'gehalt')).length, 0, 'old index is not used');
+  const b = flagMailbox([{ uid: 1, subject: 'Newsletter', text: 'b', flags: [] }]);
+  await index.sync(b.client, 'acc', [{ path: 'INBOX', flags: new Set() }]);
+  assert.equal((await index.search(['acc'], 'gehalt')).length, 0);
+  assert.equal((await index.search(['acc'], 'newsletter')).length, 1);
+  // Also after a restart: the file now belongs to mailbox B.
+  const restarted = createLocalIndex({ dir, getKey: async () => key, getIdentity: () => 'mailbox-B' });
+  assert.equal((await restarted.search(['acc'], 'gehalt')).length, 0);
+  assert.equal((await restarted.search(['acc'], 'newsletter')).length, 1);
+});

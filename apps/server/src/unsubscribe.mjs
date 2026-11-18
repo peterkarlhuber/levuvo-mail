@@ -1,5 +1,7 @@
 // Unsubscribing from newsletters via List-Unsubscribe (RFC 2369) and one-click
 // List-Unsubscribe-Post (RFC 8058). The one-click POST carries no cookies or other context.
+import { lookup as dnsLookup } from 'node:dns/promises';
+import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -56,49 +58,130 @@ export function publicUnsubscribe(info) {
   };
 }
 
+/** True for every address that is not a public unicast address (IPv4 and IPv6). */
+export function privateAddress(address) {
+  const ip = String(address || '')
+    .replace(/^\[|\]$/g, '')
+    .toLowerCase();
+  const kind = isIP(ip);
+  if (kind === 4) {
+    const [a, b] = ip.split('.').map(Number);
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      a >= 224 || // multicast, reserved, broadcast
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 192 && b === 0) ||
+      (a === 198 && (b === 18 || b === 19))
+    );
+  }
+  if (kind === 6) {
+    // IPv4-mapped/compatible forms (::ffff:127.0.0.1, ::ffff:7f00:1) are checked as IPv4.
+    const mapped = /^::(?:ffff:)?(\d+\.\d+\.\d+\.\d+)$/.exec(ip);
+    if (mapped) return privateAddress(mapped[1]);
+    const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(ip);
+    if (hex) {
+      const n = (parseInt(hex[1], 16) << 16) | parseInt(hex[2], 16);
+      return privateAddress([n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'));
+    }
+    return (
+      ip === '::' ||
+      ip === '::1' ||
+      /^f[cd]/.test(ip) || // unique local
+      /^fe[89ab]/.test(ip) || // link local
+      /^ff/.test(ip) || // multicast
+      ip.startsWith('64:ff9b:') || // NAT64
+      ip.startsWith('2001:db8') ||
+      ip.startsWith('::ffff:')
+    );
+  }
+  return true; // not an IP address at all
+}
+
 function privateHost(hostname) {
   const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal'))
     return true;
-  const kind = isIP(host);
-  if (kind === 4) {
-    const [a, b] = host.split('.').map(Number);
-    return (
-      a === 10 ||
-      a === 127 ||
-      a === 0 ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 100 && b >= 64 && b <= 127)
-    );
-  }
-  if (kind === 6)
-    return host === '::1' || host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80') || host === '::';
-  return false;
+  return isIP(host) ? privateAddress(host) : false;
 }
 
-/** RFC 8058 one-click: POST "List-Unsubscribe=One-Click" without cookies; redirects are not followed. */
-export async function oneClickUnsubscribe(url, { fetchImpl = globalThis.fetch, timeoutMs = 10_000 } = {}) {
+const blocked = () => fail('Diese Abmeldeadresse wird aus Sicherheitsgründen nicht aufgerufen.', 'unsubscribe_blocked');
+const unreachable = () =>
+  fail('Der Absender ist gerade nicht erreichbar. Bitte später erneut versuchen.', 'unsubscribe_unreachable', 502);
+
+/** Resolves the host once and accepts it only when every address is public. */
+async function publicAddress(hostname, lookup) {
+  const host = hostname.replace(/^\[|\]$/g, '');
+  if (isIP(host)) return { address: host, family: isIP(host) };
+  let found;
+  try {
+    found = await lookup(host, { all: true, verbatim: true });
+  } catch {
+    throw unreachable();
+  }
+  const list = Array.isArray(found) ? found : [found];
+  if (!list.length) throw unreachable();
+  // DNS rebinding: a host that resolves to an internal address (also only some of the time)
+  // is refused; the connection below then goes to exactly the address checked here.
+  if (list.some(a => privateAddress(a?.address))) throw blocked();
+  return list[0];
+}
+
+/** HTTPS POST that connects only to `pinned`; TLS still verifies the certificate for the host name. */
+function pinnedPost(target, pinned, { headers, body, timeoutMs }) {
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      target,
+      {
+        method: 'POST',
+        headers: { ...headers, 'Content-Length': Buffer.byteLength(body) },
+        lookup: (_host, options, callback) =>
+          options?.all
+            ? callback(null, [{ address: pinned.address, family: pinned.family }])
+            : callback(null, pinned.address, pinned.family),
+        timeout: timeoutMs
+      },
+      res => {
+        res.resume(); // the body is not needed; redirects are not followed
+        resolve({ status: res.statusCode || 0 });
+      }
+    );
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', reject);
+    req.end(body);
+  });
+}
+
+/**
+ * RFC 8058 one-click: POST "List-Unsubscribe=One-Click" without cookies; redirects are not
+ * followed. `fetchImpl` replaces the pinned HTTPS request (tests); the address check runs
+ * in both cases.
+ */
+export async function oneClickUnsubscribe(url, { fetchImpl = null, lookup = dnsLookup, timeoutMs = 10_000 } = {}) {
   const target = new URL(url);
-  if (target.protocol !== 'https:' || privateHost(target.hostname))
-    throw fail('Diese Abmeldeadresse wird aus Sicherheitsgründen nicht aufgerufen.', 'unsubscribe_blocked');
+  if (target.protocol !== 'https:' || target.username || target.password || privateHost(target.hostname))
+    throw blocked();
+  const pinned = await publicAddress(target.hostname, lookup);
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Levuvo Mail' };
+  const body = 'List-Unsubscribe=One-Click';
   let response;
   try {
-    response = await fetchImpl(target, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Levuvo Mail' },
-      body: 'List-Unsubscribe=One-Click',
-      redirect: 'manual',
-      credentials: 'omit',
-      signal: AbortSignal.timeout(timeoutMs)
-    });
+    response = fetchImpl
+      ? await fetchImpl(target, {
+          method: 'POST',
+          headers,
+          body,
+          redirect: 'manual',
+          credentials: 'omit',
+          signal: AbortSignal.timeout(timeoutMs)
+        })
+      : await pinnedPost(target, pinned, { headers, body, timeoutMs });
   } catch {
-    throw fail(
-      'Der Absender ist gerade nicht erreichbar. Bitte später erneut versuchen.',
-      'unsubscribe_unreachable',
-      502
-    );
+    throw unreachable();
   }
   if (response.status >= 400)
     throw fail(`Der Absender hat die Abmeldung abgelehnt (HTTP ${response.status}).`, 'unsubscribe_rejected', 502);
