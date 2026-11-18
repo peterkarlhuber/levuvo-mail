@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### New
+- **Phishing hints:** the reading pane now also warns about look-alike sender domains (“paypa1.com”, Cyrillic letters, a typo of your own domain such as “levuv0.at”), display names that pose as a brand while the address is from somewhere else, links to look-alike domains, links that hide the real host behind a user name (“https://paypal.com@evil.example”), password forms inside the message and attached web pages (.html, .svg). All checks run locally.
+
 ## 2.2.2 – 13 November 2026
 
 ### Fixes

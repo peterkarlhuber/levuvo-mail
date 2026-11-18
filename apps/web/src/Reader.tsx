@@ -135,6 +135,29 @@ function useCheckText() {
         });
       case 'archive_attachment':
         return t('Archiv im Anhang: {filename}. Inhalt vor dem Öffnen prüfen.', { filename: String(c.filename) });
+      case 'lookalike_domain':
+        return t('Die Absender-Domain {domain} sieht aus wie {imitates}, ist es aber nicht.', {
+          domain: String(c.domain),
+          imitates: String(c.imitates)
+        });
+      case 'lookalike_link':
+        return t('Ein Link führt zu {domain}, einer Nachahmung von {imitates}.', {
+          domain: String(c.domain),
+          imitates: String(c.imitates)
+        });
+      case 'brand_impersonation':
+        return t('Der Absender nennt sich „{brand}“, schreibt aber von {actual}.', {
+          brand: String(c.brand),
+          actual: String(c.actual)
+        });
+      case 'password_form':
+        return t(
+          'Die Nachricht enthält ein Formular, das ein Passwort abfragt. Seriöse Absender tun das nie per E-Mail.'
+        );
+      case 'html_attachment':
+        return t('Webseite im Anhang: {filename}. Solche Dateien zeigen oft gefälschte Anmeldeseiten.', {
+          filename: String(c.filename)
+        });
       case 'first_contact':
         return t('Du hast mit diesem Absender bisher keinen Kontakt gehabt.');
       default:
