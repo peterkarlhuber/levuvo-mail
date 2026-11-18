@@ -255,5 +255,24 @@ export const AI_EN: Record<string, string> = {
   'Mit wem und worum?': 'With whom and about what?',
   'Antwortentwürfe vorbereiten': 'Prepare reply drafts',
   'Entwirft Antworten auf offene Mails, du prüfst und sendest selbst.':
-    'Drafts replies to open messages; you review and send them yourself.'
+    'Drafts replies to open messages; you review and send them yourself.',
+  'Levuvo Mail Assistant (Strg/⌘+J)': 'Levuvo Mail Assistant (Ctrl/⌘+J)',
+  Starten: 'Start',
+  KI: 'AI',
+  'Der Assistent ist ausgeschaltet. Er arbeitet standardmäßig mit einem lokalen Modell auf diesem Computer.':
+    'The assistant is switched off. By default it works with a local model on this computer.',
+  'KI-Einstellungen öffnen': 'Open AI settings',
+  Routinen: 'Routines',
+  'Frag zum Beispiel „Wann kommt die Lieferung von Müller?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesendet wird nichts ohne deine Freigabe.':
+    'Ask for example “When does the delivery from Müller arrive?” or give a task like “Arrange a meeting with Anna next week”. Nothing is sent without your approval.',
+  'Sucht im Postfach…': 'Searching the mailbox…',
+  'Arbeitet…': 'Working…',
+  '(ohne Betreff)': '(no subject)',
+  '{count} Freigaben warten unten auf dich.': '{count} approvals are waiting for you below.',
+  '{count} Schritte': '{count} steps',
+  Frage: 'Question',
+  Aufgabe: 'Task',
+  'Frag dein Postfach…': 'Ask your mailbox…',
+  'Was soll der Assistent erledigen?': 'What should the assistant do?',
+  'Verlauf leeren': 'Clear history'
 };
