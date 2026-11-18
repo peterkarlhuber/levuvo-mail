@@ -42,6 +42,7 @@ import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } fro
 import FollowupList from './FollowupList';
 import AttachmentOverview from './AttachmentOverview';
 import { BundleHeader, BundleRows } from './Bundles';
+import { applySuggestions, bundleSuggester, type BundleSuggestion } from './bundle-suggest';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
@@ -148,6 +149,7 @@ export default function MailInstance({
   const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
   const [filter, setFilter] = useState<Filter>('all');
   const [bundle, setBundle] = useState<Bundle | null>(null);
+  const [suggestions, setSuggestions] = useState<Map<number, BundleSuggestion>>(() => new Map());
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   // Paging cursor of the local index search ("everywhere"); null when there is no further page.
   const [localCursor, setLocalCursor] = useState<string | null>(null);
@@ -230,8 +232,27 @@ export default function MailInstance({
     !everywhere &&
     !searching &&
     !query.trim();
+  // Optional second opinion on bundles (AI); the local rules stay the default.
+  const bundled = useMemo(
+    () => (bundling ? applySuggestions(messages, suggestions) : messages),
+    [bundling, messages, suggestions]
+  );
+  useEffect(() => setSuggestions(new Map()), [accountId]);
+  useEffect(() => {
+    const suggest = bundleSuggester();
+    if (!bundling || !suggest || !messages.length) return;
+    let active = true;
+    suggest(messages, accountId)
+      .then(found => {
+        if (active && found.size) setSuggestions(old => new Map([...old, ...found]));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [bundling, messages, accountId]);
   const visibleMessages = useMemo(() => {
-    let list = messages;
+    let list = bundled;
     if (!searching && !unified && query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(m => `${m.subject} ${m.fromName} ${m.fromEmail}`.toLowerCase().includes(q));
@@ -241,7 +262,7 @@ export default function MailInstance({
     if (filter === 'flagged') list = list.filter(m => m.flagged);
     if (filter === 'attachments') list = list.filter(m => m.hasAttachments);
     return list;
-  }, [messages, query, searching, unified, filter, bundling, bundle]);
+  }, [bundled, query, searching, unified, filter, bundling, bundle]);
   const visibleUids = useMemo(() => visibleMessages.map(m => m.uid), [visibleMessages]);
   const selected =
     unified || everywhere
@@ -1671,7 +1692,7 @@ export default function MailInstance({
                 (bundle ? (
                   <BundleHeader
                     bundle={bundle}
-                    messages={messages}
+                    messages={bundled}
                     accountId={accountId}
                     folder={folder}
                     writeEnabled={writeEnabled}
@@ -1679,7 +1700,7 @@ export default function MailInstance({
                     onAction={(action, uids) => void runAction(action, uids)}
                   />
                 ) : (
-                  <BundleRows messages={messages} onOpen={setBundle} />
+                  <BundleRows messages={bundled} onOpen={setBundle} />
                 ))}
               <MessageList
                 messages={visibleMessages}

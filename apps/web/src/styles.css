@@ -4706,3 +4706,15 @@ h4 {
 .bundle-senders small {
   color: var(--muted);
 }
+.ai-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  vertical-align: 1px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}

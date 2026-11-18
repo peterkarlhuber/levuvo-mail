@@ -6,6 +6,7 @@ import { useT } from './i18n';
 import type { Bundle, Detail, Message } from './types';
 
 export const BUNDLE_ORDER: Bundle[] = ['invoice', 'notification', 'newsletter'];
+
 const ICONS = { newsletter: Newspaper, invoice: Receipt, notification: Bell };
 
 export function useBundleLabel() {
@@ -47,7 +48,19 @@ export function BundleRows({ messages, onOpen }: { messages: Message[]; onOpen: 
               <Icon size={16} aria-hidden="true" />
             </span>
             <span className="bundle-text">
-              <strong>{label(b)}</strong>
+              <strong>
+                {label(b)}
+                {members.some(m => m.bundleSource === 'ai') && (
+                  <span
+                    className="ai-badge"
+                    title={t('Teilweise von der KI einsortiert: {reason}', {
+                      reason: members.find(m => m.bundleReason)?.bundleReason || t('Vorschlag des Assistenten')
+                    })}
+                  >
+                    {t('KI')}
+                  </span>
+                )}
+              </strong>
               <span>{names.join(', ')}</span>
             </span>
             <span className="bundle-count">

@@ -30,6 +30,9 @@ export type Message = {
   accountLabel?: string;
   /** Automatic inbox bundle, from list headers (server: bundles.mjs). */
   bundle?: Bundle | null;
+  /** Set when an optional suggester (AI) changed the bundle; `bundleReason` explains it. */
+  bundleSource?: 'ai';
+  bundleReason?: string;
 };
 
 export type Bundle = 'newsletter' | 'invoice' | 'notification';

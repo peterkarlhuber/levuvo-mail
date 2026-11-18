@@ -473,6 +473,9 @@ export const EN: Record<string, string> = {
   '{count} Nachrichten löschen': 'Delete {count} messages',
   'Alle als gelesen': 'Mark all read',
   Abgemeldet: 'Unsubscribed',
+  'Teilweise von der KI einsortiert: {reason}': 'Partly sorted by the AI: {reason}',
+  'Vorschlag des Assistenten': 'Suggested by the assistant',
+  KI: 'AI',
   'Posteingang bündeln': 'Bundle the inbox',
   'Newsletter, Rechnungen und Benachrichtigungen erscheinen gesammelt oben im Posteingang.':
     'Newsletters, invoices and notifications are collected at the top of the inbox.',
