@@ -6,8 +6,21 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync, readdirSync, readFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { createLocalIndex, encrypt, entryKey } from '../src/local-index.mjs';
+import { createLocalIndex as openIndex, encrypt, entryKey } from '../src/local-index.mjs';
 import { syntheticMailbox } from './helpers/synthetic-mailbox.mjs';
+
+// Every index a test opens is closed before its directory is removed (Windows keeps open
+// database files locked).
+const opened = [];
+const createLocalIndex = options => {
+  const index = openIndex(options);
+  opened.push(index);
+  return index;
+};
+function cleanup(dir) {
+  for (const index of opened.splice(0)) index.close();
+  rmSync(dir, { recursive: true, force: true });
+}
 
 const INBOX = [{ path: 'INBOX', flags: new Set() }];
 
@@ -37,7 +50,7 @@ function mailbox(messages, uidValidity = 7) {
 
 function tempDir(t) {
   const dir = mkdtempSync(join(tmpdir(), 'lv-sql-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   return dir;
 }
 

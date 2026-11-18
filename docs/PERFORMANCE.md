@@ -10,7 +10,9 @@ node scripts/bench-large-mailbox.mjs --messages 50000 --json bench.json
 ```
 
 The script prints the measured values as JSON and exits with 1 when an upper bound is
-exceeded. CI runs it on every push and p## Upper bounds
+exceeded. CI runs it on every push and pull request.
+
+## Upper bounds
 
 | Measure | Bound | Measured (Linux x64, Node 22) |
 | --- | --- | --- |

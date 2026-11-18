@@ -4,7 +4,20 @@ import { mkdtempSync, rmSync, readFileSync, readdirSync, statSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { createLocalIndex, encrypt, decrypt, normalize } from '../src/local-index.mjs';
+import { createLocalIndex as openIndex, encrypt, decrypt, normalize } from '../src/local-index.mjs';
+
+// Every index a test opens is closed before its directory is removed (Windows keeps open
+// database files locked).
+const opened = [];
+const createLocalIndex = options => {
+  const index = openIndex(options);
+  opened.push(index);
+  return index;
+};
+function cleanup(dir) {
+  for (const index of opened.splice(0)) index.close();
+  rmSync(dir, { recursive: true, force: true });
+}
 
 function mailbox(messages) {
   return {
@@ -65,7 +78,7 @@ test('Index is encrypted, matches without umlauts/case, removes deleted messages
     assert.equal((await wrongKey.status('acc')).messages, 0, 'wrong key → empty index');
     assert.equal((await createLocalIndex({ dir, getKey: async () => null }).status('acc')).enabled, false);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    cleanup(dir);
   }
 });
 
@@ -106,7 +119,7 @@ test('An unchanged sync writes nothing to the database', async () => {
     assert.notEqual(snapshot(), first, 'a new message is saved');
     assert.equal((await index.search(['acc'], 'neu')).length, 1);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    cleanup(dir);
   }
 });
 
@@ -148,7 +161,7 @@ function flagMailbox(messages, { condstore = false } = {}) {
 test('Index: read/unread changes from other devices reach the offline search (AUD-007)', async t => {
   for (const condstore of [false, true]) {
     const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    t.after(() => cleanup(dir));
     const key = randomBytes(32);
     const index = createLocalIndex({ dir, getKey: async () => key });
     const messages = [{ uid: 1, subject: 'Rechnung Oktober', text: 'x', flags: [], modseq: 5n }];
@@ -170,7 +183,7 @@ test('Index: read/unread changes from other devices reach the offline search (AU
 
 test('Index: data of a previous mailbox never shows up after the account changes (AUD-003)', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const key = randomBytes(32);
   let identity = 'mailbox-A';
   const index = createLocalIndex({ dir, getKey: async () => key, getIdentity: () => identity });

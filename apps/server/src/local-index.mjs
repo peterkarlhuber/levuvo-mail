@@ -212,7 +212,11 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     } catch {
       // Wrong key (key lost or replaced) or a damaged file: the index is rebuilt from the server.
       removeFiles(id);
-      db = connect(Database, id, key);
+      try {
+        db = connect(Database, id, key);
+      } catch {
+        return null; // still locked or unreadable (e.g. held open elsewhere on Windows): index off for now
+      }
     }
     protect(id);
     const identity = getIdentity(id) || null;
@@ -224,11 +228,9 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     );
     const fresh = !meta.generation;
     if (!fresh && identity && meta.identity && meta.identity !== identity) {
-      // Same account ID, another mailbox: never search the old data.
-      db.close();
-      removeFiles(id);
-      db = connect(Database, id, key);
-      protect(id);
+      // Same account ID, another mailbox: never search the old data. Wiped inside the database,
+      // so it also holds when the file cannot be deleted (open elsewhere on Windows).
+      wipe(db);
     }
     const entry = { db, statements: new Map(), vectorCache: new Map() };
     const setMeta = db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v');
@@ -245,6 +247,15 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     } else if (identity && !entry.meta('identity')) entry.meta('identity', identity);
     loaded.set(id, entry);
     return entry;
+  }
+
+  /** Removes every row, including FTS data and vectors. */
+  function wipe(db) {
+    db.transaction(() => {
+      for (const table of ['messages', 'folders', 'removed', 'vectors', 'meta']) db.exec(`DELETE FROM ${table}`);
+      db.exec("INSERT INTO words (words) VALUES ('delete-all')");
+      db.exec("INSERT INTO heads (heads) VALUES ('delete-all')");
+    })();
   }
 
   /** Imports an index file from before 2.3 once, then deletes it. */
@@ -863,6 +874,8 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const entry = loaded.get(id);
       loaded.delete(id);
       try {
+        // Emptied first: if the file cannot be deleted (Windows: open elsewhere), nothing remains in it.
+        if (entry) wipe(entry.db);
         entry?.db.close();
       } catch {
         /* already closed */
