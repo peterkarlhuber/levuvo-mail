@@ -281,3 +281,38 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
   await new Promise(resolve => setTimeout(resolve, 300));
   assert.equal(restarts, 1);
 });
+
+test('Backup routes are rate-limited', async t => {
+  const dir = tmp(t);
+  const SECRET = 'e'.repeat(64);
+  const HOST = '127.0.0.1:4791';
+  const POST = {
+    host: HOST,
+    cookie: `levuvo_desktop_session=${SECRET}`,
+    origin: `http://${HOST}`,
+    'content-type': 'application/json',
+    'x-levuvo-action': 'backup-v1'
+  };
+  const s = await createMailServer({
+    desktop: true,
+    sessionSecret: SECRET,
+    vault: vault(),
+    dataDir: dir,
+    accountsFile: join(dir, 'accounts.json'),
+    watch: false,
+    background: false
+  });
+  s.setPortForTesting(4791);
+  t.after(() => s.close());
+  const codes = [];
+  for (let i = 0; i < 11; i++)
+    codes.push(
+      await s.api.inject({ method: 'POST', url: '/api/backup/create', headers: POST, payload: { password: 'x' } })
+    );
+  assert.deepEqual(
+    codes.slice(0, 10).map(r => r.statusCode),
+    Array(10).fill(400)
+  );
+  assert.equal(codes[10].statusCode, 429);
+  assert.equal(codes[10].json().error, 'Zu viele Versuche. Bitte eine Minute warten.');
+});
