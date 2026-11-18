@@ -224,3 +224,9 @@ test('JSON-LD blocks: odd closing tags, other scripts and long hostile input', (
   jsonLdNodes('<script '.repeat(50_000) + '>');
   assert.ok(Date.now() - started < 1000);
 });
+
+test('Text heuristic: words after a number are not mistaken for a time suffix', () => {
+  assert.deepEqual(suggestionsFromText('Am 12.12.2026 10 hotels geprüft', { date: '2026-11-18' }), []);
+  const [s] = suggestionsFromText('Am 12.12.2026, 10h im Büro', { date: '2026-11-18' });
+  assert.equal(s.start, '2026-12-12T10:00');
+});

@@ -143,7 +143,7 @@ export function jsonLdNodes(html) {
   for (const body of jsonLdBlocks(src)) {
     let data;
     try {
-      data = JSON.parse(decodeEntities(body.trim().replace(/^<!--|-->$/g, '')));
+      data = JSON.parse(decodeEntities(unwrapComment(body.trim())));
     } catch {
       continue;
     }
@@ -159,6 +159,13 @@ export function jsonLdNodes(html) {
   }
   return out;
 }
+/** Some generators wrap the JSON in an HTML comment marker; only the outer markers go. */
+const unwrapComment = s => {
+  let t = s;
+  if (t.startsWith('<!--')) t = t.slice(4);
+  if (t.endsWith('-->')) t = t.slice(0, -3);
+  return t.trim();
+};
 const decodeEntities = s =>
   s.includes('&') && !s.trim().startsWith('{') && !s.trim().startsWith('[')
     ? s
@@ -325,7 +332,7 @@ const DATE_PATTERNS = [
 ]; // prettier-ignore
 // A time right after the date: "um 14:30", ", 14.30 Uhr", "at 2 pm", "von 9 bis 11 Uhr", "14:00–15:30"
 const TIME_AFTER =
-  /^[\s,]*(?:-|–|—|\/)?\s*(?:um|ab|at|from|von|,)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(uhr|h|am|pm|a\.m\.|p\.m\.)?(?:\s*(?:-|–|—|bis|to|until)\s*(\d{1,2})(?:[:.](\d{2}))?\s*(uhr|h|am|pm|a\.m\.|p\.m\.)?)?/i;
+  /^[\s,/\-–—]*(?:(?:um|ab|at|from|von)\s+)?(\d{1,2})(?:[:.](\d{2}))?(?:\s*(uhr|h|am|pm|a\.m\.|p\.m\.)(?![a-zäöü]))?(?:\s*(?:-|–|—|bis|to|until)\s*(\d{1,2})(?:[:.](\d{2}))?(?:\s*(uhr|h|am|pm|a\.m\.|p\.m\.)(?![a-zäöü]))?)?/i;
 
 function hour24(h, suffix) {
   let n = Number(h);
@@ -342,6 +349,13 @@ function inferYear(day, month, ref) {
   const candidate = Date.UTC(y, month - 1, day);
   return candidate < Date.UTC(y, ref.getUTCMonth(), ref.getUTCDate()) - 7 * 86_400_000 ? y + 1 : y;
 }
+/** "-----Original Message-----", "Am … schrieb Anna:", "From: x@y" start the quoted history. */
+function isHistoryStart(line) {
+  const t = line.trim();
+  if (/^-{2,}\s*(original|ursprüngliche|weitergeleitete|forwarded)/i.test(t)) return true;
+  if (/^(von|from):\s/i.test(t) && t.includes('@')) return true;
+  return /^(am|on)\s/i.test(t) && t.endsWith(':') && /\b(schrieb|wrote)\b/i.test(t) && t.length < 300;
+}
 /** Only the new part of a mail: quoted replies and forwarded history are skipped. */
 export function ownText(text) {
   const lines = String(text || '')
@@ -350,13 +364,7 @@ export function ownText(text) {
   const out = [];
   for (const line of lines) {
     if (/^\s*>/.test(line)) continue;
-    if (
-      /^\s*(-{2,}\s*(original|ursprüngliche|weitergeleitete|forwarded)|(am|on)\s.{4,120}\s(schrieb|wrote)\s*.*:\s*$|von:\s.+|from:\s.+@)/i.test(
-        line
-      ) &&
-      out.length
-    )
-      break;
+    if (out.length && isHistoryStart(line)) break;
     out.push(line);
   }
   return out.join('\n');
