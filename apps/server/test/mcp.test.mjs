@@ -262,3 +262,59 @@ test('accounts hidden from an agent (no cloud AI) do not exist for it', async t 
   const read = await handle(agent, rpc('tools/call', { name: 'read_message', arguments: { uid: 7, account: 'a1' } }));
   assert.equal(read.result.isError, true);
 });
+
+test('task tools: list without hidden accounts, propose waits for approval, create and complete', async t => {
+  const { registerTaskTools, taskInput } = await import('../src/ai-task-tools.mjs');
+  const { ctx, handle, approvals } = await setup(t);
+  const saved = [];
+  const items = [
+    { id: 't1', title: 'Angebot schicken', due: '2026-11-19', priority: 'high', done: false },
+    { id: 't2', title: 'Privat', mail: { accountId: 'secret', folder: 'INBOX', uid: 3, subject: 'x' }, done: false }
+  ];
+  const call = (agent, name, args) => handle(agent, rpc('tools/call', { name, arguments: args }));
+  const text = r => r.result.content[0].text;
+  registerTaskTools(ctx, { registry: mcpToolRegistry(ctx), frame: frameUntrusted });
+  const reader = { id: 'r', name: 'R', level: 'read', hiddenAccounts: ['secret'] };
+  const missing = await call(reader, 'list_tasks', {});
+  assert.equal(missing.result.isError, true, 'no task list yet');
+
+  ctx.tasks = {
+    available: true,
+    list: ({ view }) => (view === 'open' ? items.filter(i => !i.done) : items),
+    get: id => items.find(i => i.id === id) || null,
+    async save(input) {
+      saved.push(input);
+      return { id: `n${saved.length}`, ...input };
+    },
+    async setDone(id, done) {
+      const task = items.find(i => i.id === id);
+      task.done = done;
+      return { task, finished: null };
+    }
+  };
+  const listed = text(await call(reader, 'list_tasks', { view: 'open' }));
+  assert.match(listed, /untrusted_data/);
+  assert.match(listed, /Angebot schicken/);
+  assert.doesNotMatch(listed, /Privat/, 'task of a hidden account is left out');
+
+  const drafter = { id: 'd', name: 'D', level: 'draft' };
+  const names = (await handle(drafter, rpc('tools/list'))).result.tools.map(x => x.name);
+  assert.ok(names.includes('propose_task') && !names.includes('create_task') && !names.includes('complete_task'));
+  const proposed = await call(drafter, 'propose_task', { title: 'Rückruf', due: '2026-11-20' });
+  assert.equal(JSON.parse(text(proposed)).status, 'pending_approval');
+  assert.equal(saved.length, 0, 'nothing saved before approval');
+  const [item] = approvals.list();
+  assert.equal(item.summary.title, 'Aufgabe: Rückruf');
+  assert.equal(item.type, 'task');
+  assert.deepEqual(taskInput(item.payload).due, '2026-11-20');
+  await mcpToolRegistry(ctx).approval('task').execute(item.payload);
+  assert.equal(saved.at(-1).source, 'ai');
+
+  const organizer = { id: 'o', name: 'O', level: 'organize', hiddenAccounts: ['secret'] };
+  const bad = await call(organizer, 'create_task', { title: 'x', due: 'morgen' });
+  assert.equal(bad.result.isError, true);
+  const created = JSON.parse(text(await call(organizer, 'create_task', { title: 'Vertrag prüfen', priority: 'low' })));
+  assert.equal(created.title, 'Vertrag prüfen');
+  assert.equal(JSON.parse(text(await call(organizer, 'complete_task', { id: 't1' }))).done, true);
+  assert.equal((await call(organizer, 'complete_task', { id: 't2' })).result.isError, true, 'hidden account');
+});

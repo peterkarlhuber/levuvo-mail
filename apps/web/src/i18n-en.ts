@@ -503,6 +503,17 @@ export const EN: Record<string, string> = {
   'Antwort an den Organisator gesendet.': 'Reply sent to the organizer.',
   'Antwort gespeichert.': 'Reply saved.',
   'Im Kalender eingetragen.': 'Added to the calendar.',
+  // Contact card in the reader
+  Kontaktkarte: 'Contact card',
+  'Kontaktkarte anzeigen': 'Show contact card',
+  'Nicht im Adressbuch': 'Not in the address book',
+  'Letzte E-Mails': 'Recent emails',
+  'Wird geladen …': 'Loading …',
+  'Keine weiteren E-Mails gefunden.': 'No other emails found.',
+  'Gemeinsame Termine': 'Shared appointments',
+  Vergangen: 'Past',
+  'Keine gemeinsamen Termine.': 'No shared appointments.',
+  'Keine Anhänge.': 'No attachments.',
   // Detected appointments in the reader
   Flug: 'Flight',
   Zugfahrt: 'Train journey',
@@ -1718,5 +1729,18 @@ export const EN: Record<string, string> = {
   'Fehlendes anfragen': 'Request missing content',
   '{count} gemeinsame Räume': '{count} shared spaces',
   'Die Räume auf diesem Gerät sind gesperrt (Schlüsselbund). Die Sicherung wäre unvollständig und wurde nicht erstellt.':
-    'The spaces on this device are locked (keychain). The backup would be incomplete and was not created.'
+    'The spaces on this device are locked (keychain). The backup would be incomplete and was not created.',
+  // Shared spaces: assistant approvals
+  'Neuen Raum „{subject}“ anlegen': 'Create new space “{subject}”',
+  'Notiz „{subject}“ anlegen': 'Create note “{subject}”',
+  'Notiz „{subject}“ ergänzen': 'Add to note “{subject}”',
+  'Aufgabe „{subject}“ anlegen': 'Create task “{subject}”',
+  'Aufgabe „{subject}“ ändern': 'Change task “{subject}”',
+  'Termin „{subject}“ eintragen': 'Add event “{subject}”',
+  'Kommentar schreiben': 'Write a comment',
+  'Mail in den Raum legen': 'Add the mail to the space',
+  '{subject} einladen': 'Invite {subject}',
+  '{subject} entfernen': 'Remove {subject}',
+  'Rolle von {subject} ändern': 'Change the role of {subject}',
+  'Raum „{room}“: {action}': 'Space “{room}”: {action}'
 };
