@@ -4,13 +4,13 @@ import ICAL from 'ical.js';
 import { randomUUID } from 'node:crypto';
 
 const fail = message => Object.assign(new Error(message), { statusCode: 400, code: 'contact_invalid' });
+// TYPE can hold several values (e.g. INTERNET,WORK); INTERNET and PREF say nothing about the kind.
 const typeOf = p => {
   const t = p.getParameter('type');
-  return (
-    String(Array.isArray(t) ? t[0] : t || '')
-      .toLowerCase()
-      .replace(/^pref$/, '') || 'other'
-  );
+  const values = (Array.isArray(t) ? t : String(t || '').split(','))
+    .map(v => String(v).trim().toLowerCase())
+    .filter(v => v && v !== 'pref' && v !== 'internet');
+  return values[0] || 'other';
 };
 
 export function parseVCard(text) {

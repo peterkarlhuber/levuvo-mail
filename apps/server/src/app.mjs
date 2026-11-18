@@ -25,6 +25,7 @@ import { createLocalIndex } from './local-index.mjs';
 import { createDavStore, createDavService } from './dav.mjs';
 import { createCloudService, DEFAULT_ENDPOINTS as CLOUD_ENDPOINTS } from './cloud.mjs';
 import { createLocalCalendar } from './local-calendar.mjs';
+import { createLocalContacts } from './local-contacts.mjs';
 import { createPgp } from './pgp.mjs';
 import { createSmime } from './smime.mjs';
 import { createDiagnostics } from './diagnostics.mjs';
@@ -157,6 +158,16 @@ export async function createMailServer({
     vault: store
   }).catch(err => {
     logger(`local calendar unavailable: ${err.code || err.message}`);
+    return null;
+  });
+  // Same for the address book on this device; the reason is shown in the contacts view.
+  let localContactsError = null;
+  const localContacts = await createLocalContacts({
+    filename: path.join(dir, 'contacts-local.json'),
+    vault: store
+  }).catch(err => {
+    logger(`local contacts unavailable: ${err.code || err.message}`);
+    localContactsError = err;
     return null;
   });
   const pgp = createPgp({ meta: cryptoMeta, vault: store });
@@ -404,6 +415,8 @@ export async function createMailServer({
     davStore,
     davService,
     localCalendar,
+    localContacts,
+    localContactsError,
     cloud,
     fetchImpl,
     pgp,

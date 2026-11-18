@@ -208,3 +208,68 @@ test('Desktop mode does not start without a valid session key', async () => {
     /Sitzungsschlüssel/
   );
 });
+
+test('Contacts can be created, edited and deleted on this device without any account', async t => {
+  const { s } = await server(t);
+  const list = async () => (await s.api.inject({ method: 'GET', url: '/api/contacts/list', headers: GET })).json();
+  const post = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'contacts-v1' }, payload });
+
+  const empty = await list();
+  assert.deepEqual(empty.contacts, []);
+  assert.equal(empty.addressBooks.length, 1);
+  const [book] = empty.addressBooks;
+  assert.equal(book.source, 'local');
+
+  const created = await post('/api/contacts/save', {
+    accountId: book.accountId,
+    addressBookUrl: book.url,
+    contact: { firstName: 'Clara', lastName: 'Huber', emails: [{ value: 'clara@example.org', type: 'home' }] }
+  });
+  assert.equal(created.statusCode, 200, created.body);
+  let [clara] = (await list()).contacts;
+  assert.equal(clara.name, 'Clara Huber');
+
+  const edited = await post('/api/contacts/save', {
+    accountId: clara.accountId,
+    addressBookUrl: clara.addressBookUrl,
+    url: clara.url,
+    etag: clara.etag,
+    uid: clara.uid,
+    contact: { ...clara, organization: 'Levuvo' }
+  });
+  assert.equal(edited.statusCode, 200, edited.body);
+  [clara] = (await list()).contacts;
+  assert.equal(clara.organization, 'Levuvo');
+
+  const exported = await s.api.inject({ method: 'GET', url: '/api/contacts/export', headers: GET });
+  assert.match(exported.body, /FN:Clara Huber/);
+
+  const imported = await post('/api/contacts/import', {
+    accountId: book.accountId,
+    addressBookUrl: book.url,
+    vcf: 'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Dora\r\nEMAIL:dora@example.org\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nEND:VCARD\r\n'
+  });
+  assert.equal(imported.json().imported, 1, 'cards without a name are skipped');
+
+  const removed = await post('/api/contacts/delete', { accountId: clara.accountId, url: clara.url, etag: clara.etag });
+  assert.equal(removed.statusCode, 200, removed.body);
+  assert.deepEqual(
+    (await list()).contacts.map(c => c.name),
+    ['Dora']
+  );
+});
+
+test('Without a keychain the device address book reports why it is missing', async t => {
+  const { s } = await server(t, { vault: { available: false, get: () => '', set() {}, delete() {} } });
+  const r = (await s.api.inject({ method: 'GET', url: '/api/contacts/list', headers: GET })).json();
+  assert.deepEqual(r.addressBooks, []);
+  assert.ok(r.errors.some(e => /Schlüsselbund/.test(e.error)));
+  const saved = await s.api.inject({
+    method: 'POST',
+    url: '/api/contacts/save',
+    headers: { ...POST, 'x-levuvo-action': 'contacts-v1' },
+    payload: { accountId: 'local', addressBookUrl: 'local-contacts:', contact: { name: 'X' } }
+  });
+  assert.equal(saved.statusCode, 423);
+});

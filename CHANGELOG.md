@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Contacts on this device:** contacts can be created, edited, deleted, imported and exported without connecting a CardDAV, Microsoft 365 or Google address book. They are stored as vCards, encrypted with AES-256-GCM; the key lives in the system keychain. Without the keychain (or with a different key) the address book stays locked instead of being replaced by an empty one. Addresses from it are suggested when writing and count as known senders.
+
+### Fixes
+- **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
+
 ## 2.2.2 – 13 November 2026
 
 ### Fixes
