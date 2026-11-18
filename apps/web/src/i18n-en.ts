@@ -1353,5 +1353,7 @@ export const EN: Record<string, string> = {
   '1 Tracker blockiert': '1 tracker blocked',
   '{count} Tracker blockiert': '{count} trackers blocked',
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
-    'Tracking pixels removed, even when images are loaded: {hosts}'
+    'Tracking pixels removed, even when images are loaded: {hosts}',
+  Zeitraster: 'Time grid',
+  '{n} ungelesen': '{n} unread'
 };

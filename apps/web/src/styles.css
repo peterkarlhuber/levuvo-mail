@@ -152,6 +152,7 @@
   --content-max: 760px;
   --bottom-nav-h: 60px;
   --row-actions-w: 120px;
+  --resizer-w: 8px;
 }
 @media (pointer: coarse) {
   :root {
@@ -643,7 +644,7 @@ h4 {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 236px var(--mail-list-width, 400px) 8px minmax(0, 1fr);
+  grid-template-columns: 236px calc(var(--mail-list-width, 400px) + var(--resizer-w)) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
@@ -994,7 +995,14 @@ h4 {
 .message-select {
   display: grid;
   place-items: center;
-  width: 22px;
+  /* 28px keeps a 24px target circle around the checkbox (WCAG 2.5.8). */
+  width: 28px;
+  flex: none;
+}
+.message-select input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 .filter-chips {
   display: flex;
@@ -1090,7 +1098,7 @@ h4 {
   border-bottom: 1px solid var(--border);
 }
 .message-row .message-select {
-  padding-left: var(--space-2);
+  padding-left: var(--space-1);
   opacity: 0.55;
 }
 .message-row:hover .message-select,
@@ -1276,7 +1284,16 @@ h4 {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.message-column {
+  position: relative;
+  padding-right: var(--resizer-w);
+}
 .column-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--resizer-w);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2574,10 +2591,10 @@ h4 {
   gap: var(--space-3);
   background: var(--surface);
 }
-.settings-section h3 {
+.settings-section h2 {
   font-size: var(--text-lg);
 }
-.settings-section h4 {
+.settings-section h3 {
   font-size: var(--text-sm);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2780,7 +2797,7 @@ h4 {
   align-items: center;
   justify-content: space-between;
 }
-.managed-accounts-head h3 {
+.managed-accounts-head h2 {
   font-size: var(--text-lg);
 }
 .managed-explain {
@@ -3447,6 +3464,7 @@ h4 {
   padding-bottom: var(--space-3);
 }
 .contact-row {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
@@ -3608,7 +3626,7 @@ h4 {
 /* ---------- Responsive ---------- */
 @media (max-width: 1180px) {
   .workspace {
-    grid-template-columns: 210px var(--mail-list-width, 360px) 8px minmax(0, 1fr);
+    grid-template-columns: 210px calc(var(--mail-list-width, 360px) + var(--resizer-w)) minmax(0, 1fr);
   }
   .reader-content {
     padding-inline: var(--space-6);
@@ -3626,6 +3644,9 @@ h4 {
   }
   .column-resizer {
     display: none;
+  }
+  .message-column {
+    padding-right: 0;
   }
   .reader-column {
     display: none;
@@ -4385,7 +4406,6 @@ h4 {
 }
 .mini-day.outside {
   color: var(--faint);
-  opacity: 0.6;
 }
 .mini-day.selected {
   background: var(--selected);
@@ -4967,9 +4987,17 @@ h4 {
     min-height: var(--touch-target);
     justify-content: center;
   }
-  .reader-secondary-actions select {
-    flex: 1 1 auto;
-    min-width: 0;
+  /* Very narrow screens (or 400 % zoom): scroll instead of shrinking the buttons. */
+  .reader-secondary-actions {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .reader-secondary-actions > * {
+    flex: none;
+  }
+  .reader-secondary-actions > select {
+    flex: 1 0 88px;
+    min-width: 88px;
     max-width: 120px;
     min-height: var(--touch-target);
   }
@@ -5104,5 +5132,94 @@ h4 {
   }
   .calendar-toolbar .segmented {
     margin-left: auto;
+  }
+}
+
+/* =====================================================================
+   Contrast preferences
+   ===================================================================== */
+/* "Increase contrast" (macOS, iOS, Windows): stronger borders and secondary text. */
+@media (prefers-contrast: more) {
+  :root:not([data-theme='light']),
+  [data-theme='dark'] {
+    --muted: #c8c8c8;
+    --faint: #b4b4b4;
+    --text-2: #f2f2f2;
+    --border: #6a6a6a;
+    --border-strong: #8a8a8a;
+  }
+  [data-theme='light'] {
+    --muted: #3a3a3a;
+    --faint: #444444;
+    --text-2: #141414;
+    --border: #8a8a8a;
+    --border-strong: #5a5a5a;
+  }
+  .message-row .message-select,
+  .flag-button,
+  .folder-more {
+    opacity: 1;
+  }
+}
+
+/* Windows high contrast / forced colours: states that rely on background colour get a
+   visible system-colour outline instead, decorative dots and switches keep their shape. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .segmented button.active,
+  .rail-item.active,
+  .folder-item.active,
+  .message-row.selected,
+  .contact-row.selected,
+  .mini-day.selected,
+  .filter-chips button.active,
+  .settings-nav button.active {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .segmented button.active,
+  .filter-chips button.active {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+  .unread-dot,
+  .rail-badge,
+  .folder-count {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+  .switch span {
+    border-color: CanvasText;
+  }
+  .switch input:checked + span {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+  }
+  .switch span::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .switch input:checked + span::after {
+    background: HighlightText;
+  }
+  .btn.primary,
+  .compose-button,
+  .compose-fab {
+    border: 2px solid ButtonText;
+  }
+  .ui-dialog,
+  .confirm-card,
+  .modal-card,
+  .compose-panel,
+  .menu,
+  .palette,
+  .toast {
+    border: 1px solid CanvasText;
   }
 }

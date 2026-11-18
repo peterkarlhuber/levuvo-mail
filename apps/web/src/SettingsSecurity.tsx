@@ -307,10 +307,10 @@ export function SecuritySettings() {
           'Ende-zu-Ende-Verschlüsselung nach OpenPGP (kompatibel mit Thunderbird, GnuPG, Proton u. a.). Private Schlüssel liegen passphrasegeschützt im Schlüsselbund.'
         )}
       >
-        <h4>{t('Eigene Schlüssel')}</h4>
+        <h3>{t('Eigene Schlüssel')}</h3>
         {state.pgp.own.length === 0 && <p className="muted">{t('Noch kein eigener Schlüssel.')}</p>}
         {state.pgp.own.map(k => pgpRow(k, true))}
-        <h4>{t('Schlüssel von Kontakten')}</h4>
+        <h3>{t('Schlüssel von Kontakten')}</h3>
         {state.pgp.public.length === 0 && (
           <p className="muted">
             {t('Noch keine. Öffentliche Schlüssel kannst du hier oder direkt aus einer E-Mail importieren.')}
@@ -342,17 +342,17 @@ export function SecuritySettings() {
           'Zertifikatsbasierte Signatur und Verschlüsselung (Standard in Outlook/Apple Mail). Dein Zertifikat erhältst du von einer Zertifizierungsstelle als .p12/.pfx-Datei.'
         )}
       >
-        <h4>{t('Eigene Zertifikate')}</h4>
+        <h3>{t('Eigene Zertifikate')}</h3>
         {state.smime.own.length === 0 && <p className="muted">{t('Noch kein eigenes Zertifikat.')}</p>}
         {state.smime.own.map(c => certRow(c))}
-        <h4>{t('Zertifikate von Kontakten')}</h4>
+        <h3>{t('Zertifikate von Kontakten')}</h3>
         {state.smime.public.length === 0 && (
           <p className="muted">{t('Werden automatisch aus signierten E-Mails übernommen.')}</p>
         )}
         {state.smime.public.map(c => certRow(c))}
         {state.smime.trusted.length > 0 && (
           <>
-            <h4>{t('Zusätzlich vertraute Zertifizierungsstellen')}</h4>
+            <h3>{t('Zusätzlich vertraute Zertifizierungsstellen')}</h3>
             {state.smime.trusted.map(c => certRow(c, false))}
           </>
         )}

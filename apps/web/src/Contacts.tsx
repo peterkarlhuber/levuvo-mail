@@ -331,23 +331,24 @@ export default function ContactsModule({
             }}
           />
         </div>
-        <div className="contact-rows" role="list">
+        <div className="contact-rows" role={contacts.length ? 'list' : undefined}>
           {contacts.map(c => (
-            <button
-              role="listitem"
-              key={key(c)}
-              className={`contact-row ${selected === key(c) ? 'selected' : ''}`}
-              onClick={() => {
-                setSelected(key(c));
-                setEdit(null);
-              }}
-            >
-              <span className="reader-avatar small">{initials(c.name)}</span>
-              <span>
-                <strong>{c.name}</strong>
-                <small>{c.emails[0]?.value || c.organization || c.phones[0]?.value}</small>
-              </span>
-            </button>
+            <div role="listitem" key={key(c)} className="contact-row-item">
+              <button
+                aria-current={selected === key(c) ? 'true' : undefined}
+                className={`contact-row ${selected === key(c) ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelected(key(c));
+                  setEdit(null);
+                }}
+              >
+                <span className="reader-avatar small">{initials(c.name)}</span>
+                <span>
+                  <strong>{c.name}</strong>
+                  <small>{c.emails[0]?.value || c.organization || c.phones[0]?.value}</small>
+                </span>
+              </button>
+            </div>
           ))}
           {!contacts.length && (
             <p className="muted center">{query ? t('Keine Treffer.') : t('Noch keine Kontakte.')}</p>

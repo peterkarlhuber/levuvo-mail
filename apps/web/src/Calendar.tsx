@@ -1220,7 +1220,14 @@ export default function CalendarModule({
           </div>
         ))}
       </div>
-      <div className="time-grid" ref={grid} style={{ '--days': days.length } as CSSProperties}>
+      <div
+        className="time-grid"
+        ref={grid}
+        style={{ '--days': days.length } as CSSProperties}
+        tabIndex={0}
+        role="region"
+        aria-label={t('Zeitraster')}
+      >
         <div className="hours">
           {Array.from({ length: 24 }, (_, h) => (
             <span key={h} style={{ top: h * HOUR_PX }}>
@@ -1540,7 +1547,7 @@ function MiniMonth({
           <ChevronRight size={15} />
         </button>
       </div>
-      <div className="mini-month-grid" role="grid">
+      <div className="mini-month-grid" role="group" aria-label={label}>
         {days.slice(0, 7).map(d => (
           <span key={`h${ymd(d)}`} className="mini-weekday" aria-hidden="true">
             {weekday.format(d)}

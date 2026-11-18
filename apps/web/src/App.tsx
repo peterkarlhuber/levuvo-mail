@@ -540,14 +540,18 @@ function Shell() {
             className={`rail-item ${module === item.id ? 'active' : ''}`}
             onClick={() => setModule(item.id)}
             title={`${item.label} (Alt+${item.key})`}
-            aria-label={item.label}
             aria-current={module === item.id ? 'page' : undefined}
           >
-            <item.icon size={20} strokeWidth={1.8} />
+            <item.icon size={20} strokeWidth={1.8} aria-hidden="true" />
             {item.id === 'mail' && unseenTotal > 0 && (
-              <span className="rail-badge">{unseenTotal > 99 ? '99+' : unseenTotal}</span>
+              <span className="rail-badge" aria-hidden="true">
+                {unseenTotal > 99 ? '99+' : unseenTotal}
+              </span>
             )}
             <span className="rail-label">{item.label}</span>
+            {item.id === 'mail' && unseenTotal > 0 && (
+              <span className="sr-only">, {t('{n} ungelesen', { n: unseenTotal })}</span>
+            )}
           </button>
         ))}
         <span className="rail-spacer" />

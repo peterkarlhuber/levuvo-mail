@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Bell,
   Bot,
@@ -61,20 +61,39 @@ export function Section({
 }) {
   return (
     <section className="settings-section">
-      <h3>{title}</h3>
+      <h2>{title}</h2>
       {description && <p className="settings-description">{description}</p>}
       {children}
     </section>
   );
 }
 export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  const id = useId();
+  const control = useRef<HTMLDivElement>(null);
+  // Fields inside a row get the row's label and hint as accessible name and description,
+  // unless they carry their own (WCAG 1.3.1 / 4.1.2).
+  useLayoutEffect(() => {
+    control.current?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea').forEach(el => {
+      const named =
+        el.getAttribute('aria-label') ||
+        (el.getAttribute('aria-labelledby') && !el.dataset.rowLabel) ||
+        (el as HTMLInputElement).labels?.length;
+      if (!named) {
+        el.setAttribute('aria-labelledby', `${id}-label`);
+        el.dataset.rowLabel = '1';
+      }
+      if (hint && !el.getAttribute('aria-describedby')) el.setAttribute('aria-describedby', `${id}-hint`);
+    });
+  });
   return (
     <div className="settings-row">
       <div className="settings-row-label">
-        <strong>{label}</strong>
-        {hint && <small>{hint}</small>}
+        <strong id={`${id}-label`}>{label}</strong>
+        {hint && <small id={`${id}-hint`}>{hint}</small>}
       </div>
-      <div className="settings-row-control">{children}</div>
+      <div className="settings-row-control" ref={control}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -660,7 +679,7 @@ export default function Settings(props: Props) {
           </button>
         ))}
       </nav>
-      <div className="settings-content">
+      <main className="settings-content">
         <header className="settings-head">
           <h1>
             {current.label}
@@ -696,7 +715,7 @@ export default function Settings(props: Props) {
         {props.tab === 'privacy' && <Privacy />}
         {props.tab === 'help' && <Help />}
         {props.tab === 'about' && <About runtime={props.runtime} />}
-      </div>
+      </main>
     </div>
   );
 }
