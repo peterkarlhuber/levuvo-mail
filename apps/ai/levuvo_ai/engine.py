@@ -17,8 +17,8 @@ from .server import RpcError
 
 PROVIDERS = ("ollama", "anthropic", "openai")
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
-DEFAULT_MODELS = {"ollama": "qwen3.5:4b", "anthropic": "claude-sonnet-5-5", "openai": "gpt-5.5-mini"}
-DEFAULT_EMBED_MODEL = "nomic-embed-text"
+DEFAULT_MODELS = {"ollama": "qwen3.5:9b", "anthropic": "claude-sonnet-5-5", "openai": "gpt-5.5-mini"}
+DEFAULT_EMBED_MODEL = "qwen3-embedding:0.6b"
 
 
 def loopback_url(url: str) -> str:

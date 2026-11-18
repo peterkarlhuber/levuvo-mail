@@ -1,0 +1,6 @@
+# Third-party runtime dependencies of the AI sidecar (Orkexa core and its openai/anthropic extras).
+# Locked with hashes in requirements-lock.txt (uv pip compile --universal --generate-hashes).
+pydantic>=2.6,<3
+typing-extensions>=4.14
+openai>=3.0,<4
+anthropic>=2.0,<3

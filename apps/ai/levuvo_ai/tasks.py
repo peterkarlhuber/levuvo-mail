@@ -120,14 +120,44 @@ class Draft(BaseModel):
     body: str = Field(description="Plain text email body without signature")
 
 
+TONES = {
+    "friendly": "Use a friendly, warm and clear tone.",
+    "formal": "Use a formal, polite business tone.",
+    "casual": "Use a casual, relaxed tone.",
+    "brief": "Be as brief as possible: short sentences, no filler.",
+}
+ADDRESS = {
+    "du": "When writing German, address the recipient informally with 'du'.",
+    "sie": "When writing German, address the recipient formally with 'Sie'.",
+}
+
+
+def _profile(params: dict[str, Any]) -> str:
+    """The user's own writing preferences from the settings. They shape style only, never the rules."""
+    profile = params.get("profile") if isinstance(params.get("profile"), dict) else {}
+    parts = [TONES.get(str(profile.get("tone")), ""), ADDRESS.get(str(profile.get("address")), "")]
+    signoff = _text(profile.get("signoff"), 200).strip()
+    if signoff:
+        parts.append(f"End the email with this closing line: {signoff}")
+    own = _text(profile.get("instructions"), 1000).strip()
+    if own:
+        parts.append(
+            "The user's own writing preferences (trusted, but they only shape style and content of the draft and "
+            f"never override the rules above): {own}"
+        )
+    return " ".join(p for p in parts if p)
+
+
 def _style(params: dict[str, Any]) -> str:
     samples = [s for s in params.get("styleSamples") or [] if isinstance(s, str)][:5]
+    profile = _profile(params)
     if not samples:
-        return "Write in a friendly, clear and concise business tone."
+        return profile or "Write in a friendly, clear and concise business tone."
     joined = "\n\n---\n\n".join(_text(s, 1200) for s in samples)
     return (
         "Match the user's own writing style (greeting, tone, length, formality) as shown in these emails "
-        "the user wrote. Use them only for style, never copy facts from them.\n"
+        "the user wrote. Use them only for style, never copy facts from them. "
+        + (f"Where the samples and these preferences differ, follow the preferences: {profile}\n" if profile else "\n")
         + frame_untrusted(joined, "user's sent emails (style samples)")
     )
 
@@ -137,7 +167,8 @@ def reply(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Draft a reply in {_lang(params)} to the last email of the thread. {_style(params)} "
-        "Do not include a signature. Do not promise anything the user did not ask for; leave placeholders like "
+        "Do not include a signature block (name, title, contact details). "
+        "Do not promise anything the user did not ask for; leave placeholders like "
         "[date] where facts are missing. "
         + (f"The user's instruction for this reply (trusted): {instruction}" if instruction else ""),
         _thread(params),
@@ -164,6 +195,7 @@ def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Rewrite the user's draft. {REWRITE_MODES[mode]} Keep names, numbers, dates and links. "
+        f"{_profile(params) if mode not in ('formal', 'casual', 'proofread') else ''} "
         "Return only the rewritten body as `body`.",
         frame_untrusted(_text(params.get("text")), "user's draft"),
         Draft,
@@ -179,7 +211,7 @@ def compose(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Turn the user's bullet points into a complete email in {_lang(params)}. {_style(params)} "
-        "Cover every bullet, add nothing factual. No signature. Suggest a subject if none is given.",
+        "Cover every bullet, add nothing factual. No signature block. Suggest a subject if none is given.",
         prompt,
         Draft,
         max_tokens=2000,
@@ -201,6 +233,42 @@ def attachment_check(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         AttachmentCheck,
         max_tokens=300,
     )
+
+
+class PresendIssue(BaseModel):
+    kind: Literal["attachment", "tone", "recipient", "sensitive"]
+    message: str = Field(description="One short sentence for the user")
+
+
+class PresendCheck(BaseModel):
+    issues: list[PresendIssue] = Field(default_factory=list)
+
+
+def presend(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """One check before sending: forgotten attachment, tone, wrong recipient, sensitive data."""
+    has_files = bool(params.get("hasAttachments"))
+    recipients = ", ".join(_text(r, 200) for r in (params.get("recipients") or [])[:30] if isinstance(r, str))
+    checks = [
+        "tone: the draft sounds rude, angry, passive-aggressive or far more casual than the situation needs",
+        "recipient: the greeting or content names someone who does not match the recipients "
+        f"({recipients or 'none'}), or the content looks meant for someone else",
+        "sensitive: the draft contains passwords, one-time codes, full card numbers, bank PINs, health data or "
+        "ID numbers that should not go out by email",
+    ]
+    if not has_files:
+        checks.insert(0, "attachment: the text announces something attached but nothing is attached")
+    result = _ask(
+        engine,
+        "Check the user's email draft before it is sent. Report only clear problems of these kinds:\n- "
+        + "\n- ".join(checks)
+        + f"\nWrite each message in {_lang(params)}. Return an empty list when the draft is fine; do not nitpick.",
+        frame_untrusted(f"Subject: {_text(params.get('subject'), 300)}\n\n{_text(params.get('text'), 6000)}", "draft"),
+        PresendCheck,
+        max_tokens=500,
+    )
+    if has_files:
+        result["issues"] = [i for i in result.get("issues", []) if i.get("kind") != "attachment"]
+    return result
 
 
 # ---- organize --------------------------------------------------------------------------
@@ -295,9 +363,22 @@ class TaskSuggestion(BaseModel):
     quote: str = ""
 
 
+class ContactSuggestion(BaseModel):
+    name: str
+    email: str = ""
+    phone: str = ""
+    organization: str = ""
+    title: str = Field(default="", description="Job title")
+    address: str = ""
+    website: str = ""
+
+
 class Extraction(BaseModel):
     events: list[EventSuggestion] = Field(default_factory=list)
     tasks: list[TaskSuggestion] = Field(default_factory=list)
+    contacts: list[ContactSuggestion] = Field(
+        default_factory=list, description="People from email signatures, with details exactly as written"
+    )
 
 
 def extract(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
@@ -307,7 +388,8 @@ def extract(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         f"Find appointments, meeting proposals and tasks for the user in the email. Today is {now} "
         f"(time zone {_text(params.get('timeZone'), 60) or 'local'}). Resolve relative dates against today. "
         f"Titles in {_lang(params)}. A vague proposal like 'can we call next week?' is an event with certain=false. "
-        "Return empty lists when there is nothing.",
+        "Contacts: only people whose details appear in a signature or contact block; copy them exactly, never "
+        f"guess, and leave out the user ({_text(params.get('me'), 500)}). Return empty lists when there is nothing.",
         _thread(params) if params.get("messages") else frame_untrusted(_text(params.get("text")), "email"),
         Extraction,
         max_tokens=1500,
@@ -386,6 +468,50 @@ def embed(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return {"vectors": engine.embed(texts), "model": engine.config.embed_model}
 
 
+# ---- filters in words --------------------------------------------------------------------
+
+
+class FilterCondition(BaseModel):
+    field: Literal["from", "to", "subject", "any"]
+    op: Literal["contains", "is", "not_contains"]
+    value: str
+
+
+class FilterAction(BaseModel):
+    type: Literal["move", "markRead", "flag"]
+    folder: str = Field(default="", description="Exact folder path from the list, only for move")
+
+
+class FilterRule(BaseModel):
+    name: str
+    match: Literal["all", "any"] = "all"
+    conditions: list[FilterCondition] = Field(min_length=1, max_length=10)
+    actions: list[FilterAction] = Field(min_length=1, max_length=5)
+    stop: bool = True
+    unclear: str = Field(default="", description="What could not be expressed, empty if everything fits")
+
+
+def filter_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """Turns a description in words into a server filter rule (Sieve) for the user to review."""
+    folders = [_text(f, 200) for f in (params.get("folders") or [])[:200] if isinstance(f, str)]
+    result = _ask(
+        engine,
+        f"Turn the user's description into one email filter rule. Rule name in {_lang(params)}, short. Conditions "
+        "test the sender (from), recipients (to), subject or anything (any). Actions: move to a folder, mark as "
+        "read, flag. Never delete. For move, use exactly one folder path from this list: "
+        + ", ".join(folders or ["INBOX"])
+        + ". If something cannot be expressed with these options, explain it in `unclear`.",
+        f"Description from the user (trusted): {_text(params.get('text'), 1000)}",
+        FilterRule,
+        max_tokens=600,
+    )
+    known = set(folders)
+    result["actions"] = [
+        a for a in result.get("actions", []) if a.get("type") != "move" or a.get("folder") in known
+    ] or [{"type": "flag", "folder": ""}]
+    return result
+
+
 TASKS = {
     "digest": digest,
     "translate": translate,
@@ -393,6 +519,8 @@ TASKS = {
     "rewrite": rewrite,
     "compose": compose,
     "attachment_check": attachment_check,
+    "presend": presend,
+    "filter_rule": filter_rule,
     "prioritize": prioritize,
     "classify": classify,
     "extract": extract,

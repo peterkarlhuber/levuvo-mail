@@ -66,6 +66,8 @@ export const BACKUP_FILES = {
   'tasks-local.json': { kind: 'json', encrypted: 'tasks-key' },
   'ai.json': { kind: 'json' },
   'ai-log.jsonl': { kind: 'jsonl' },
+  // Own assistant routines. ai-semantic.json (index progress) stays out: vectors are rebuilt.
+  'ai-skills.json': { kind: 'json' },
   // MCP settings and agents (token hashes only). mcp-approvals.json is short-lived and stays out.
   'mcp.json': { kind: 'json' }
 };

@@ -32,6 +32,8 @@ const TASK_FEATURE = {
   rewrite: 'rewrite',
   compose: 'compose',
   attachment_check: 'attachmentCheck',
+  presend: 'attachmentCheck',
+  filter_rule: 'classify',
   prioritize: 'prioritize',
   classify: 'classify',
   extract: 'extract',
@@ -46,13 +48,16 @@ const VAULT_ID = 'ai';
 export const DEFAULT_AI_SETTINGS = {
   enabled: false,
   provider: 'ollama',
-  model: 'qwen3.5:4b',
+  model: 'qwen3.5:9b',
   baseUrl: 'http://127.0.0.1:11434',
-  embedModel: 'nomic-embed-text',
+  embedModel: 'qwen3-embedding:0.6b',
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
-  noCloudAccounts: []
+  noCloudAccounts: [],
+  profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '' }
 };
+export const AI_TONES = ['auto', 'friendly', 'formal', 'casual', 'brief'];
+export const AI_ADDRESS = ['auto', 'du', 'sie'];
 
 function invalid(message, code = 'ai_invalid') {
   return Object.assign(new Error(message), { statusCode: 400, code });
@@ -86,6 +91,25 @@ export function validateAiSettings(input, current) {
   }
   if (input.features && typeof input.features === 'object') {
     for (const f of AI_FEATURES) if (input.features[f] !== undefined) next.features[f] = input.features[f] === true;
+  }
+  next.profile = { ...DEFAULT_AI_SETTINGS.profile, ...(current.profile || {}) };
+  if (input.profile && typeof input.profile === 'object') {
+    const p = input.profile;
+    if (p.tone !== undefined) {
+      if (!AI_TONES.includes(p.tone)) throw invalid('Unbekannter Tonfall.');
+      next.profile.tone = p.tone;
+    }
+    if (p.address !== undefined) {
+      if (!AI_ADDRESS.includes(p.address)) throw invalid('Unbekannte Anrede.');
+      next.profile.address = p.address;
+    }
+    // Own wording and instructions: plain text, no control characters.
+    const clean = (v, n) =>
+      String(v ?? '')
+        .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+        .slice(0, n);
+    if (p.signoff !== undefined) next.profile.signoff = clean(p.signoff, 200);
+    if (p.instructions !== undefined) next.profile.instructions = clean(p.instructions, 1000);
   }
   if (Array.isArray(input.noCloudAccounts))
     next.noCloudAccounts = [...new Set(input.noCloudAccounts.map(String).filter(id => /^[\w-]{1,64}$/.test(id)))];
@@ -250,21 +274,24 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     async run(kind, input, { accountId = null, source = 'user' } = {}) {
       const feature = TASK_FEATURE[kind];
       if (!feature) throw invalid('Unbekannte KI-Funktion.');
-      const s = ensureAllowed(feature, accountId);
-      // Embeddings always run on the local Ollama, also when a cloud model writes the answers.
+      // Embeddings always run on the local Ollama, also when a cloud model writes the answers, so the
+      // per-account cloud block does not apply to them.
+      const s = ensureAllowed(feature, kind === 'embed' ? null : accountId);
       const started = Date.now();
       try {
         const result = await sidecar.call('task', { kind, input });
-        void log.add({
-          type: 'task',
-          kind,
-          provider: kind === 'embed' ? 'ollama' : s.provider,
-          model: s.model,
-          accountId,
-          source,
-          ok: true,
-          ms: Date.now() - started
-        });
+        // Background indexing would flood the log; the indexer writes one entry per run instead.
+        if (source !== 'index')
+          void log.add({
+            type: 'task',
+            kind,
+            provider: kind === 'embed' ? 'ollama' : s.provider,
+            model: s.model,
+            accountId,
+            source,
+            ok: true,
+            ms: Date.now() - started
+          });
         return result;
       } catch (err) {
         void log.add({

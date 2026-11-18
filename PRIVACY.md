@@ -53,7 +53,22 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   days on this device. It is not used to monitor anyone's performance.
 - **Transparency:** AI results are labelled as AI-generated and are never sent, moved or deleted without
   your action.
-- "Delete all AI data" removes settings, consents, keys, the log and agent access at once.
+- **Semantic index:** the vectors for semantic search are derived from the encrypted local search index
+  and kept on this device only, encrypted in the local search index (in older index versions only in
+  memory). They are deleted with the index and are not part of backups.
+- **Agents and the MCP server (off by default):** If you switch on the MCP server, AI agents that you
+  connect yourself (for example Claude Desktop) can use the mailbox through it, only from this computer
+  (127.0.0.1) and with a token you create per agent. What the agent's own model does with the data is
+  governed by that agent's provider; Levuvo Mail cannot control it. Sending, events with attendees, new
+  contacts and moving to the trash wait for your approval. Pending approvals (with the prepared content)
+  are kept for at most 7 days; after a decision only a summary remains.
+- **Routines and tasks of the built-in assistant** use the same MCP server with a token that is valid for
+  at most 20 minutes and exists only in memory. With a cloud model, accounts marked "No cloud AI" are
+  invisible to the routine.
+- "Delete all AI data" removes settings, consents, keys, the log, own routines, approvals and agent access
+  at once.
+- For organizations: templates for an internal usage policy, the record of processing activities, the
+  security concept and a short AI guide for users are in [docs/ai](docs/ai/).
 
 ## Connections to the internet
 

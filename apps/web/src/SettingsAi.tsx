@@ -3,6 +3,9 @@ import { Bot, Download, LoaderCircle, RefreshCcw, ShieldCheck, Trash2 } from 'lu
 import { getJson, postJson } from './api';
 import {
   aiStatus,
+  DEFAULT_LOCAL_MODEL,
+  EMBED_MODELS,
+  LOCAL_MODELS,
   forgetAiCache,
   isCloud,
   saveAiSettings,
@@ -14,6 +17,7 @@ import {
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Row, Section, Segmented, Toggle } from './Settings';
+import { McpSettings } from './SettingsMcp';
 import type { AccountItem } from './types';
 
 type LogEntry = {
@@ -27,6 +31,7 @@ type LogEntry = {
   error?: string;
   agent?: string;
   source?: string;
+  reason?: string;
 };
 
 const FEATURES: { id: AiFeature; label: string; hint: string }[] = [
@@ -114,7 +119,25 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
       });
       return;
     }
-    await save({ provider, model: provider === 'ollama' ? 'qwen3.5:4b' : settings.model });
+    await save({ provider, model: provider === 'ollama' ? DEFAULT_LOCAL_MODEL : settings.model });
+  }
+
+  async function changeEmbedModel(input: HTMLInputElement) {
+    const embedModel = input.value.trim();
+    if (!settings || !embedModel || embedModel === settings.embedModel) return;
+    const ok = await confirm({
+      title: t('Suchmodell wechseln?'),
+      message: t(
+        'Der Suchindex wird mit {model} im Hintergrund neu aufgebaut. Bis dahin findet die semantische Suche weniger.',
+        { model: embedModel }
+      ),
+      confirmLabel: t('Wechseln')
+    });
+    if (!ok) {
+      input.value = settings.embedModel;
+      return;
+    }
+    await save({ embedModel });
   }
 
   async function pull(model: string) {
@@ -132,6 +155,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
   }
 
   if (!settings) return <LoaderCircle className="spin" size={18} />;
+  const profile = { tone: 'auto', address: 'auto', signoff: '', instructions: '', ...settings.profile };
   const cloud = isCloud(settings.provider);
   const runtimeLine = !runtime?.available
     ? t('KI-Komponente nicht verfügbar ({reason}).', { reason: runtime?.reason || '–' })
@@ -179,16 +203,26 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 onBlur={e => e.target.value !== settings.baseUrl && void save({ baseUrl: e.target.value })}
               />
             </Row>
-            <Row label={t('Sprachmodell')} hint={t('Empfohlen: qwen3.5:4b (Apache-2.0-Lizenz), ab 8 GB RAM.')}>
+            <Row
+              label={t('Sprachmodell')}
+              hint={t(LOCAL_MODELS.find(m => m.id === settings.model)?.note ?? 'Eigenes Modell aus Ollama.')}
+            >
               <input
                 list="ai-models"
                 defaultValue={settings.model}
                 onBlur={e => e.target.value !== settings.model && void save({ model: e.target.value })}
               />
               <datalist id="ai-models">
-                {models.map(m => (
-                  <option key={m} value={m} />
+                {LOCAL_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {t(m.note)}
+                  </option>
                 ))}
+                {models
+                  .filter(m => !LOCAL_MODELS.some(p => p.id === m))
+                  .map(m => (
+                    <option key={m} value={m} />
+                  ))}
               </datalist>
               {runtime?.ollama?.running && !models.includes(settings.model) && (
                 <button className="btn small" disabled={busy === 'pull'} onClick={() => void pull(settings.model)}>
@@ -196,12 +230,24 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 </button>
               )}
             </Row>
-            <Row label={t('Modell für die Suche')} hint={t('Läuft immer lokal, auch bei Cloud-KI.')}>
+            <Row
+              label={t('Modell für die Suche')}
+              hint={t('Läuft immer lokal, auch bei Cloud-KI. {note}', {
+                note: t(EMBED_MODELS.find(m => m.id === settings.embedModel)?.note ?? '')
+              })}
+            >
               <input
-                list="ai-models"
+                list="ai-embed-models"
                 defaultValue={settings.embedModel}
-                onBlur={e => e.target.value !== settings.embedModel && void save({ embedModel: e.target.value })}
+                onBlur={e => void changeEmbedModel(e.target)}
               />
+              <datalist id="ai-embed-models">
+                {EMBED_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {t(m.note)}
+                  </option>
+                ))}
+              </datalist>
               {runtime?.ollama?.running && !models.some(m => m.startsWith(settings.embedModel)) && (
                 <button className="btn small" disabled={busy === 'pull'} onClick={() => void pull(settings.embedModel)}>
                   <Download size={14} /> {t('Herunterladen')}
@@ -242,7 +288,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                   void save({
                     provider: 'ollama',
                     consent: { provider: settings.provider, granted: false },
-                    model: 'qwen3.5:4b'
+                    model: DEFAULT_LOCAL_MODEL
                   })
                 }
               >
@@ -263,6 +309,58 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             />
           </Row>
         ))}
+      </Section>
+
+      <Section
+        title={t('Schreibstil')}
+        description={t(
+          'Gilt für Antwortvorschläge, Umformulieren und Stichpunkte zu Mail. Ohne Angaben orientiert sich die KI an deinen gesendeten Mails. Die Sicherheitsregeln der KI lassen sich nicht ändern.'
+        )}
+      >
+        <Row label={t('Tonfall')}>
+          <select
+            value={profile.tone}
+            onChange={e => void save({ profile: { tone: e.target.value } })}
+            aria-label={t('Tonfall')}
+          >
+            <option value="auto">{t('Wie in meinen Mails')}</option>
+            <option value="friendly">{t('Freundlich')}</option>
+            <option value="formal">{t('Förmlich')}</option>
+            <option value="casual">{t('Locker')}</option>
+            <option value="brief">{t('Möglichst kurz')}</option>
+          </select>
+        </Row>
+        <Row label={t('Anrede')} hint={t('Für deutschsprachige Mails.')}>
+          <select
+            value={profile.address}
+            onChange={e => void save({ profile: { address: e.target.value } })}
+            aria-label={t('Anrede')}
+          >
+            <option value="auto">{t('Wie in der Unterhaltung')}</option>
+            <option value="du">{t('Du')}</option>
+            <option value="sie">{t('Sie')}</option>
+          </select>
+        </Row>
+        <Row label={t('Grußformel')} hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.')}>
+          <input
+            maxLength={200}
+            defaultValue={profile.signoff}
+            onBlur={e => e.target.value !== profile.signoff && void save({ profile: { signoff: e.target.value } })}
+          />
+        </Row>
+        <Row
+          label={t('Eigene Anweisungen')}
+          hint={t('Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.')}
+        >
+          <textarea
+            rows={3}
+            maxLength={1000}
+            defaultValue={profile.instructions}
+            onBlur={e =>
+              e.target.value !== profile.instructions && void save({ profile: { instructions: e.target.value } })
+            }
+          />
+        </Row>
       </Section>
 
       <Section
@@ -288,6 +386,8 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
         ))}
       </Section>
 
+      <McpSettings />
+
       <Section
         title={t('KI-Protokoll')}
         description={t(
@@ -304,7 +404,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 <small>
                   {new Date(e.at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}
                   {e.provider ? ` · ${e.provider}${e.model ? ` ${e.model}` : ''}` : ''}
-                  {e.ok === false ? ` · ${t('fehlgeschlagen')} (${e.error || ''})` : ''}
+                  {e.ok === false ? ` · ${t('fehlgeschlagen')} (${e.error || e.reason || ''})` : ''}
                 </small>
               </span>
             </div>

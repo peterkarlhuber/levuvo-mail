@@ -264,6 +264,7 @@ passwords/tokens/keys only in the keychain, the app is only reachable from your 
 | E | archive |
 | B | snooze |
 | Ctrl/⌘ + K | command palette |
+| Ctrl/⌘ + J | Levuvo Mail Assistant |
 | ! | spam / not spam |
 | Del | trash |
 | P | print / PDF |
@@ -293,3 +294,46 @@ passwords/tokens/keys only in the keychain, the app is only reachable from your 
 
 See `PRIVACY.md`. In short: no telemetry, no advertising, no Levuvo servers in the data path;
 crash reports only if you turn them on.
+
+## 17 Levuvo Mail Assistant (AI)
+
+The assistant is **off by default**. Switch it on under **Settings → AI & agents**. It works with a local
+model on this computer (Ollama; recommended **qwen3.5:9b**, with 8 GB RAM **qwen3.5:4b**), and
+**Qwen3-Embedding 0.6B** for search by meaning. "Download" fetches a missing model. Cloud models
+(Anthropic, OpenAI) are used only after consent and never for accounts marked "No cloud AI". All
+results are labelled **AI-generated**; nothing is sent, saved or moved without your click.
+
+**In a message:** summarize (who wants what by when, deadlines, amounts, open questions), translate, find
+events, tasks and contacts and save them with "Add", check authenticity (pressure, payment requests,
+changed bank details, impersonation).
+
+**While writing ("Assistant" button):** suggest a reply (also from your notes), bullet points to email,
+rewrite (shorter, more polite, more formal, more casual, spelling, English, German) with "Undo". Before
+sending, the assistant checks for a forgotten attachment, a harsh tone, a wrong recipient and sensitive
+data; you decide whether to send anyway.
+
+**Writing style:** tone, form of address (du/Sie), closing line and your own instructions. Without them
+the assistant follows your sent emails (as a style example only, no training).
+
+**Filters in words:** under Settings → Filters type e.g. "invoices from suppliers to the Accounting
+folder", click "Suggest rule", review, save.
+
+**Assistant panel (✦ on the left or Ctrl/⌘ + J):**
+- **Question:** "When does the delivery from Müller arrive?" – answer with clickable source emails.
+- **Task:** "Arrange a meeting with Anna next week" – the assistant finds free times and creates a draft.
+  Nothing is sent.
+- **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
+  meeting, prepare reply drafts.
+- **Approvals:** what agents prepared (send an email, event with attendees, contact, trash) – "Approve" or
+  "Reject".
+
+**Agents (MCP server):** under Settings → AI & agents switch on the MCP server, create an agent (level
+read, drafts, organize or everything incl. sending) and enter the token shown once, or the ready-made
+configuration, in Claude Desktop or Claude Code. The server is reachable only from this computer.
+Permanent deletion, accounts, passwords, keys and AI settings are never available to agents.
+
+**AI log:** shows what the AI and agents did (no message content, 30 days, only on this device). "Delete
+all AI data" removes settings, consents, keys, log, routines, approvals and agents.
+
+For organizations: templates for a usage policy, the record of processing activities, a security
+concept and a short AI guide are in `docs/ai/`.
