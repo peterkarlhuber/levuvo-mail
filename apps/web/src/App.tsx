@@ -4,6 +4,7 @@ import {
   CircleHelp,
   Command,
   Contact2,
+  ListTodo,
   LoaderCircle,
   Mail,
   RefreshCcw,
@@ -23,10 +24,12 @@ import { setFormatLocale } from './format';
 import { useT } from './i18n';
 import { accountMarkerKey, detectArrivals, type NotificationCursor } from './notification-tracker';
 import { useDocumentPrefs, usePrefs } from './prefs';
+import { useTaskBadge } from './task-reminders';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
 const CalendarModule = lazy(() => import('./Calendar'));
 const ContactsModule = lazy(() => import('./Contacts'));
+const TasksModule = lazy(() => import('./Tasks'));
 const SettingsModule = lazy(() => import('./Settings'));
 const RestoreOnWelcome = lazy(() =>
   import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
@@ -34,7 +37,7 @@ const RestoreOnWelcome = lazy(() =>
 const SpacesModule = lazy(() => import('./Spaces'));
 
 type NotificationState = NotificationPermission | 'unsupported';
-export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'settings';
+export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'tasks' | 'settings';
 export type SettingsTab =
   | 'general'
   | 'accounts'
@@ -297,6 +300,27 @@ function Shell() {
     return () => window.clearInterval(timer);
   }, [runtime, t, locale, toast]);
 
+  // Tasks: badge in the rail; reminders in the browser (the desktop app notifies natively).
+  const onTaskReminder = useCallback(
+    (task: { title: string; notes: string }) => {
+      toast({
+        text: `${t('Erinnerung')}: ${task.title}`,
+        kind: 'info',
+        timeout: 15000,
+        action: { label: t('Aufgaben'), run: () => setModule('tasks') }
+      });
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(task.title, { body: task.notes.slice(0, 120), icon: '/favicon.png' });
+        } catch {
+          /* blocked */
+        }
+      }
+    },
+    [t, toast]
+  );
+  const tasksDue = useTaskBadge({ browserReminders: Boolean(runtime && !runtime.desktop), onReminder: onTaskReminder });
+
   // Follow-ups in the browser (the desktop app notifies from the main process).
   useEffect(() => {
     if (!runtime || runtime.desktop) return;
@@ -555,7 +579,8 @@ function Shell() {
     { id: 'mail', label: t('E-Mail'), icon: Mail, key: '1' },
     { id: 'calendar', label: t('Kalender'), icon: CalendarDays, key: '2' },
     { id: 'contacts', label: t('Kontakte'), icon: Contact2, key: '3' },
-    { id: 'spaces', label: t('Räume'), icon: Users, key: '4' }
+    { id: 'spaces', label: t('Räume'), icon: Users, key: '4' },
+    { id: 'tasks', label: t('Aufgaben'), icon: ListTodo, key: '5' }
   ];
   const unseenTotal = Object.values(snapshots).reduce((n, s) => n + (s.unseen || 0), 0);
   const fallback = (
@@ -582,6 +607,9 @@ function Shell() {
             <item.icon size={20} strokeWidth={1.8} />
             {item.id === 'mail' && unseenTotal > 0 && (
               <span className="rail-badge">{unseenTotal > 99 ? '99+' : unseenTotal}</span>
+            )}
+            {item.id === 'tasks' && tasksDue > 0 && (
+              <span className="rail-badge">{tasksDue > 99 ? '99+' : tasksDue}</span>
             )}
             <span className="rail-label">{item.label}</span>
           </button>
@@ -662,6 +690,16 @@ function Shell() {
             <SpacesModule accounts={accounts} />
           </Suspense>
         )}
+        {module === 'tasks' && (
+          <Suspense fallback={fallback}>
+            <TasksModule
+              onOpenMail={mail => {
+                setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                setModule('mail');
+              }}
+            />
+          </Suspense>
+        )}
         {module === 'settings' && (
           <Suspense fallback={fallback}>
             <SettingsModule
@@ -718,6 +756,7 @@ function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => v
         '2': 'calendar',
         '3': 'contacts',
         '4': 'spaces',
+        '5': 'tasks',
         ',': 'settings'
       };
       const target = map[e.key];

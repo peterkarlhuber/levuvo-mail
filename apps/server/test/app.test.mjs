@@ -455,3 +455,21 @@ test('Spaces API: create a space, add a task, upload and download a file', async
   assert.match(down.headers['content-disposition'], /attachment/);
   assert.equal(down.headers['content-type'], 'application/octet-stream');
 });
+
+test('Tasks API: save, list, done and delete without a mail account', async t => {
+  const { s } = await server(t);
+  const post = (url, payload, action = 'mail-v1') =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': action }, payload });
+  assert.equal((await post('/api/tasks/save', { task: { title: 'x' } }, 'calendar-v1')).statusCode, 403);
+  assert.equal((await post('/api/tasks/save', { task: { title: '' } })).statusCode, 400);
+  const saved = (await post('/api/tasks/save', { task: { title: 'Rechnung zahlen', due: '2026-12-01' } })).json().task;
+  assert.equal(saved.title, 'Rechnung zahlen');
+  assert.equal((await post('/api/tasks/done', { id: saved.id, done: true })).json().task.done, true);
+  const list = (await s.api.inject({ method: 'GET', url: '/api/tasks', headers: GET })).json().tasks;
+  assert.deepEqual(
+    list.map(x => [x.title, x.done]),
+    [['Rechnung zahlen', true]]
+  );
+  assert.equal((await post('/api/tasks/delete', { id: saved.id })).statusCode, 200);
+  assert.deepEqual((await s.api.inject({ method: 'GET', url: '/api/tasks', headers: GET })).json().tasks, []);
+});

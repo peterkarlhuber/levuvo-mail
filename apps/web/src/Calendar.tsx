@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  ListTodo,
   LoaderCircle,
   MapPin,
   Paperclip,
@@ -25,6 +26,9 @@ import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
+import TaskDialog, { type TaskDraft } from './TaskDialog';
+import { useTasks } from './task-reminders';
+import { dueDay, type Task } from './tasks';
 import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo, EventAttachment } from './types';
 import {
   addDays,
@@ -878,6 +882,9 @@ export default function CalendarModule({
   const [dropOn, setDropOn] = useState('');
   const [miniMonth, setMiniMonth] = useState(() => startOfDay(new Date()));
   const [view, setView] = useState<View>(prefs.calendarView);
+  // Open tasks are shown on their due day (from the Tasks module, stored on this computer).
+  const { tasks } = useTasks();
+  const [taskEdit, setTaskEdit] = useState<TaskDraft | null>(null);
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [calendars, setCalendars] = useState<CalendarInfo[] | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -1139,6 +1146,17 @@ export default function CalendarModule({
   const timeFmt = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
   const ranged = events.map(e => ({ e, ...eventRange(e) }));
   const onDay = (day: Date) => ranged.filter(x => x.start < addDays(day, 1) && x.end > day);
+  const tasksOn = (day: Date) => (tasks || []).filter(x => !x.done && dueDay(x.due) === ymd(day));
+  const taskChip = (x: Task) => (
+    <button
+      key={`task-${x.id}`}
+      className={`event-chip task-chip prio-${x.priority}`}
+      title={t('Aufgabe')}
+      onClick={() => setTaskEdit(x)}
+    >
+      <ListTodo size={11} /> {x.title}
+    </button>
+  );
 
   if (calendars === null)
     return (
@@ -1192,6 +1210,7 @@ export default function CalendarModule({
             onDoubleClick={() => openNew(d, true)}
             {...dropProps(`a${ymd(d)}`, (_ev, dragged) => (dragged.e.allDay ? { day: d } : null))}
           >
+            {tasksOn(d).map(taskChip)}
             {onDay(d)
               .filter(x => x.e.allDay || x.end.getTime() - x.start.getTime() >= DAY_MS)
               .map(x => (
@@ -1317,6 +1336,7 @@ export default function CalendarModule({
             >
               {d.getDate()}
             </button>
+            {tasksOn(d).slice(0, 2).map(taskChip)}
             {list.slice(0, 3).map(x => (
               <button
                 key={`${x.e.uid}${x.e.recurrenceId || ''}`}
@@ -1347,14 +1367,24 @@ export default function CalendarModule({
   );
 
   const agendaDays = Array.from({ length: 60 }, (_, i) => addDays(anchor, i))
-    .map(d => ({ d, list: onDay(d).sort((a, b) => a.start.getTime() - b.start.getTime()) }))
-    .filter(x => x.list.length);
+    .map(d => ({ d, list: onDay(d).sort((a, b) => a.start.getTime() - b.start.getTime()), dayTasks: tasksOn(d) }))
+    .filter(x => x.list.length || x.dayTasks.length);
   const agenda = (
     <div className="agenda">
       {agendaDays.length === 0 && <p className="muted">{t('Keine Termine in den nächsten 60 Tagen.')}</p>}
-      {agendaDays.map(({ d, list }) => (
+      {agendaDays.map(({ d, list, dayTasks }) => (
         <section key={ymd(d)} className={ymd(d) === ymd(now) ? 'today' : ''}>
           <h3>{new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(d)}</h3>
+          {dayTasks.map(x => (
+            <button key={`task-${x.id}`} className="agenda-item task-agenda" onClick={() => setTaskEdit(x)}>
+              <span className="agenda-time">
+                <ListTodo size={13} /> {t('Aufgabe')}
+              </span>
+              <span className="agenda-title">
+                <strong>{x.title}</strong>
+              </span>
+            </button>
+          ))}
           {list.map(x => (
             <button
               key={`${x.e.uid}${x.e.recurrenceId || ''}`}
@@ -1485,6 +1515,7 @@ export default function CalendarModule({
           {view === 'month' ? month : view === 'agenda' ? agenda : timeGrid(range.days)}
         </div>
       </main>
+      {taskEdit && <TaskDialog draft={taskEdit} onClose={() => setTaskEdit(null)} />}
       {editor && (
         <EventEditor
           draft={editor}
