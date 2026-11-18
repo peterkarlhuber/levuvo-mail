@@ -29,7 +29,7 @@ export default function TemplateMenu({
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
   const shown = (items || []).filter(
-    i => !filter || `${i.name} ${i.subject}`.toLowerCase().includes(filter.toLowerCase())
+    i => !filter || `${i.name} ${i.subject} ;${i.shortcut || ''}`.toLowerCase().includes(filter.toLowerCase())
   );
   return (
     <div className="menu-anchor" ref={ref}>
@@ -80,6 +80,7 @@ export default function TemplateMenu({
               }}
             >
               {item.name}
+              {item.shortcut && <kbd className="template-shortcut">;{item.shortcut}</kbd>}
               {item.subject && <small>{item.subject}</small>}
             </button>
           ))}

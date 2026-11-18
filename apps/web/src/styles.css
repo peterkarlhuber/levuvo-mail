@@ -4599,6 +4599,11 @@ h4 {
   display: inline-flex;
   color: var(--muted);
 }
+.template-shortcut {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
 
 /* ---------- Inbox bundles ---------- */
 .bundle-rows {

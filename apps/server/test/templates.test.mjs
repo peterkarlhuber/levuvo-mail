@@ -25,3 +25,16 @@ test('Templates: sanitized, validated, saved and deleted', async () => {
   await store.remove(a.id);
   assert.deepEqual(store.list(), []);
 });
+
+test('Templates: optional shortcut is normalised, validated and unique', async () => {
+  assert.equal(validateTemplate({ name: 'A', html: '<p>x</p>', shortcut: ' ;MfG ' }).shortcut, 'mfg');
+  assert.equal(validateTemplate({ name: 'A', html: '<p>x</p>', shortcut: '' }).shortcut, undefined);
+  assert.throws(() => validateTemplate({ name: 'A', html: '<p>x</p>', shortcut: 'a' }), /Kürzel/);
+  assert.throws(() => validateTemplate({ name: 'A', html: '<p>x</p>', shortcut: 'mit leer' }), /Kürzel/);
+  let v = {};
+  const store = createTemplateStore({ get: () => v, save: async n => void (v = n) });
+  const a = await store.save({ name: 'Gruß', html: '<p>Mit freundlichen Grüßen</p>', shortcut: 'mfg' });
+  await assert.rejects(store.save({ name: 'Anderer', html: '<p>x</p>', shortcut: 'MFG' }), /vergeben/);
+  const again = await store.save({ id: a.id, name: 'Gruß', html: '<p>LG</p>', shortcut: 'mfg' });
+  assert.equal(again.shortcut, 'mfg');
+});
