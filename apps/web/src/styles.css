@@ -2756,6 +2756,7 @@ h4 {
   justify-content: space-between;
 }
 .managed-form label,
+.backup-fields label,
 .event-editor label,
 .contact-form label {
   display: flex;
@@ -2775,6 +2776,10 @@ h4 {
 }
 .managed-form input[readonly] {
   opacity: 0.7;
+}
+.backup-fields {
+  max-width: 560px;
+  margin-bottom: 10px;
 }
 .managed-field-grid {
   display: grid;
@@ -3519,6 +3524,9 @@ h4 {
   margin-top: 30vh;
 }
 .onboarding-retry {
+  align-self: flex-start;
+}
+.onboarding-restore {
   align-self: flex-start;
 }
 .onboarding-motto {
