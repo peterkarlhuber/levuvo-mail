@@ -63,9 +63,12 @@ export function indexableFolders(folders) {
 }
 
 /**
- * @param {{dir:string, getKey:(id:string)=>Promise<Buffer|null>, maxPerAccount?:number}} options
+ * @param {{dir:string, getKey:(id:string)=>Promise<Buffer|null>, getIdentity?:(id:string)=>string|null,
+ *   maxPerAccount?:number}} options
+ * `getIdentity` names the mailbox an account ID currently points to. An index built for
+ * another mailbox (server or login changed) is discarded instead of being searched.
  */
-export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
+export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPerAccount = 25_000 }) {
   const loaded = new Map(); // accountId -> { data, haystacks: Map }
   const file = id => path.join(dir, `${id.replace(/[^a-z0-9-]/gi, '')}.lvx`);
 
@@ -73,12 +76,15 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
     if (loaded.has(id)) return loaded.get(id);
     const key = await getKey(id);
     if (!key) return null;
-    let data = { version: VERSION, folders: {}, updatedAt: null };
+    const identity = getIdentity(id) || null;
+    let data = { version: VERSION, identity, folders: {}, updatedAt: null };
     let stored = false;
     try {
       data = await decryptAsync(key, await readFile(file(id)));
-      stored = data.version === VERSION;
-      if (!stored) data = { version: VERSION, folders: {}, updatedAt: null };
+      // Files from before the identity check carry none and are adopted once.
+      stored = data.version === VERSION && (!identity || !data.identity || data.identity === identity);
+      if (!stored) data = { version: VERSION, identity, folders: {}, updatedAt: null };
+      else if (identity) data.identity = identity;
     } catch {
       /* missing or unreadable: start fresh */
     }
@@ -96,6 +102,35 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
     entry.stored = true;
   }
   const count = data => Object.values(data.folders).reduce((n, f) => n + Object.keys(f.items).length, 0);
+
+  /**
+   * Read/unread can change on any device without a new UID. With CONDSTORE only messages
+   * changed since the last run are fetched, otherwise the flags of the whole folder.
+   */
+  async function refreshFlags(client, folder) {
+    if (!Object.keys(folder.items).length) return 0;
+    const highest = client.mailbox?.highestModseq;
+    const condstore = Boolean(highest) && Boolean(folder.modseq) && client.enabled?.has?.('CONDSTORE');
+    let changed = 0;
+    try {
+      if (!condstore || BigInt(highest) > BigInt(folder.modseq)) {
+        const options = condstore ? { uid: true, changedSince: BigInt(folder.modseq) } : { uid: true };
+        for await (const m of client.fetch('1:*', { uid: true, flags: true }, options)) {
+          const item = Number.isSafeInteger(m?.uid) && m.flags instanceof Set ? folder.items[m.uid] : null;
+          if (!item) continue;
+          const unread = !m.flags.has('\\Seen');
+          if (item.r !== unread) {
+            item.r = unread;
+            changed++;
+          }
+        }
+      }
+      if (highest) folder.modseq = String(highest);
+    } catch {
+      /* flags are refreshed on the next run */
+    }
+    return changed;
+  }
 
   /** Brings one folder up to date; at most `budget` new messages per call. */
   async function syncFolder(client, id, folderPath, budget) {
@@ -116,6 +151,8 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
           entry.haystacks.delete(`${folderPath}\u0000${uid}`);
           removed++;
         }
+      const flagsChanged = reset ? 0 : await refreshFlags(client, folder);
+      if (reset && client.mailbox?.highestModseq) folder.modseq = String(client.mailbox.highestModseq);
       const room = Math.max(0, maxPerAccount - count(entry.data));
       const missing = [...present]
         .filter(uid => !folder.items[uid])
@@ -178,7 +215,7 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
           }
         }
       }
-      return { added, removed, reset };
+      return { added, removed, reset, flagsChanged };
     } finally {
       lock.release();
     }
@@ -203,7 +240,7 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
         const result = await syncFolder(client, id, f.path, left);
         added += result.added;
         removed += result.removed;
-        if (result.reset) changed = true;
+        if (result.reset || result.flagsChanged) changed = true;
         left -= result.added;
         if (left <= 0) break;
       }
