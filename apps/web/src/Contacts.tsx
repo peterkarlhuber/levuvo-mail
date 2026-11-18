@@ -13,7 +13,8 @@ import {
   StickyNote,
   Trash2,
   Upload,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
@@ -279,7 +280,7 @@ export default function ContactsModule({
   );
 
   return (
-    <div className="contacts-module">
+    <div className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
       <aside className="contacts-list">
         <div className="contacts-head">
           <h1>
@@ -354,6 +355,16 @@ export default function ContactsModule({
         </div>
       </aside>
       <main className="contact-detail">
+        <button
+          type="button"
+          className="contacts-back btn ghost small"
+          onClick={() => {
+            setSelected(null);
+            setEdit(null);
+          }}
+        >
+          <ArrowLeft size={16} aria-hidden="true" /> {t('Kontakte')}
+        </button>
         <CloudConsentBanner errors={data.errors} onDone={load} />
         {otherErrors.length > 0 && (
           <div className="error-banner">

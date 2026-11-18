@@ -1368,7 +1368,8 @@ export default function MailInstance({
             <div className="message-title-row">
               <button
                 className="mobile-menu icon-button"
-                aria-label={t('Menü')}
+                aria-label={t('Ordner')}
+                aria-expanded={mobileSidebar}
                 onClick={() => setMobileSidebar(!mobileSidebar)}
               >
                 <Menu size={20} />
@@ -1377,6 +1378,15 @@ export default function MailInstance({
                 {listTitle}
                 <span className="period">.</span>
               </h1>
+              <button
+                className="compose-fab"
+                onClick={beginNewMessage}
+                disabled={!status?.configured}
+                aria-label={t('Neue Nachricht')}
+                title={t('Neue Nachricht')}
+              >
+                <PenSquare size={22} aria-hidden="true" />
+              </button>
               <span
                 className={`connection-pill ${stale ? 'offline' : pushState?.connected ? 'live' : health?.error || pushState?.error ? 'error' : ''}`}
                 title={

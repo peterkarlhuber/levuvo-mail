@@ -882,7 +882,10 @@ export default function CalendarModule({
   const drag = useRef<{ e: CalendarEvent; grab: number } | null>(null);
   const [dropOn, setDropOn] = useState('');
   const [miniMonth, setMiniMonth] = useState(() => startOfDay(new Date()));
-  const [view, setView] = useState<View>(prefs.calendarView);
+  // A 7-day grid is unreadable on a phone: start with the day view there.
+  const [view, setView] = useState<View>(() =>
+    prefs.calendarView === 'week' && window.matchMedia?.('(max-width: 640px)').matches ? 'day' : prefs.calendarView
+  );
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [calendars, setCalendars] = useState<CalendarInfo[] | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -967,6 +970,10 @@ export default function CalendarModule({
     grid.current.scrollTo({ top: HOUR_PX * Math.max(0, firstHour - 0.5) });
   }, [view, range.from, range.to, events]);
 
+  const newEventNow = () =>
+    openNew(
+      new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), Math.min(17, new Date().getHours() + 1))
+    );
   const changeView = (v: View) => {
     setView(v);
     setPrefs({ calendarView: v });
@@ -1390,19 +1397,7 @@ export default function CalendarModule({
   return (
     <div className="calendar-module">
       <aside className="calendar-sidebar">
-        <button
-          className="compose-button"
-          onClick={() =>
-            openNew(
-              new Date(
-                anchor.getFullYear(),
-                anchor.getMonth(),
-                anchor.getDate(),
-                Math.min(17, new Date().getHours() + 1)
-              )
-            )
-          }
-        >
+        <button className="compose-button" onClick={newEventNow}>
           <Plus size={17} />
           <span>{t('Neuer Termin')}</span>
         </button>
@@ -1473,6 +1468,14 @@ export default function CalendarModule({
             }))}
           />
         </header>
+        <button
+          className="compose-fab calendar-fab"
+          onClick={newEventNow}
+          aria-label={t('Neuer Termin')}
+          title={t('Neuer Termin')}
+        >
+          <Plus size={24} aria-hidden="true" />
+        </button>
         <CloudConsentBanner errors={cloudErrors} onDone={load} />
         {errors.length > 0 && (
           <div className="error-banner" role="alert">

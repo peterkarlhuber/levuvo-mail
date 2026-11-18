@@ -552,7 +552,7 @@ function Shell() {
         ))}
         <span className="rail-spacer" />
         <button
-          className="rail-item"
+          className="rail-item rail-desktop-only"
           onClick={() => window.dispatchEvent(new Event('levuvo:palette'))}
           title={t('Befehle (Strg/⌘+K)')}
           aria-label={t('Befehle')}
@@ -560,7 +560,7 @@ function Shell() {
           <Command size={19} strokeWidth={1.8} />
         </button>
         <button
-          className={`rail-item ${module === 'settings' && settingsTab === 'help' ? 'active' : ''}`}
+          className={`rail-item rail-desktop-only ${module === 'settings' && settingsTab === 'help' ? 'active' : ''}`}
           onClick={() => openSettings('help')}
           title={t('Hilfe')}
           aria-label={t('Hilfe')}
@@ -574,6 +574,7 @@ function Shell() {
           aria-label={t('Einstellungen')}
         >
           <Settings2 size={20} strokeWidth={1.8} />
+          <span className="rail-label rail-mobile-only">{t('Einstellungen')}</span>
         </button>
       </nav>
       <div className="module-host">
