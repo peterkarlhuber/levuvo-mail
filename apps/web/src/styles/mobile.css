@@ -67,9 +67,19 @@
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
   .message-column {
     height: auto;
     flex: 1;
+    min-height: 0;
+  }
+  /* Last rows stay reachable above the floating compose button. */
+  .message-list {
+    padding-bottom: calc(56px + var(--space-8));
   }
   .workspace,
   .module {

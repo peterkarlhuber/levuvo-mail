@@ -4,6 +4,9 @@
 
 ### New
 - **Design foundation:** one shared scale for spacing, type, weights, radii, layers and elevation; type sizes are now in rem, so the system font size setting is respected. Shared, accessible building blocks (button, icon button, field, segmented control, dialog, toolbar with overflow menu) for all new screens, documented in `docs/design-system.md`. `npm test` rejects raw sizes, layers, radii and colours in the stylesheets.
+- **Phones and tablets:** bottom navigation instead of the side rail, a floating compose button, the reading pane full screen with its actions in a bottom bar, the composer full screen, contacts as list → detail with a back button, the calendar starting with the day view and a new-event button (also on tablets). Filter chips stay available, settings tabs scroll in one row and settings rows wrap instead of cutting off labels. Safe areas (notch, home indicator) are respected; touch screens get 44px controls.
+- **Install metadata:** web app manifest and icons; the title bar colour follows the light/dark theme.
+- **Accessibility:** WCAG 2.2 AA checked with axe-core on every main view (dark/light, desktop/phone) in CI (`npm run test:a11y`), together with keyboard checks. One main landmark per view, headings in order, 24px target sizes, labelled settings fields, unread count read out on the mail button, labelled mini month and time grid. "Increase contrast" strengthens borders and secondary text, Windows high contrast keeps selected states, switches and badges visible. No horizontal scrolling down to 320px width (400 % zoom).
 - **Keyboard:** every dialog (composer, confirmations, event editor, shortcuts, attachment preview, command palette) keeps focus inside while open and returns it to the button that opened it. Segmented controls (design, language, calendar view, format) work with the arrow keys and are a single tab stop.
 - **Phishing hints:** the reading pane now also warns about look-alike sender domains (“paypa1.com”, Cyrillic letters, a typo of your own domain such as “levuv0.at”), display names that pose as a brand while the address is from somewhere else, links to look-alike domains, links that hide the real host behind a user name (“https://paypal.com@evil.example”), password forms inside the message and attached web pages (.html, .svg). All checks run locally.
 - **Levuvo Mail Assistant (foundation):** optional AI features, off by default, under Settings → AI & agents. By default a local model (Ollama on this computer) does the work and no content leaves the device; Anthropic or OpenAI can be chosen after a recorded consent, never for accounts marked "No cloud AI". API keys are stored only in the keychain. An AI log records what the AI did (no message content, 30 days), and "Delete all AI data" removes settings, consents, keys and the log at once. The AI component is a separate process based on Orkexa with a minimal environment; mail content always reaches the model marked as untrusted data.
@@ -19,6 +22,8 @@
 - **Benchmark:** `npm run bench:mailbox` measures paging, IMAP search and the index on 100,000 synthetic messages and fails when an upper bound is exceeded; it runs in CI.
 
 ### Fixes
+- **Mail list:** the quick actions shown on hover no longer cover subject and preview.
+- **Phones:** the message list scrolls again and its last rows are no longer hidden behind the navigation.
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
 
 ### Fixes

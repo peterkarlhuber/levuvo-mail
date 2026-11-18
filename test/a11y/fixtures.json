@@ -1,0 +1,946 @@
+{
+  "GET /api/runtime": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "desktop": true,
+      "version": "2.2.2",
+      "platform": "linux"
+    }
+  },
+  "GET /api/accounts": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "accounts": [
+        {
+          "id": "managed-8998d6a1e1f6",
+          "label": "Levuvo",
+          "mailbox": "alex@levuvo.test",
+          "configured": true,
+          "managed": true
+        }
+      ]
+    }
+  },
+  "GET /api/status": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "mode": "configured",
+      "accountId": "managed-8998d6a1e1f6",
+      "configured": true,
+      "mailbox": "alex@levuvo.test",
+      "readOnly": false,
+      "smtpConfigured": true,
+      "sendEnabled": true,
+      "sender": "alex@levuvo.test",
+      "displayName": "Alex Muster",
+      "identities": [
+        {
+          "email": "alex@levuvo.test",
+          "name": "Alex Muster",
+          "signatureHtml": ""
+        }
+      ],
+      "writeEnabled": true,
+      "draftsEnabled": true,
+      "signature": "",
+      "signatureHtml": "",
+      "auth": "password",
+      "push": {
+        "connected": true,
+        "healthy": true,
+        "error": null,
+        "at": 1795037707114
+      }
+    }
+  },
+  "GET /api/followups": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "items": []
+    }
+  },
+  "GET /api/inbox/monitor": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "folder": "INBOX",
+      "readOnly": true,
+      "total": 12,
+      "unseen": 11,
+      "uidValidity": "1795035668",
+      "highestUid": 12,
+      "hasMore": false,
+      "nextBeforeUid": null,
+      "messages": [
+        {
+          "uid": 12,
+          "seq": 12,
+          "fromName": "Lukas Hofer",
+          "fromEmail": "lukas@hofer-it.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Server-Migration am Wochenende",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566815.1189.13292847411279481750@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo Alex, wir planen die Migration für Samstag."
+        },
+        {
+          "uid": 11,
+          "seq": 11,
+          "fromName": "Finanzamt Österreich",
+          "fromEmail": "noreply@bmf.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Neue Nachricht in FinanzOnline",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566815.1189.16817573468424256206@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Sie haben eine neue Nachricht."
+        },
+        {
+          "uid": 10,
+          "seq": 10,
+          "fromName": "Anna Berger",
+          "fromEmail": "anna.berger@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Protokoll Workshop 12.11.",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.1917472087382600867@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo zusammen, anbei das Protokoll vom Workshop."
+        },
+        {
+          "uid": 9,
+          "seq": 9,
+          "fromName": "Sophie Wagner",
+          "fromEmail": "sophie@wagner-design.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Moodboard für das neue Logo",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.4370752736186050586@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo Alex, hier das Moodboard. Freue mich auf Feedback!"
+        },
+        {
+          "uid": 8,
+          "seq": 8,
+          "fromName": "Hetzner Online",
+          "fromEmail": "billing@hetzner.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Ihre Rechnung November 2026",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.11542514058818564944@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Ihre Rechnung ist verfügbar."
+        },
+        {
+          "uid": 7,
+          "seq": 7,
+          "fromName": "Thomas Gruber",
+          "fromEmail": "thomas.gruber@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Mittagessen nächste Woche?",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.7270822119208416710@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Servus Alex, hast du Dienstag oder Mittwoch Zeit?"
+        },
+        {
+          "uid": 6,
+          "seq": 6,
+          "fromName": "Team Newsletter",
+          "fromEmail": "news@designweekly.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Design Weekly #212: Tokens, Raster und Dark Mode",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.5110576335390646430@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Diese Woche: Warum Design-Tokens die Basis jedes Systems sind."
+        },
+        {
+          "uid": 5,
+          "seq": 5,
+          "fromName": "GitHub",
+          "fromEmail": "noreply@github.com",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "[levuvo-mail] CI: alle Checks erfolgreich",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.1254817738695186503@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "All checks have passed on main."
+        },
+        {
+          "uid": 4,
+          "seq": 4,
+          "fromName": "Maria Steiner",
+          "fromEmail": "m.steiner@kanzlei-steiner.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Vertragsentwurf v3 zur Durchsicht",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566812.1189.14303834271080029776@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Sehr geehrter Herr Muster, anbei der überarbeitete Vertragsentwurf. Änderungen sind markiert. Mit freundlichen Grüßen Maria Steiner"
+        },
+        {
+          "uid": 3,
+          "seq": 3,
+          "fromName": "Österreichische Post",
+          "fromEmail": "noreply@post.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Ihre Sendung wird heute zugestellt",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566812.1189.7576530050717344118@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Ihre Sendung 1Z999 wird heute zwischen 10 und 14 Uhr zugestellt."
+        },
+        {
+          "uid": 2,
+          "seq": 2,
+          "fromName": "Lukas Hofer",
+          "fromEmail": "lukas@hofer-it.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Re: Server-Migration am Wochenende",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566811.1189.5236084930011843068@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hi Alex, die Migration ist durch, alle Postfächer laufen wieder. Bitte kurz prüfen, ob bei dir alles passt. LG Lukas"
+        },
+        {
+          "uid": 1,
+          "seq": 1,
+          "fromName": "Anna Berger",
+          "fromEmail": "anna.berger@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Angebot Website-Relaunch – Rückmeldung bis Freitag?",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": false,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566810.1189.4249140948820220923@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": true,
+          "preview": "Hallo Alex, anbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet: 1. Neues Design-System mit Komponentenbibliothek 2. Barrieref"
+        }
+      ],
+      "checkedAt": 1795037707114,
+      "source": "idle"
+    }
+  },
+  "GET /api/folders": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "folders": [
+        {
+          "path": "INBOX",
+          "name": "Posteingang",
+          "specialUse": "\\Inbox",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 11,
+          "total": 12
+        },
+        {
+          "path": "Sent",
+          "name": "Gesendet",
+          "specialUse": "\\Sent",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 0,
+          "total": 0
+        },
+        {
+          "path": "Drafts",
+          "name": "Entwürfe",
+          "specialUse": "\\Drafts",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 0,
+          "total": 0
+        },
+        {
+          "path": "Archive",
+          "name": "Archiv",
+          "specialUse": "\\Archive",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 0,
+          "total": 0
+        },
+        {
+          "path": "Junk",
+          "name": "Spam",
+          "specialUse": "\\Junk",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 0,
+          "total": 0
+        },
+        {
+          "path": "Trash",
+          "name": "Papierkorb",
+          "specialUse": "\\Trash",
+          "delimiter": ".",
+          "parent": null,
+          "selectable": true,
+          "unseen": 0,
+          "total": 0
+        }
+      ]
+    }
+  },
+  "GET /api/messages": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "folder": "INBOX",
+      "total": 12,
+      "uidValidity": "1795035668",
+      "readOnly": true,
+      "messages": [
+        {
+          "uid": 12,
+          "seq": 12,
+          "fromName": "Lukas Hofer",
+          "fromEmail": "lukas@hofer-it.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Server-Migration am Wochenende",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566815.1189.13292847411279481750@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo Alex, wir planen die Migration für Samstag."
+        },
+        {
+          "uid": 11,
+          "seq": 11,
+          "fromName": "Finanzamt Österreich",
+          "fromEmail": "noreply@bmf.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Neue Nachricht in FinanzOnline",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566815.1189.16817573468424256206@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Sie haben eine neue Nachricht."
+        },
+        {
+          "uid": 10,
+          "seq": 10,
+          "fromName": "Anna Berger",
+          "fromEmail": "anna.berger@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Protokoll Workshop 12.11.",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.1917472087382600867@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo zusammen, anbei das Protokoll vom Workshop."
+        },
+        {
+          "uid": 9,
+          "seq": 9,
+          "fromName": "Sophie Wagner",
+          "fromEmail": "sophie@wagner-design.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Moodboard für das neue Logo",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.4370752736186050586@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hallo Alex, hier das Moodboard. Freue mich auf Feedback!"
+        },
+        {
+          "uid": 8,
+          "seq": 8,
+          "fromName": "Hetzner Online",
+          "fromEmail": "billing@hetzner.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Ihre Rechnung November 2026",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566814.1189.11542514058818564944@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Ihre Rechnung ist verfügbar."
+        },
+        {
+          "uid": 7,
+          "seq": 7,
+          "fromName": "Thomas Gruber",
+          "fromEmail": "thomas.gruber@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Mittagessen nächste Woche?",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.7270822119208416710@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Servus Alex, hast du Dienstag oder Mittwoch Zeit?"
+        },
+        {
+          "uid": 6,
+          "seq": 6,
+          "fromName": "Team Newsletter",
+          "fromEmail": "news@designweekly.example",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Design Weekly #212: Tokens, Raster und Dark Mode",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.5110576335390646430@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Diese Woche: Warum Design-Tokens die Basis jedes Systems sind."
+        },
+        {
+          "uid": 5,
+          "seq": 5,
+          "fromName": "GitHub",
+          "fromEmail": "noreply@github.com",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "[levuvo-mail] CI: alle Checks erfolgreich",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566813.1189.1254817738695186503@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "All checks have passed on main."
+        },
+        {
+          "uid": 4,
+          "seq": 4,
+          "fromName": "Maria Steiner",
+          "fromEmail": "m.steiner@kanzlei-steiner.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Vertragsentwurf v3 zur Durchsicht",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566812.1189.14303834271080029776@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Sehr geehrter Herr Muster, anbei der überarbeitete Vertragsentwurf. Änderungen sind markiert. Mit freundlichen Grüßen Maria Steiner"
+        },
+        {
+          "uid": 3,
+          "seq": 3,
+          "fromName": "Österreichische Post",
+          "fromEmail": "noreply@post.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Ihre Sendung wird heute zugestellt",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566812.1189.7576530050717344118@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Ihre Sendung 1Z999 wird heute zwischen 10 und 14 Uhr zugestellt."
+        },
+        {
+          "uid": 2,
+          "seq": 2,
+          "fromName": "Lukas Hofer",
+          "fromEmail": "lukas@hofer-it.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Re: Server-Migration am Wochenende",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": true,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566811.1189.5236084930011843068@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": false,
+          "preview": "Hi Alex, die Migration ist durch, alle Postfächer laufen wieder. Bitte kurz prüfen, ob bei dir alles passt. LG Lukas"
+        },
+        {
+          "uid": 1,
+          "seq": 1,
+          "fromName": "Anna Berger",
+          "fromEmail": "anna.berger@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Angebot Website-Relaunch – Rückmeldung bis Freitag?",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": false,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566810.1189.4249140948820220923@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": true,
+          "preview": "Hallo Alex, anbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet: 1. Neues Design-System mit Komponentenbibliothek 2. Barrieref"
+        }
+      ],
+      "hasMore": false,
+      "nextBeforeUid": null
+    }
+  },
+  "GET /api/messages/1": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "uid": 1,
+      "folder": "INBOX",
+      "from": [
+        {
+          "name": "Anna Berger",
+          "email": "anna.berger@beispiel.at"
+        }
+      ],
+      "to": [
+        {
+          "name": "Alex Muster",
+          "email": "alex@levuvo.test"
+        }
+      ],
+      "cc": [],
+      "bcc": [],
+      "replyTo": [],
+      "subject": "Angebot Website-Relaunch – Rückmeldung bis Freitag?",
+      "date": "2026-11-18T20:43:08.000Z",
+      "messageId": "<179503566810.1189.4249140948820220923@beispiel.at>",
+      "text": "Hallo Alex,\n\nanbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet:\n\n1. Neues Design-System mit Komponentenbibliothek\n2. Barrierefreiheit nach WCAG 2.2 AA\n3. Mehrsprachigkeit (DE/EN)\n\nKönntest du mir bis Freitag Bescheid geben, ob wir am Montag, 23.11. um 10:00 starten können?\n\nViele Grüße\nAnna\n",
+      "html": "",
+      "remoteContent": false,
+      "unsubscribe": null,
+      "textTruncated": false,
+      "htmlTruncated": false,
+      "attachments": [
+        {
+          "index": 0,
+          "filename": "Angebot_Relaunch_2026.pdf",
+          "mimeType": "application/pdf",
+          "size": 13,
+          "inline": false,
+          "embedded": false
+        }
+      ],
+      "readOnly": true,
+      "flagged": false,
+      "unread": false,
+      "crypto": null,
+      "security": {
+        "level": "info",
+        "auth": {},
+        "checks": [
+          {
+            "level": "info",
+            "code": "auth_unknown"
+          }
+        ]
+      },
+      "pgpKeys": []
+    }
+  },
+  "GET /api/thread": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "messages": [
+        {
+          "uid": 1,
+          "seq": 1,
+          "fromName": "Anna Berger",
+          "fromEmail": "anna.berger@beispiel.at",
+          "to": [
+            {
+              "name": "Alex Muster",
+              "email": "alex@levuvo.test"
+            }
+          ],
+          "subject": "Angebot Website-Relaunch – Rückmeldung bis Freitag?",
+          "date": "2026-11-18T21:01:08.000Z",
+          "unread": false,
+          "flagged": false,
+          "answered": false,
+          "messageId": "<179503566810.1189.4249140948820220923@beispiel.at>",
+          "inReplyTo": null,
+          "hasAttachments": true,
+          "preview": "Hallo Alex, anbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet: 1. Neues Design-System mit Komponentenbibliothek 2. Barrieref",
+          "folder": "INBOX",
+          "sent": false
+        }
+      ]
+    }
+  },
+  "GET /api/calendar/calendars": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "calendars": [
+        {
+          "accountId": "local",
+          "accountLabel": "Auf diesem Gerät",
+          "source": "local",
+          "url": "local:079798b1-db6a-4634-9fee-d9b054d7a9b5",
+          "name": "Persönlich",
+          "color": "#7c6cf2",
+          "hidden": false,
+          "readOnly": false
+        }
+      ],
+      "errors": []
+    }
+  },
+  "GET /api/calendar/events": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "events": [],
+      "errors": []
+    }
+  },
+  "GET /api/contacts/list": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "contacts": [],
+      "addressBooks": [
+        {
+          "accountId": "local",
+          "url": "local-contacts:",
+          "name": "Kontakte",
+          "accountLabel": "Auf diesem Gerät",
+          "source": "local"
+        }
+      ],
+      "errors": []
+    }
+  },
+  "GET /api/accounts/management": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "vaultAvailable": true,
+      "accounts": [
+        {
+          "signatureHtml": "",
+          "displayName": "Alex Muster",
+          "identities": [],
+          "sieveHost": "",
+          "sievePort": 4190,
+          "auth": "password",
+          "oauthProvider": "",
+          "id": "managed-8998d6a1e1f6",
+          "label": "Levuvo",
+          "user": "alex@levuvo.test",
+          "smtpUser": "alex@levuvo.test",
+          "imapHost": "mail.levuvo.test",
+          "imapPort": 993,
+          "smtpHost": "mail.levuvo.test",
+          "smtpPort": 465,
+          "sentFolder": "",
+          "draftsFolder": "",
+          "signature": "",
+          "managed": true
+        }
+      ],
+      "oauthProviders": [],
+      "source": "os-keychain"
+    }
+  },
+  "GET /api/templates": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "templates": []
+    }
+  },
+  "GET /api/sieve": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "available": false,
+      "reason": "Der Filterserver (ManageSieve) ist nicht erreichbar. Dein Anbieter bietet ihn eventuell nicht an."
+    }
+  },
+  "GET /api/dav/accounts": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "accounts": []
+    }
+  },
+  "GET /api/crypto": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "vaultAvailable": true,
+      "pgp": {
+        "own": [],
+        "public": []
+      },
+      "smime": {
+        "own": [],
+        "public": [],
+        "trusted": []
+      }
+    }
+  },
+  "GET /api/index/status": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "enabled": true,
+      "accounts": [
+        {
+          "accountId": "managed-8998d6a1e1f6",
+          "label": "Levuvo",
+          "enabled": true,
+          "messages": 0,
+          "folders": 0,
+          "updatedAt": null,
+          "generation": "a35c9a43df179e5b",
+          "bytes": 0
+        }
+      ]
+    }
+  },
+  "GET /api/ai/status": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "settings": {
+        "enabled": false,
+        "provider": "ollama",
+        "model": "qwen3.5:4b",
+        "baseUrl": "http://127.0.0.1:11434",
+        "embedModel": "nomic-embed-text",
+        "features": {
+          "digest": true,
+          "translate": true,
+          "reply": true,
+          "rewrite": true,
+          "compose": true,
+          "attachmentCheck": true,
+          "prioritize": true,
+          "classify": true,
+          "extract": true,
+          "assess": true,
+          "search": true,
+          "agents": true
+        },
+        "consents": {},
+        "noCloudAccounts": [],
+        "keys": {
+          "anthropic": false,
+          "openai": false
+        },
+        "consentVersion": "2026-11-18",
+        "vaultAvailable": true
+      },
+      "runtime": {
+        "available": false,
+        "reason": "stopped",
+        "enabled": false
+      }
+    }
+  },
+  "GET /api/ai/log": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "entries": []
+    }
+  },
+  "GET /api/app-settings": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "crashReports": false,
+      "localIndex": true
+    }
+  }
+}

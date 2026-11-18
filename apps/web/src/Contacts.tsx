@@ -280,8 +280,8 @@ export default function ContactsModule({
   );
 
   return (
-    <div className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
-      <aside className="contacts-list">
+    <main className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
+      <section className="contacts-list" aria-label={t('Kontaktliste')}>
         <div className="contacts-head">
           <h1>
             {t('Kontakte')}
@@ -354,8 +354,8 @@ export default function ContactsModule({
             <p className="muted center">{query ? t('Keine Treffer.') : t('Noch keine Kontakte.')}</p>
           )}
         </div>
-      </aside>
-      <main className="contact-detail">
+      </section>
+      <section className="contact-detail" aria-label={t('Kontakt')}>
         <button
           type="button"
           className="contacts-back btn ghost small"
@@ -567,7 +567,7 @@ export default function ContactsModule({
             )}
           </div>
         )}
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

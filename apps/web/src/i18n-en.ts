@@ -1355,5 +1355,7 @@ export const EN: Record<string, string> = {
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
     'Tracking pixels removed, even when images are loaded: {hosts}',
   Zeitraster: 'Time grid',
-  '{n} ungelesen': '{n} unread'
+  '{n} ungelesen': '{n} unread',
+  Kontaktliste: 'Contact list',
+  Kontakt: 'Contact'
 };
