@@ -8,9 +8,11 @@ import {
   createApprovals,
   createMcpHandler,
   createMcpHttpServer,
+  frameUntrusted,
   hashToken,
   mcpToolRegistry
 } from './mcp-server.mjs';
+import { registerTaskTools } from './ai-task-tools.mjs';
 import { resolveSidecar } from './ai-sidecar.mjs';
 import { CLOUD_PROVIDERS } from './ai-service.mjs';
 import { createSkills, skillInstruction } from './ai-skills.mjs';
@@ -22,6 +24,8 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
   const file = await createJsonFile(path.join(dir, 'mcp.json'), { enabled: false, port: DEFAULT_MCP_PORT, agents: [] });
   const approvalsFile = await createJsonFile(path.join(dir, 'mcp-approvals.json'), { items: [] });
   const persistent = createAgentRegistry(file);
+  // Task tools: they report "not available" until the task list (ctx.tasks) exists.
+  registerTaskTools(ctx, { registry: mcpToolRegistry(ctx), frame: frameUntrusted });
   // Short-lived agents of the built-in assistant (routines, delegated tasks): in memory only.
   const ephemeral = new Map();
   const agents = {
