@@ -432,7 +432,7 @@ function eventSchema(withCalendar = false) {
     ['summary', 'start', 'end']
   );
 }
-function eventPayload(a) {
+export function eventPayload(a) {
   const allDay = a.allDay === true;
   const cut = v => str(v, 40).slice(0, allDay ? 10 : 16);
   return {
@@ -465,7 +465,7 @@ function contactSchema() {
     ['name']
   );
 }
-function contactPayload(a) {
+export function contactPayload(a) {
   return {
     addressBookUrl: 'local-contacts:',
     contact: {

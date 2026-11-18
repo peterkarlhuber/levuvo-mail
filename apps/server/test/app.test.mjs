@@ -351,6 +351,11 @@ test('AI and MCP: settings off by default, internal agent reaches the API with t
   const mcp = await s.api.inject({ method: 'GET', url: '/api/mcp', headers: GET });
   assert.equal(mcp.json().enabled, false);
   assert.equal(mcp.json().running, false);
+  const apply = payload =>
+    s.api.inject({ method: 'POST', url: '/api/ai/apply', headers: { ...POST, 'x-levuvo-action': 'ai-v1' }, payload });
+  assert.equal((await apply({ type: 'shell', data: {} })).statusCode, 400);
+  assert.equal((await apply({ type: 'event', data: { summary: 'x' } })).statusCode, 400);
+  assert.ok([200, 409].includes((await apply({ type: 'task', data: { title: 'x' } })).statusCode));
 
   const agent = await s.mcp.internalAgent({ level: 'read' });
   t.after(() => agent.release());

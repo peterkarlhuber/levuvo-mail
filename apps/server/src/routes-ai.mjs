@@ -2,6 +2,7 @@
 // server (the UI sends references), so the model gets the same text the reader shows and nothing else.
 import { htmlToText } from './html-mail.mjs';
 import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
+import { contactPayload, eventPayload } from './mcp-server.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
@@ -17,6 +18,8 @@ const addr = list =>
 function clientText(value, limit = MAX_CLIENT_TEXT) {
   return String(value ?? '').slice(0, limit);
 }
+
+const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
 
 export function messageForAi(detail) {
   const text = detail.text?.trim() ? detail.text : htmlToText(detail.html || '');
@@ -215,6 +218,42 @@ export function registerAiRoutes(ctx) {
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {
       return aiError(reply, err);
+    }
+  });
+  // "Übernehmen" on an AI suggestion: the user clicked it, so it is saved directly. Events never get
+  // attendees here (no invitations); contacts go to the local address book; tasks to the task list.
+  api.post('/api/ai/apply', { bodyLimit: 32 * 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const { type, data } = request.body || {};
+    const d = data && typeof data === 'object' ? data : {};
+    try {
+      if (type === 'event') {
+        const payload = eventPayload({ ...d, attendees: [] });
+        if (!payload.event.summary || !payload.event.start) throw invalidApply('Titel und Beginn fehlen.');
+        if (!payload.event.end) payload.event.end = payload.event.start;
+        await ctx.internalRequest('POST', '/api/calendar/events/save', payload, 'calendar-v1');
+      } else if (type === 'contact') {
+        const payload = contactPayload(d);
+        if (!payload.contact.name && !payload.contact.emails.length) throw invalidApply('Name oder Adresse fehlt.');
+        await ctx.internalRequest('POST', '/api/contacts/save', payload, 'contacts-v1');
+      } else if (type === 'task') {
+        if (!ctx.tasks?.save)
+          throw Object.assign(new Error('Aufgaben sind noch nicht verfügbar.'), { statusCode: 409 });
+        const title = clientText(d.title, 300).trim();
+        if (!title) throw invalidApply('Titel fehlt.');
+        await ctx.tasks.save({
+          title,
+          due: clientText(d.due, 40) || null,
+          notes: clientText(d.notes, 2000),
+          source: 'ai'
+        });
+      } else throw invalidApply('Unbekannter Vorschlag.');
+      void ai.log.add({ type: 'apply', kind: type, source: clientText(request.body?.source, 40) || 'reader' });
+      return { saved: true };
+    } catch (err) {
+      return reply
+        .code(err.statusCode || 500)
+        .send({ error: err.statusCode ? err.message : 'Speichern fehlgeschlagen.' });
     }
   });
   api.get('/api/ai/log', async () => ({ entries: await ai.log.list(300) }));

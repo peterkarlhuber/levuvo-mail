@@ -4525,3 +4525,77 @@ h4 {
   color: var(--text);
   font-weight: 600;
 }
+
+/* Levuvo Mail Assistant in the reading pane */
+.reader-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+.reader-ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+.reader-ai-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.reader-ai-card p {
+  margin: 6px 0;
+}
+.reader-ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.ai-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ai-summary {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.ai-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ai-translation {
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow: auto;
+}
+.ai-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.ai-suggestion > span {
+  flex: 1;
+  min-width: 0;
+}
+.ai-taken {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ai-risk-high {
+  color: var(--danger);
+}
+.ai-risk-medium {
+  color: var(--warning, var(--danger));
+}

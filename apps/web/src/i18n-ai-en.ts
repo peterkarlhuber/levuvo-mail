@@ -182,5 +182,31 @@ export const AI_EN: Record<string, string> = {
   'Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.':
     'For example “No exclamation marks, always give the weekday with dates”.',
   'Unbekannter Tonfall.': 'Unknown tone.',
-  'Unbekannte Anrede.': 'Unknown form of address.'
+  'Unbekannte Anrede.': 'Unknown form of address.',
+  'Aufgabe gespeichert.': 'Task saved.',
+  'Speichern fehlgeschlagen.': 'Saving failed.',
+  Übernommen: 'Added',
+  'Levuvo Mail Assistant': 'Levuvo Mail Assistant',
+  Zusammenfassen: 'Summarize',
+  'Termine, Aufgaben, Kontakte': 'Events, tasks, contacts',
+  'Echtheit prüfen': 'Check authenticity',
+  'Von einer KI erstellt. Bitte prüfen.': 'Created by an AI. Please check.',
+  'KI-generiert': 'AI-generated',
+  Fristen: 'Deadlines',
+  Beträge: 'Amounts',
+  'Offene Fragen an dich': 'Open questions to you',
+  'Du solltest reagieren.': 'You should respond.',
+  'Übersetzt aus: {lang}': 'Translated from: {lang}',
+  'Zeitpunkt unklar': 'time unclear',
+  'bis {date}': 'by {date}',
+  'Hohes Risiko': 'High risk',
+  Vorsicht: 'Caution',
+  'Keine Auffälligkeiten': 'Nothing suspicious',
+  'Die Einschätzung kann irren. Im Zweifel den Absender über einen bekannten Weg kontaktieren.':
+    'The assessment can be wrong. If in doubt, contact the sender through a channel you know.',
+  'Aufgaben sind noch nicht verfügbar.': 'Tasks are not available yet.',
+  'Titel und Beginn fehlen.': 'Title and start are missing.',
+  'Name oder Adresse fehlt.': 'Name or address is missing.',
+  'Titel fehlt.': 'Title is missing.',
+  'Unbekannter Vorschlag.': 'Unknown suggestion.'
 };

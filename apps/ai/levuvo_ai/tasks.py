@@ -327,9 +327,22 @@ class TaskSuggestion(BaseModel):
     quote: str = ""
 
 
+class ContactSuggestion(BaseModel):
+    name: str
+    email: str = ""
+    phone: str = ""
+    organization: str = ""
+    title: str = Field(default="", description="Job title")
+    address: str = ""
+    website: str = ""
+
+
 class Extraction(BaseModel):
     events: list[EventSuggestion] = Field(default_factory=list)
     tasks: list[TaskSuggestion] = Field(default_factory=list)
+    contacts: list[ContactSuggestion] = Field(
+        default_factory=list, description="People from email signatures, with details exactly as written"
+    )
 
 
 def extract(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
@@ -339,7 +352,8 @@ def extract(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         f"Find appointments, meeting proposals and tasks for the user in the email. Today is {now} "
         f"(time zone {_text(params.get('timeZone'), 60) or 'local'}). Resolve relative dates against today. "
         f"Titles in {_lang(params)}. A vague proposal like 'can we call next week?' is an event with certain=false. "
-        "Return empty lists when there is nothing.",
+        "Contacts: only people whose details appear in a signature or contact block; copy them exactly, never "
+        f"guess, and leave out the user ({_text(params.get('me'), 500)}). Return empty lists when there is nothing.",
         _thread(params) if params.get("messages") else frame_untrusted(_text(params.get("text")), "email"),
         Extraction,
         max_tokens=1500,
