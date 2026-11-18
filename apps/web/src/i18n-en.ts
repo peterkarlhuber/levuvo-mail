@@ -921,6 +921,7 @@ export const EN: Record<string, string> = {
   'Ordner konnte nicht gelöscht werden.': 'The folder could not be deleted.',
   'Unbekannte Ordneraktion.': 'Unknown folder action.',
   'Ungültiger Ordner.': 'Invalid folder.',
+  'Ungültiger Cursor.': 'Invalid cursor.',
   'Der formatierte Text ist zu groß.': 'The formatted text is too large.',
   'IMAP-Anmeldung fehlgeschlagen. Benutzername und Passwort prüfen.':
     'IMAP sign-in failed. Check user name and password.',

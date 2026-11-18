@@ -7,3 +7,5 @@ package-lock.json
 *.plist
 build/
 test/e2e/screenshots
+.venv/
+apps/ai/
