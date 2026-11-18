@@ -214,7 +214,7 @@ test('Send later: time, strip headers, send exactly once', async () => {
         yield { uid, flags: flags.get(uid), source: sources[uid] };
         return;
       }
-      for (const uid of uids)
+      for (const uid of Array.isArray(uids) ? uids : String(uids).split(',').map(Number))
         yield {
           uid,
           envelope: { subject: `S${uid}`, to: [{ address: 'x@y.at' }] },
@@ -229,6 +229,10 @@ test('Send later: time, strip headers, send exactly once', async () => {
     },
     messageFlagsAdd: async (uid, f) => {
       f.forEach(x => flags.get(Number(uid)).add(x));
+      return true;
+    },
+    messageFlagsRemove: async (uid, f) => {
+      f.forEach(x => flags.get(Number(uid)).delete(x));
       return true;
     },
     messageMove: async (uid, path) => {

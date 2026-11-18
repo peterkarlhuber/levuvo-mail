@@ -20,6 +20,7 @@ import { submitEmail, appendToSent } from './send-service.mjs';
 import { randomUUID } from 'node:crypto';
 import { isCloud } from './cloud.mjs';
 import { LOCAL_ACCOUNT, isLocalCalendar } from './local-calendar.mjs';
+import { isLocalContact } from './local-contacts.mjs';
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const RANGE_MAX = 400 * 86400_000;
@@ -30,6 +31,7 @@ export function registerDavRoutes(ctx) {
   const { api, davStore, davService, requireAction, errorResponse, withImap } = ctx;
   const cloud = ctx.cloud;
   const local = ctx.localCalendar;
+  const localContacts = ctx.localContacts;
   // CalDAV and the local calendar share one interface (iCalendar objects).
   const localBackend = {
     object: (_a, url) => local.object(url),
@@ -72,8 +74,20 @@ export function registerDavRoutes(ctx) {
       () => cloud.contacts(),
       ['contacts', 'addressBooks']
     );
+    // The device address book comes last, so connected address books stay the default.
+    if (localContacts) {
+      const own = localContacts.contacts();
+      r.contacts = [...r.contacts, ...own.contacts];
+      r.addressBooks = [...r.addressBooks, ...own.addressBooks];
+    } else if (ctx.localContactsError)
+      r.errors = [...(r.errors || []), { accountId: LOCAL_ACCOUNT, error: ctx.localContactsError.message }];
     r.contacts.sort((a, b) => a.name.localeCompare(b.name, 'de'));
     return r;
+  };
+  const requireLocalContacts = () => {
+    if (!localContacts)
+      throw ctx.localContactsError || fail('Die Kontakte auf diesem Gerät sind nicht verfügbar.', 'local_locked', 423);
+    return localContacts;
   };
 
   function str(value, max, label) {
@@ -546,6 +560,13 @@ export function registerDavRoutes(ctx) {
   guard('/api/contacts/save', 'contacts-v1', async request => {
     const b = request.body || {};
     const contact = validateContact(b.contact);
+    if (isLocalContact(b.url) || isLocalContact(b.addressBookUrl))
+      return requireLocalContacts().save({
+        url: b.url || null,
+        etag: b.etag || null,
+        uid: typeof b.uid === 'string' && b.uid ? str(b.uid, 200, 'UID') : null,
+        contact
+      });
     if (isCloud(b.url) || isCloud(b.addressBookUrl))
       return cloud.saveContact({ accountId: b.accountId, url: b.url || null, etag: b.etag || null, contact });
     const uid = b.uid || randomUUID();
@@ -559,9 +580,11 @@ export function registerDavRoutes(ctx) {
     return { ok: true };
   });
   guard('/api/contacts/delete', 'contacts-v1', async request =>
-    isCloud(request.body?.url)
-      ? cloud.deleteContact({ accountId: request.body.accountId, url: request.body.url })
-      : davService.deleteContact(request.body?.accountId, request.body?.url, request.body?.etag)
+    isLocalContact(request.body?.url)
+      ? requireLocalContacts().delete(request.body.url, request.body.etag || null)
+      : isCloud(request.body?.url)
+        ? cloud.deleteContact({ accountId: request.body.accountId, url: request.body.url })
+        : davService.deleteContact(request.body?.accountId, request.body?.url, request.body?.etag)
   );
   guard(
     '/api/contacts/import',
@@ -571,6 +594,20 @@ export function registerDavRoutes(ctx) {
       const cards = splitVcards(vcf);
       if (!cards.length) throw fail('Die Datei enthält keine Kontakte (vCard).', 'contact_invalid');
       if (cards.length > 2000) throw fail('Höchstens 2000 Kontakte pro Import.', 'contact_invalid');
+      if (isLocalContact(request.body?.addressBookUrl)) {
+        const { parseVCard } = await import('./vcard.mjs');
+        const valid = [];
+        for (const card of cards) {
+          const parsed = parseVCard(card);
+          if (!parsed) continue;
+          try {
+            valid.push(validateContact(parsed));
+          } catch {
+            /* skip cards without name or with invalid fields */
+          }
+        }
+        return requireLocalContacts().importMany(valid);
+      }
       let imported = 0;
       for (const card of cards) {
         const uid = randomUUID();

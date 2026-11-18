@@ -1200,14 +1200,36 @@ export default function Reader(props: Props) {
               )}
             </div>
           )}
-          {detail?.scheduledFor && (
-            <div className="reader-security scheduled">
-              <CalendarClock size={14} />{' '}
-              {t('Geplanter Versand: {when}. „Bearbeiten“ hebt die Planung auf.', {
-                when: fullDateLabel(detail.scheduledFor)
-              })}
+          {detail?.scheduledFor && detail.scheduleState === 'uncertain' && (
+            <div className="reader-security warning" role="status">
+              <AlertTriangle size={14} />{' '}
+              {t(
+                'Versand nicht bestätigt: Die Verbindung brach während des Sendens ab. Bitte in „Gesendet“ oder beim Empfänger prüfen. Levuvo Mail sendet diese Nachricht nicht automatisch erneut – „Bearbeiten“ macht sie wieder zum Entwurf, Löschen verwirft sie.'
+              )}
             </div>
           )}
+          {detail?.scheduledFor && detail.scheduleState === 'failed' && (
+            <div className="reader-security warning" role="status">
+              <AlertTriangle size={14} />{' '}
+              {t(
+                'Geplanter Versand fehlgeschlagen: Der Server hat die Nachricht abgelehnt, sie wurde nicht gesendet. „Bearbeiten“ macht sie wieder zum Entwurf.'
+              )}
+            </div>
+          )}
+          {detail?.scheduledFor && detail.scheduleState === 'sent' && (
+            <div className="reader-security scheduled">
+              <CalendarClock size={14} /> {t('Gesendet. Die geplante Kopie wird gleich aus „Entwürfe“ entfernt.')}
+            </div>
+          )}
+          {detail?.scheduledFor &&
+            (!detail.scheduleState || detail.scheduleState === 'scheduled' || detail.scheduleState === 'claimed') && (
+              <div className="reader-security scheduled">
+                <CalendarClock size={14} />{' '}
+                {t('Geplanter Versand: {when}. „Bearbeiten“ hebt die Planung auf.', {
+                  when: fullDateLabel(detail.scheduledFor)
+                })}
+              </div>
+            )}
 
           {detail && !detail.stale && (
             <ThreadPanel accountId={accountId} detail={detail} onOpen={props.onOpenThreadMessage} />

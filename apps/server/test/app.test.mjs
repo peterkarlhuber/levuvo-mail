@@ -208,3 +208,122 @@ test('Desktop mode does not start without a valid session key', async () => {
     /Sitzungsschlüssel/
   );
 });
+
+test('Contacts can be created, edited and deleted on this device without any account', async t => {
+  const { s } = await server(t);
+  const list = async () => (await s.api.inject({ method: 'GET', url: '/api/contacts/list', headers: GET })).json();
+  const post = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'contacts-v1' }, payload });
+
+  const empty = await list();
+  assert.deepEqual(empty.contacts, []);
+  assert.equal(empty.addressBooks.length, 1);
+  const [book] = empty.addressBooks;
+  assert.equal(book.source, 'local');
+
+  const created = await post('/api/contacts/save', {
+    accountId: book.accountId,
+    addressBookUrl: book.url,
+    contact: { firstName: 'Clara', lastName: 'Huber', emails: [{ value: 'clara@example.org', type: 'home' }] }
+  });
+  assert.equal(created.statusCode, 200, created.body);
+  let [clara] = (await list()).contacts;
+  assert.equal(clara.name, 'Clara Huber');
+
+  const edited = await post('/api/contacts/save', {
+    accountId: clara.accountId,
+    addressBookUrl: clara.addressBookUrl,
+    url: clara.url,
+    etag: clara.etag,
+    uid: clara.uid,
+    contact: { ...clara, organization: 'Levuvo' }
+  });
+  assert.equal(edited.statusCode, 200, edited.body);
+  [clara] = (await list()).contacts;
+  assert.equal(clara.organization, 'Levuvo');
+
+  const exported = await s.api.inject({ method: 'GET', url: '/api/contacts/export', headers: GET });
+  assert.match(exported.body, /FN:Clara Huber/);
+
+  const imported = await post('/api/contacts/import', {
+    accountId: book.accountId,
+    addressBookUrl: book.url,
+    vcf: 'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Dora\r\nEMAIL:dora@example.org\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nEND:VCARD\r\n'
+  });
+  assert.equal(imported.json().imported, 1, 'cards without a name are skipped');
+
+  const removed = await post('/api/contacts/delete', { accountId: clara.accountId, url: clara.url, etag: clara.etag });
+  assert.equal(removed.statusCode, 200, removed.body);
+  assert.deepEqual(
+    (await list()).contacts.map(c => c.name),
+    ['Dora']
+  );
+});
+
+test('Without a keychain the device address book reports why it is missing', async t => {
+  const { s } = await server(t, { vault: { available: false, get: () => '', set() {}, delete() {} } });
+  const r = (await s.api.inject({ method: 'GET', url: '/api/contacts/list', headers: GET })).json();
+  assert.deepEqual(r.addressBooks, []);
+  assert.ok(r.errors.some(e => /Schlüsselbund/.test(e.error)));
+  const saved = await s.api.inject({
+    method: 'POST',
+    url: '/api/contacts/save',
+    headers: { ...POST, 'x-levuvo-action': 'contacts-v1' },
+    payload: { accountId: 'local', addressBookUrl: 'local-contacts:', contact: { name: 'X' } }
+  });
+  assert.equal(saved.statusCode, 423);
+});
+
+test('Changing the login of an account drops cached data of the previous mailbox (AUD-003)', async t => {
+  const { s } = await server(t);
+  const id = await addAccount(s);
+  const { ctx } = s;
+  ctx.detailCache.set(`${id}|INBOX|1`, { data: { subject: 'Alt' }, at: Date.now() });
+  ctx.listCache.set(`${id}|INBOX|40|`, { data: [], at: Date.now() });
+  ctx.previewCache.set(`${id}:INBOX:5:1`, 'Vorschau alt');
+  await ctx.followups.addSnoozed(
+    id,
+    'INBOX',
+    { folder: 'Z', uidValidity: '5', items: [{ uid: '1' }] },
+    '2030-01-01T00:00:00.000Z'
+  );
+  // Only the label changes: same mailbox, nothing is dropped.
+  const label = await s.api.inject({
+    method: 'POST',
+    url: '/api/accounts/update',
+    headers: { ...POST, 'x-levuvo-action': 'accounts-v1' },
+    payload: { id, label: 'Arbeit' }
+  });
+  assert.equal(label.statusCode, 200, label.body);
+  assert.ok(ctx.detailCache.get(`${id}|INBOX|1`));
+  // Another login for the same account ID: everything of the old mailbox goes.
+  const other = await s.api.inject({
+    method: 'POST',
+    url: '/api/accounts/update',
+    headers: { ...POST, 'x-levuvo-action': 'accounts-v1' },
+    payload: { id, user: 'anna@example.org', password: 'pw2' }
+  });
+  assert.equal(other.statusCode, 200, other.body);
+  assert.equal(ctx.detailCache.get(`${id}|INBOX|1`), undefined);
+  assert.equal(ctx.listCache.get(`${id}|INBOX|40|`), undefined);
+  assert.equal(ctx.previewCache.get(`${id}:INBOX:5:1`), undefined);
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(ctx.followups.snoozed(id).length, 0);
+});
+
+test('Every installation has a stable instance ID for scheduled sending', async t => {
+  const { s, dir } = await server(t);
+  assert.match(s.ctx.instanceId, /^[a-f0-9]{32}$/);
+  const again = await createMailServer({
+    desktop: true,
+    sessionSecret: SECRET,
+    env: {},
+    vault: vault(),
+    accountsFile: join(dir, 'accounts.json'),
+    staticRoot: join(dir, 'dist'),
+    watch: false,
+    background: false
+  });
+  t.after(() => again.close());
+  assert.equal(again.ctx.instanceId, s.ctx.instanceId);
+});

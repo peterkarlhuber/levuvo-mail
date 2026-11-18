@@ -3,7 +3,7 @@
 // AES-256-GCM; the key lives in the OS keychain. Without a keychain the file stays readable only
 // for the user (0600).
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import ICAL from 'ical.js';
 import { expandObject, parseIcs } from './calendar-model.mjs';
@@ -65,6 +65,14 @@ export async function createLocalCalendar({ filename, vault }) {
       key = null;
     }
   }
+  // Calendar data is never written in plain text (fail closed): without a key from the system
+  // keychain the device calendar is unavailable instead of silently unencrypted.
+  if (!key)
+    throw fail(
+      'Der lokale Kalender braucht den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.',
+      'local_locked',
+      423
+    );
   let state = { calendars: [], objects: [] };
   if (encrypted) {
     // Never fall back to an empty calendar here: the file stays untouched until the key is back.
@@ -95,14 +103,26 @@ export async function createLocalCalendar({ filename, vault }) {
   let writing = Promise.resolve();
   function persist() {
     const snapshot = JSON.stringify(state);
-    writing = writing.then(async () => {
-      await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-      const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-      await writeFile(tmp, key ? encrypt(key, snapshot) : snapshot, { mode: 0o600 });
-      await rename(tmp, filename);
-    });
-    return writing;
+    // Each write reports its own error, but a failed write must not block every later one:
+    // the queue continues after a rejection.
+    const run = writing
+      .catch(() => {})
+      .then(async () => {
+        await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
+        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
+        try {
+          await writeFile(tmp, encrypt(key, snapshot), { mode: 0o600 });
+          await rename(tmp, filename);
+        } catch (err) {
+          await unlink(tmp).catch(() => {});
+          throw err;
+        }
+      });
+    writing = run;
+    return run;
   }
+  // A plain-text file from an earlier version is encrypted right away.
+  if (raw !== null && !encrypted) await persist();
   const urlOf = cal => `${LOCAL_PREFIX}${cal.id}`;
   const calendarOf = url => {
     const cal = state.calendars.find(c => urlOf(c) === url);

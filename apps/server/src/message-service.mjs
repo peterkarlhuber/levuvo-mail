@@ -5,6 +5,7 @@ import { analyzeMessage } from './security-analysis.mjs';
 import { parseItip } from './calendar-model.mjs';
 import { findProtectedBox } from './protected-message.mjs';
 import { fetchUidOne } from './imap-fetch.mjs';
+import { scheduleState } from './scheduled.mjs';
 
 const PARSE_OPTIONS = {
   attachmentEncoding: 'arraybuffer',
@@ -138,7 +139,10 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
       detail.draftId = parseDraftId(msg.source);
       detail.uidValidity = String(client.mailbox?.uidValidity || '');
       const sendAt = /^x-levuvo-send-at:\s*(.+)$/im.exec(msg.source.subarray(0, 16000).toString('latin1'))?.[1]?.trim();
-      if (sendAt && !Number.isNaN(Date.parse(sendAt))) detail.scheduledFor = new Date(sendAt).toISOString();
+      if (sendAt && !Number.isNaN(Date.parse(sendAt))) {
+        detail.scheduledFor = new Date(sendAt).toISOString();
+        detail.scheduleState = scheduleState(meta.flags);
+      }
     }
     return { detail, parsed, source: msg.source, ics };
   } finally {
