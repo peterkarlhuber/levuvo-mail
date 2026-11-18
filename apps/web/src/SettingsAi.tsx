@@ -155,6 +155,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
   }
 
   if (!settings) return <LoaderCircle className="spin" size={18} />;
+  const profile = { tone: 'auto', address: 'auto', signoff: '', instructions: '', ...settings.profile };
   const cloud = isCloud(settings.provider);
   const runtimeLine = !runtime?.available
     ? t('KI-Komponente nicht verfügbar ({reason}).', { reason: runtime?.reason || '–' })
@@ -308,6 +309,58 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             />
           </Row>
         ))}
+      </Section>
+
+      <Section
+        title={t('Schreibstil')}
+        description={t(
+          'Gilt für Antwortvorschläge, Umformulieren und Stichpunkte zu Mail. Ohne Angaben orientiert sich die KI an deinen gesendeten Mails. Die Sicherheitsregeln der KI lassen sich nicht ändern.'
+        )}
+      >
+        <Row label={t('Tonfall')}>
+          <select
+            value={profile.tone}
+            onChange={e => void save({ profile: { tone: e.target.value } })}
+            aria-label={t('Tonfall')}
+          >
+            <option value="auto">{t('Wie in meinen Mails')}</option>
+            <option value="friendly">{t('Freundlich')}</option>
+            <option value="formal">{t('Förmlich')}</option>
+            <option value="casual">{t('Locker')}</option>
+            <option value="brief">{t('Möglichst kurz')}</option>
+          </select>
+        </Row>
+        <Row label={t('Anrede')} hint={t('Für deutschsprachige Mails.')}>
+          <select
+            value={profile.address}
+            onChange={e => void save({ profile: { address: e.target.value } })}
+            aria-label={t('Anrede')}
+          >
+            <option value="auto">{t('Wie in der Unterhaltung')}</option>
+            <option value="du">{t('Du')}</option>
+            <option value="sie">{t('Sie')}</option>
+          </select>
+        </Row>
+        <Row label={t('Grußformel')} hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.')}>
+          <input
+            maxLength={200}
+            defaultValue={profile.signoff}
+            onBlur={e => e.target.value !== profile.signoff && void save({ profile: { signoff: e.target.value } })}
+          />
+        </Row>
+        <Row
+          label={t('Eigene Anweisungen')}
+          hint={t('Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.')}
+        >
+          <textarea
+            rows={3}
+            maxLength={1000}
+            defaultValue={profile.instructions}
+            onBlur={e =>
+              e.target.value !== profile.instructions && void save({ profile: { instructions: e.target.value } })
+            }
+          />
+        </Row>
       </Section>
 
       <Section

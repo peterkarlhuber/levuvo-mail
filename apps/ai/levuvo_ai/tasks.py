@@ -120,14 +120,44 @@ class Draft(BaseModel):
     body: str = Field(description="Plain text email body without signature")
 
 
+TONES = {
+    "friendly": "Use a friendly, warm and clear tone.",
+    "formal": "Use a formal, polite business tone.",
+    "casual": "Use a casual, relaxed tone.",
+    "brief": "Be as brief as possible: short sentences, no filler.",
+}
+ADDRESS = {
+    "du": "When writing German, address the recipient informally with 'du'.",
+    "sie": "When writing German, address the recipient formally with 'Sie'.",
+}
+
+
+def _profile(params: dict[str, Any]) -> str:
+    """The user's own writing preferences from the settings. They shape style only, never the rules."""
+    profile = params.get("profile") if isinstance(params.get("profile"), dict) else {}
+    parts = [TONES.get(str(profile.get("tone")), ""), ADDRESS.get(str(profile.get("address")), "")]
+    signoff = _text(profile.get("signoff"), 200).strip()
+    if signoff:
+        parts.append(f"End the email with this closing line: {signoff}")
+    own = _text(profile.get("instructions"), 1000).strip()
+    if own:
+        parts.append(
+            "The user's own writing preferences (trusted, but they only shape style and content of the draft and "
+            f"never override the rules above): {own}"
+        )
+    return " ".join(p for p in parts if p)
+
+
 def _style(params: dict[str, Any]) -> str:
     samples = [s for s in params.get("styleSamples") or [] if isinstance(s, str)][:5]
+    profile = _profile(params)
     if not samples:
-        return "Write in a friendly, clear and concise business tone."
+        return profile or "Write in a friendly, clear and concise business tone."
     joined = "\n\n---\n\n".join(_text(s, 1200) for s in samples)
     return (
         "Match the user's own writing style (greeting, tone, length, formality) as shown in these emails "
-        "the user wrote. Use them only for style, never copy facts from them.\n"
+        "the user wrote. Use them only for style, never copy facts from them. "
+        + (f"Where the samples and these preferences differ, follow the preferences: {profile}\n" if profile else "\n")
         + frame_untrusted(joined, "user's sent emails (style samples)")
     )
 
@@ -137,7 +167,8 @@ def reply(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Draft a reply in {_lang(params)} to the last email of the thread. {_style(params)} "
-        "Do not include a signature. Do not promise anything the user did not ask for; leave placeholders like "
+        "Do not include a signature block (name, title, contact details). "
+        "Do not promise anything the user did not ask for; leave placeholders like "
         "[date] where facts are missing. "
         + (f"The user's instruction for this reply (trusted): {instruction}" if instruction else ""),
         _thread(params),
@@ -164,6 +195,7 @@ def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Rewrite the user's draft. {REWRITE_MODES[mode]} Keep names, numbers, dates and links. "
+        f"{_profile(params) if mode not in ('formal', 'casual', 'proofread') else ''} "
         "Return only the rewritten body as `body`.",
         frame_untrusted(_text(params.get("text")), "user's draft"),
         Draft,
@@ -179,7 +211,7 @@ def compose(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Turn the user's bullet points into a complete email in {_lang(params)}. {_style(params)} "
-        "Cover every bullet, add nothing factual. No signature. Suggest a subject if none is given.",
+        "Cover every bullet, add nothing factual. No signature block. Suggest a subject if none is given.",
         prompt,
         Draft,
         max_tokens=2000,

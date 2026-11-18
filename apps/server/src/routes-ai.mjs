@@ -1,6 +1,7 @@
 // AI routes: settings, status, models and the AI functions. Message content is loaded here on the
 // server (the UI sends references), so the model gets the same text the reader shows and nothing else.
 import { htmlToText } from './html-mail.mjs';
+import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
@@ -107,6 +108,7 @@ export function registerAiRoutes(ctx) {
     return samples;
   }
   const own = () => ctx.ownAddresses().join(', ');
+  const profile = () => ({ ...DEFAULT_AI_SETTINGS.profile, ...(ai.publicSettings().profile || {}) });
 
   /** Builds the sidecar input for one AI function from references and client text. */
   async function prepare(kind, body) {
@@ -136,6 +138,7 @@ export function registerAiRoutes(ctx) {
           lang,
           messages: details.map(messageForAi),
           instruction: clientText(input.instruction, 1000),
+          profile: profile(),
           styleSamples: account ? await styleSamples(account) : []
         };
       }
@@ -144,11 +147,12 @@ export function registerAiRoutes(ctx) {
         return { lang, message: messageForAi(d), facts: securityFacts(d) };
       }
       case 'rewrite':
-        return { lang, mode: clientText(input.mode, 20), text: clientText(input.text) };
+        return { lang, mode: clientText(input.mode, 20), text: clientText(input.text), profile: profile() };
       case 'compose': {
         const out = {
           lang,
           bullets: clientText(input.bullets, 3000),
+          profile: profile(),
           styleSamples: account ? await styleSamples(account) : []
         };
         if (Array.isArray(body.refs) && body.refs.length)

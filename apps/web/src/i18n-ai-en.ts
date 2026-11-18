@@ -160,5 +160,27 @@ export const AI_EN: Record<string, string> = {
   'Nur lesen': 'Read only',
   'Lesen und Entwürfe': 'Read and drafts',
   'Lesen, Entwürfe, Ordnen': 'Read, drafts, organize',
-  'Alles inkl. Senden': 'Everything incl. sending'
+  'Alles inkl. Senden': 'Everything incl. sending',
+  Schreibstil: 'Writing style',
+  'Gilt für Antwortvorschläge, Umformulieren und Stichpunkte zu Mail. Ohne Angaben orientiert sich die KI an deinen gesendeten Mails. Die Sicherheitsregeln der KI lassen sich nicht ändern.':
+    'Applies to reply suggestions, rewriting and bullet points to email. Without settings the AI follows your sent emails. The safety rules of the AI cannot be changed.',
+  Tonfall: 'Tone',
+  'Wie in meinen Mails': 'As in my emails',
+  Freundlich: 'Friendly',
+  Förmlich: 'Formal',
+  Locker: 'Casual',
+  'Möglichst kurz': 'As short as possible',
+  Anrede: 'Form of address',
+  'Für deutschsprachige Mails.': 'For emails in German.',
+  'Wie in der Unterhaltung': 'As in the conversation',
+  Du: 'Informal (du)',
+  Sie: 'Formal (Sie)',
+  Grußformel: 'Closing line',
+  'Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.':
+    'For example “Best regards”. Levuvo adds your signature itself.',
+  'Eigene Anweisungen': 'Own instructions',
+  'Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.':
+    'For example “No exclamation marks, always give the weekday with dates”.',
+  'Unbekannter Tonfall.': 'Unknown tone.',
+  'Unbekannte Anrede.': 'Unknown form of address.'
 };

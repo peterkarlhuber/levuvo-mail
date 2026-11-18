@@ -51,8 +51,11 @@ export const DEFAULT_AI_SETTINGS = {
   embedModel: 'qwen3-embedding:0.6b',
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
-  noCloudAccounts: []
+  noCloudAccounts: [],
+  profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '' }
 };
+export const AI_TONES = ['auto', 'friendly', 'formal', 'casual', 'brief'];
+export const AI_ADDRESS = ['auto', 'du', 'sie'];
 
 function invalid(message, code = 'ai_invalid') {
   return Object.assign(new Error(message), { statusCode: 400, code });
@@ -86,6 +89,25 @@ export function validateAiSettings(input, current) {
   }
   if (input.features && typeof input.features === 'object') {
     for (const f of AI_FEATURES) if (input.features[f] !== undefined) next.features[f] = input.features[f] === true;
+  }
+  next.profile = { ...DEFAULT_AI_SETTINGS.profile, ...(current.profile || {}) };
+  if (input.profile && typeof input.profile === 'object') {
+    const p = input.profile;
+    if (p.tone !== undefined) {
+      if (!AI_TONES.includes(p.tone)) throw invalid('Unbekannter Tonfall.');
+      next.profile.tone = p.tone;
+    }
+    if (p.address !== undefined) {
+      if (!AI_ADDRESS.includes(p.address)) throw invalid('Unbekannte Anrede.');
+      next.profile.address = p.address;
+    }
+    // Own wording and instructions: plain text, no control characters.
+    const clean = (v, n) =>
+      String(v ?? '')
+        .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+        .slice(0, n);
+    if (p.signoff !== undefined) next.profile.signoff = clean(p.signoff, 200);
+    if (p.instructions !== undefined) next.profile.instructions = clean(p.instructions, 1000);
   }
   if (Array.isArray(input.noCloudAccounts))
     next.noCloudAccounts = [...new Set(input.noCloudAccounts.map(String).filter(id => /^[\w-]{1,64}$/.test(id)))];

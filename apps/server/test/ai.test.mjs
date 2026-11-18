@@ -147,3 +147,17 @@ test('message preparation: html fallback and security facts', () => {
   assert.equal(facts.dmarc, 'fail');
   assert.equal(facts.check_deceptive_link, 'danger: a → b');
 });
+
+test('writing profile: known tone and address only, plain text limited', () => {
+  const base = validateAiSettings({}, DEFAULT_AI_SETTINGS);
+  assert.deepEqual(base.profile, DEFAULT_AI_SETTINGS.profile);
+  const next = validateAiSettings(
+    { profile: { tone: 'formal', address: 'sie', signoff: 'Beste\u0000 Grüße', instructions: 'x'.repeat(2000) } },
+    base
+  );
+  assert.equal(next.profile.tone, 'formal');
+  assert.equal(next.profile.signoff, 'Beste Grüße');
+  assert.equal(next.profile.instructions.length, 1000);
+  assert.throws(() => validateAiSettings({ profile: { tone: 'evil' } }, base), /Tonfall/);
+  assert.throws(() => validateAiSettings({ profile: { address: 'ihr' } }, base), /Anrede/);
+});

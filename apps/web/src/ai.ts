@@ -18,6 +18,12 @@ export type AiFeature =
   | 'search'
   | 'agents';
 
+export type AiProfile = {
+  tone: 'auto' | 'friendly' | 'formal' | 'casual' | 'brief';
+  address: 'auto' | 'du' | 'sie';
+  signoff: string;
+  instructions: string;
+};
 export type AiSettings = {
   enabled: boolean;
   provider: AiProvider;
@@ -27,6 +33,7 @@ export type AiSettings = {
   features: Record<AiFeature, boolean>;
   consents: Partial<Record<AiProvider, { version: string; at: string }>>;
   noCloudAccounts: string[];
+  profile?: AiProfile;
   keys: Partial<Record<AiProvider, boolean>>;
   consentVersion: string;
   vaultAvailable: boolean;
