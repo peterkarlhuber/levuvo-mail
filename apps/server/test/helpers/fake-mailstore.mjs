@@ -16,7 +16,7 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
   );
   const specialUse = { Drafts: '\\Drafts', Sent: '\\Sent', Trash: '\\Trash' };
 
-  function add(path, source, flags = []) {
+  function add(path, source, flags = [], options = {}) {
     const box = boxes.get(path);
     const uid = box.nextUid++;
     box.modseq++;
@@ -24,7 +24,7 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
       uid,
       source: Buffer.from(source),
       flags: new Set(flags),
-      internalDate: new Date('2026-11-18T10:00:00Z'),
+      internalDate: options.internalDate || new Date('2026-11-18T10:00:00Z'),
       modseq: box.modseq
     });
     return uid;
@@ -100,7 +100,12 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
         await op('search');
         const list = [...box().messages.values()];
         const header = query?.header || {};
+        const uidRange = typeof query?.uid === 'string' ? /^(\d+):(\*|\d+)$/.exec(query.uid) : null;
         return list
+          .filter(
+            m => !uidRange || (m.uid >= Number(uidRange[1]) && (uidRange[2] === '*' || m.uid <= Number(uidRange[2])))
+          )
+          .filter(m => !query?.before || m.internalDate < query.before)
           .filter(m =>
             Object.entries(header).every(([key, value]) => {
               const v = headerOf(m.source, key);
@@ -129,6 +134,16 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
           }
           yield out;
         }
+      },
+      async status(path) {
+        await op('status');
+        const b = boxes.get(path);
+        return { path, uidNext: b.nextUid, uidValidity: b.uidValidity, messages: b.messages.size };
+      },
+      async messageDelete(spec) {
+        await op('delete');
+        for (const uid of range(spec)) box().messages.delete(uid);
+        return true;
       },
       async messageFlagsAdd(spec, flags) {
         await op('store');

@@ -1,0 +1,77 @@
+# Shared spaces
+
+A space („Raum“) collects everything about one topic, project or customer: notes that several
+people edit at the same time (with checklists), pinned mails with internal comments, tasks and
+events with assignees, files with versions, and an activity list. Anyone can create any number of
+spaces and invite people by email address. There is **no Levuvo server**: every member keeps a
+complete encrypted copy, and changes travel as end-to-end encrypted mails between the members'
+existing mailboxes. This works across providers (for example Hetzner and Microsoft 365).
+
+## Roles
+
+| Role | Can |
+|---|---|
+| Owner | everything, including inviting, removing members, changing roles, handing over, dissolving, the space's assistant settings |
+| Editor | read and change content (notes, mails, comments, tasks, events, files) |
+| Reader | read only |
+
+## How it works
+
+- **Identity:** each installation has an Ed25519 signing key and an X25519 key, stored in the OS
+  keychain (`local` / `spaces-identity`). A member's ID is derived from both public keys; the
+  *safety code* (6 × 4 digits) can be compared by phone to rule out a man in the middle.
+- **Operations:** every change is a signed operation `{author, seq, lc, type, data}`. Sorting all
+  operations by Lamport clock, author and sequence and folding them gives the same state on every
+  device, whatever order mails arrive in. Notes are Yjs documents (CRDT), so concurrent edits merge
+  without conflicts; other fields are last-writer-wins.
+- **Permissions** are checked by every member while folding: operations from non-members, from
+  readers or after a member was removed are ignored everywhere.
+- **Encryption:** content is sealed with the space key (AES-256-GCM, bound to space and key epoch).
+  Keys reach members wrapped for their X25519 key (ephemeral ECDH, HKDF-SHA256, AES-256-GCM).
+  Every envelope is signed by its sender.
+- **Removing a member** records the removal and replaces the space key („Schlüsselrotation“). The
+  removed person keeps what they already had but cannot read anything added afterwards.
+- **Invitation:** the owner's app sends an invitation mail with a one-time token (valid 14 days).
+  The invitee chooses „Beitreten“; their app sends a join request encrypted to the owner, the
+  owner's app checks the token and the address, adds the member and sends the key and the full
+  history.
+- **Transport:** sync mails carry the header `X-Levuvo-Space`, a short explanatory text and one
+  attachment with the encrypted envelope. They are not saved to „Sent“. On arrival (also from the
+  junk folder) Levuvo processes them and moves them into the folder „Levuvo Spaces“, which other
+  devices of the same person read as well. Transport mails are deleted there after 30 days; the
+  content lives in each member's local copy. Lost mails are recovered automatically: every message
+  carries a version vector, and members ask each other for what they lack.
+- **Files** are encrypted with a fresh key per version and sent in parts of 5 MB, so mail size
+  limits (usually 20–25 MB) are no problem. Files up to 25 MB are sent to everyone right away;
+  larger ones are fetched from the uploader when someone opens them. Maximum 250 MB per file.
+
+## Local storage
+
+```
+<data folder>/spaces/<space id>.lvs     state, operations, keys, outbox (AES-256-GCM)
+<data folder>/spaces/index.lvs          received invitations, IMAP cursors (AES-256-GCM)
+<data folder>/spaces/blobs/<blob>.<n>   file parts, encrypted with the per-file key
+```
+
+The local key (`local` / `spaces-key`) is in the OS keychain. Without the keychain spaces stay
+locked; existing files are never overwritten with a new key.
+
+## Assistant and agents
+
+The Levuvo Mail Assistant and external agents (MCP) see only spaces in which the user is an active
+member and for which the owner has not switched the assistant off. Reading (`list_rooms`,
+`read_room`, `room_changes`, `search_rooms`, `read_room_file`) is immediate; content from other
+members is framed as untrusted data. Every change (`room_create`, `room_create_note`,
+`room_append_note`, `room_add_task`, `room_update_task`, `room_add_event`, `room_comment`,
+`room_add_mail`) waits for the user's approval because other members see it. Inviting, removing
+members and changing roles (`room_invite`, `room_remove_member`, `room_set_role`) additionally need
+the highest agent level. Dissolving a space, deleting the local copy, keys and the space's
+assistant settings are not available to the assistant at all. Per space the owner can forbid cloud
+models (`cloudAllowed`, default off).
+
+## Limits
+
+- Changes arrive as fast as mail: usually seconds to a minute (sync runs every minute).
+- Member list, sender, recipients, time and size of sync mails are visible to the mail providers
+  involved; the space name is readable in the invitation mail.
+- A removed member keeps their copy of what existed before the removal.

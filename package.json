@@ -53,7 +53,8 @@
     "postal-mime": "4.2.1",
     "sanitize-html": "2.18.2",
     "timezones-ical-library": "3.0.0",
-    "tsdav": "2.5.0"
+    "tsdav": "2.5.0",
+    "yjs": "13.6.33"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

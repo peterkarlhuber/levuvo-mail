@@ -1352,5 +1352,48 @@ export const EN: Record<string, string> = {
   '1 Tracker blockiert': '1 tracker blocked',
   '{count} Tracker blockiert': '{count} trackers blocked',
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
-    'Tracking pixels removed, even when images are loaded: {hosts}'
+    'Tracking pixels removed, even when images are loaded: {hosts}',
+  // Shared spaces (server messages)
+  'Ungültige Version.': 'Invalid version.',
+  'Bitte bestätigen.': 'Please confirm.',
+  'Nachricht nicht mehr vorhanden.': 'The message no longer exists.',
+  'Versand ist für dieses Konto nicht eingerichtet.': 'Sending is not set up for this account.',
+  'Empfänger abgelehnt.': 'Recipient rejected.',
+  'Das Konto für diesen Raum ist nicht mehr eingerichtet.': 'The account for this space is no longer set up.',
+  'Raum nicht gefunden.': 'Space not found.',
+  'Dieser Raum ist nicht mehr aktiv.': 'This space is no longer active.',
+  'Ungültige Eingabe.': 'Invalid input.',
+  'Dafür fehlen in diesem Raum die Rechte oder der Eintrag existiert nicht.':
+    'You lack the permission for this in this space, or the item does not exist.',
+  'Bitte einen Namen für den Raum angeben (höchstens 120 Zeichen).':
+    'Please enter a name for the space (up to 120 characters).',
+  'Nur der Besitzer kann einladen.': 'Only the owner can invite.',
+  'Bitte eine gültige Mailadresse angeben.': 'Please enter a valid email address.',
+  'Unbekannte Rolle.': 'Unknown role.',
+  'Diese Person ist schon Mitglied.': 'This person is already a member.',
+  'Nur der Besitzer kann Einladungen zurückziehen.': 'Only the owner can withdraw invitations.',
+  'Einladung nicht gefunden.': 'Invitation not found.',
+  'Diese Einladung ist abgelaufen. Bitte um eine neue.': 'This invitation has expired. Please ask for a new one.',
+  'Die Einladung gilt für eine andere Mailadresse.': 'The invitation is for a different email address.',
+  'Du bist schon Mitglied dieses Raums.': 'You are already a member of this space.',
+  'Nur der Besitzer kann Mitglieder entfernen.': 'Only the owner can remove members.',
+  'Als Besitzer bitte zuerst den Raum an jemanden übergeben oder ihn auflösen.':
+    'As the owner, please hand the space over to someone or dissolve it first.',
+  'Ein aktiver Raum kann nicht nur lokal gelöscht werden. Bitte zuerst austreten oder auflösen.':
+    'An active space cannot be deleted only on this device. Please leave or dissolve it first.',
+  'Notiz nicht gefunden.': 'Note not found.',
+  'Datei fehlt.': 'File missing.',
+  'Dateien in Räumen dürfen höchstens 250 MB groß sein.': 'Files in spaces can be at most 250 MB.',
+  'Version nicht gefunden.': 'Version not found.',
+  'Die Datei wird gerade von einem anderen Mitglied geholt. Bitte gleich noch einmal versuchen.':
+    'The file is being fetched from another member. Please try again in a moment.',
+  'Die Datei ist beschädigt.': 'The file is damaged.',
+  'Räume brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
+    'Spaces need the system keychain. It is not available right now.',
+  'Die Räume lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'The spaces cannot be opened with the key from the keychain.',
+  'Ein Raum lässt sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'A space cannot be opened with the key from the keychain.',
+  'Die Raumliste lässt sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'The list of spaces cannot be opened with the key from the keychain.'
 };
