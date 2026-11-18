@@ -9,6 +9,12 @@ import { parseVCard } from './vcard.mjs';
 
 const MAX_ACCOUNTS = 5;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
+const tooLarge = () =>
+  fail(
+    'Der Kalenderserver hat den Termin abgelehnt, weil er zu groß ist. Bitte Anhänge verkleinern oder entfernen.',
+    'event_too_large',
+    413
+  );
 const COLORS = ['#4f8cff', '#3fb68b', '#e5a23c', '#d9534f', '#9b6bdf', '#2bb3c0', '#e46fa8', '#8a9a5b'];
 
 export function normalizeServerUrl(value) {
@@ -367,6 +373,7 @@ export function createDavService({ store, fetchImpl = globalThis.fetch }) {
       const c = await client(account, 'caldav');
       const filename = `${uid.replace(/[^a-z0-9-]/gi, '') || randomUUID()}.ics`;
       const res = await c.createCalendarObject({ calendar: cal.raw, filename, iCalString: ics });
+      if (res.status === 413) throw tooLarge();
       if (!res.ok)
         throw fail(
           res.status === 412
@@ -386,6 +393,7 @@ export function createDavService({ store, fetchImpl = globalThis.fetch }) {
       const res = await c.updateCalendarObject({ calendarObject: { url, etag, data: ics } });
       if (res.status === 412)
         throw fail('Der Termin wurde zwischenzeitlich geändert. Bitte neu laden.', 'event_conflict', 409);
+      if (res.status === 413) throw tooLarge();
       if (!res.ok) throw fail('Termin konnte nicht gespeichert werden.', 'event_save_failed', 502);
       for (const [key] of objectCache) if (url.startsWith(key)) objectCache.delete(key);
       calendarCache.delete(account.id);
