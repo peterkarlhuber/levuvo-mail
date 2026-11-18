@@ -24,6 +24,7 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Local search index: subject, sender, date and the first 3,000 characters of text (no attachments; end-to-end encrypted messages only in their unreadable, encrypted form); with the AI assistant on, also numeric embeddings (vectors) of these texts | app data folder, SQLite database **encrypted as a whole with SQLCipher (AES-256, HMAC-SHA512)**, key in the system keychain; can be switched off and deleted | search across all folders, offline reading |
 | Display (language, theme, column width), notification counters (message IDs only) | local app storage | convenience |
 | Address suggestions, preview texts, offline view | in memory only | faster work |
+| Shared spaces: notes, tasks, events, pinned mails, comments, files, member list (name, address, public keys) and the activity of the space | a full copy on the device of **every member**, **encrypted with AES-256-GCM**; changes travel as end-to-end encrypted mails between the members' own mailboxes | working together in a space |
 
 Decrypted content is not stored – not even for the offline view.
 
@@ -63,12 +64,14 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - **Links** open in the default browser after confirmation (exception without confirmation: levuvo.at and the Microsoft/Google sign-in pages).
 - **Updates** (signed versions only): roughly every six hours a request to Levuvo's update server ([address]). For technical reasons the IP address, operating system and app version are transmitted; no account data or content.
 - **Crash reports – only with consent:** Off by default. If you switch them on under Settings → Privacy and the build contains a report address, a technical report (memory dump of the crashed process, app version, operating system) is sent to [recipient/service] after a crash. The app is designed so that email content is not held in the main process; however, it cannot be completely ruled out that memory dumps contain fragments. Legal basis: consent (Art. 6(1)(a) GDPR), revocable at any time by switching it off.
+- **Shared spaces:** Changes are sent as end-to-end encrypted mails from your mail account to the other members' addresses and moved into a folder called “Levuvo Spaces” on arrival (kept 30 days, then deleted). Mail providers on the way see sender, recipient, time and size, never content. The invitation mail contains the name of the space in readable form. Members you invite receive the content of the space; a removed member keeps what they already had, but cannot read anything added later (the key is replaced). The activity list shows who changed what and when; it contains no statistics or evaluation of individual people.
 - **Diagnostic report:** Saved as a file only at your request (version, system, error counters, connection status – no content, no addresses). You decide whether to pass it on.
 
 ## Deletion
 
 - Removing an email account deletes the local setup, the keychain entries and the search index of that account. Emails on the server remain unchanged.
 - Calendar/contact accounts, keys and certificates can be removed individually in the settings.
+- Shared spaces: leaving a space or dissolving it (owner) stops syncing; afterwards the local copy can be deleted under Spaces. Copies on other members' devices are under their control.
 - The search index can be switched off under Settings → Search & offline (it is deleted in the process).
 - Backup files you saved yourself are not touched by Levuvo; delete them yourself when no longer needed. Safety copies from a restore are in `before-restore/` in the app data folder.
 - All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
