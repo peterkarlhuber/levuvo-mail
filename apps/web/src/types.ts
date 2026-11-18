@@ -190,6 +190,8 @@ export type CalendarInfo = {
   source?: 'microsoft' | 'google' | 'local';
   primary?: boolean;
 };
+/** File in an event (inline in the iCalendar data, Microsoft 365 file) or a link (Google Drive, other apps). */
+export type EventAttachment = { id: string; name: string; type: string; size: number; uri?: string };
 export type CalendarEvent = {
   uid: string;
   url: string;
@@ -214,6 +216,9 @@ export type CalendarEvent = {
   organizer: { email: string; name: string } | null;
   attendees: Attendee[];
   alarms: number[];
+  attachments?: EventAttachment[];
+  /** Microsoft 365: the attachments are loaded when the event is opened. */
+  hasAttachments?: boolean;
 };
 export type ContactEntry = { value: string; type: string };
 export type Contact = {

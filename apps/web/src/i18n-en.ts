@@ -1312,6 +1312,32 @@ export const EN: Record<string, string> = {
   'Speichern der geplanten Nachricht nicht bestätigt.': 'Saving the scheduled message was not confirmed.',
   'Ob die geplante Nachricht gespeichert wurde, ist unklar. Bitte zuerst im Ordner „Entwürfe“ nachsehen, bevor du sie erneut planst.':
     'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.',
+  // Calendar attachments
+  'Höchstens 20 Anhänge pro Termin.': 'At most 20 attachments per event.',
+  '„{name}“ ist zu groß: Microsoft 365 nimmt hier höchstens 3 MB pro Datei an.':
+    '“{name}” is too large: Microsoft 365 accepts at most 3 MB per file here.',
+  '„{name}“ ist zu groß (höchstens 5 MB pro Datei).': '“{name}” is too large (at most 5 MB per file).',
+  'Die Anhänge sind zusammen zu groß (höchstens 10 MB pro Termin).':
+    'The attachments are too large in total (at most 10 MB per event).',
+  'wird beim Speichern hinzugefügt': 'added when saved',
+  '{name} öffnen': 'Open {name}',
+  'Datei anhängen': 'Attach file',
+  'Bis 3 MB pro Datei, zusammen bis 10 MB.': 'Up to 3 MB per file, 10 MB in total.',
+  'Bis 5 MB pro Datei, zusammen bis 10 MB.': 'Up to 5 MB per file, 10 MB in total.',
+  'Google Kalender hängt Dateien über Google Drive an. Vorhandene Anhänge lassen sich hier öffnen und entfernen.':
+    'Google Calendar attaches files via Google Drive. Existing attachments can be opened and removed here.',
+  'Anhang nicht gefunden. Bitte neu laden.': 'Attachment not found. Please reload.',
+  'Ungültiger Anhang.': 'Invalid attachment.',
+  'Ein Anhang ist zu groß (höchstens 5 MB pro Datei).': 'An attachment is too large (at most 5 MB per file).',
+  'Microsoft 365 nimmt hier Dateien bis 3 MB pro Anhang an.':
+    'Microsoft 365 accepts files up to 3 MB per attachment here.',
+  'Google Kalender speichert Anhänge als Google-Drive-Dateien. Dateien bitte in Google Drive ablegen und dort anhängen.':
+    'Google Calendar stores attachments as Google Drive files. Please put the files in Google Drive and attach them there.',
+  'Der Kalenderserver hat den Termin abgelehnt, weil er zu groß ist. Bitte Anhänge verkleinern oder entfernen.':
+    'The calendar server rejected the event because it is too large. Please make the attachments smaller or remove them.',
+  'Der lokale Kalender ist voll. Bitte große Anhänge entfernen oder in einem verbundenen Kalender speichern.':
+    'The device calendar is full. Please remove large attachments or save them in a connected calendar.',
+  'Dieser Anhang ist ein Link und wird im Browser geöffnet.': 'This attachment is a link and opens in the browser.',
   // Tracking pixels
   '1 Tracker blockiert': '1 tracker blocked',
   '{count} Tracker blockiert': '{count} trackers blocked',

@@ -3239,6 +3239,20 @@ h4 {
   gap: 12px;
   min-width: 0;
 }
+.event-attachments {
+  margin-top: 12px;
+  border-radius: var(--radius);
+}
+.event-attachments.dragging {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+}
+.event-attachments-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .event-title {
   font-size: 18px;
   font-weight: 600;
