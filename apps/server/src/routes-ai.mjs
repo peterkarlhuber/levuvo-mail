@@ -332,9 +332,9 @@ export function registerAiRoutes(ctx) {
       void ai.log.add({ type: 'apply', kind: type, source: clientText(request.body?.source, 40) || 'reader' });
       return { saved: true };
     } catch (err) {
-      return reply
-        .code(err.statusCode || 500)
-        .send({ error: err.statusCode ? err.message : 'Speichern fehlgeschlagen.' });
+      // 4xx from the target (for example 423 when the task store is locked) is passed on as it is.
+      const status = err.statusCode || err.status || 500;
+      return reply.code(status).send({ error: status < 500 ? err.message : 'Speichern fehlgeschlagen.' });
     }
   });
   api.get('/api/ai/log', async () => ({ entries: await ai.log.list(300) }));
