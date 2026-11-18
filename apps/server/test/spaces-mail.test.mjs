@@ -195,3 +195,58 @@ test('Spaces tools: reads are framed, changes wait for approval, cloud agents se
   await anna.service.apply(space.id, 'ai.settings', { enabled: false });
   assert.doesNotMatch(await tools.get('list_rooms').run({}, local), /Kunde Müller/);
 });
+
+test('Spaces tools through the real MCP server: listed, gated by level and cloud, changes only after approval', async t => {
+  const {
+    people: [anna]
+  } = await setup(t);
+  const dir = mkdtempSync(join(tmpdir(), 'lv-spaces-mcp-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const { createAgentRegistry, createApprovals, createMcpHandler, mcpToolRegistry } =
+    await import('../src/mcp-server.mjs');
+  const { createJsonFile } = await import('../src/app.mjs');
+  const { registerSpaceTools } = await import('../src/spaces/tools.mjs');
+  const ctx = { accounts: () => [anna.account], spaces: { addMail: async () => ({ id: 'x' }) } };
+  // Same path as the app: the tools find the registry through the MCP module on their own.
+  registerSpaceTools(ctx, { service: async () => anna.service });
+  for (let i = 0; i < 50 && !mcpToolRegistry(ctx).list().length; i++) await new Promise(r => setTimeout(r, 10));
+  const log = { add: () => Promise.resolve() };
+  const approvals = createApprovals(await createJsonFile(join(dir, 'ap.json'), { items: [] }), {
+    execute: (type, payload) => mcpToolRegistry(ctx).approval(type).execute(payload),
+    log
+  });
+  const handle = createMcpHandler(ctx, { approvals, log, version: '1' });
+  const agents = createAgentRegistry(await createJsonFile(join(dir, 'mcp.json'), { agents: [] }));
+  const rpc = (method, params) => ({ jsonrpc: '2.0', id: 1, method, params });
+  const text = out => out.result.content.map(c => c.text).join('');
+
+  const space = await anna.service.create({ name: 'Projekt Dach', accountId: anna.account.id });
+  const { agent: reader } = await agents.create({ name: 'Leser', level: 'read' });
+  const { agent: organizer } = await agents.create({ name: 'Ordner', level: 'organize' });
+
+  const names = (await handle(reader, rpc('tools/list'))).result.tools.map(x => x.name);
+  assert.ok(names.includes('list_rooms') && names.includes('read_room'));
+  assert.ok(!names.includes('room_add_task') && !names.includes('room_invite'));
+
+  // External agents count as cloud: nothing is visible until the owner allows it.
+  assert.doesNotMatch(text(await handle(reader, rpc('tools/call', { name: 'list_rooms', arguments: {} }))), /Dach/);
+  await anna.service.apply(space.id, 'ai.settings', { cloudAllowed: true });
+  assert.match(text(await handle(reader, rpc('tools/call', { name: 'list_rooms', arguments: {} }))), /Projekt Dach/);
+
+  const denied = await handle(
+    reader,
+    rpc('tools/call', { name: 'room_add_task', arguments: { room: space.id, title: 'Ziegel bestellen' } })
+  );
+  assert.equal(denied.result.isError, true);
+
+  await handle(
+    organizer,
+    rpc('tools/call', { name: 'room_add_task', arguments: { room: space.id, title: 'Ziegel bestellen' } })
+  );
+  assert.equal(anna.service.detail(space.id).tasks.length, 0);
+  const pending = approvals.list().filter(a => a.status === 'pending');
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].type, 'room_change');
+  await approvals.decide(pending[0].id, true);
+  assert.equal(anna.service.detail(space.id).tasks[0].title, 'Ziegel bestellen');
+});
