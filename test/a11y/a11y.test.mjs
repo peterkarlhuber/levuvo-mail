@@ -166,6 +166,9 @@ test(
         await page.locator('.rail-item').nth(3).click();
         await page.locator('.spaces-module').waitFor();
         await axe(page, 'spaces');
+        await page.locator('.rail-item').nth(4).click();
+        await page.locator('.tasks-module').waitFor();
+        await axe(page, 'tasks');
         await page.locator('.rail-item[aria-label="Assistent"]').click();
         await page.locator('.assistant-panel').waitFor();
         await axe(page, 'assistant');
@@ -203,7 +206,8 @@ test(
         [1, 'phone calendar'],
         [2, 'phone contacts'],
         [3, 'phone spaces'],
-        [5, 'phone settings']
+        [4, 'phone tasks'],
+        [6, 'phone settings']
       ]) {
         await page.locator('.rail-item:visible').nth(index).click();
         await page.waitForTimeout(300);
