@@ -35,6 +35,9 @@ import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
 import { applyPendingRestore, pendingRestore } from './backup.mjs';
+import { registerAiRoutes } from './routes-ai.mjs';
+import { createSidecar } from './ai-sidecar.mjs';
+import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -140,6 +143,7 @@ export async function createMailServer({
   watch = true,
   background = true,
   onRestartRequested = null,
+  aiSidecar = null,
   logger = () => {}
 } = {}) {
   if (desktop && !/^[a-f0-9]{64}$/.test(sessionSecret)) throw new Error('Desktop-Sitzungsschlüssel fehlt.');
@@ -342,7 +346,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -452,8 +456,53 @@ export async function createMailServer({
     [a.imap.user, ...(a.identities || []).map(i => i.email)].filter(Boolean).map(e => e.toLowerCase());
   const ownAddresses = () => accounts.flatMap(accountAddresses);
 
+  /** A request to this API from inside the server (same checks as a request from the app). */
+  async function internalRequest(method, url, body, action) {
+    const host = `127.0.0.1:${desktop ? activePort : browserPort}`;
+    const headers = { host };
+    if (desktop) headers.cookie = `levuvo_desktop_session=${sessionSecret}`;
+    if (method !== 'GET') {
+      headers.origin = desktop ? `http://${host}` : 'http://127.0.0.1:5173';
+      headers['content-type'] = 'application/json';
+      if (action) headers['x-levuvo-action'] = action;
+    }
+    const response = await api.inject({ method, url, headers, payload: body ? JSON.stringify(body) : undefined });
+    let json;
+    try {
+      json = response.json();
+    } catch {
+      json = null;
+    }
+    if (response.statusCode >= 400)
+      throw Object.assign(new Error(json?.error || 'Anfrage fehlgeschlagen.'), {
+        statusCode: response.statusCode,
+        code: json?.code
+      });
+    return json;
+  }
+
+  const aiSettings = await createJsonFile(path.join(dir, 'ai.json'), DEFAULT_AI_SETTINGS);
+  let ai;
+  const sidecar =
+    aiSidecar ||
+    createSidecar({
+      env,
+      logger,
+      onStart: call => ai.configure(call)
+    });
+  ai = createAiService({
+    settingsFile: aiSettings,
+    vault: store,
+    sidecar,
+    log: createAiLog(path.join(dir, 'ai-log.jsonl')),
+    logger
+  });
+
   const ctx = {
     api,
+    ai,
+    internalRequest,
+    aiForgetHooks: [],
     desktop,
     env: effectiveEnv,
     logger,
@@ -511,6 +560,7 @@ export async function createMailServer({
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
+  registerAiRoutes(ctx);
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
@@ -562,6 +612,7 @@ export async function createMailServer({
     async close() {
       for (const t of timers) clearInterval(t);
       watchers.stopAll();
+      await sidecar.stop().catch(() => {});
       await api.close();
     }
   };

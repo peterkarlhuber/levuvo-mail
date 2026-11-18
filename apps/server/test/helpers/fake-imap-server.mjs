@@ -109,14 +109,25 @@ function parseFetchItems(text) {
   return items;
 }
 
+const EXPUNGED_STAND_IN = {
+  flags: ['\\Recent'],
+  internalDate: '01-Jan-1970 00:00:00 +0000',
+  source: Buffer.alloc(0),
+  text: Buffer.alloc(0)
+};
+
 /** Builds the bytes of one `* n FETCH (...)` response for a stored message. */
 function fetchResponse(seq, msg, items) {
+  // `expunged`: deleted by another connection that this one has not been told about yet.
+  // Dovecot then still answers, with this stand-in (seen against Dovecot 2.3.21).
+  if (msg.expunged) msg = { ...msg, ...EXPUNGED_STAND_IN };
   const parts = [];
   if (items.uid) parts.push(`UID ${msg.uid}`);
   if (items.flags) parts.push(`FLAGS (${msg.flags.join(' ')})`);
   if (items.size) parts.push(`RFC822.SIZE ${msg.source.length}`);
   if (items.internalDate) parts.push(`INTERNALDATE ${quote(msg.internalDate)}`);
-  if (items.envelope) parts.push(`ENVELOPE ${envelope(msg)}`);
+  if (items.envelope)
+    parts.push(`ENVELOPE ${msg.expunged ? '(NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL)' : envelope(msg)}`);
   if (items.bodyStructure) parts.push(`BODYSTRUCTURE ${bodyStructure(msg)}`);
   const chunks = [];
   let head = `* ${seq} FETCH (${parts.join(' ')}`;

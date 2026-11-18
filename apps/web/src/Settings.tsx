@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ArchiveRestore,
   Bell,
+  Bot,
   BookOpen,
   CalendarDays,
   Check,
@@ -33,6 +34,7 @@ import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
 import { BackupSettings } from './SettingsBackup';
+import { AiSettingsPanel } from './SettingsAi';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
 
@@ -66,7 +68,7 @@ export function Section({
     </section>
   );
 }
-function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="settings-row">
       <div className="settings-row-label">
@@ -77,7 +79,7 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
     </div>
   );
 }
-function Segmented<T extends string | number>({
+export function Segmented<T extends string | number>({
   value,
   options,
   onChange,
@@ -105,7 +107,15 @@ function Segmented<T extends string | number>({
     </div>
   );
 }
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Toggle({
+  checked,
+  onChange,
+  label
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
   return (
     <label className="switch">
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} aria-label={label} />
@@ -652,6 +662,7 @@ export default function Settings(props: Props) {
     { id: 'dav', label: t('Kalender & Kontakte'), icon: CalendarDays },
     { id: 'security', label: t('Sicherheit'), icon: KeyRound },
     { id: 'search', label: t('Suche & Offline'), icon: Search },
+    { id: 'ai', label: t('KI & Agenten'), icon: Bot },
     { id: 'notifications', label: t('Mitteilungen'), icon: Bell },
     { id: 'privacy', label: t('Datenschutz'), icon: ShieldCheck },
     { id: 'backup', label: t('Sicherung'), icon: ArchiveRestore },
@@ -702,6 +713,7 @@ export default function Settings(props: Props) {
         {props.tab === 'dav' && <DavSettings />}
         {props.tab === 'security' && <SecuritySettings />}
         {props.tab === 'search' && <SearchIndex />}
+        {props.tab === 'ai' && <AiSettingsPanel accounts={props.accounts} />}
         {props.tab === 'notifications' && (
           <Notifications
             runtime={props.runtime}

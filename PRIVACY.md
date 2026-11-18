@@ -32,6 +32,27 @@ Decrypted content is not stored – not even for the offline view.
 A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, templates, snooze and follow-up entries, your own PGP/S/MIME keys and the assistant's settings and activity log. It does **not** contain account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
 
 The file is encrypted with a password of your choice (scrypt key derivation, AES-256-GCM); without it the backup cannot be read, not even by Levuvo. Only the creation date and app version are readable without the password. Restoring checks the file first and replaces the data on this device at the next start; the previous data is kept in `before-restore/` in the app data folder (the last three restores) and can be deleted there. Since a backup contains personal data of others (contacts, appointments), store it as carefully as the computer itself and delete outdated copies.
+## AI features (optional, off by default)
+
+The AI features (Settings → AI & agents) are switched off until you switch them on.
+
+- **Local model (default):** The AI component of the app (a Python process shipped with it, based on
+  Orkexa) sends the content of the messages you apply an AI function to only to **Ollama on this
+  computer** (address 127.0.0.1). Nothing leaves the device. Other addresses are refused.
+- **Cloud model (only with consent):** If you choose Anthropic or OpenAI, the app asks for your consent
+  first and records the date and the version of the consent text. From then on, the content of the
+  messages you apply an AI function to is sent to that provider and processed under its terms, possibly
+  outside the EU. Legal basis: consent (Art. 6(1)(a) GDPR), revocable at any time ("Withdraw consent").
+  Accounts marked "No cloud AI" are never processed by a cloud model. The API key is stored only in the
+  keychain. For use in an organization, a data processing agreement (Art. 28 GDPR) with the provider is
+  required.
+- **Semantic search** computes its vectors always locally with Ollama, also when a cloud model is chosen.
+- **What is stored:** the AI settings (app data folder, no key) and an **AI log** of what the AI and
+  agents did (time, function or tool, provider, model, result) **without message content**, kept for 30
+  days on this device. It is not used to monitor anyone's performance.
+- **Transparency:** AI results are labelled as AI-generated and are never sent, moved or deleted without
+  your action.
+- "Delete all AI data" removes settings, consents, keys, the log and agent access at once.
 
 ## Connections to the internet
 
@@ -50,6 +71,7 @@ The file is encrypted with a password of your choice (scrypt key derivation, AES
 - Calendar/contact accounts, keys and certificates can be removed individually in the settings.
 - The search index can be switched off under Settings → Search & offline (it is deleted in the process).
 - Backup files you saved yourself are not touched by Levuvo; delete them yourself when no longer needed. Safety copies from a restore are in `before-restore/` in the app data folder.
+- All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
 - After uninstalling, the app data folder can be deleted: macOS `~/Library/Application Support/Levuvo Mail`, Windows `%APPDATA%\Levuvo Mail`.
 
 ## Your rights
