@@ -151,6 +151,7 @@
   --sidebar-w: 240px;
   --content-max: 760px;
   --bottom-nav-h: 60px;
+  --row-actions-w: 120px;
 }
 @media (pointer: coarse) {
   :root {
@@ -3829,7 +3830,7 @@ h4 {
 /* Reserve the room the hover actions take on the sender line. */
 .message-row:hover .message-topline,
 .message-row:focus-within .message-topline {
-  padding-right: 120px;
+  padding-right: var(--row-actions-w);
 }
 .row-actions .menu {
   top: calc(100% + 6px);
