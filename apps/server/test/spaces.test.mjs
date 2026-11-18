@@ -233,7 +233,8 @@ test('Spaces: files are chunked, encrypted and versioned', async t => {
   const space = await anna.service.create({ name: 'Dateien', accountId: anna.accountId });
   await joinSpace(office, anna, ben, space.id, 'editor', all);
   const big = Buffer.alloc(11 * 1024 * 1024, 1);
-  big.write('Plan', 0);
+  const marker = 'GEHEIMER-GRUNDRISS-PLAN-0815';
+  big.write(marker, 0);
   const fileId = await anna.service.addFile(space.id, {
     name: 'plan.pdf',
     folder: 'Pläne',
@@ -252,7 +253,10 @@ test('Spaces: files are chunked, encrypted and versioned', async t => {
   assert.equal((await anna.service.readFile(space.id, fileId, 1)).data.length, big.length);
   // chunk files on disk never contain plain content
   const chunk = readdirSync(join(anna.dir, 'blobs'))[0];
-  assert.ok(!readFileSync(join(anna.dir, 'blobs', chunk), 'utf8').includes('Plan'));
+  // (A short word could appear by chance in random base64; a long marker cannot.)
+  const raw = readFileSync(join(anna.dir, 'blobs', chunk), 'utf8');
+  assert.ok(!raw.includes(marker));
+  assert.ok(!Buffer.from(JSON.parse(raw).data, 'base64url').includes(marker));
 });
 
 test('Spaces: a member who missed mails catches up', async t => {
@@ -341,4 +345,15 @@ test('Spaces: changes queued while mails are being sent are not lost', async t =
       .sort(),
     ['Eins', 'Zwei']
   );
+});
+
+test('Spaces: note text keeps formatted words and never yields markup', () => {
+  const doc = new Y.Doc();
+  const para = new Y.XmlElement('paragraph');
+  const text = new Y.XmlText();
+  text.insert(0, 'fett', { bold: true });
+  text.insert(4, ' und <script>x</script>');
+  para.insert(0, [text]);
+  doc.getXmlFragment('default').insert(0, [para]);
+  assert.equal(noteText(doc), 'fett und <script>x</script>');
 });

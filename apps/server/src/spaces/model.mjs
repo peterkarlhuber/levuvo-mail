@@ -271,7 +271,12 @@ export function noteText(doc) {
   const fragment = doc.getXmlFragment('default');
   const lines = [];
   const walk = (node, prefix = '') => {
-    if (node instanceof Y.XmlText) return node.toString().replace(/<[^>]+>/g, '');
+    // The plain inserts of the text, without formatting marks (never parsed as markup).
+    if (node instanceof Y.XmlText)
+      return node
+        .toDelta()
+        .map(part => (typeof part.insert === 'string' ? part.insert : ''))
+        .join('');
     if (node instanceof Y.XmlElement) {
       const inner = node
         .toArray()
