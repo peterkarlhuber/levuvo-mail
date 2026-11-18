@@ -45,6 +45,7 @@ import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText,
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
 import { EventSuggestions } from './EventSuggestions';
+import ContactCard from './ContactCard';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
 import type {
@@ -805,6 +806,8 @@ export default function Reader(props: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [preview, setPreview] = useState<Attachment | null>(null);
   const [menu, setMenu] = useState(false);
+  // Contact card of the sender, per message (closes when another message is opened).
+  const [cardFor, setCardFor] = useState<string | null>(null);
   const [snoozeMenu, setSnoozeMenu] = useState(false);
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
@@ -1072,21 +1075,47 @@ export default function Reader(props: Props) {
 
           <h2>{header.subject}</h2>
           <div className="reader-meta">
-            <div className="reader-avatar" aria-hidden="true">
-              {initials(header.fromName)}
-            </div>
-            <div className="reader-sender">
-              <div className="sender-name">{header.fromName}</div>
-              {header.fromEmail && header.fromEmail.toLowerCase() !== header.fromName.toLowerCase() && (
-                <div className="sender-email" title={header.fromEmail}>
-                  {header.fromEmail}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              className="reader-sender-button"
+              disabled={!header.fromEmail}
+              aria-expanded={cardFor === `${detail?.uid}|${header.fromEmail}`}
+              title={t('Kontaktkarte anzeigen')}
+              onClick={() =>
+                setCardFor(c =>
+                  c === `${detail?.uid}|${header.fromEmail}` ? null : `${detail?.uid}|${header.fromEmail}`
+                )
+              }
+            >
+              <div className="reader-avatar" aria-hidden="true">
+                {initials(header.fromName)}
+              </div>
+              <div className="reader-sender">
+                <div className="sender-name">{header.fromName}</div>
+                {header.fromEmail && header.fromEmail.toLowerCase() !== header.fromName.toLowerCase() && (
+                  <div className="sender-email" title={header.fromEmail}>
+                    {header.fromEmail}
+                  </div>
+                )}
+              </div>
+            </button>
             <time className="reader-date" title={fullDateLabel(header.date)}>
               {fullDateLabel(header.date)}
             </time>
           </div>
+          {detail && header.fromEmail && cardFor === `${detail.uid}|${header.fromEmail}` && (
+            <ContactCard
+              accountId={accountId}
+              email={header.fromEmail}
+              name={header.fromName}
+              currentUid={detail.uid}
+              onOpenMail={(folder, uid) => {
+                setCardFor(null);
+                props.onOpenThreadMessage(folder, uid);
+              }}
+              onClose={() => setCardFor(null)}
+            />
+          )}
           {detail && (detail.to.length > 0 || detail.cc.length > 0 || detail.replyTo.length > 0) && (
             <div className="recipient-panel">
               {detail.to.length > 0 && (

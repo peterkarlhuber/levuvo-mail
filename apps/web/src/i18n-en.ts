@@ -474,6 +474,18 @@ export const EN: Record<string, string> = {
   'Antwort an den Organisator gesendet.': 'Reply sent to the organizer.',
   'Antwort gespeichert.': 'Reply saved.',
   'Im Kalender eingetragen.': 'Added to the calendar.',
+  // Contact card in the reader
+  Kontaktkarte: 'Contact card',
+  'Kontaktkarte anzeigen': 'Show contact card',
+  'Nicht im Adressbuch': 'Not in the address book',
+  'Letzte E-Mails': 'Recent emails',
+  'Wird geladen …': 'Loading …',
+  'Keine weiteren E-Mails gefunden.': 'No other emails found.',
+  'Gemeinsame Termine': 'Shared appointments',
+  Vergangen: 'Past',
+  'Keine gemeinsamen Termine.': 'No shared appointments.',
+  'E-Mails mit Anhängen': 'Emails with attachments',
+  'Keine Anhänge.': 'No attachments.',
   // Detected appointments in the reader
   Flug: 'Flight',
   Zugfahrt: 'Train journey',
