@@ -1,5 +1,6 @@
 // Mail routes: folders, lists, search, reading, actions, drafts, sending, scheduling,
 // filters (Sieve), local index and background jobs.
+import { attachmentQuery, listAttachments } from './attachment-overview.mjs';
 import { folderName, cleanLimit, cleanBeforeUid } from './config.mjs';
 import { publicAccounts, accountScopedRequestKey } from './accounts.mjs';
 import { validFolder, validUid, validAttachmentIndex, downloadHeaders, attachmentBytes } from './message-utils.mjs';
@@ -463,6 +464,17 @@ export function registerMailRoutes(ctx) {
   api.get('/api/messages/:uid/attachments/:index', (request, reply) =>
     attachment(request, reply, request.query?.inline === '1')
   );
+  // Attachment overview: all files of a folder, optionally only those exchanged with one contact.
+  api.get('/api/attachments', async (request, reply) => {
+    const folder = typeof request.query?.folder === 'string' ? request.query.folder : 'INBOX';
+    if (!validFolder(folder)) return reply.code(400).send({ error: 'Ungültiger Ordner.' });
+    try {
+      const options = attachmentQuery(request.query);
+      return await withImap(client => listAttachments(client, folder, options), request.mailAccount);
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
   api.get('/api/thread', async (request, reply) => {
     const folder = typeof request.query?.folder === 'string' ? request.query.folder : 'INBOX';
     if (!validFolder(folder) || !validUid(String(request.query?.uid || '')))
