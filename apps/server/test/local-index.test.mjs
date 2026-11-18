@@ -74,6 +74,8 @@ test('Index is encrypted, matches without umlauts/case, removes deleted messages
     assert.equal((await reopened.status('acc')).messages, 2);
     await reopened.sync(mailbox(msgs.slice(0, 1)), 'acc', [{ path: 'INBOX', flags: new Set() }]);
     assert.deepEqual(await reopened.search(['acc'], 'rechnung'), []);
+    // As after a restart with a lost key: nothing else holds the file open (Windows locks it).
+    for (const open of opened.splice(0)) open.close();
     const wrongKey = createLocalIndex({ dir, getKey: async () => randomBytes(32) });
     assert.equal((await wrongKey.status('acc')).messages, 0, 'wrong key → empty index');
     assert.equal((await createLocalIndex({ dir, getKey: async () => null }).status('acc')).enabled, false);
