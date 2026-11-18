@@ -942,5 +942,17 @@
       "crashReports": false,
       "localIndex": true
     }
+  },
+  "GET /api/spaces": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "identity": {
+        "id": "id-alex",
+        "safetyCode": "4821 9930 1177"
+      },
+      "spaces": [],
+      "invitations": []
+    }
   }
 }

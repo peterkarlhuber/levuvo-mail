@@ -163,6 +163,9 @@ test(
         await page.locator('.rail-item').nth(2).click();
         await page.locator('.contacts-module').waitFor();
         await axe(page, 'contacts');
+        await page.locator('.rail-item').nth(3).click();
+        await page.locator('.spaces-module').waitFor();
+        await axe(page, 'spaces');
         await page.locator('.rail-item[aria-label="Einstellungen"]').click();
         for (const tab of settingsTabs) {
           await page.locator('.settings-nav button', { hasText: tab }).first().click();
@@ -194,7 +197,8 @@ test(
       for (const [index, name] of [
         [1, 'phone calendar'],
         [2, 'phone contacts'],
-        [3, 'phone settings']
+        [3, 'phone spaces'],
+        [4, 'phone settings']
       ]) {
         await page.locator('.rail-item:visible').nth(index).click();
         await page.waitForTimeout(300);
