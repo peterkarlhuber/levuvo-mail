@@ -44,6 +44,7 @@
   "dependencies": {
     "@napi-rs/keyring": "2.1.2",
     "asn1js": "4.0.0",
+    "better-sqlite3-multiple-ciphers": "13.0.3",
     "electron-updater": "6.8.11",
     "fastify": "5.12.8",
     "ical.js": "2.2.1",
@@ -91,6 +92,8 @@
       "output": "release"
     },
     "asar": true,
+    "afterPack": "build/after-pack.cjs",
+    "npmRebuild": false,
     "asarUnpack": [
       "**/*.node"
     ],
@@ -104,6 +107,8 @@
       "!**/.env",
       "!**/.env.*",
       "!**/test/**/*",
+      "!node_modules/better-sqlite3-multiple-ciphers/{deps,src}/**/*",
+      "!node_modules/better-sqlite3-multiple-ciphers/binding.gyp",
       "!**/*.map"
     ],
     "mac": {

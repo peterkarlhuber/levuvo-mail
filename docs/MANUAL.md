@@ -123,7 +123,7 @@ without opening it.
 
 - **This folder:** the search field (key /) searches subject, sender and content on the mail server.
 - **Everywhere:** the “Everywhere” switch searches all folders and accounts using the **local, encrypted
-  search index** – even without internet. The index is built in the background (Settings → Search & offline:
+  search index** (SQLite, encrypted with SQLCipher) – even without internet. The index is built in the background (Settings → Search & offline:
   status, “Update now”, “Rebuild”, turn off).
 - **Offline:** without a connection the app shows recently loaded lists and messages, or the text from the
   index. Moving and sending are possible again once you are online.

@@ -4,7 +4,7 @@
 // bound is exceeded. Bounds are deliberately generous so slow CI runners pass; the transfer
 // bounds (UIDs and bytes per page) are exact properties of the algorithm, not timing.
 //
-//   node scripts/bench-large-mailbox.mjs [--messages 100000] [--index 25000] [--json out.json]
+//   node scripts/bench-large-mailbox.mjs [--messages 100000] [--index 100000] [--vectors 20000] [--json out.json]
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,7 +20,9 @@ const option = (name, fallback) => {
   return i >= 0 ? args[i + 1] : fallback;
 };
 const MESSAGES = Number(option('messages', 100_000));
-const INDEXED = Number(option('index', 25_000));
+const INDEXED = Number(option('index', 100_000));
+const VECTORS = Number(option('vectors', 20_000));
+const DIM = 1024;
 const PAGE = 40;
 
 // Upper bounds (ms, counts, bytes). Timings are per operation against an in-process fake server,
@@ -30,10 +32,11 @@ const BOUNDS = {
   pageSearchUids: 4 * PAGE,
   pageBytes: 64 * 1024,
   imapSearchNextPageUidsRatio: 1,
-  indexFullSyncMs: 60_000,
+  indexFullSyncMs: 180_000,
   indexIdleSyncMs: 2_000,
   indexIdleSearchUids: 0,
   indexSearchMs: 400,
+  vectorSearchMs: 2_000,
   heapMb: 1_024
 };
 
@@ -43,7 +46,7 @@ const time = async fn => {
   return { value, ms: Math.round((performance.now() - start) * 10) / 10 };
 };
 
-const results = { messages: MESSAGES, indexed: INDEXED, page: PAGE, node: process.version };
+const results = { messages: MESSAGES, indexed: INDEXED, vectors: VECTORS, dim: DIM, page: PAGE, node: process.version };
 const failures = [];
 const check = (name, value, bound) => {
   results[name] = value;
@@ -122,6 +125,34 @@ try {
   const paged = await time(() => index.searchPage(['bench'], 'rechnung', { limit: PAGE, cursor: '400' }));
   worst = Math.max(worst, paged.ms);
   check('indexSearchMs', worst, BOUNDS.indexSearchMs);
+
+  // Embeddings (e.g. qwen3-embedding, 1024 dimensions) for the first VECTORS indexed messages.
+  let seed = 7;
+  const random = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32) * 2 - 1;
+  const vectorOf = () => Float32Array.from({ length: DIM }, random);
+  let batch = [];
+  let stored = 0;
+  const put = time(async () => {
+    for await (const e of index.entries('bench')) {
+      if (stored + batch.length >= VECTORS) break;
+      batch.push({ key: e.key, vector: vectorOf() });
+      if (batch.length === 1000) {
+        stored += (await index.putVectors('bench', 'qwen3-embedding:0.6b', batch)).stored;
+        batch = [];
+      }
+    }
+    if (batch.length) stored += (await index.putVectors('bench', 'qwen3-embedding:0.6b', batch)).stored;
+  });
+  results.vectorPutMs = Math.round((await put).ms);
+  results.vectorsStored = stored;
+  let vectorWorst = 0;
+  for (let i = 0; i < 3; i++) {
+    const run = await time(() => index.searchVectors('bench', 'qwen3-embedding:0.6b', vectorOf(), { limit: 20 }));
+    vectorWorst = Math.max(vectorWorst, run.ms);
+  }
+  check('vectorSearchMs', vectorWorst, BOUNDS.vectorSearchMs);
+  results.indexFileBytesWithVectors = (await index.status('bench')).bytes;
+  index.close();
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

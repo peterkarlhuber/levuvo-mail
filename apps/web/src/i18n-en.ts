@@ -907,6 +907,7 @@ export const EN: Record<string, string> = {
   'Unbekannte Ordneraktion.': 'Unknown folder action.',
   'Ungültiger Ordner.': 'Invalid folder.',
   'Ungültiger Cursor.': 'Invalid cursor.',
+  'Ungültiger Modellname.': 'Invalid model name.',
   'Der formatierte Text ist zu groß.': 'The formatted text is too large.',
   'IMAP-Anmeldung fehlgeschlagen. Benutzername und Passwort prüfen.':
     'IMAP sign-in failed. Check user name and password.',

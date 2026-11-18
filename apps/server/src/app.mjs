@@ -545,6 +545,7 @@ export async function createMailServer({
       for (const t of timers) clearInterval(t);
       watchers.stopAll();
       await api.close();
+      localIndex.close();
     }
   };
 }
