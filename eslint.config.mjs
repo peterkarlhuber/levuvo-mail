@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
-  { ignores: ['node_modules/', 'apps/web/dist/', 'release/', 'coverage/'] },
+  { ignores: ['node_modules/', 'apps/web/dist/', 'release/', 'coverage/', '**/.venv/', 'build/ai-runtime/'] },
   {
     files: ['**/*.mjs'],
     extends: [js.configs.recommended],

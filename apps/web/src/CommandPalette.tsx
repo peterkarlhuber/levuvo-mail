@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sun,
   UserRound,
+  Sparkles,
   type LucideIcon
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
@@ -190,6 +191,7 @@ export default function CommandPalette({
       ['dav', t('Kalender & Kontakte'), CalendarDays, 'caldav carddav verbinden'],
       ['security', t('Sicherheit'), ShieldCheck, 'pgp smime verschlüsselung'],
       ['search', t('Suche & Offline'), Search, 'index'],
+      ['ai', t('KI & Agenten'), Sparkles, 'ki ai llm ollama agent mcp'],
       ['notifications', t('Mitteilungen'), BellRing, 'benachrichtigung'],
       ['help', t('Hilfe'), CircleHelp, 'handbuch']
     ];
