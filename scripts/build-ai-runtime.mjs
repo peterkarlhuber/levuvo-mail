@@ -9,9 +9,10 @@
 // apps/ai/requirements-lock.txt (--require-hashes). Tabrion and Orkexa are installed from exact
 // git commits without dependencies, and the sidecar itself from apps/ai.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { detectArchitectures } from './verify-app-arch.mjs';
 
 export const PYTHON_VERSION = '3.13.14';
 const root = resolve(import.meta.dirname, '..');
@@ -65,6 +66,19 @@ function prune(dir) {
     if (PRUNE.has(entry.name)) rmSync(full, { recursive: true });
     else prune(full);
   }
+}
+
+/**
+ * Windows: drop the test and Tk extension modules, and on ARM64 the x64-only vcruntime140_1.dll that
+ * python-build-standalone ships (ARM64 has no __CxxFrameHandler4 runtime split; nothing loads it there).
+ */
+function pruneWindows(target, arch) {
+  if (process.platform !== 'win32') return;
+  const dlls = join(target, 'DLLs');
+  for (const name of readdirSync(dlls))
+    if (/^_test.*\.pyd$|^_tkinter\.pyd$|^t(cl|k)\d+t\.dll$/i.test(name)) rmSync(join(dlls, name));
+  const extra = join(target, 'vcruntime140_1.dll');
+  if (arch === 'arm64' && existsSync(extra) && !detectArchitectures(extra).includes('arm64')) rmSync(extra);
 }
 
 /** Starts the sidecar once with the bundled interpreter, exactly as the app does, and asks for its status. */
@@ -135,6 +149,7 @@ async function main() {
     run('uv', ['pip', 'check', '--python', python], { env });
 
     prune(target);
+    pruneWindows(target, arch);
     const smoke = smokeTest(python, out);
     const notices = spawnSync(python, ['-I', '-c', NOTICES], { encoding: 'utf8' });
     if (notices.status !== 0) throw new Error(notices.stderr);
