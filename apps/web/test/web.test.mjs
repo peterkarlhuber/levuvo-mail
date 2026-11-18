@@ -183,7 +183,7 @@ test('Detected appointment becomes a calendar editor model', async () => {
     fromMail: 'Aus der E-Mail',
     untitled: '(Ohne Titel)'
   };
-  const mail = { subject: 'Ihre Buchung', from: [{ name: 'Airline', address: 'noreply@airline.test' }] };
+  const mail = { subject: 'Ihre Buchung', from: [{ name: 'Airline', email: 'noreply@airline.test' }] };
   const flight = suggestionToEvent(
     {
       kind: 'flight',

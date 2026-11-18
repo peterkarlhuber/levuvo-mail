@@ -39,7 +39,7 @@ const PREFIXED = new Set(['flight', 'train', 'bus', 'car']);
 
 export function suggestionToEvent(
   s: EventSuggestion,
-  mail: { subject?: string; from?: { name?: string; address?: string }[] },
+  mail: { subject?: string; from?: { name?: string; email?: string }[] },
   labels: SuggestionLabels,
   zone: string = TZ
 ): SuggestedEvent {
@@ -50,7 +50,7 @@ export function suggestionToEvent(
     s.reservationNumber ? `${labels.reservation}: ${s.reservationNumber}` : '',
     s.description || '',
     mail.subject
-      ? `${labels.fromMail}: „${mail.subject}“${sender ? ` – ${sender.name || sender.address || ''}` : ''}`
+      ? `${labels.fromMail}: „${mail.subject}“${sender ? ` – ${sender.name || sender.email || ''}` : ''}`
       : ''
   ]
     .filter(Boolean)
