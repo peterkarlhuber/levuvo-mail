@@ -499,7 +499,6 @@ export const EN: Record<string, string> = {
   'Gemeinsame Termine': 'Shared appointments',
   Vergangen: 'Past',
   'Keine gemeinsamen Termine.': 'No shared appointments.',
-  'E-Mails mit Anhängen': 'Emails with attachments',
   'Keine Anhänge.': 'No attachments.',
   // Detected appointments in the reader
   Flug: 'Flight',

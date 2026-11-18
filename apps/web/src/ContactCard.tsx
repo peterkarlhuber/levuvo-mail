@@ -1,10 +1,12 @@
 // Contact card in the reader: who the sender is (address book), the latest mails with them,
-// shared appointments and mails with attachments. Everything is read from this computer
+// shared appointments and the files exchanged (from the attachment overview). Everything is read from this computer
 // (encrypted search index, connected calendars and address books); nothing is looked up online.
 import { useEffect, useState } from 'react';
 import { Building2, CalendarDays, Mail, Paperclip, Phone, X } from 'lucide-react';
 import { getJson } from './api';
 import { useT } from './i18n';
+import type { AttachmentItem } from './AttachmentOverview';
+import { prettySize } from './format';
 import { pickContact, sharedEvents, type ContactMail } from './contact-card';
 import type { CalendarEvent, Contact } from './types';
 
@@ -28,6 +30,7 @@ export default function ContactCard({
   const { t, locale } = useT();
   const [contact, setContact] = useState<Contact | null>(null);
   const [mails, setMails] = useState<ContactMail[] | null>(null);
+  const [files, setFiles] = useState<AttachmentItem[] | null>(null);
   const [events, setEvents] = useState<{ upcoming: CalendarEvent[]; past: CalendarEvent[] } | null>(null);
 
   useEffect(() => {
@@ -49,6 +52,13 @@ export default function ContactCard({
       .catch(inbox)
       .then(list => live && setMails(list))
       .catch(() => live && setMails([]));
+    // Same source as the attachment overview: files in the inbox exchanged with this address.
+    getJson<{ items: AttachmentItem[] }>(
+      `/api/attachments?folder=INBOX&contact=${encodeURIComponent(email)}`,
+      accountId
+    )
+      .then(d => live && setFiles(d.items || []))
+      .catch(() => live && setFiles([]));
     const now = Date.now();
     getJson<{ events: CalendarEvent[] }>(
       `/api/calendar/events?from=${new Date(now - 180 * DAY).toISOString()}&to=${new Date(now + 180 * DAY).toISOString()}`
@@ -64,6 +74,7 @@ export default function ContactCard({
 
   const others = (mails || []).filter(m => m.uid !== currentUid);
   const recent = others.slice(0, 5);
+  const fileList = (files || []).slice(0, 5);
   const withFiles = others.filter(m => m.hasAttachments).slice(0, 5);
   const day = (iso: string | null) =>
     iso
@@ -154,10 +165,27 @@ export default function ContactCard({
 
       <section>
         <h4>
-          <Paperclip size={13} /> {t('E-Mails mit Anhängen')}
+          <Paperclip size={13} /> {t('Anhänge')}
         </h4>
-        {mails === null ? (
+        {files === null ? (
           <small className="muted">{t('Wird geladen …')}</small>
+        ) : fileList.length ? (
+          <ul>
+            {fileList.map(f => (
+              <li key={`${f.folder}|${f.uid}|${f.filename}`}>
+                <button
+                  className="sender-card-link"
+                  title={f.subject || undefined}
+                  onClick={() => onOpenMail(f.folder, f.uid)}
+                >
+                  <span>{f.filename}</span>
+                  <small>
+                    {prettySize(f.size)} · {day(f.date)}
+                  </small>
+                </button>
+              </li>
+            ))}
+          </ul>
         ) : withFiles.length ? (
           <ul>{withFiles.map(mailRow)}</ul>
         ) : (
