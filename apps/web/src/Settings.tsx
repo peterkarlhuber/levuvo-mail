@@ -197,6 +197,18 @@ function General() {
         >
           <Toggle label={t('Posteingang bündeln')} checked={prefs.bundles} onChange={v => setPrefs({ bundles: v })} />
         </Row>
+        <Row
+          label={t('Neue Absender zuerst prüfen')}
+          hint={t(
+            'Mails von Absendern, die nicht in deinen Kontakten stehen und denen du nie geschrieben hast, warten unter „Neue Absender“, bis du sie annimmst oder blockierst. Gilt für Mails ab dem Einschalten.'
+          )}
+        >
+          <Toggle
+            label={t('Neue Absender zuerst prüfen')}
+            checked={prefs.screening}
+            onChange={v => setPrefs({ screening: v })}
+          />
+        </Row>
       </Section>
       <Section title={t('Schreiben')}>
         <Row label={t('Standardformat')}>

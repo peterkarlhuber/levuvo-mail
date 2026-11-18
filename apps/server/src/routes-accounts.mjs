@@ -60,6 +60,7 @@ export function registerAccountRoutes(ctx) {
     oauth.forget(request.body.id);
     await ctx.localIndex.clear(request.body.id);
     await ctx.followups.forgetAccount(request.body.id);
+    await ctx.screening?.clear(request.body.id);
     refreshAccounts();
     return result;
   });

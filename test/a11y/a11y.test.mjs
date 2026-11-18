@@ -73,7 +73,7 @@ test(
       rmSync(dir, { recursive: true, force: true });
     });
 
-    async function open(options) {
+    async function open({ setup, ...options } = {}) {
       // bypassCSP only lets the test inject axe; the app itself runs under its normal policy.
       const context = await browser.newContext({
         locale: 'de-AT',
@@ -100,6 +100,7 @@ test(
         if (req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
         return route.fulfill({ status: 204, body: '' });
       });
+      if (setup) await setup(context);
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -208,6 +209,40 @@ test(
       await page.setViewportSize({ width: 320, height: 640 });
       const width = await page.evaluate(() => document.documentElement.scrollWidth);
       assert.ok(width <= 320, `page scrolls horizontally at 320px (${width}px)`);
+      await context.close();
+    });
+
+    await t.test('sender screening: row and screener view', async () => {
+      const { page, context, errors } = await open({
+        viewport: { width: 1440, height: 900 },
+        colorScheme: 'dark',
+        setup: async context => {
+          await context.addInitScript(() => {
+            const key = 'levuvo-mail-prefs-v2';
+            const prefs = JSON.parse(globalThis.localStorage.getItem(key) || '{}');
+            globalThis.localStorage.setItem(key, JSON.stringify({ ...prefs, screening: true }));
+          });
+          const state = { since: '2026-01-01T00:00:00.000Z', allowed: [], blocked: [] };
+          const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+          await context.route(
+            url => url.pathname === '/api/screening',
+            route => route.fulfill(json(state))
+          );
+          await context.route(
+            url => url.pathname === '/api/screening/check',
+            route => {
+              const emails = route.request().postDataJSON()?.emails || [];
+              return route.fulfill(json({ unknown: emails.filter(e => e === 'lukas@hofer-it.at') }));
+            }
+          );
+        }
+      });
+      await page.locator('.screener-rows .bundle-row').waitFor({ timeout: 10_000 });
+      await axe(page, 'screener row');
+      await page.locator('.screener-rows .bundle-row').click();
+      await page.locator('.screener-item').first().waitFor();
+      await axe(page, 'screener view');
+      assert.deepEqual(errors, []);
       await context.close();
     });
 

@@ -1,5 +1,6 @@
 // Levuvo Mail local API. Created by the Electron main process (desktop mode) or by
 // server.mjs for browser-based development. Binds to 127.0.0.1 only.
+import { createScreeningStore } from './screening.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
@@ -179,6 +180,7 @@ export async function createMailServer({
   const followups = createFollowupStore(
     await createJsonFile(path.join(dir, 'followups.json'), { snoozed: [], followups: [] })
   );
+  const screening = createScreeningStore(await createJsonFile(path.join(dir, 'screening.json'), { accounts: {} }));
   const templates = createTemplateStore(await createJsonFile(path.join(dir, 'templates.json'), { templates: [] }));
   const davStore = await createDavStore({ filename: path.join(dir, 'dav.json'), vault: store });
   const davService = createDavService({ store: davStore, fetchImpl });
@@ -285,6 +287,7 @@ export async function createMailServer({
       // Index entries and snooze/follow-up tracking refer to the previous mailbox.
       void localIndex.clear(id).catch(() => {});
       void followups.forgetAccount(id).catch(() => {});
+      void screening.clear(id).catch(() => {});
     }
   }
   function refreshAccounts() {
@@ -524,6 +527,7 @@ export async function createMailServer({
     smime,
     localIndex,
     followups,
+    screening,
     templates,
     watchers,
     previewCache,
