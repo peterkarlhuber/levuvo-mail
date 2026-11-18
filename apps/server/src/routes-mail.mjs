@@ -93,6 +93,11 @@ export function registerMailRoutes(ctx) {
     }
     return Promise.race([davEmails.promise, new Promise(resolve => setTimeout(() => resolve(new Set()), 1500))]);
   }
+  /** Addresses from the address book on this device (in memory, no lookup needed). */
+  function localContactEmails() {
+    if (!ctx.localContacts) return new Set();
+    return new Set(ctx.localContacts.contacts().contacts.flatMap(c => c.emails.map(e => e.value.toLowerCase())));
+  }
   function readContext(account) {
     return {
       // Invitations are evaluated from the point of view of this mailbox.
@@ -100,6 +105,7 @@ export function registerMailRoutes(ctx) {
       knownSender: async email => {
         if (!email) return null;
         if ((await davContactEmails()).has(email)) return true;
+        if (localContactEmails().has(email)) return true;
         const list = await Promise.race([
           knownContacts(account),
           new Promise(resolve => setTimeout(() => resolve(null), 1500))
@@ -503,6 +509,11 @@ export function registerMailRoutes(ctx) {
     } catch {
       /* no DAV account */
     }
+    const fromDevice = ctx.localContacts
+      ? ctx.localContacts
+          .contacts()
+          .contacts.flatMap(c => c.emails.map(e => ({ email: e.value, name: c.name, score: 100 })))
+      : [];
     let fromMail = [];
     try {
       fromMail = await knownContacts(request.mailAccount);
@@ -510,7 +521,7 @@ export function registerMailRoutes(ctx) {
       /* offline */
     }
     const seen = new Set();
-    const merged = [...fromDav, ...fromMail].filter(c => {
+    const merged = [...fromDav, ...fromDevice, ...fromMail].filter(c => {
       const k = c.email.toLowerCase();
       if (seen.has(k)) return false;
       seen.add(k);

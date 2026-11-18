@@ -233,5 +233,5 @@ export type Contact = {
   birthday: string;
   note: string;
 };
-export type AddressBook = { accountId: string; url: string; name: string; accountLabel?: string };
+export type AddressBook = { accountId: string; url: string; name: string; accountLabel?: string; source?: string };
 export type DavAccount = { id: string; label: string; serverUrl: string; username: string; hasPassword: boolean };
