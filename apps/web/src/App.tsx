@@ -8,7 +8,8 @@ import {
   Mail,
   RefreshCcw,
   Settings2,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react';
 import AccountSettings from './AccountSettings';
 import { ConfirmProvider, useUi } from './ConfirmDialog';
@@ -30,9 +31,10 @@ const SettingsModule = lazy(() => import('./Settings'));
 const RestoreOnWelcome = lazy(() =>
   import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
 );
+const SpacesModule = lazy(() => import('./Spaces'));
 
 type NotificationState = NotificationPermission | 'unsupported';
-export type Module = 'mail' | 'calendar' | 'contacts' | 'settings';
+export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'settings';
 export type SettingsTab =
   | 'general'
   | 'accounts'
@@ -552,7 +554,8 @@ function Shell() {
   const rail: { id: Module; label: string; icon: typeof Mail; key: string }[] = [
     { id: 'mail', label: t('E-Mail'), icon: Mail, key: '1' },
     { id: 'calendar', label: t('Kalender'), icon: CalendarDays, key: '2' },
-    { id: 'contacts', label: t('Kontakte'), icon: Contact2, key: '3' }
+    { id: 'contacts', label: t('Kontakte'), icon: Contact2, key: '3' },
+    { id: 'spaces', label: t('Räume'), icon: Users, key: '4' }
   ];
   const unseenTotal = Object.values(snapshots).reduce((n, s) => n + (s.unseen || 0), 0);
   const fallback = (
@@ -654,6 +657,11 @@ function Shell() {
             />
           </Suspense>
         )}
+        {module === 'spaces' && (
+          <Suspense fallback={fallback}>
+            <SpacesModule accounts={accounts} />
+          </Suspense>
+        )}
         {module === 'settings' && (
           <Suspense fallback={fallback}>
             <SettingsModule
@@ -705,7 +713,13 @@ function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => v
         return;
       }
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      const map: Record<string, Module> = { '1': 'mail', '2': 'calendar', '3': 'contacts', ',': 'settings' };
+      const map: Record<string, Module> = {
+        '1': 'mail',
+        '2': 'calendar',
+        '3': 'contacts',
+        '4': 'spaces',
+        ',': 'settings'
+      };
       const target = map[e.key];
       if (target) {
         e.preventDefault();

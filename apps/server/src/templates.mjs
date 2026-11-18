@@ -17,7 +17,20 @@ export function validateTemplate(input) {
   if (html.length > MAX_HTML) throw fail('Die Vorlage ist zu groß.');
   const clean = sanitizeOutgoingHtml(html);
   if (!stripTags(clean).trim() && !/<img/i.test(clean)) throw fail('Die Vorlage ist leer.');
-  return { name, subject, html: clean };
+  const shortcut = normalizeShortcut(input.shortcut);
+  return shortcut ? { name, subject, html: clean, shortcut } : { name, subject, html: clean };
+}
+
+/** Optional shortcut ("mfg"): typed as ";mfg" + space or Tab in the composer. */
+export function normalizeShortcut(value) {
+  const shortcut = String(value ?? '')
+    .trim()
+    .replace(/^;/, '')
+    .toLowerCase();
+  if (!shortcut) return '';
+  if (!/^[\p{L}\p{N}_-]{2,20}$/u.test(shortcut))
+    throw fail('Das Kürzel braucht 2–20 Buchstaben, Ziffern, - oder _.', 'template_shortcut_invalid');
+  return shortcut;
 }
 
 export function createTemplateStore(file) {
@@ -30,6 +43,8 @@ export function createTemplateStore(file) {
       const id = typeof input.id === 'string' && current.some(t => t.id === input.id) ? input.id : randomUUID();
       if (!current.some(t => t.id === id) && current.length >= MAX_TEMPLATES)
         throw fail(`Höchstens ${MAX_TEMPLATES} Vorlagen.`);
+      if (clean.shortcut && current.some(t => t.id !== id && t.shortcut === clean.shortcut))
+        throw fail('Dieses Kürzel ist schon vergeben.', 'template_shortcut_taken', 409);
       const item = { id, ...clean, updatedAt: new Date().toISOString() };
       await file.save({ templates: [...current.filter(t => t.id !== id), item] });
       return item;

@@ -7,6 +7,7 @@ import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek,
 import { orderFolders } from '../src/folder-utils.ts';
 import { applySuggestions, bundleSuggester, registerBundleSuggester } from '../src/bundle-suggest.ts';
 import { isTrackingImage, trackerHost } from '../src/trackers.ts';
+import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -301,6 +302,19 @@ test('assistant helpers: own part of a draft and default event end', async () =>
       [7, 'notification']
     ]
   );
+});
+
+test('Templates: a shortcut right before the cursor is found', () => {
+  const list = [
+    { id: '1', name: 'Gruß', subject: '', html: '<p>MfG</p>', shortcut: 'mfg' },
+    { id: '2', name: 'Ohne', subject: '', html: '<p>x</p>' }
+  ];
+  assert.equal(shortcutAt('Danke ;mfg', list)?.template.id, '1');
+  assert.equal(shortcutAt(';MFG', list)?.length, 4);
+  assert.equal(shortcutAt('Danke;mfg', list), null); // inside a word
+  assert.equal(shortcutAt('Danke ;mfgx', list), null);
+  assert.equal(shortcutAt('Danke mfg', list), null);
+  assert.equal(shortcutAt(';', list), null);
 });
 
 test('bundle suggestions: optional second opinion over the local rules', () => {

@@ -44,7 +44,8 @@ export type ActionKind =
   | 'contacts-v1'
   | 'crypto-v1'
   | 'backup-v1'
-  | 'ai-v1';
+  | 'ai-v1'
+  | 'spaces-v1';
 
 export async function postJson<T>(path: string, body: unknown, action: ActionKind, accountId?: string): Promise<T> {
   const res = await fetch(accountPath(path, accountId), {

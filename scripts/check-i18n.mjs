@@ -16,9 +16,13 @@ export function collectTexts(root) {
     for (const m of s.matchAll(/(?:parse<T>\(res, |new Error\()'((?:[^'\\\n]|\\.)*)'/g)) ui.add(unquote(m[1]));
     for (const m of s.matchAll(/hint: '((?:[^'\\\n]|\\.)*)'/g)) ui.add(unquote(m[1]));
   }
-  for (const f of readdirSync(join(root, 'apps/server/src'))) {
+  const serverFiles = [
+    ...readdirSync(join(root, 'apps/server/src')).map(f => join('apps/server/src', f)),
+    ...readdirSync(join(root, 'apps/server/src/spaces')).map(f => join('apps/server/src/spaces', f))
+  ];
+  for (const f of serverFiles) {
     if (!f.endsWith('.mjs')) continue;
-    const s = readFileSync(join(root, 'apps/server/src', f), 'utf8');
+    const s = readFileSync(join(root, f), 'utf8');
     for (const m of s.matchAll(/(?:fail|invalid|problem|err|failure|unavailable|httpError)\(\s*'((?:[^'\\\n]|\\.)*)'/g))
       server.add(unquote(m[1]));
     for (const m of s.matchAll(/error: '((?:[^'\\\n]|\\.)*)'/g)) server.add(unquote(m[1]));
