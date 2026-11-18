@@ -209,3 +209,18 @@ test('At most three suggestions; missing summary falls back to the subject', () 
   });
   assert.deepEqual([ev.summary, ev.allDay, ev.start, ev.end], ['Einladung', true, '2026-12-01', '2026-12-02']);
 });
+
+test('JSON-LD blocks: odd closing tags, other scripts and long hostile input', () => {
+  const html =
+    '<script>var a = "<b>";</script>' +
+    '<SCRIPT type=\'application/ld+json\'>{"@type":"Event","name":"A","startDate":"2026-12-01"}</SCRIPT >' +
+    '<script type="application/ld+json" data-x="1">[{"@type":"Event","name":"B","startDate":"2026-12-02"}]</script\n>';
+  assert.deepEqual(
+    jsonLdNodes(html).map(n => n.name),
+    ['A', 'B']
+  );
+  const started = Date.now();
+  jsonLdNodes('<script type=application/ld+json'.repeat(20_000));
+  jsonLdNodes('<script '.repeat(50_000) + '>');
+  assert.ok(Date.now() - started < 1000);
+});

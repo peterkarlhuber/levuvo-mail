@@ -114,15 +114,36 @@ function addressText(a) {
     .join(', ');
 }
 
+/**
+ * Contents of <script type="application/ld+json"> blocks. Scanned with indexOf instead of one
+ * large regular expression: linear time on hostile input and tolerant of "</script >".
+ */
+export function jsonLdBlocks(src) {
+  const lower = src.toLowerCase();
+  const blocks = [];
+  let at = 0;
+  while (blocks.length < 20) {
+    const open = lower.indexOf('<script', at);
+    if (open < 0) break;
+    const tagEnd = lower.indexOf('>', open);
+    if (tagEnd < 0) break;
+    const close = lower.indexOf('</script', tagEnd);
+    if (close < 0) break;
+    const tag = lower.slice(open, tagEnd);
+    if (/\btype\s*=\s*["']?application\/ld\+json/.test(tag)) blocks.push(src.slice(tagEnd + 1, close));
+    at = close + 8;
+  }
+  return blocks;
+}
+
 /** All JSON-LD objects of an HTML document (flattened: arrays, @graph). */
 export function jsonLdNodes(html) {
   const out = [];
   const src = String(html || '').slice(0, MAX_HTML);
-  const re = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
-  for (const m of src.matchAll(re)) {
+  for (const body of jsonLdBlocks(src)) {
     let data;
     try {
-      data = JSON.parse(decodeEntities(m[1].trim().replace(/^<!--|-->$/g, '')));
+      data = JSON.parse(decodeEntities(body.trim().replace(/^<!--|-->$/g, '')));
     } catch {
       continue;
     }
