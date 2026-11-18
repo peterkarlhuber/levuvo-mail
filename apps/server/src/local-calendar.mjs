@@ -14,6 +14,8 @@ export const LOCAL_LABEL = 'Auf diesem Gerät';
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const MAX_OBJECTS = 20_000;
 const MAX_CALENDARS = 20;
+// The whole calendar is kept in memory and rewritten on every change; attachments make it grow.
+const MAX_BYTES = 64 * 1024 * 1024;
 const COLORS = ['#7c6cf2', '#1a8f5a', '#d9822b', '#c2417a', '#2f8fb8'];
 
 export const isLocalCalendar = url => String(url || '').startsWith(LOCAL_PREFIX);
@@ -139,6 +141,15 @@ export async function createLocalCalendar({ filename, vault }) {
     if (given && given !== obj.etag)
       throw fail('Der Termin wurde zwischenzeitlich geändert. Bitte neu laden.', 'event_conflict', 409);
   };
+  const checkSize = (added, replaced = 0) => {
+    const used = state.objects.reduce((n, o) => n + o.data.length, 0);
+    if (used - replaced + added > MAX_BYTES)
+      throw fail(
+        'Der lokale Kalender ist voll. Bitte große Anhänge entfernen oder in einem verbundenen Kalender speichern.',
+        'calendar_limit',
+        413
+      );
+  };
   const uidOf = ics => {
     try {
       return parseIcs(ics).getFirstSubcomponent('vevent')?.getFirstPropertyValue('uid') || '';
@@ -230,6 +241,7 @@ export async function createLocalCalendar({ filename, vault }) {
       if (state.objects.length >= MAX_OBJECTS) throw fail('Der lokale Kalender ist voll.', 'calendar_limit');
       if (state.objects.some(o => o.uid === uid && o.calendarId === cal.id))
         throw fail('Ein Termin mit dieser Kennung existiert bereits.', 'event_save_failed', 409);
+      checkSize(ics.length);
       const obj = {
         url: `${LOCAL_PREFIX}${cal.id}/${randomUUID()}.ics`,
         calendarId: cal.id,
@@ -244,6 +256,7 @@ export async function createLocalCalendar({ filename, vault }) {
     async updateCalendarObject(url, givenEtag, ics) {
       const obj = objectOf(url);
       checkEtag(obj, givenEtag);
+      checkSize(ics.length, obj.data.length);
       Object.assign(obj, { data: ics, etag: etag(), uid: uidOf(ics) || obj.uid });
       await persist();
       return { ok: true };
@@ -300,6 +313,7 @@ export async function createLocalCalendar({ filename, vault }) {
       if (!byUid.size) throw fail('Die Datei enthält keine Termine.', 'ics_invalid');
       if (state.objects.length + byUid.size > MAX_OBJECTS)
         throw fail('Der lokale Kalender ist voll.', 'calendar_limit');
+      checkSize(text.length);
       let imported = 0;
       let skipped = 0;
       for (const [uid, events] of byUid) {

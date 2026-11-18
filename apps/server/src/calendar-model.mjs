@@ -118,8 +118,139 @@ function details(comp) {
     organizer: organizerOf(comp),
     attendees: people(comp),
     alarms: alarmsOf(comp),
+    attachments: attachmentsOf(comp),
     sequence: Number(comp.getFirstPropertyValue('sequence') || 0)
   };
+}
+
+// ------------------------------------------------------------------ attachments (RFC 5545 ATTACH)
+// Files are stored inline (ENCODING=BASE64;VALUE=BINARY), so they travel with the event to the
+// device calendar, CalDAV servers and .ics exports. Links (ATTACH as URI) from other apps are kept.
+export const ATTACH_MAX_FILE = 5 * 1024 * 1024;
+export const ATTACH_MAX_TOTAL = 10 * 1024 * 1024;
+export const ATTACH_MAX_COUNT = 20;
+const FILENAME_PARAMS = ['x-filename', 'filename', 'x-apple-filename', 'x-oracle-filename', 'x-ms-filename'];
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+
+export function base64Size(b64) {
+  const s = String(b64 || '').replace(/\s+/g, '');
+  const pad = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((s.length * 3) / 4) - pad);
+}
+/** File name without paths, control characters or characters that are unsafe on Windows. */
+export function safeFilename(name, fallback = 'Anhang') {
+  const clean = String(name || '')
+    .split(/[\\/]/)
+    .pop()
+    .replace(/[\u0000-\u001f\u007f<>:"|?*]+/g, '')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+    .slice(0, 200);
+  return clean || fallback;
+}
+export const safeMimeType = type =>
+  /^[a-z0-9][\w.+-]*\/[\w.+-]+$/i.test(String(type || '')) ? String(type).toLowerCase() : 'application/octet-stream';
+function nameFromUri(uri) {
+  try {
+    const u = new URL(uri);
+    return decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || u.hostname);
+  } catch {
+    return '';
+  }
+}
+function attachEntry(p, i) {
+  const value = p.getFirstValue();
+  const binary =
+    p.type === 'binary' ||
+    String(p.getParameter('value') || '').toUpperCase() === 'BINARY' ||
+    String(p.getParameter('encoding') || '').toUpperCase() === 'BASE64';
+  const given = FILENAME_PARAMS.map(n => p.getParameter(n)).find(v => typeof v === 'string' && v);
+  const type = safeMimeType(p.getParameter('fmttype'));
+  if (binary) {
+    const data = String(typeof value === 'string' ? value : value?.value || '').replace(/\s+/g, '');
+    return { id: String(i), name: safeFilename(given, `Anhang ${i + 1}`), type, size: base64Size(data), data };
+  }
+  const uri = String(value || '');
+  const web = /^https?:\/\//i.test(uri);
+  return {
+    id: String(i),
+    name: safeFilename(given || (web ? nameFromUri(uri) : ''), `Anhang ${i + 1}`),
+    type,
+    size: Number(p.getParameter('size')) || 0,
+    // Only web links can be opened; other schemes (cid:, managed ids) are shown by name.
+    ...(web ? { uri } : {})
+  };
+}
+const attachEntries = comp => comp.getAllProperties('attach').map(attachEntry);
+/** Attachment list without file contents (for the event list). */
+export function attachmentsOf(comp) {
+  return attachEntries(comp).map(({ data: _d, ...meta }) => meta);
+}
+/** The VEVENT an occurrence is shown from: its override, otherwise the master. */
+function componentFor(vcal, recurrenceId) {
+  const vevents = vcal.getAllSubcomponents('vevent');
+  const master = vevents.find(v => !v.hasProperty('recurrence-id')) || vevents[0];
+  if (!recurrenceId) return master;
+  return (
+    vevents.find(
+      v => v.hasProperty('recurrence-id') && timeOut(v.getFirstPropertyValue('recurrence-id')) === recurrenceId
+    ) || master
+  );
+}
+/** One attachment with its content (Buffer) or link. */
+export function attachmentContent(ics, recurrenceId, id) {
+  const comp = componentFor(parseIcs(ics), recurrenceId || null);
+  const entry = comp && attachEntries(comp).find(a => a.id === String(id));
+  if (!entry) throw fail('Anhang nicht gefunden.', 'attachment_missing', 404);
+  if (entry.data === undefined) return entry;
+  const { data, ...meta } = entry;
+  return { ...meta, content: Buffer.from(data, 'base64') };
+}
+/**
+ * Turns the editor's list (kept ids + new files) into the final attachments with content,
+ * read from the version of the event the user saw. Enforces the size limits.
+ * `list` null keeps all existing attachments.
+ */
+export function resolveAttachments(ics, recurrenceId, list = null) {
+  const existing = ics ? attachEntries(componentFor(parseIcs(ics), recurrenceId || null)) : [];
+  // null: all attachments as they are (moving an event to another calendar).
+  const out = (list ?? existing.map(e => ({ id: e.id }))).map(a => {
+    if (a.id === undefined) return a;
+    const hit = existing.find(e => e.id === a.id);
+    if (!hit) throw fail('Anhang nicht gefunden. Bitte neu laden.', 'attachment_missing', 409);
+    return withoutId(hit);
+  });
+  checkAttachmentTotal(out);
+  return out;
+}
+export const withoutId = ({ id: _id, ...rest }) => rest;
+export function checkAttachmentTotal(list) {
+  if (list.length > ATTACH_MAX_COUNT) throw fail('Höchstens 20 Anhänge pro Termin.', 'attachment_too_large', 413);
+  if (list.reduce((n, a) => n + (a.size || 0), 0) > ATTACH_MAX_TOTAL)
+    throw fail('Die Anhänge sind zusammen zu groß (höchstens 10 MB pro Termin).', 'attachment_too_large', 413);
+}
+function setAttachments(vevent, list) {
+  vevent.removeAllProperties('attach');
+  for (const a of list) {
+    const p = new ICAL.Property('attach', vevent);
+    if (a.data !== undefined) {
+      p.resetType('binary');
+      p.setParameter('encoding', 'BASE64');
+      p.setValue(new ICAL.Binary(a.data));
+    } else if (a.uri) {
+      p.setValue(a.uri);
+    } else continue;
+    if (a.type && a.type !== 'application/octet-stream') p.setParameter('fmttype', a.type);
+    if (a.name) p.setParameter('x-filename', a.name);
+    vevent.addProperty(p);
+  }
+}
+/** Files of the event as e-mail attachments (for invitations, which carry no inline files). */
+export function inlineAttachments(ics) {
+  const comp = componentFor(parseIcs(ics), null);
+  if (!comp) return [];
+  return attachEntries(comp)
+    .filter(a => a.data !== undefined)
+    .map(a => ({ filename: a.name, contentType: a.type, content: Buffer.from(a.data, 'base64') }));
 }
 
 export function parseIcs(ics) {
@@ -224,6 +355,25 @@ export function validateEventInput(input) {
   const alarms = (Array.isArray(input.alarms) ? input.alarms : [])
     .filter(m => Number.isInteger(m) && m >= 0 && m <= 40320)
     .slice(0, 5);
+  // null: attachments stay as they are (e.g. when an event is only moved).
+  let attachments = null;
+  if (input.attachments !== undefined && input.attachments !== null) {
+    if (!Array.isArray(input.attachments) || input.attachments.length > ATTACH_MAX_COUNT)
+      throw fail('Höchstens 20 Anhänge pro Termin.', 'attachment_too_large', 413);
+    attachments = input.attachments.map(a => {
+      if (typeof a?.id === 'string') {
+        if (!/^[A-Za-z0-9+/=_-]{1,512}$/.test(a.id)) throw fail('Ungültiger Anhang.');
+        return { id: a.id };
+      }
+      const data = typeof a?.data === 'string' ? a.data : '';
+      if (!data || !BASE64.test(data)) throw fail('Ungültiger Anhang.');
+      const size = base64Size(data);
+      if (size > ATTACH_MAX_FILE)
+        throw fail('Ein Anhang ist zu groß (höchstens 5 MB pro Datei).', 'attachment_too_large', 413);
+      return { name: safeFilename(text(a.name, 255, 'Dateiname')), type: safeMimeType(a.type), size, data };
+    });
+    checkAttachmentTotal(attachments.filter(a => a.id === undefined));
+  }
   return {
     summary,
     allDay,
@@ -234,7 +384,8 @@ export function validateEventInput(input) {
     description: text(input.description, 10_000, 'Beschreibung'),
     rrule,
     attendees,
-    alarms
+    alarms,
+    attachments
   };
 }
 
@@ -346,6 +497,7 @@ export function createEventIcs(model, { organizer = null, scheduleByClient = tru
   stamp(vevent);
   applyDetails(vevent, model, { organizer, scheduleByClient });
   setRrule(vevent, model.rrule);
+  if (Array.isArray(model.attachments)) setAttachments(vevent, model.attachments);
   vcal.addSubcomponent(vevent);
   return { uid, ics: vcal.toString() };
 }
@@ -374,11 +526,14 @@ export function updateEventIcs(
       override = new ICAL.Component('vevent');
       override.addPropertyWithValue('uid', master.getFirstPropertyValue('uid'));
       setTime(override, 'recurrence-id', rid, masterTz);
+      // A new override shows the same files as the series until they are changed.
+      for (const p of master.getAllProperties('attach')) override.addProperty(new ICAL.Property(p.toJSON()));
       vcal.addSubcomponent(override);
     }
     override.updatePropertyWithValue('sequence', Number(master.getFirstPropertyValue('sequence') || 0) + 1);
     stamp(override);
     applyDetails(override, model, { organizer, scheduleByClient });
+    if (Array.isArray(model.attachments)) setAttachments(override, model.attachments);
     return vcal.toString();
   }
   bumpSequence(master);
@@ -388,6 +543,7 @@ export function updateEventIcs(
   if (recurrenceId && master.hasProperty('rrule')) model = shiftSeries(model, master, recurrenceId);
   applyDetails(master, model, { organizer, scheduleByClient });
   setRrule(master, model.rrule);
+  if (Array.isArray(model.attachments)) setAttachments(master, model.attachments);
   if (!model.rrule) for (const ex of vevents) if (ex !== master) vcal.removeSubcomponent(ex);
   return vcal.toString();
 }
@@ -541,6 +697,9 @@ export function buildOrganizerMessage(ics, method) {
   for (const vevent of vcal.getAllSubcomponents('vevent')) {
     for (const alarm of vevent.getAllSubcomponents('valarm')) vevent.removeSubcomponent(alarm);
     for (const p of vevent.getAllProperties('attendee')) p.removeParameter('schedule-agent');
+    // Inline files go along as regular e-mail attachments (see inlineAttachments); links stay.
+    for (const p of vevent.getAllProperties('attach'))
+      if (attachEntry(p, 0).data !== undefined) vevent.removeProperty(p);
     if (method === 'CANCEL') vevent.updatePropertyWithValue('status', 'CANCELLED');
   }
   return vcal.toString();

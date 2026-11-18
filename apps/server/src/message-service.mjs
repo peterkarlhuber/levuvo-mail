@@ -107,7 +107,7 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
     } catch {
       known = null;
     }
-    detail.security = analyzeMessage(parsed, { knownSender: known });
+    detail.security = analyzeMessage(parsed, { knownSender: known, ownAddresses: context.ownAddresses || [] });
     detail.pgpKeys = (parsed.attachments || [])
       .map((a, index) => ({ a, index }))
       .filter(

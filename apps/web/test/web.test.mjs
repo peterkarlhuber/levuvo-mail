@@ -5,6 +5,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek, ymd } from '../src/calendar-utils.ts';
 import { orderFolders } from '../src/folder-utils.ts';
+import { isTrackingImage, trackerHost } from '../src/trackers.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -244,4 +245,33 @@ test('Detected appointment becomes a calendar editor model', async () => {
     [hotel.allDay, hotel.start, hotel.end, hotel.summary, hotel.description],
     [true, '2026-12-12', '2026-12-15', 'Hotel Sacher', '']
   );
+});
+
+test('Tracking pixels: tiny, hidden and known tracker images are recognised', () => {
+  const yes = [
+    { src: 'https://example.com/a.gif', width: '1', height: '1' },
+    { src: '//example.com/a.gif', width: '0', height: '0' },
+    { src: 'https://example.com/x', style: 'width:1px;height:1px' },
+    { src: 'https://example.com/x', width: '1' },
+    { src: 'https://example.com/logo.png', style: 'display: none !important' },
+    { src: 'https://example.com/logo.png', style: 'opacity:0' },
+    { src: 'https://mailtrack.io/trace/mail/abc.png' },
+    { src: 'https://foo.list-manage.com/track/open.php?u=1&id=2' },
+    { src: 'https://u123.ct.sendgrid.net/wf/open?upn=xyz' },
+    { src: 'https://shop.example/email/track/open/123' },
+    { src: 'https://news.example/pixel.gif?id=9' }
+  ];
+  const no = [
+    { src: 'https://example.com/logo.png', width: '120', height: '40' },
+    { src: 'https://example.com/banner.jpg' },
+    { src: 'https://example.com/spacer.gif', width: '1', height: '20' },
+    { src: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', width: '1', height: '1' },
+    { src: 'cid:logo', width: '1', height: '1' },
+    { src: 'https://example.com/logo.png', style: 'max-width:1px' },
+    { src: 'https://list-manage.com/images/logo.png' },
+    { src: 'https://example.com/open-source.png' }
+  ];
+  for (const img of yes) assert.equal(isTrackingImage(img), true, JSON.stringify(img));
+  for (const img of no) assert.equal(isTrackingImage(img), false, JSON.stringify(img));
+  assert.equal(trackerHost('https://www.mailtrack.io/x.png'), 'mailtrack.io');
 });
