@@ -195,3 +195,12 @@ def test_eval_cases_detect_a_model_that_follows_an_injection() -> None:
     prompt = held.calls[0]["prompt"]
     assert prompt.count("</untrusted_data>") == 1 and prompt.rstrip().endswith("</untrusted_data>")
     assert {c.group for c in evals.CASES} >= {"injection", "protect", "quality"}
+
+
+def test_presend_drops_attachment_issue_when_files_are_attached() -> None:
+    engine = StubEngine(
+        {"issues": [{"kind": "attachment", "message": "Anhang fehlt"}, {"kind": "tone", "message": "Klingt scharf"}]}
+    )
+    out = tasks.presend(engine, {"subject": "x", "text": "anbei", "hasAttachments": True, "recipients": ["a@b.at"]})
+    assert [i["kind"] for i in out["issues"]] == ["tone"]
+    assert "a@b.at" in engine.calls[0]["system"]

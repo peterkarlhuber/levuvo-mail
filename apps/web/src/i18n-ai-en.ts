@@ -208,5 +208,26 @@ export const AI_EN: Record<string, string> = {
   'Titel und Beginn fehlen.': 'Title and start are missing.',
   'Name oder Adresse fehlt.': 'Name or address is missing.',
   'Titel fehlt.': 'Title is missing.',
-  'Unbekannter Vorschlag.': 'Unknown suggestion.'
+  'Unbekannter Vorschlag.': 'Unknown suggestion.',
+  'Vor dem Senden prüfen': 'Check before sending',
+  'Hinweise des Levuvo Mail Assistant (KI). Trotzdem senden?': 'Notes from Levuvo Mail Assistant (AI). Send anyway?',
+  'Trotzdem planen': 'Schedule anyway',
+  'Trotzdem senden': 'Send anyway',
+  'Wird geprüft…': 'Checking…',
+  'Vom Assistenten geschrieben ({model}). Bitte vor dem Senden prüfen.':
+    'Written by the assistant ({model}). Please check before sending.',
+  Assistent: 'Assistant',
+  'Antwort wird geschrieben…': 'Writing reply…',
+  'Antwort aus meinen Stichworten': 'Reply from my notes',
+  'Antwort vorschlagen': 'Suggest a reply',
+  'Mail wird geschrieben…': 'Writing email…',
+  'Stichpunkte zu fertiger Mail': 'Bullet points to email',
+  'Wird umformuliert…': 'Rewriting…',
+  Kürzer: 'Shorter',
+  Höflicher: 'More polite',
+  Förmlicher: 'More formal',
+  Lockerer: 'More casual',
+  'Rechtschreibung korrigieren': 'Fix spelling',
+  'Auf Englisch': 'In English',
+  'Auf Deutsch': 'In German'
 };

@@ -204,3 +204,12 @@ test('Tracking pixels: tiny, hidden and known tracker images are recognised', ()
   for (const img of no) assert.equal(isTrackingImage(img), false, JSON.stringify(img));
   assert.equal(trackerHost('https://www.mailtrack.io/x.png'), 'mailtrack.io');
 });
+
+test('assistant helpers: own part of a draft and default event end', async () => {
+  const { ownPart, defaultEnd } = await import('../src/ai-utils.ts');
+  assert.equal(ownPart('<p>Hi</p><p>-- </p><p>Sig</p>', ['<p>-- </p>', '<blockquote']), '<p>Hi</p>');
+  assert.equal(ownPart('Nur Text', ['\n-- \n']), 'Nur Text');
+  assert.equal(defaultEnd('2026-11-23T14:00', false), '2026-11-23T15:00');
+  assert.equal(defaultEnd('2026-11-23T23:30', false), '2026-11-23T23:59');
+  assert.equal(defaultEnd('2026-11-23', true), '2026-11-23');
+});

@@ -121,3 +121,5 @@ export function aiErrorText(code: string | undefined, t: (s: string) => string) 
       return t('KI-Funktion fehlgeschlagen.');
   }
 }
+
+export { defaultEnd, ownPart } from './ai-utils';

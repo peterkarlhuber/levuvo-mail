@@ -965,6 +965,7 @@ export default function MailInstance({
       html: `<p></p>${signatureFor(id)}<p>${escapeHtml(attribution(detail))}</p><blockquote>${quotedHtml(detail)}</blockquote>`,
       inReplyTo: detail.messageId || undefined,
       references: detail.messageId || undefined,
+      source: { folder: detail.folder, uid: detail.uid },
       security: detail.crypto?.encrypted ? { method: detail.crypto.method, sign: true, encrypt: true } : undefined
     });
   };

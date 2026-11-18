@@ -170,7 +170,9 @@ export function registerAiRoutes(ctx) {
           subject: clientText(input.subject, 300),
           text: clientText(input.text, 6000),
           hasAttachments: input.hasAttachments === true,
-          recipients: (Array.isArray(input.recipients) ? input.recipients : []).slice(0, 30).map(r => clientText(r, 200))
+          recipients: (Array.isArray(input.recipients) ? input.recipients : [])
+            .slice(0, 30)
+            .map(r => clientText(r, 200))
         };
       case 'prioritize':
       case 'classify':

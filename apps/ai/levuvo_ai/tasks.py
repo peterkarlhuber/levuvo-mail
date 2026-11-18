@@ -235,6 +235,42 @@ def attachment_check(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+class PresendIssue(BaseModel):
+    kind: Literal["attachment", "tone", "recipient", "sensitive"]
+    message: str = Field(description="One short sentence for the user")
+
+
+class PresendCheck(BaseModel):
+    issues: list[PresendIssue] = Field(default_factory=list)
+
+
+def presend(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """One check before sending: forgotten attachment, tone, wrong recipient, sensitive data."""
+    has_files = bool(params.get("hasAttachments"))
+    recipients = ", ".join(_text(r, 200) for r in (params.get("recipients") or [])[:30] if isinstance(r, str))
+    checks = [
+        "tone: the draft sounds rude, angry, passive-aggressive or far more casual than the situation needs",
+        "recipient: the greeting or content names someone who does not match the recipients "
+        f"({recipients or 'none'}), or the content looks meant for someone else",
+        "sensitive: the draft contains passwords, one-time codes, full card numbers, bank PINs, health data or "
+        "ID numbers that should not go out by email",
+    ]
+    if not has_files:
+        checks.insert(0, "attachment: the text announces something attached but nothing is attached")
+    result = _ask(
+        engine,
+        "Check the user's email draft before it is sent. Report only clear problems of these kinds:\n- "
+        + "\n- ".join(checks)
+        + f"\nWrite each message in {_lang(params)}. Return an empty list when the draft is fine; do not nitpick.",
+        frame_untrusted(f"Subject: {_text(params.get('subject'), 300)}\n\n{_text(params.get('text'), 6000)}", "draft"),
+        PresendCheck,
+        max_tokens=500,
+    )
+    if has_files:
+        result["issues"] = [i for i in result.get("issues", []) if i.get("kind") != "attachment"]
+    return result
+
+
 # ---- organize --------------------------------------------------------------------------
 
 
@@ -439,6 +475,7 @@ TASKS = {
     "rewrite": rewrite,
     "compose": compose,
     "attachment_check": attachment_check,
+    "presend": presend,
     "prioritize": prioritize,
     "classify": classify,
     "extract": extract,

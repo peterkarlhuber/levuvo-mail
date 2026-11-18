@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { ApiError, postJson } from './api';
-import { aiEnabled, aiErrorText, runAi, type AiFeature, type AiResult } from './ai';
+import { aiEnabled, aiErrorText, defaultEnd, runAi, type AiFeature, type AiResult } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 
@@ -295,13 +295,4 @@ export function ReaderAssist({ accountId, folder, uid }: { accountId: string; fo
       )}
     </div>
   );
-}
-
-/** One hour after a timed start, the same day for an all-day event. */
-export function defaultEnd(start: string, allDay: boolean) {
-  if (allDay) return start.slice(0, 10);
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(start);
-  if (!m) return start;
-  const d = new Date(Date.UTC(2000, 0, 1, Number(m[2]) + 1, Number(m[3])));
-  return Number(m[2]) >= 23 ? `${m[1]}T23:59` : `${m[1]}T${d.toISOString().slice(11, 16)}`;
 }

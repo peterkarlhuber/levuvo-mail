@@ -13,6 +13,7 @@ import {
   Paperclip,
   PenLine,
   RefreshCw,
+  LoaderCircle,
   Send,
   ShieldCheck,
   Trash2,
@@ -21,6 +22,7 @@ import {
 import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api';
 import { fillTemplate, nameParts, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
+import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
 import { useT } from './i18n';
@@ -48,6 +50,8 @@ export type ComposeInitial = {
   draftUidValidity?: string;
   security?: Security;
   scheduledFor?: string;
+  /** The message being answered, for the assistant's reply suggestion. */
+  source?: { folder: string; uid: number };
 };
 export type Security = {
   method: 'pgp' | 'smime' | 'password' | null;
@@ -108,7 +112,7 @@ export default function Composer({
   onClose,
   onSubmit
 }: Props) {
-  const { t, locale } = useT();
+  const { t, locale, lang } = useT();
   const { confirm, prompt, toast } = useUi();
   const [prefs] = usePrefs();
   const [from, setFrom] = useState(initial.from || identities[0]?.email || '');
@@ -127,6 +131,7 @@ export default function Composer({
   const [security, setSecurity] = useState<Security>(initial.security || { method: null, sign: false, encrypt: false });
   const [missing, setMissing] = useState<{ recipients: string[]; own: boolean } | null>(null);
   const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [followUpDays, setFollowUpDays] = useState(0);
   const draftId = useRef(initial.draftId || crypto.randomUUID());
@@ -337,6 +342,33 @@ export default function Composer({
     onClose();
   }
 
+  // The user's own part of the message (before signature and quote), for the assistant.
+  const QUOTE_MARKS = [SIGNATURE_SEPARATOR, '<blockquote'];
+  function draftBoundary(current: string) {
+    const own = ownPart(current, QUOTE_MARKS);
+    // Without a signature the quote attribution ("Am … schrieb …:") is the paragraph before the quote.
+    if (!current.includes(SIGNATURE_SEPARATOR) && own.length < current.length) {
+      const p = own.lastIndexOf('<p>');
+      if (p > 0) return own.slice(0, p);
+    }
+    return own;
+  }
+  function getDraft() {
+    if (format === 'text') return ownPart(text, ['\n-- \n', '\n> ']).trim();
+    return htmlToPlain(draftBoundary(editor?.getHTML() || ''));
+  }
+  function setDraft(value: string) {
+    if (format === 'text') {
+      const own = ownPart(text, ['\n-- \n', '\n> ']);
+      setText(`${value.trim()}\n${text.slice(own.trimEnd().length)}`);
+      return;
+    }
+    if (!editor) return;
+    const current = editor.getHTML();
+    const own = draftBoundary(current);
+    editor.commands.setContent(`${plainToHtml(value.trim())}${current.slice(own.length)}`);
+  }
+
   function validate() {
     const all = [...toList, ...ccList, ...bccList];
     const invalid = all.find(a => !EMAIL.test(a));
@@ -365,6 +397,26 @@ export default function Composer({
     }
     if (!subject.trim() && !(await confirm({ title: t('Ohne Betreff senden?'), confirmLabel: t('Senden') }))) return;
     setError('');
+    setChecking(true);
+    const issues = await presendIssues(
+      {
+        accountId,
+        subject,
+        text: getDraft(),
+        recipients: [...toList, ...ccList, ...bccList],
+        hasAttachments: files.length > 0
+      },
+      lang
+    ).finally(() => setChecking(false));
+    if (
+      issues.length &&
+      !(await confirm({
+        title: t('Vor dem Senden prüfen'),
+        message: `${issues.map(i => `• ${i.message}`).join('\n')}\n\n${t('Hinweise des Levuvo Mail Assistant (KI). Trotzdem senden?')}`,
+        confirmLabel: sendAt ? t('Trotzdem planen') : t('Trotzdem senden')
+      }))
+    )
+      return;
     const base = await payloadBase();
     const start = sendAt ? Date.parse(sendAt) : Date.now();
     const payload = followUpDays
@@ -625,6 +677,14 @@ export default function Composer({
 
             <div className="compose-options">
               <TemplateMenu onInsert={tpl => void insertTemplate(tpl)} onSaveCurrent={() => void saveAsTemplate()} />
+              <ComposerAssist
+                accountId={accountId}
+                source={initial.mode === 'reply' || initial.mode === 'replyAll' ? initial.source : undefined}
+                getDraft={getDraft}
+                setDraft={setDraft}
+                subject={subject}
+                setSubject={setSubject}
+              />
               <div className="segmented small" role="radiogroup" aria-label={t('Format')}>
                 <button
                   type="button"
@@ -809,11 +869,12 @@ export default function Composer({
           <div className="split-button">
             <button
               className="btn primary"
-              disabled={!sendEnabled}
+              disabled={!sendEnabled || checking}
               onClick={() => void submit(null)}
               title={t('Strg/⌘ + Enter')}
             >
-              <Send size={15} /> {t('Senden')}
+              {checking ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}{' '}
+              {checking ? t('Wird geprüft…') : t('Senden')}
             </button>
             <button
               className="btn primary split-toggle"
