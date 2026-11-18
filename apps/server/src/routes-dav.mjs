@@ -11,8 +11,13 @@ import {
   invitationToStoredIcs,
   applyReply,
   parseItip,
-  dueAlarms
+  dueAlarms,
+  attachmentContent,
+  resolveAttachments,
+  inlineAttachments,
+  ATTACH_MAX_TOTAL
 } from './calendar-model.mjs';
+import { downloadHeaders } from './message-utils.mjs';
 import { validateContact, buildVCard, splitVcards } from './vcard.mjs';
 import { loadParsedMessage } from './message-service.mjs';
 import { validFolder, validUid } from './message-utils.mjs';
@@ -25,6 +30,9 @@ import { isLocalContact } from './local-contacts.mjs';
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const RANGE_MAX = 400 * 86400_000;
 const PARTSTAT = { accept: 'ACCEPTED', tentative: 'TENTATIVE', decline: 'DECLINED' };
+// Attachments travel base64-encoded inside the event (≈ 4/3 of the file size).
+const SAVE_LIMIT = Math.ceil((ATTACH_MAX_TOTAL * 4) / 3) + 1024 * 1024;
+const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;
 const ANSWER_TEXT = { ACCEPTED: 'Zugesagt', TENTATIVE: 'Mit Vorbehalt', DECLINED: 'Abgelehnt' };
 
 export function registerDavRoutes(ctx) {
@@ -254,7 +262,7 @@ export function registerDavRoutes(ctx) {
     return null;
   }
   /** iMIP: an e-mail with text/calendar (method) plus a readable text part. */
-  async function sendItip(identity, to, subject, text, method, ics) {
+  async function sendItip(identity, to, subject, text, method, ics, attachments = []) {
     const { account, from } = identity;
     const composer = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'windows' });
     const built = await composer.sendMail({
@@ -263,6 +271,7 @@ export function registerDavRoutes(ctx) {
       subject,
       text,
       icalEvent: { method, content: ics, filename: method === 'REPLY' ? 'reply.ics' : 'invite.ics' },
+      attachments,
       headers: { 'X-Mailer': 'Levuvo Mail' },
       disableFileAccess: true,
       disableUrlAccess: true
@@ -289,29 +298,49 @@ export function registerDavRoutes(ctx) {
     return lines.join('\n');
   }
 
-  guard('/api/calendar/events/save', 'calendar-v1', async request => {
-    const b = request.body || {};
-    const model = validateEventInput(b.event);
-    // Moving to another calendar (also between local, CalDAV, Microsoft and Google): the event is
-    // created in the target and removed from the source (as a whole series).
-    const target = b.targetAccountId ? String(b.targetAccountId) : null;
-    if (b.url && target && b.sourceCalendarUrl && (target !== b.accountId || b.calendarUrl !== b.sourceCalendarUrl)) {
-      const saved = await saveEvent(
-        { ...b, accountId: target, url: null, etag: null, scope: 'all', seriesId: null, recurrenceId: null },
-        model
-      );
-      await removeEvent({
+  guard(
+    '/api/calendar/events/save',
+    'calendar-v1',
+    async request => {
+      const b = request.body || {};
+      let model = validateEventInput(b.event);
+      // Moving to another calendar (also between local, CalDAV, Microsoft and Google): the event is
+      // created in the target and removed from the source (as a whole series).
+      const target = b.targetAccountId ? String(b.targetAccountId) : null;
+      if (b.url && target && b.sourceCalendarUrl && (target !== b.accountId || b.calendarUrl !== b.sourceCalendarUrl)) {
+        // The files are copied from the source, because the target cannot refer to them.
+        model = { ...model, attachments: await sourceAttachments(b, model.attachments) };
+        const saved = await saveEvent(
+          { ...b, accountId: target, url: null, etag: null, scope: 'all', seriesId: null, recurrenceId: null },
+          model
+        );
+        await removeEvent({
+          accountId: b.accountId,
+          calendarUrl: b.sourceCalendarUrl,
+          url: b.url,
+          seriesId: b.seriesId || null,
+          scope: 'all',
+          notify: false
+        });
+        return { ...saved, moved: true };
+      }
+      return saveEvent(b, model);
+    },
+    SAVE_LIMIT
+  );
+  /** Attachments of the event being moved, with content, as the editor's list describes them. */
+  async function sourceAttachments(b, list) {
+    if (isCloud(b.url))
+      return cloud.fullAttachments({
         accountId: b.accountId,
         calendarUrl: b.sourceCalendarUrl,
         url: b.url,
         seriesId: b.seriesId || null,
-        scope: 'all',
-        notify: false
+        list
       });
-      return { ...saved, moved: true };
-    }
-    return saveEvent(b, model);
-  });
+    const current = await backend(b.accountId).object(b.accountId, b.url);
+    return resolveAttachments(current.data, b.recurrenceId || null, list);
+  }
   async function saveEvent(b, model) {
     if (isCloud(b.calendarUrl) || isCloud(b.url)) {
       // Microsoft 365 / Google send invitations and updates to attendees themselves.
@@ -337,6 +366,8 @@ export function registerDavRoutes(ctx) {
     let uid;
     if (b.url) {
       const current = await backend(b.accountId).object(b.accountId, b.url);
+      if (Array.isArray(model.attachments))
+        model = { ...model, attachments: resolveAttachments(current.data, b.recurrenceId || null, model.attachments) };
       ics = updateEventIcs(current.data, model, {
         scope: b.scope === 'this' ? 'this' : 'all',
         recurrenceId: b.recurrenceId || null,
@@ -345,6 +376,8 @@ export function registerDavRoutes(ctx) {
       await backend(b.accountId).updateCalendarObject(b.accountId, b.url, b.etag || current.etag, ics);
       uid = parseItip(ics)?.uid;
     } else {
+      if (Array.isArray(model.attachments))
+        model = { ...model, attachments: resolveAttachments(null, null, model.attachments) };
       ({ uid, ics } = createEventIcs(model, { organizer }));
       await backend(b.accountId).createCalendarObject(b.accountId, b.calendarUrl, uid, ics);
     }
@@ -358,13 +391,81 @@ export function registerDavRoutes(ctx) {
           `${b.url ? 'Aktualisiert' : 'Einladung'}: ${model.summary}`,
           invitationText({ ...parseItip(ics), tzid: model.tzid }, 'REQUEST'),
           'REQUEST',
-          buildOrganizerMessage(ics, 'REQUEST')
+          buildOrganizerMessage(ics, 'REQUEST'),
+          inlineAttachments(ics)
         );
         invited = recipients.length;
       }
     }
     return { ok: true, uid, invited };
   }
+
+  // ------------------------------------------------------------ attachments of events
+  const queryText = (request, name, max = 4096) => {
+    const v = request.query?.[name];
+    return typeof v === 'string' && v.length <= max ? v : '';
+  };
+  /** Microsoft 365 lists attachments separately; the other calendars include them in each event. */
+  api.get('/api/calendar/events/attachments', async (request, reply) => {
+    try {
+      const url = queryText(request, 'url');
+      if (!isCloud(url)) throw fail('Ungültige Anhang-Anfrage.', 'dav_invalid');
+      return {
+        attachments: await cloud.attachments({
+          accountId: queryText(request, 'accountId', 200),
+          calendarUrl: queryText(request, 'calendarUrl'),
+          url,
+          seriesId: queryText(request, 'seriesId') || null
+        })
+      };
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
+  api.get('/api/calendar/events/attachment', async (request, reply) => {
+    try {
+      const accountId = queryText(request, 'accountId', 200);
+      const url = queryText(request, 'url');
+      const id = queryText(request, 'id', 512);
+      if (!url || !id) throw fail('Ungültige Anhang-Anfrage.', 'dav_invalid');
+      const att = isCloud(url)
+        ? await cloud.attachment({
+            accountId,
+            calendarUrl: queryText(request, 'calendarUrl'),
+            url,
+            seriesId: queryText(request, 'seriesId') || null,
+            id
+          })
+        : attachmentContent(
+            (await backend(accountId).object(accountId, url)).data,
+            queryText(request, 'recurrenceId', 64) || null,
+            id
+          );
+      if (!att.content) throw fail('Dieser Anhang ist ein Link und wird im Browser geöffnet.', 'attachment_link', 409);
+      if (request.query?.inline === '1') {
+        const type = String(att.type || '').toLowerCase();
+        if (!PREVIEWABLE.test(type))
+          return reply.code(415).send({ error: 'Für diesen Dateityp gibt es keine Vorschau.' });
+        reply.headers({
+          'Content-Type': type === 'text/plain' ? 'text/plain; charset=utf-8' : type,
+          'Content-Disposition': `inline; filename="preview"; filename*=UTF-8''${encodeURIComponent(att.name)}`,
+          'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff',
+          'Content-Security-Policy':
+            type === 'application/pdf'
+              ? "frame-ancestors 'self'"
+              : "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox; frame-ancestors 'self'",
+          'X-Frame-Options': 'SAMEORIGIN'
+        });
+      } else {
+        reply.headers(downloadHeaders(att.name));
+      }
+      reply.header('Content-Length', att.content.length);
+      return reply.send(att.content);
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
 
   guard('/api/calendar/events/delete', 'calendar-v1', async request => removeEvent(request.body || {}));
   async function removeEvent(b) {
