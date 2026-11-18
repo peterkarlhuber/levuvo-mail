@@ -49,14 +49,39 @@ export async function fetchInfos(client, range, { uidRange = false, previewCache
   return infos.sort((a, b) => b.uid - a.uid);
 }
 
-/** Selects the newest `limit` UIDs strictly below `beforeUid`. */
-async function uidsBefore(client, beforeUid, limit) {
-  if (beforeUid <= 1) return { uids: [], more: false };
-  const found = await client.search({ uid: `1:${beforeUid - 1}` }, { uid: true });
-  const all = (Array.isArray(found) ? found : [])
-    .filter(uid => Number.isSafeInteger(uid) && uid > 0 && uid < beforeUid)
-    .sort((a, b) => a - b);
-  return { uids: all.slice(-limit), more: all.length > limit };
+// UID windowing: an older page never asks the server for every UID below the cursor (on a
+// 100k folder that was ~600 KB per page). It searches a window just below the cursor, sized
+// from the folder's UID density, and widens it only when the window holds too few messages.
+export const WINDOW_GROWTH = 2;
+export const MAX_WINDOW_ROUNDS = 24;
+
+/**
+ * Selects the newest `limit` UIDs strictly below `beforeUid`, newest first.
+ * `stats` ({ total, uidNext }) only tunes the first window; results are exact either way.
+ * Returns `rounds` and `transferred` (UIDs the server sent) for the benchmark.
+ */
+export async function uidsBefore(client, beforeUid, limit, { total = 0, uidNext = 0 } = {}) {
+  if (beforeUid <= 1) return { uids: [], more: false, rounds: 0, transferred: 0 };
+  const want = limit + 1; // one extra UID tells whether an older page exists
+  const density = total > 0 && uidNext > 1 ? Math.min(1, total / (uidNext - 1)) : 1;
+  let span = Math.max(want, Math.ceil((want / Math.max(density, 1e-4)) * 1.25));
+  let high = beforeUid - 1;
+  const collected = [];
+  let rounds = 0;
+  let transferred = 0;
+  while (high >= 1 && collected.length < want) {
+    // Past the round limit the rest of the range is taken in one go, so the result stays exact.
+    const low = rounds + 1 >= MAX_WINDOW_ROUNDS ? 1 : Math.max(1, high - span + 1);
+    const found = await client.search({ uid: `${low}:${high}` }, { uid: true });
+    rounds++;
+    const list = Array.isArray(found) ? found : [];
+    transferred += list.length;
+    for (const uid of list) if (Number.isSafeInteger(uid) && uid >= low && uid <= high) collected.push(uid);
+    high = low - 1;
+    span = Math.min(4294967295, span * WINDOW_GROWTH);
+  }
+  const sorted = [...new Set(collected)].sort((a, b) => b - a);
+  return { uids: sorted.slice(0, limit), more: sorted.length > limit, rounds, transferred };
 }
 
 /**
@@ -78,7 +103,10 @@ export async function listMessages(client, folder, { limit, beforeUid = null, pr
       messages = (await fetchInfos(client, `${start}:*`, { previewCache, keyPrefix })).slice(0, limit);
       hasMore = start > 1;
     } else {
-      const { uids, more } = await uidsBefore(client, beforeUid, limit);
+      const { uids, more } = await uidsBefore(client, beforeUid, limit, {
+        total,
+        uidNext: safeImapInteger(client.mailbox?.uidNext) || 0
+      });
       messages = uids.length ? await fetchInfos(client, uids, { uidRange: true, previewCache, keyPrefix }) : [];
       hasMore = more;
     }
@@ -98,12 +126,20 @@ export function validateSearchQuery(value) {
   return q;
 }
 
-/** Server-side IMAP TEXT search in one folder, paged by UID. */
+/**
+ * Server-side IMAP TEXT search in one folder, paged by UID. Later pages restrict the search to
+ * UIDs below the cursor, so the server neither scans nor sends the part already shown.
+ * `total` is the number of matches at or below the cursor (on the first page: all matches).
+ */
 export async function searchFolder(client, path, text, { limit, beforeUid = null, previewCache, accountKey = '' }) {
   const query = validateSearchQuery(text);
   const lock = await client.getMailboxLock(path, { readOnly: true });
   try {
-    const ids = await client.search({ text: query }, { uid: true });
+    if (beforeUid !== null && beforeUid <= 1) {
+      return { folder: path, query, total: 0, messages: [], readOnly: true, hasMore: false, nextBeforeUid: null };
+    }
+    const criteria = beforeUid === null ? { text: query } : { text: query, uid: `1:${beforeUid - 1}` };
+    const ids = await client.search(criteria, { uid: true });
     if (!Array.isArray(ids)) throw Object.assign(new Error('IMAP-Suchfunktion nicht verfügbar.'), { statusCode: 502 });
     const all = [...new Set(ids.filter(n => Number.isSafeInteger(n) && n > 0))].sort((a, b) => b - a);
     const eligible = beforeUid === null ? all : all.filter(uid => uid < beforeUid);
