@@ -5,7 +5,7 @@ tokens and components. `npm test` fails when a stylesheet uses raw font sizes, f
 z-index numbers, radii, spacing or colours (`scripts/check-design-tokens.mjs`, also
 `npm run check:tokens`).
 
-## Tokens (`apps/web/src/styles.css`, top of file)
+## Tokens (`apps/web/src/styles/tokens.css`)
 
 | Group | Tokens | Notes |
 | --- | --- | --- |
@@ -20,6 +20,15 @@ z-index numbers, radii, spacing or colours (`scripts/check-design-tokens.mjs`, a
 | Layout | `--rail-w`, `--sidebar-w`, `--content-max` | |
 
 Breakpoints: **640px** (phone), **960px** (tablet, one content column), **1180px** (narrow desktop).
+
+## Stylesheets (`apps/web/src/styles/`)
+
+`index.css` imports one file per area in cascade order: `tokens`, `base`, `shell`, `mail`, `menus`,
+`reader`, `composer`, `dialogs`, `settings`, `calendar`, `contacts`, `onboarding`, `responsive`,
+`features-2-1`, `ui-primitives`, `mobile`, `contrast`. A new feature (assistant, spaces, tasks …)
+adds **its own file** (e.g. `styles/assistant.css`) and one `@import` line before `mobile.css`,
+so parallel work does not collide in a shared file. Phone rules for a feature go into a
+`@media (max-width: 640px)` block in the feature's own file.
 
 ## Components (`apps/web/src/ui`)
 
@@ -43,5 +52,10 @@ import { Button, IconButton, Field, Segmented, Dialog, Toolbar, useFocusTrap } f
 2. Interactive elements only via the components above (or native elements with the same guarantees).
 3. Every icon-only control has a label; every input has a visible label (or `Field hideLabel` with a reason).
 4. Focus must stay visible (`:focus-visible` ring) and follow a logical order; modals trap focus.
-5. Check each screen at 390px, 900px and 1440px width, in dark and light mode, and at 200 % zoom.
-6. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.
+5. Check each screen at 390px, 900px and 1440px width, in dark and light mode, and at 200 % zoom;
+   nothing may scroll horizontally at 320px.
+6. Phones (≤ 640px): bottom navigation (`--bottom-nav-h`) and safe areas (`env(safe-area-inset-*)`)
+   are reserved; fixed elements sit above them. Use `dvh`, never `vh`.
+7. `npm run test:a11y` (axe-core in Chromium, part of CI) must stay free of violations; add new
+   screens to `test/a11y/a11y.test.mjs`.
+8. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.

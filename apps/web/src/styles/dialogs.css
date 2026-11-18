@@ -1,0 +1,170 @@
+/* ---------- Modals, dialogs, toasts ---------- */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+}
+.modal-card h2 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.3px;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.confirm-scrim {
+  z-index: var(--z-dialog);
+}
+.confirm-card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.confirm-card h2 {
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+}
+.confirm-card p {
+  margin: 0;
+  color: var(--text-2);
+  line-height: var(--leading-relaxed);
+  font-size: var(--text-base);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-1-5);
+}
+.confirm-actions.vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+.dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+}
+.dialog-error {
+  color: var(--danger) !important;
+  font-size: var(--text-md) !important;
+}
+.toasts {
+  position: fixed;
+  z-index: var(--z-toast);
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 300px;
+  max-width: min(620px, 92vw);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+.toast > span:first-child {
+  flex: 1;
+  line-height: var(--leading-snug);
+}
+.toast.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
+}
+.toast-action {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: var(--weight-heavy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  display: grid;
+  place-items: center;
+}
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.45;
+  transition: width 0.2s linear;
+}
+.shortcut-modal {
+  width: min(520px, 100%);
+}
+.shortcut-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: var(--space-1) 0;
+}
+.shortcut-row dt {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.shortcut-row dd {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+}

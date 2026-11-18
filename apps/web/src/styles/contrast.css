@@ -1,0 +1,88 @@
+/* =====================================================================
+   Contrast preferences
+   ===================================================================== */
+/* "Increase contrast" (macOS, iOS, Windows): stronger borders and secondary text. */
+@media (prefers-contrast: more) {
+  :root:not([data-theme='light']),
+  [data-theme='dark'] {
+    --muted: #c8c8c8;
+    --faint: #b4b4b4;
+    --text-2: #f2f2f2;
+    --border: #6a6a6a;
+    --border-strong: #8a8a8a;
+  }
+  [data-theme='light'] {
+    --muted: #3a3a3a;
+    --faint: #444444;
+    --text-2: #141414;
+    --border: #8a8a8a;
+    --border-strong: #5a5a5a;
+  }
+  .message-row .message-select,
+  .flag-button,
+  .folder-more {
+    opacity: 1;
+  }
+}
+
+/* Windows high contrast / forced colours: states that rely on background colour get a
+   visible system-colour outline instead, decorative dots and switches keep their shape. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .segmented button.active,
+  .rail-item.active,
+  .folder-item.active,
+  .message-row.selected,
+  .contact-row.selected,
+  .mini-day.selected,
+  .filter-chips button.active,
+  .settings-nav button.active {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .segmented button.active,
+  .filter-chips button.active {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+  .unread-dot,
+  .rail-badge,
+  .folder-count {
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+  .switch span {
+    border-color: CanvasText;
+  }
+  .switch input:checked + span {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+  }
+  .switch span::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .switch input:checked + span::after {
+    background: HighlightText;
+  }
+  .btn.primary,
+  .compose-button,
+  .compose-fab {
+    border: 2px solid ButtonText;
+  }
+  .ui-dialog,
+  .confirm-card,
+  .modal-card,
+  .compose-panel,
+  .menu,
+  .palette,
+  .toast {
+    border: 1px solid CanvasText;
+  }
+}
