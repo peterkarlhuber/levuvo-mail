@@ -46,9 +46,9 @@ const VAULT_ID = 'ai';
 export const DEFAULT_AI_SETTINGS = {
   enabled: false,
   provider: 'ollama',
-  model: 'qwen3.5:4b',
+  model: 'qwen3.5:9b',
   baseUrl: 'http://127.0.0.1:11434',
-  embedModel: 'nomic-embed-text',
+  embedModel: 'qwen3-embedding:0.6b',
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
   noCloudAccounts: []

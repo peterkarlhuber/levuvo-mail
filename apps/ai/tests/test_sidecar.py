@@ -104,7 +104,7 @@ def test_other_tasks_run() -> None:
 
 def test_engine_configuration_rules() -> None:
     engine = Engine()
-    assert engine.configure({"provider": "ollama", "model": "qwen3.5:4b"})["hasKey"] is False
+    assert engine.configure({"provider": "ollama", "model": "qwen3.5:9b"})["hasKey"] is False
     with pytest.raises(RpcError):
         engine.configure({"provider": "ollama", "model": "gpt-oss:120b-cloud".replace("-cloud", ":cloud")})
     with pytest.raises(RpcError):
