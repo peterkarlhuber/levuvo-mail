@@ -6,6 +6,7 @@ import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button, Field, IconButton, Segmented } from './ui';
 import { ApprovalList } from './SettingsMcp';
 
 type Skill = {
@@ -149,9 +150,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
         <Sparkles size={16} aria-hidden="true" />
         <h2 className="assistant-title">{t('Levuvo Mail Assistant')}</h2>
         <span className="ai-label">{t('KI')}</span>
-        <button className="icon-button" aria-label={t('Schließen')} onClick={onClose}>
-          <X size={16} />
-        </button>
+        <IconButton label={t('Schließen')} icon={<X size={16} />} onClick={onClose} />
       </header>
       {off ? (
         <div className="assistant-body">
@@ -160,9 +159,9 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
               'Der Assistent ist ausgeschaltet. Er arbeitet standardmäßig mit einem lokalen Modell auf diesem Computer.'
             )}
           </p>
-          <button className="btn primary" onClick={onOpenSettings}>
+          <Button variant="primary" onClick={onOpenSettings}>
             {t('KI-Einstellungen öffnen')}
-          </button>
+          </Button>
           <ApprovalSection onPending={onPending} />
         </div>
       ) : (
@@ -245,56 +244,47 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
               submit();
             }}
           >
-            <div className="segmented small" role="radiogroup" aria-label={t('Art')}>
-              {enabled?.search !== false && (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={mode === 'ask'}
-                  className={mode === 'ask' ? 'active' : ''}
-                  onClick={() => setMode('ask')}
-                >
-                  {t('Frage')}
-                </button>
-              )}
-              {enabled?.agents !== false && (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={mode === 'task'}
-                  className={mode === 'task' ? 'active' : ''}
-                  onClick={() => setMode('task')}
-                >
-                  {t('Aufgabe')}
-                </button>
-              )}
-            </div>
-            <textarea
-              ref={input}
-              rows={2}
-              maxLength={2000}
-              value={text}
-              placeholder={mode === 'ask' ? t('Frag dein Postfach…') : t('Was soll der Assistent erledigen?')}
-              onChange={ev => setText(ev.target.value)}
-              onKeyDown={ev => {
-                if (ev.key === 'Enter' && !ev.shiftKey) {
-                  ev.preventDefault();
-                  submit();
-                }
-              }}
+            <Segmented
+              size="sm"
+              label={t('Art')}
+              value={mode}
+              onChange={setMode}
+              options={[
+                ...(enabled?.search !== false ? [{ value: 'ask' as const, label: t('Frage') }] : []),
+                ...(enabled?.agents !== false ? [{ value: 'task' as const, label: t('Aufgabe') }] : [])
+              ]}
             />
-            <button className="btn primary small" type="submit" disabled={!text.trim()} aria-label={t('Senden')}>
-              <Send size={14} />
-            </button>
+            <Field hideLabel label={mode === 'ask' ? t('Frage an das Postfach') : t('Aufgabe für den Assistenten')}>
+              <textarea
+                ref={input}
+                rows={2}
+                maxLength={2000}
+                value={text}
+                placeholder={mode === 'ask' ? t('Frag dein Postfach…') : t('Was soll der Assistent erledigen?')}
+                onChange={ev => setText(ev.target.value)}
+                onKeyDown={ev => {
+                  if (ev.key === 'Enter' && !ev.shiftKey) {
+                    ev.preventDefault();
+                    submit();
+                  }
+                }}
+              />
+            </Field>
+            <IconButton
+              type="submit"
+              className="primary"
+              size="sm"
+              label={t('Senden')}
+              icon={<Send size={14} />}
+              disabled={!text.trim()}
+            />
             {entries.length > 0 && (
-              <button
-                type="button"
-                className="icon-button"
-                aria-label={t('Verlauf leeren')}
+              <IconButton
+                size="sm"
+                label={t('Verlauf leeren')}
+                icon={<Trash2 size={14} />}
                 onClick={() => setEntries([])}
-              >
-                <Trash2 size={14} />
-              </button>
+              />
             )}
           </form>
         </>

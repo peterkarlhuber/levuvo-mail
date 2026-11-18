@@ -17,6 +17,7 @@ import { ApiError, postJson } from './api';
 import { aiEnabled, aiErrorText, defaultEnd, runAi, type AiFeature, type AiResult } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button, IconButton } from './ui';
 
 type Digest = {
   summary: string[];
@@ -135,9 +136,15 @@ export function ReaderAssist({ accountId, folder, uid }: { accountId: string; fo
 
   const button = (kind: Kind, icon: React.ReactNode, label: string) =>
     enabled[kind] && (
-      <button className="btn small" disabled={busy !== null} onClick={() => void run(kind)}>
-        {busy === kind ? <LoaderCircle className="spin" size={14} /> : icon} {label}
-      </button>
+      <Button
+        size="sm"
+        disabled={busy !== null}
+        aria-busy={busy === kind || undefined}
+        icon={busy === kind ? <LoaderCircle className="spin" size={14} /> : icon}
+        onClick={() => void run(kind)}
+      >
+        {label}
+      </Button>
     );
   const take = (key: string, onClick: () => void, icon: React.ReactNode) =>
     saved.has(key) ? (
@@ -145,9 +152,9 @@ export function ReaderAssist({ accountId, folder, uid }: { accountId: string; fo
         <Check size={14} /> {t('Übernommen')}
       </span>
     ) : (
-      <button className="btn small" onClick={onClick}>
-        {icon} {t('Übernehmen')}
-      </button>
+      <Button size="sm" icon={icon} onClick={onClick}>
+        {t('Übernehmen')}
+      </Button>
     );
 
   return (
@@ -170,9 +177,7 @@ export function ReaderAssist({ accountId, folder, uid }: { accountId: string; fo
             <span className="ai-label" title={t('Von einer KI erstellt. Bitte prüfen.')}>
               <Sparkles size={12} /> {t('KI-generiert')} · {shown.data.model}
             </span>
-            <button className="icon-button" aria-label={t('Schließen')} onClick={() => setShown(null)}>
-              <X size={14} />
-            </button>
+            <IconButton size="sm" label={t('Schließen')} icon={<X size={14} />} onClick={() => setShown(null)} />
           </div>
           {shown.kind === 'digest' && (
             <>
