@@ -88,6 +88,18 @@ export function withoutLegacyEnv(env) {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !LEGACY_ENV.test(key)));
 }
 
+/**
+ * Which mailbox an account points to. Cached and indexed data belongs to this identity, not
+ * to the internal account ID: when the user changes server or login of an account, nothing
+ * from the previous mailbox may show up in the new one.
+ */
+export function mailboxIdentity(account) {
+  const imap = account?.imap || {};
+  // No secret is part of it; the value is only compared (and kept inside the encrypted index).
+  const provider = account?.auth === 'oauth2' ? String(imap.oauth || 'oauth2') : 'password';
+  return JSON.stringify([String(imap.host || '').toLowerCase(), String(imap.user || '').toLowerCase(), provider]);
+}
+
 /** Small JSON settings file (non-secret data only). */
 export async function createJsonFile(filename, fallback) {
   let value = fallback;
@@ -172,8 +184,17 @@ export async function createMailServer({
   });
   const pgp = createPgp({ meta: cryptoMeta, vault: store });
   const smime = createSmime({ meta: cryptoMeta, vault: store });
+  // Random ID of this installation: marks scheduled messages this device is responsible for.
+  const instanceFile = await createJsonFile(path.join(dir, 'instance.json'), {});
+  if (!/^[a-f0-9]{32}$/.test(instanceFile.get().id || ''))
+    await instanceFile.save({ id: randomBytes(16).toString('hex') }).catch(() => {});
+  const instanceId = /^[a-f0-9]{32}$/.test(instanceFile.get().id || '') ? instanceFile.get().id : '';
   const localIndex = createLocalIndex({
     dir: path.join(dir, 'index'),
+    getIdentity: id => {
+      const account = accounts.find(a => a.id === id);
+      return account ? mailboxIdentity(account) : null;
+    },
     getKey: async id => {
       if (!store.available || settings.get().localIndex === false) return null;
       try {
@@ -233,13 +254,30 @@ export async function createMailServer({
   });
 
   let accounts = [];
+  let identities = new Map(); // account id → mailboxIdentity
+  const accountChangeHooks = [];
+  /** Drops every cached piece of an account's mailbox (removed account or new identity). */
+  function forgetAccountData(id, { identityChanged = false } = {}) {
+    listCache.deleteWhere(key => key.startsWith(`${id}|`));
+    detailCache.deleteWhere(key => key.startsWith(`${id}|`));
+    previewCache.deleteWhere(key => key.startsWith(`${id}:`));
+    localIndex.unload(id);
+    for (const hook of accountChangeHooks) hook(id);
+    if (identityChanged) {
+      // Index entries and snooze/follow-up tracking refer to the previous mailbox.
+      void localIndex.clear(id).catch(() => {});
+      void followups.forgetAccount(id).catch(() => {});
+    }
+  }
   function refreshAccounts() {
     accounts = accountManager.all();
     if (watch) watchers.sync(accounts);
-    const ids = new Set(accounts.map(a => a.id));
-    listCache.deleteWhere(key => !ids.has(key.split('|')[0]));
-    detailCache.deleteWhere(key => !ids.has(key.split('|')[0]));
-    for (const id of ids) if (!accounts.some(a => a.id === id)) localIndex.unload(id);
+    const next = new Map(accounts.map(a => [a.id, mailboxIdentity(a)]));
+    for (const [id, identity] of identities)
+      if (next.get(id) !== identity) forgetAccountData(id, { identityChanged: next.has(id) });
+    identities = next;
+    listCache.deleteWhere(key => !next.has(key.split('|')[0]));
+    detailCache.deleteWhere(key => !next.has(key.split('|')[0]));
     return accounts;
   }
   refreshAccounts();
@@ -435,6 +473,8 @@ export async function createMailServer({
     watch,
     accounts: () => accounts,
     refreshAccounts,
+    instanceId,
+    onAccountChange: hook => accountChangeHooks.push(hook),
     withImap,
     imapConfig,
     smtpConfigFor,

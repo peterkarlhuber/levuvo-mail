@@ -171,6 +171,8 @@ export type DetailExtras = {
   invitation?: Invitation;
   pgpKeys?: number[];
   scheduledFor?: string;
+  /** Send state of a scheduled message (see scheduled.mjs on the server). */
+  scheduleState?: 'scheduled' | 'claimed' | 'uncertain' | 'sent' | 'failed';
   offlineIndex?: boolean;
   /** Password-protected message (Levuvo): the hint shown before unlocking. */
   protected?: { hint: string };

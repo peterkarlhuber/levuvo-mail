@@ -1485,7 +1485,8 @@ h4 {
 .reader-security > span {
   flex: 1;
 }
-.reader-security.offline {
+.reader-security.offline,
+.reader-security.warning {
   background: var(--warn-bg);
   color: var(--warn-text);
 }

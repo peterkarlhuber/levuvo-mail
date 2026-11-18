@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import {
   createFollowupStore,
   findSnoozeFolder,
+  locateSnoozed,
   messageIdOf,
   snoozeMessages,
   validateWhen,
   wakeMessage
 } from '../src/followups.mjs';
 import { parseIds, threadFolders } from '../src/thread.mjs';
+import { createMailStore } from './helpers/fake-mailstore.mjs';
 
 const memoryFile = init => {
   let v = init;
@@ -110,6 +112,7 @@ test('Snooze: folder is created when needed, message comes back unread', async (
     messageId: '<m5@x>',
     subject: 'Angebot',
     from: 'kunde@x.at',
+    print: null,
     snoozeUid: '905'
   });
   const store = createFollowupStore(memoryFile({ snoozed: [], followups: [] }));
@@ -137,4 +140,82 @@ test('Follow-up: create entries, mark due, delete when the account is removed', 
   assert.equal(store.followups('a')[0].state, 'due');
   await store.forgetAccount('a');
   assert.deepEqual(store.followups(), []);
+});
+
+const plainMail = subject => `From: Kunde <kunde@x.at>\r\nTo: me@x.at\r\nSubject: ${subject}\r\n\r\nText\r\n`;
+
+test('Snooze: without COPYUID and Message-ID the message still comes back (AUD-005)', async () => {
+  const mail = createMailStore({ folders: ['INBOX', 'Trash'] });
+  mail.add('INBOX', plainMail('Ohne Kennung'));
+  const client = mail.client({ capabilities: ['MOVE'] }); // no UIDPLUS: MOVE reports no new UID
+  const result = await snoozeMessages(client, { folder: 'INBOX', uids: ['1'] });
+  assert.equal(result.items[0].snoozeUid, null);
+  assert.equal(result.items[0].messageId, null);
+  const store = createFollowupStore(memoryFile({ snoozed: [], followups: [] }));
+  const [entry] = await store.addSnoozed('acc', 'INBOX', result, '2026-11-14T08:00:00.000Z');
+  // Another message lands in the snooze folder meanwhile.
+  mail.add(result.folder, plainMail('Etwas anderes'));
+  assert.deepEqual(await wakeMessage(client, entry), { woke: true, folder: 'INBOX' });
+  assert.equal(mail.messages('INBOX')[0].source.toString().includes('Ohne Kennung'), true);
+  // Two indistinguishable candidates: reported as missing instead of guessing.
+  const twin = createMailStore({ folders: ['INBOX', 'Zurückgestellt'] });
+  twin.add('INBOX', plainMail('Gleich'));
+  const c2 = twin.client({ capabilities: ['MOVE'] });
+  const r2 = await snoozeMessages(c2, { folder: 'INBOX', uids: ['1'] });
+  twin.add('Zurückgestellt', plainMail('Gleich'));
+  const [e2] = await store.addSnoozed('acc', 'INBOX', r2, '2026-11-14T08:00:00.000Z');
+  assert.deepEqual(await wakeMessage(c2, e2), { woke: false, reason: 'message_missing' });
+  assert.equal(twin.messages('Zurückgestellt').length, 2, 'nothing was moved by guessing');
+});
+
+test('Snooze: tracking is written before the MOVE and a crash in between is recoverable (AUD-006)', async () => {
+  const mail = createMailStore({ folders: ['INBOX', 'Zurückgestellt'] });
+  mail.add('INBOX', plainMail('Wichtig'));
+  const client = mail.client();
+  const store = createFollowupStore(memoryFile({ snoozed: [], followups: [] }));
+  let pending;
+  const result = await snoozeMessages(client, {
+    folder: 'INBOX',
+    uids: ['1'],
+    beforeMove: async plan => {
+      assert.equal(mail.messages('INBOX').length, 1, 'journal entry comes first');
+      pending = await store.addSnoozed('acc', 'INBOX', plan, '2026-11-20T08:00:00.000Z', { state: 'pending' });
+    }
+  });
+  // Crash here: the MOVE happened, finishSnoozed() never ran.
+  assert.equal(store.snoozed('acc')[0].state, 'pending');
+  const found = await locateSnoozed(client, store.snoozed('acc')[0]);
+  assert.equal(found.where, 'snoozed');
+  await store.updateSnoozed(pending[0].id, { state: 'snoozed', snoozeUid: found.uid, uidValidity: found.uidValidity });
+  assert.deepEqual(await wakeMessage(client, store.snoozed('acc')[0]), { woke: true, folder: 'INBOX' });
+  assert.equal(result.items.length, 1);
+
+  // Crash before the MOVE: the message is still in its folder and the entry can be dropped.
+  const mail2 = createMailStore({ folders: ['INBOX', 'Zurückgestellt'] });
+  mail2.add('INBOX', plainMail('Nie verschoben'));
+  const c2 = mail2.client();
+  const store2 = createFollowupStore(memoryFile({ snoozed: [], followups: [] }));
+  await assert.rejects(
+    snoozeMessages(c2, {
+      folder: 'INBOX',
+      uids: ['1'],
+      beforeMove: async plan => {
+        await store2.addSnoozed('acc', 'INBOX', plan, '2026-11-20T08:00:00.000Z', { state: 'pending' });
+        throw new Error('process killed');
+      }
+    })
+  );
+  assert.equal((await locateSnoozed(c2, store2.snoozed('acc')[0])).where, 'original');
+  // A failed journal write stops the MOVE: nothing leaves the inbox untracked.
+  await assert.rejects(
+    snoozeMessages(c2, {
+      folder: 'INBOX',
+      uids: ['1'],
+      beforeMove: async () => {
+        throw Object.assign(new Error('EIO'), { code: 'EIO' });
+      }
+    }),
+    { code: 'EIO' }
+  );
+  assert.equal(mail2.messages('INBOX').length, 1);
 });

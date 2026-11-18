@@ -1296,5 +1296,20 @@ export const EN: Record<string, string> = {
     'The contacts on this device cannot be opened with the key from the keychain.',
   'Kontakt nicht gefunden.': 'Contact not found.',
   'Das Adressbuch auf diesem Gerät ist voll.': 'The address book on this device is full.',
-  'Die Kontakte auf diesem Gerät sind nicht verfügbar.': 'The contacts on this device are not available.'
+  'Die Kontakte auf diesem Gerät sind nicht verfügbar.': 'The contacts on this device are not available.',
+  'Versand nicht bestätigt: Die Verbindung brach während des Sendens ab. Bitte in „Gesendet“ oder beim Empfänger prüfen. Levuvo Mail sendet diese Nachricht nicht automatisch erneut – „Bearbeiten“ macht sie wieder zum Entwurf, Löschen verwirft sie.':
+    'Sending not confirmed: the connection dropped while sending. Please check “Sent” or with the recipient. Levuvo Mail does not resend this message automatically – “Edit” turns it back into a draft, deleting discards it.',
+  'Geplanter Versand fehlgeschlagen: Der Server hat die Nachricht abgelehnt, sie wurde nicht gesendet. „Bearbeiten“ macht sie wieder zum Entwurf.':
+    'Scheduled sending failed: the server refused the message, it was not sent. “Edit” turns it back into a draft.',
+  'Gesendet. Die geplante Kopie wird gleich aus „Entwürfe“ entfernt.':
+    'Sent. The scheduled copy will be removed from “Drafts” shortly.',
+  'Der lokale Kalender braucht den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
+    'The local calendar needs the system keychain, which is not available right now.',
+  'Die Nachricht wurde im Ordner „Zurückgestellt“ nicht gefunden. Die Erinnerung wurde entfernt.':
+    'The message was not found in the “Snoozed” folder. The reminder was removed.',
+  'Dieser Mailserver speichert keine Statusmarkierungen. „Später senden“ ist hier nicht verfügbar.':
+    'This mail server does not store status keywords. “Send later” is not available here.',
+  'Speichern der geplanten Nachricht nicht bestätigt.': 'Saving the scheduled message was not confirmed.',
+  'Ob die geplante Nachricht gespeichert wurde, ist unklar. Bitte zuerst im Ordner „Entwürfe“ nachsehen, bevor du sie erneut planst.':
+    'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.'
 };

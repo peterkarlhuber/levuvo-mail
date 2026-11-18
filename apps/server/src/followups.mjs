@@ -41,8 +41,12 @@ async function ensureSnoozeFolder(client) {
   return path;
 }
 
-/** Moves messages into the snooze folder; returns what is needed to bring them back. */
-export async function snoozeMessages(client, { folder, uids }) {
+/**
+ * Moves messages into the snooze folder; returns what is needed to bring them back.
+ * `beforeMove(plan)` runs after the messages were read and before the MOVE: the caller stores
+ * its tracking entries there, so a crash after the MOVE never leaves an untracked message.
+ */
+export async function snoozeMessages(client, { folder, uids, beforeMove = async () => {} }) {
   const target = await ensureSnoozeFolder(client);
   if (target === folder) throw fail('Die Nachricht ist bereits zurückgestellt.', 'already_snoozed', 409);
   if (!client.capabilities?.has?.('MOVE'))
@@ -50,23 +54,34 @@ export async function snoozeMessages(client, { folder, uids }) {
   const lock = await client.getMailboxLock(folder);
   try {
     const items = [];
-    const query = { uid: true, envelope: true };
+    const query = { uid: true, envelope: true, internalDate: true, size: true };
     const wanted = uidSet(uids);
     const seen = new Set();
     for await (const m of client.fetch(uids.join(','), query, { uid: true })) {
       // Skip unsolicited FETCH responses (flag updates, foreign UIDs) and duplicates.
-      if (!isRequestedFetchResult(m, query, wanted) || seen.has(m.uid)) continue;
+      // Date and size are optional (only used to find the message again).
+      if (!isRequestedFetchResult(m, { envelope: true }, wanted) || seen.has(m.uid)) continue;
       seen.add(m.uid);
       items.push({
         uid: String(m.uid),
         messageId: m.envelope?.messageId || null,
         subject: m.envelope?.subject || '',
-        from: m.envelope?.from?.[0]?.address || ''
+        from: m.envelope?.from?.[0]?.address || '',
+        // Finds the message again when the server reports neither a new UID nor a Message-ID.
+        print: printOf(m)
       });
     }
     if (!items.length) throw fail('Nachricht nicht mehr vorhanden. Bitte aktualisieren.', 'message_missing', 404);
-    const moved = await client.messageMove(items.map(i => i.uid).join(','), target, { uid: true });
-    if (!moved) throw fail('Verschieben wurde vom Server abgelehnt.', 'move_rejected', 409);
+    await beforeMove({ folder: target, uidValidity: '', items });
+    let moved;
+    try {
+      moved = await client.messageMove(items.map(i => i.uid).join(','), target, { uid: true });
+    } catch (err) {
+      // A NO/BAD answer proves nothing moved; anything else leaves the outcome open.
+      throw Object.assign(err, { moveRefused: ['NO', 'BAD'].includes(String(err?.responseStatus || '')) });
+    }
+    if (!moved)
+      throw Object.assign(fail('Verschieben wurde vom Server abgelehnt.', 'move_rejected', 409), { moveRefused: true });
     const map = moved.uidMap instanceof Map ? moved.uidMap : new Map();
     return {
       folder: target,
@@ -78,6 +93,52 @@ export async function snoozeMessages(client, { folder, uids }) {
   }
 }
 
+/** Date, size, sender and subject: together they identify a message without a Message-ID. */
+function printOf(m) {
+  const date = m.internalDate instanceof Date ? m.internalDate.toISOString() : String(m.internalDate || '');
+  if (!date || !Number.isSafeInteger(m.size)) return null; // too weak to identify a message
+  return [date, String(m.size), m.envelope?.from?.[0]?.address || '', m.envelope?.subject || ''].join('|');
+}
+
+const MAX_PRINT_SCAN = 5000;
+/** UID of the tracked message in the currently selected folder, or null. */
+async function locateInOpenFolder(client, entry, { trustUid = false } = {}) {
+  if (entry.messageId) {
+    const found = await client.search({ header: { 'message-id': entry.messageId } }, { uid: true });
+    if (Array.isArray(found) && found.length) return String(found.at(-1));
+  }
+  if (trustUid && entry.snoozeUid && String(client.mailbox?.uidValidity ?? '') === entry.uidValidity)
+    return entry.snoozeUid;
+  // No Message-ID and no COPYUID answer: compare date, size, sender and subject. The
+  // snooze folder is small, so a scan of its envelopes is cheap.
+  if (!entry.print || !Number(client.mailbox?.exists || 0) || client.mailbox.exists > MAX_PRINT_SCAN) return null;
+  const query = { uid: true, envelope: true, internalDate: true, size: true };
+  const hits = [];
+  for await (const m of client.fetch('1:*', query, { uid: true }))
+    if (isRequestedFetchResult(m, { envelope: true }) && printOf(m) === entry.print) hits.push(m.uid);
+  // Two identical candidates cannot be told apart: better to report it than to guess.
+  return hits.length === 1 ? String(hits[0]) : null;
+}
+
+/** Where a tracked message is now: 'snoozed', 'original' (never moved) or null. */
+export async function locateSnoozed(client, entry) {
+  const folders = selectableFolders(await client.list());
+  for (const [where, path] of [
+    ['snoozed', entry.folder],
+    ['original', entry.originalFolder]
+  ]) {
+    if (!folders.some(f => f.path === path)) continue;
+    const lock = await client.getMailboxLock(path, { readOnly: true });
+    try {
+      const uid = await locateInOpenFolder(client, entry, { trustUid: where === 'snoozed' });
+      if (uid) return { where, uid, uidValidity: String(client.mailbox?.uidValidity ?? '') };
+    } finally {
+      lock.release();
+    }
+  }
+  return null;
+}
+
 /** Brings one snoozed message back (unread) into its original folder or the inbox. */
 export async function wakeMessage(client, entry) {
   const folders = selectableFolders(await client.list());
@@ -87,13 +148,7 @@ export async function wakeMessage(client, entry) {
     folders.find(f => f.path === entry.originalFolder) || folders.find(f => f.path.toUpperCase() === 'INBOX');
   const lock = await client.getMailboxLock(snooze.path);
   try {
-    let uid = null;
-    if (entry.messageId) {
-      const found = await client.search({ header: { 'message-id': entry.messageId } }, { uid: true });
-      uid = Array.isArray(found) && found.length ? String(found.at(-1)) : null;
-    }
-    if (!uid && entry.snoozeUid && String(client.mailbox?.uidValidity ?? '') === entry.uidValidity)
-      uid = entry.snoozeUid;
+    const uid = await locateInOpenFolder(client, entry, { trustUid: true });
     if (!uid) return { woke: false, reason: 'message_missing' };
     await client.messageFlagsRemove(uid, ['\\Seen'], { uid: true }).catch(() => {});
     const moved = await client.messageMove(uid, back.path, { uid: true });
@@ -132,7 +187,7 @@ export function createFollowupStore(file) {
   return {
     snoozed: accountId => data().snoozed.filter(s => !accountId || s.accountId === accountId),
     followups: accountId => data().followups.filter(f => !accountId || f.accountId === accountId),
-    async addSnoozed(accountId, originalFolder, result, until) {
+    async addSnoozed(accountId, originalFolder, result, until, extra = {}) {
       const d = data();
       const added = result.items.map(i => ({
         id: randomUUID(),
@@ -141,10 +196,32 @@ export function createFollowupStore(file) {
         folder: result.folder,
         uidValidity: result.uidValidity,
         until,
-        ...i
+        ...i,
+        ...extra
       }));
       await save({ ...d, snoozed: [...d.snoozed, ...added] });
       return added;
+    },
+    /** Records the result of the MOVE for entries stored as `pending` before it. */
+    async finishSnoozed(entries, result) {
+      const d = data();
+      const byUid = new Map(result.items.map(i => [i.uid, i]));
+      const done = new Map(
+        entries.map(e => [
+          e.id,
+          { uidValidity: result.uidValidity, snoozeUid: byUid.get(e.uid)?.snoozeUid || null, state: 'snoozed' }
+        ])
+      );
+      await save({ ...d, snoozed: d.snoozed.map(s => (done.has(s.id) ? { ...s, ...done.get(s.id) } : s)) });
+    },
+    async updateSnoozed(id, patch) {
+      const d = data();
+      await save({ ...d, snoozed: d.snoozed.map(s => (s.id === id ? { ...s, ...patch } : s)) });
+    },
+    async removeSnoozedMany(ids) {
+      const drop = new Set(ids);
+      const d = data();
+      await save({ ...d, snoozed: d.snoozed.filter(s => !drop.has(s.id)) });
     },
     async removeSnoozed(id) {
       const d = data();

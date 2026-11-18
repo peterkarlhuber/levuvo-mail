@@ -7,6 +7,19 @@
 
 ### Fixes
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
+### Fixes (audit of 2.2.2)
+- **Send later – sent at most once, also with several devices:** the send state now lives in IMAP keywords on the scheduled message (`scheduled → claimed → sending → sent | failed | unconfirmed`). The device that scheduled a message sends it; another device takes over only after two minutes, and a two-flag claim on the server keeps both from sending at the same moment. A scheduler run never overlaps with the next one.
+- **Send later – nothing gets stuck or lost silently:** a claim left behind by a device that stopped before SMTP is released after ten minutes. If SMTP may have started (crash, lost connection during DATA), the message is shown as "sending not confirmed" in the reading pane and is never resent automatically; a copy in "Sent" settles it. Refusals before DATA are shown as failed (nothing was sent).
+- **Send later – no duplicate scheduled messages:** a lost APPEND answer no longer triggers a second APPEND; the server is checked for the message instead. Repeating a schedule request with the same request ID returns the stored message. Servers that cannot store keywords refuse "Send later" instead of sending twice or never.
+- **Accounts:** when the server or login of an account changes, the search index, message, list and preview caches and snooze/follow-up entries of the previous mailbox are dropped; the index file is bound to the mailbox identity.
+- **Snooze:** the tracking entry is written before the message is moved and completed afterwards; entries a crash left open are reconciled. Messages without Message-ID and without COPYUID are found again by date, size, sender and subject. A message that cannot be found is kept as a reminder (retried hourly) instead of being dropped.
+- **Search index:** read/unread changes made on other devices are picked up (CONDSTORE when available, otherwise a flag refresh).
+- **Device calendar:** never stored unencrypted – without the system keychain the device calendar is unavailable, and a plain-text file from an earlier version is encrypted on start. One failed save no longer blocks all later saves.
+- **Password-protected messages:** opening one no longer blocks the app: key derivation runs off the main thread, and iteration count and fields are checked first.
+- **Newsletter one-click unsubscribe:** the host is resolved first and refused if any address is internal (also IPv4-mapped IPv6); the request goes to exactly the checked address.
+
+### Tests
+- Failure tests for two devices sending at the same moment (forced and random interleavings), crashes before and after SMTP, lost APPEND answers, repeated schedule requests, account identity changes, snooze without COPYUID/Message-ID and with a crash between MOVE and tracking, flag changes in the index, calendar write errors, hostile protected-message boxes and DNS answers pointing to internal addresses.
 
 ## 2.2.2 – 13 November 2026
 

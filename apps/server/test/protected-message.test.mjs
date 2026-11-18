@@ -4,6 +4,8 @@ import {
   buildProtectedFile,
   findProtectedBox,
   openPayload,
+  MIN_OPEN_ITERATIONS,
+  MAX_OPEN_ITERATIONS,
   protectedNotice,
   readPasswordProtection,
   sealPayload,
@@ -28,14 +30,14 @@ test('Protect with password: inputs are validated', () => {
   assert.throws(() => readSecurity({ method: 'password', password: '123' }), /mindestens 10/);
 });
 
-test('Protect with password: encrypt, open, wrong password, size limit', () => {
-  const box = sealPayload({ hello: 'Grüße €' }, 'Ein langes Passwort', { iterations: 1000 });
-  assert.deepEqual(openPayload(box, 'Ein langes Passwort'), { hello: 'Grüße €' });
-  assert.throws(
-    () => openPayload(box, 'falsch falsch'),
+test('Protect with password: encrypt, open, wrong password, size limit', async () => {
+  const box = sealPayload({ hello: 'Grüße €' }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
+  assert.deepEqual(await openPayload(box, 'Ein langes Passwort'), { hello: 'Grüße €' });
+  await assert.rejects(
+    openPayload(box, 'falsch falsch'),
     err => err.code === 'protected_wrong_password' && err.statusCode === 403
   );
-  assert.throws(() => openPayload({ ...box, iter: 99_000_000 }, 'x'), /Unbekanntes Format/);
+  await assert.rejects(openPayload({ ...box, iter: 99_000_000 }, 'x'), /Unbekanntes Format/);
   assert.throws(
     () =>
       buildProtectedFile(
@@ -95,10 +97,32 @@ test('Protect with password: file is self-contained, decryptable in the browser 
     { filename: PROTECTED_FILENAME, content: Buffer.from(file) }
   ]);
   assert.equal(found.hint, 'Die drei Wörter vom Workshop');
-  assert.equal(openPayload(found.box, 'Pferd-Batterie-Klammer').html, '<p>Benutzer: <b>admin</b></p>');
+  assert.equal((await openPayload(found.box, 'Pferd-Batterie-Klammer')).html, '<p>Benutzer: <b>admin</b></p>');
   assert.equal(findProtectedBox([{ filename: 'x.html', content: '<script>levuvo-protected</script>' }]), null);
 
   const notice = protectedNotice({ sender: 'Peter', hint: '<b>x</b>' });
   assert.match(notice.text, /Geschuetzte-Nachricht\.html/);
   assert.match(notice.html, /&lt;b&gt;x&lt;\/b&gt;/);
+});
+
+test('Protect with password: hostile boxes are refused early and never block the event loop (AUD-012)', async () => {
+  const good = sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
+  for (const bad of [
+    { ...good, iter: MAX_OPEN_ITERATIONS + 1 },
+    { ...good, iter: 10 },
+    { ...good, iter: 1.5 },
+    { ...good, salt: 'x' },
+    { ...good, iv: 'AAAA' },
+    { ...good, ct: 'not base64!' },
+    { ...good, kdf: 'scrypt' },
+    null
+  ])
+    await assert.rejects(openPayload(bad, 'Ein langes Passwort'), { code: 'protected_invalid' });
+  // The derivation runs off the main thread: timers keep firing while a box is opened.
+  const slow = sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: 600_000 });
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 5);
+  await openPayload(slow, 'Ein langes Passwort');
+  clearInterval(timer);
+  assert.ok(ticks > 0, 'event loop stayed responsive');
 });

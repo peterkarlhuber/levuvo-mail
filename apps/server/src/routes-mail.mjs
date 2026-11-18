@@ -28,10 +28,18 @@ import { publicImapFailure } from './imap-diagnostics.mjs';
 import { fetchUidOne } from './imap-fetch.mjs';
 import { collectContacts, filterContacts } from './contacts.mjs';
 import { manageFolder, validateFolderInput } from './folders.mjs';
-import { scheduleMessage, listScheduled, sendDue, validateSendAt, stripHeaders } from './scheduled.mjs';
+import {
+  scheduleMessage,
+  findScheduled,
+  foundInSent,
+  listScheduled,
+  sendDue,
+  validateSendAt,
+  stripHeaders
+} from './scheduled.mjs';
 import { ManageSieveClient, loadSieve, saveSieve, validateSieveConfig } from './sieve.mjs';
 import { indexableFolders } from './local-index.mjs';
-import { hasReply, messageIdOf, snoozeMessages, validateWhen, wakeMessage } from './followups.mjs';
+import { hasReply, locateSnoozed, messageIdOf, snoozeMessages, validateWhen, wakeMessage } from './followups.mjs';
 
 const CONTACTS_TTL_MS = 15 * 60 * 1000;
 const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;
@@ -53,6 +61,8 @@ export function registerMailRoutes(ctx) {
   } = ctx;
   const contactsCache = new Map();
   const sentRequests = new Map();
+  const scheduleRequests = new Map();
+  ctx.onAccountChange?.(id => contactsCache.delete(id));
 
   // ------------------------------------------------------------ helpers
   async function knownContacts(account) {
@@ -707,40 +717,98 @@ export function registerMailRoutes(ctx) {
       return reply.code(403).send({ error: 'Versand ist in dieser Sitzung nicht freigegeben.' });
     if (request.headers['x-levuvo-action'] !== 'send-v1')
       return reply.code(403).send({ error: 'Lokaler Versand nicht autorisiert.' });
+    let input;
+    let replaceDraft;
+    let sendAt;
+    let followUp;
     try {
-      const input = validateSendPayload(request.body);
+      input = validateSendPayload(request.body);
       ctx.fromFor(account, input.from);
-      const replaceDraft = validateReplaceDraft(request.body?.replaceDraft);
-      const sendAt = validateSendAt(request.body?.sendAt);
-      const followUp = request.body?.followUp ? validateWhen(request.body.followUp, sendAt.getTime()) : null;
-      const { raw } = await buildOutgoing(account, input, {
-        keepBcc: true,
-        headers: { 'X-Levuvo-Send-At': sendAt.toISOString(), 'X-Levuvo-Draft-ID': input.requestId }
-      });
-      const stored = await withImap(client => scheduleMessage(client, raw, account.draftsFolder), account, {
-        retryConnect: false
-      });
-      nextSchedulerRun = Math.min(nextSchedulerRun, sendAt.getTime());
-      const retired = replaceDraft
-        ? await withImap(client => retireDraft(client, replaceDraft, account.draftsFolder), account, {
-            retryConnect: false
-          }).catch(() => ({ removed: false }))
-        : { removed: false };
-      listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
-      const messageId = messageIdOf(raw);
-      if (followUp && messageId)
-        await followups.addFollowup({
-          accountId: account.id,
-          messageId,
-          subject: input.subject,
-          to: [...input.to, ...input.cc],
-          due: followUp
-        });
-      return { scheduled: true, sendAt: sendAt.toISOString(), draftRemoved: retired.removed, ...stored };
+      replaceDraft = validateReplaceDraft(request.body?.replaceDraft);
+      sendAt = validateSendAt(request.body?.sendAt);
+      followUp = request.body?.followUp ? validateWhen(request.body.followUp, sendAt.getTime()) : null;
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+    // One request ID is one scheduled message: a parallel repeat waits for the first attempt,
+    // a later repeat finds the stored message by its X-Levuvo-Draft-ID (see scheduleMessage).
+    const key = accountScopedRequestKey(account, input.requestId);
+    if (!scheduleRequests.has(key)) {
+      const operation = scheduleOnce(account, input, { replaceDraft, sendAt, followUp }).finally(() =>
+        scheduleRequests.delete(key)
+      );
+      scheduleRequests.set(key, operation);
+    }
+    try {
+      return await scheduleRequests.get(key);
     } catch (err) {
       return errorResponse(reply, err);
     }
   });
+  async function scheduleOnce(account, input, { replaceDraft, sendAt, followUp }) {
+    const { raw } = await buildOutgoing(account, input, {
+      keepBcc: true,
+      headers: {
+        'X-Levuvo-Send-At': sendAt.toISOString(),
+        'X-Levuvo-Draft-ID': input.requestId,
+        'X-Levuvo-Scheduler': ctx.instanceId
+      }
+    });
+    let stored;
+    try {
+      stored = await withImap(
+        client => scheduleMessage(client, raw, account.draftsFolder, { draftId: input.requestId }),
+        account,
+        { retryConnect: false }
+      );
+    } catch (err) {
+      if (!err.uncertain) throw err;
+      // The APPEND answer was lost: look on a fresh connection whether the server stored it.
+      let found;
+      try {
+        found = await withImap(client => findScheduled(client, input.requestId, account.draftsFolder), account, {
+          retryConnect: false
+        });
+      } catch {
+        diagnostics.record('scheduled', 'store_unconfirmed');
+        throw Object.assign(
+          new Error(
+            'Ob die geplante Nachricht gespeichert wurde, ist unklar. Bitte zuerst im Ordner „Entwürfe“ nachsehen, bevor du sie erneut planst.'
+          ),
+          { statusCode: 502, code: 'schedule_unconfirmed' }
+        );
+      }
+      if (!found)
+        throw Object.assign(new Error('Speichern der geplanten Nachricht fehlgeschlagen.'), {
+          statusCode: 502,
+          code: 'schedule_failed'
+        });
+      stored = found;
+    }
+    nextSchedulerRun = Math.min(nextSchedulerRun, sendAt.getTime());
+    const retired = replaceDraft
+      ? await withImap(client => retireDraft(client, replaceDraft, account.draftsFolder), account, {
+          retryConnect: false
+        }).catch(() => ({ removed: false }))
+      : { removed: false };
+    listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
+    const messageId = messageIdOf(raw);
+    if (followUp && messageId && !stored.existing)
+      await followups.addFollowup({
+        accountId: account.id,
+        messageId,
+        subject: input.subject,
+        to: [...input.to, ...input.cc],
+        due: followUp
+      });
+    return {
+      scheduled: true,
+      sendAt: sendAt.toISOString(),
+      draftRemoved: retired.removed,
+      folder: stored.folder,
+      uid: stored.uid
+    };
+  }
   api.get('/api/scheduled', async (request, reply) => {
     try {
       return await withImap(client => listScheduled(client, request.mailAccount.draftsFolder), request.mailAccount);
@@ -771,7 +839,7 @@ export function registerMailRoutes(ctx) {
         });
       let message;
       try {
-        message = openPayload(found.box, password);
+        message = await openPayload(found.box, password);
       } catch (err) {
         const count = (attempt?.count || 0) + 1;
         protectedAttempts.set(key, { count, until: count >= 5 ? Date.now() + 60_000 : 0 });
@@ -812,7 +880,7 @@ export function registerMailRoutes(ctx) {
           code: 'unsubscribe_missing'
         });
       if (info.oneClick) {
-        await oneClickUnsubscribe(info.http, { fetchImpl: ctx.fetchImpl });
+        await oneClickUnsubscribe(info.http, ctx.unsubscribeOptions || {});
         diagnostics.record('unsubscribe', 'one-click');
         return { done: true, method: 'one-click' };
       }
@@ -849,13 +917,35 @@ export function registerMailRoutes(ctx) {
       if (!validFolder(folder) || !uids.length || uids.length > 200 || !uids.every(validUid))
         throw Object.assign(new Error('Ungültige Anfrage.'), { statusCode: 400 });
       const until = validateWhen(request.body?.until);
-      const result = await withImap(client => snoozeMessages(client, { folder, uids }), account, {
-        retryConnect: false
-      });
-      const added = await followups.addSnoozed(account.id, folder, result, until);
+      // Journal first: the tracking entries are stored as `pending` before the MOVE and
+      // completed after it; runFollowups settles entries a crash left pending.
+      let pending = [];
+      let result;
+      try {
+        result = await withImap(
+          client =>
+            snoozeMessages(client, {
+              folder,
+              uids,
+              beforeMove: async plan => {
+                pending = await followups.addSnoozed(account.id, folder, plan, until, {
+                  state: 'pending',
+                  createdAt: new Date().toISOString()
+                });
+              }
+            }),
+          account,
+          { retryConnect: false }
+        );
+      } catch (err) {
+        if (pending.length && err.moveRefused)
+          await followups.removeSnoozedMany(pending.map(p => p.id)).catch(() => {});
+        throw err;
+      }
+      await followups.finishSnoozed(pending, result).catch(() => diagnostics.record('snooze', 'journal_pending'));
       listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
       if (ctx.watch) void watchers.refresh(account.id);
-      return { snoozed: result.items.length, until, folder: result.folder, ids: added.map(a => a.id) };
+      return { snoozed: result.items.length, until, folder: result.folder, ids: pending.map(a => a.id) };
     } catch (err) {
       return errorResponse(reply, err);
     }
@@ -869,8 +959,15 @@ export function registerMailRoutes(ctx) {
     if (!entry) return reply.code(404).send({ error: 'Eintrag nicht gefunden.' });
     try {
       const result = await withImap(client => wakeMessage(client, entry), request.mailAccount, { retryConnect: false });
+      // Asked for by the user: the entry goes either way, but a message that was not found is
+      // reported instead of being acknowledged as returned.
       await followups.removeSnoozed(entry.id);
       listCache.deleteWhere(k => k.startsWith(`${request.mailAccount.id}|`));
+      if (!result.woke)
+        return reply.code(404).send({
+          error: 'Die Nachricht wurde im Ordner „Zurückgestellt“ nicht gefunden. Die Erinnerung wurde entfernt.',
+          code: result.reason
+        });
       return result;
     } catch (err) {
       return errorResponse(reply, err);
@@ -902,14 +999,50 @@ export function registerMailRoutes(ctx) {
     return { ok: true };
   });
 
+  const PENDING_SNOOZE_MS = 2 * 60_000;
+  const MISSING_RETRY_MS = 60 * 60_000;
+  let followingUp = false;
   async function runFollowups() {
+    if (followingUp) return;
+    followingUp = true;
+    try {
+      await followupPass();
+    } finally {
+      followingUp = false;
+    }
+  }
+  async function followupPass() {
     const now = Date.now();
     for (const account of ctx.accounts().filter(a => a.imap.configured)) {
-      for (const entry of followups.snoozed(account.id).filter(s => Date.parse(s.until) <= now)) {
+      // Entries a crash or a write error left `pending` (MOVE outcome not recorded).
+      for (const entry of followups
+        .snoozed(account.id)
+        .filter(s => s.state === 'pending' && now - Date.parse(s.createdAt || 0) > PENDING_SNOOZE_MS)) {
+        try {
+          const found = await withImap(client => locateSnoozed(client, entry), account, { retryConnect: false });
+          if (found?.where === 'snoozed')
+            await followups.updateSnoozed(entry.id, {
+              state: 'snoozed',
+              snoozeUid: found.uid,
+              uidValidity: found.uidValidity
+            });
+          else if (found?.where === 'original') await followups.removeSnoozed(entry.id); // never moved
+          diagnostics.record('snooze', `pending_${found?.where || 'unknown'}`);
+        } catch {
+          diagnostics.record('snooze', 'pending_check_failed');
+        }
+      }
+      for (const entry of followups
+        .snoozed(account.id)
+        .filter(
+          s => Date.parse(s.until) <= now && !(s.missingAt && now - Date.parse(s.missingAt) < MISSING_RETRY_MS)
+        )) {
         try {
           const result = await withImap(client => wakeMessage(client, entry), account, { retryConnect: false });
-          // Gone (e.g. deleted in webmail): nothing to bring back.
-          if (result.woke || result.reason === 'message_missing') await followups.removeSnoozed(entry.id);
+          if (result.woke) await followups.removeSnoozed(entry.id);
+          // Not found: the entry stays (shown in the app) and is retried hourly; an uncertain
+          // lookup must never make a reminder disappear.
+          else await followups.updateSnoozed(entry.id, { missingAt: new Date(now).toISOString() });
           diagnostics.record('snooze', result.woke ? 'woke' : result.reason);
           listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
           if (ctx.watch) void watchers.refresh(account.id);
@@ -989,9 +1122,20 @@ export function registerMailRoutes(ctx) {
 
   // ------------------------------------------------------------ background jobs
   let nextSchedulerRun = 0;
+  let scheduling = false;
   let indexing = false;
+  const scheduleClaims = new Map(); // account id → claims seen on the server (lease tracking)
   async function runScheduler() {
-    if (Date.now() < nextSchedulerRun) return;
+    // One run at a time: a slow SMTP server must not let the 30 s interval start a second run.
+    if (scheduling || Date.now() < nextSchedulerRun) return;
+    scheduling = true;
+    try {
+      await schedulerPass();
+    } finally {
+      scheduling = false;
+    }
+  }
+  async function schedulerPass() {
     let next = Date.now() + 10 * 60 * 1000;
     for (const account of ctx.accounts().filter(a => a.imap.configured && a.smtp.configured)) {
       try {
@@ -999,6 +1143,10 @@ export function registerMailRoutes(ctx) {
           client =>
             sendDue(client, {
               preferredDrafts: account.draftsFolder,
+              instanceId: ctx.instanceId,
+              claims: scheduleClaims.get(account.id) || scheduleClaims.set(account.id, new Map()).get(account.id),
+              wasSent: messageId =>
+                withImap(c => foundInSent(c, messageId, account.sentFolder), account, { retryConnect: false }),
               submit: async (recipients, raw) => {
                 const smtp = await ctx.smtpConfigFor(account);
                 await submitEmail(smtp, { to: recipients, cc: [], bcc: [] }, raw, ctx.smtpFactory(smtp));
@@ -1009,7 +1157,11 @@ export function registerMailRoutes(ctx) {
           account,
           { retryConnect: false }
         );
-        for (const r of result.results) diagnostics.record('scheduled', r.sent ? 'sent' : r.retry ? 'retry' : 'failed');
+        for (const r of result.results)
+          diagnostics.record(
+            'scheduled',
+            r.confirmed ? 'confirmed' : r.sent ? 'sent' : r.retry ? 'retry' : r.uncertain ? 'uncertain' : 'failed'
+          );
         if (result.next) next = Math.min(next, Date.parse(result.next));
       } catch {
         diagnostics.record('scheduled', 'check_failed');
