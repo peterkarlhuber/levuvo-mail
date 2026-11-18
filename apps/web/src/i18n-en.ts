@@ -1368,5 +1368,69 @@ export const EN: Record<string, string> = {
   '1 Tracker blockiert': '1 tracker blocked',
   '{count} Tracker blockiert': '{count} trackers blocked',
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
-    'Tracking pixels removed, even when images are loaded: {hosts}'
+    'Tracking pixels removed, even when images are loaded: {hosts}',
+  Sicherung: 'Backup',
+  'Mindestens {count} Zeichen.': 'At least {count} characters.',
+  'Die Passwörter stimmen nicht überein.': 'The passwords do not match.',
+  'Sicherung erstellt. Bewahre sie an einem zweiten Ort auf.': 'Backup created. Keep it in a second place.',
+  'Das ist keine Levuvo-Sicherung.': 'This is not a Levuvo backup.',
+  'Sicherung wiederherstellen?': 'Restore backup?',
+  'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.':
+    'Settings, accounts, local contacts and calendar, templates, snoozed messages, own keys and assistant data on this device are replaced by the backup from {date}. The current data is kept as a safety copy first. Levuvo restarts afterwards.',
+  Wiederherstellen: 'Restore',
+  'Wiederherstellung abgebrochen. Es wurde nichts geändert.': 'Restore cancelled. Nothing was changed.',
+  '{count} E-Mail-Konten (ohne Passwörter)': '{count} mail accounts (without passwords)',
+  '{count} Kalender-/Kontaktkonten (ohne Passwörter)': '{count} calendar/contacts accounts (without passwords)',
+  '{count} Termine in {calendars} lokalen Kalendern': '{count} events in {calendars} local calendars',
+  '{count} lokale Kontakte': '{count} local contacts',
+  '{count} Vorlagen': '{count} templates',
+  '{count} Wiedervorlagen und {followups} Antwort-Erinnerungen':
+    '{count} snoozed messages and {followups} reply reminders',
+  '{count} eigene Schlüssel (PGP/S/MIME)': '{count} own keys (PGP/S/MIME)',
+  'Einstellungen und Protokoll des Assistenten': 'Assistant settings and log',
+  'Der Schlüsselbund ist nicht verfügbar. Sichern und Wiederherstellen sind erst möglich, wenn er erreichbar ist.':
+    'The keychain is not available. Backup and restore work once it can be reached.',
+  'Wiederhergestellt aus der Sicherung vom {date}. Passwörter und Anmeldungen bitte unter Konten neu eingeben, falls nötig.':
+    'Restored from the backup of {date}. If needed, enter passwords and sign-ins again under Accounts.',
+  'Wiederherstellung bereit': 'Restore ready',
+  'Die Sicherung vom {date} wurde geprüft. Sie wird beim Neustart übernommen; bis dahin sind keine Änderungen möglich.':
+    'The backup from {date} was checked. It is applied when Levuvo restarts; until then, nothing can be changed.',
+  'Bitte Levuvo jetzt beenden und neu starten.': 'Please quit and restart Levuvo now.',
+  'Jetzt neu starten': 'Restart now',
+  'Sicherung erstellen': 'Create backup',
+  'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.':
+    "Backs up everything that exists only on this device: settings, accounts (without passwords), local contacts, the local calendar with attachments, templates, snoozed messages, own PGP/S/MIME keys and the assistant's data. The file is encrypted with your password (AES-256). Without this password it cannot be opened, not even by Levuvo.",
+  'Passwort für die Sicherung': 'Password for the backup',
+  'Passwort wiederholen': 'Repeat password',
+  'Speichere die Datei an einem zweiten Ort (USB-Stick, NAS, Cloud-Ordner) und notiere das Passwort sicher. Passwörter der Postfächer, Anmeldungen und API-Schlüssel sind nicht enthalten; der Suchindex wird neu aufgebaut.':
+    'Store the file in a second place (USB stick, NAS, cloud folder) and keep the password safe. Mailbox passwords, sign-ins and API keys are not included; the search index is rebuilt.',
+  'Sicherung speichern': 'Save backup',
+  'Wiederherstellen oder auf neuen Rechner umziehen': 'Restore or move to a new computer',
+  'Wähle eine Levuvo-Sicherung (.levuvo) und gib ihr Passwort ein. Die Daten werden geprüft und beim Neustart übernommen. Danach die Passwörter der Konten einmal neu eingeben.':
+    'Choose a Levuvo backup (.levuvo) and enter its password. The data is checked and applied when Levuvo restarts. Afterwards, enter the account passwords once more.',
+  'Sicherungsdatei wählen': 'Choose backup file',
+  'Passwort der Sicherung': 'Backup password',
+  'Ungültiges Passwort.': 'Invalid password.',
+  'Das Passwort braucht mindestens 12 Zeichen.': 'The password needs at least 12 characters.',
+  'Eine Datei auf diesem Gerät ist beschädigt. Die Sicherung wurde nicht erstellt.':
+    'A file on this device is damaged. The backup was not created.',
+  'Kalender, Kontakte oder Aufgaben auf diesem Gerät sind gesperrt (Schlüsselbund). Die Sicherung wäre unvollständig und wurde nicht erstellt.':
+    'Calendar, contacts or tasks on this device are locked (keychain). The backup would be incomplete and was not created.',
+  'Die Daten sind zu groß für eine Sicherung.': 'The data is too large for a backup.',
+  'Der Schlüsselbund ist nicht verfügbar; die privaten Schlüssel könnten nicht gesichert werden.':
+    'The keychain is not available; the private keys could not be backed up.',
+  'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.':
+    'This backup comes from a newer version of Levuvo. Please update first.',
+  'Die Sicherung ist beschädigt.': 'The backup is damaged.',
+  'Falsches Passwort oder beschädigte Sicherung.': 'Wrong password or damaged backup.',
+  'Der Schlüssel für Kalender, Kontakte oder Aufgaben fehlt im Schlüsselbund. Die Wiederherstellung wurde abgebrochen.':
+    'The key for calendar, contacts or tasks is missing from the keychain. The restore was cancelled.',
+  'Der Schlüsselbund des Systems ist nicht verfügbar. Ohne ihn ist keine Wiederherstellung möglich.':
+    'The system keychain is not available. Without it, no restore is possible.',
+  'Keine Sicherungsdatei ausgewählt.': 'No backup file selected.',
+  'Es wartet keine Wiederherstellung.': 'No restore is waiting.',
+  'Eine Wiederherstellung wartet auf den Neustart von Levuvo. Bis dahin sind keine Änderungen möglich.':
+    'A restore is waiting for Levuvo to restart. Until then, nothing can be changed.',
+  'Zurück zur Einrichtung': 'Back to setup',
+  'Umzug von einem anderen Rechner? Sicherung wiederherstellen': 'Moving from another computer? Restore a backup'
 };
