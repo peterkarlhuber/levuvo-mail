@@ -708,6 +708,8 @@ const TOOL_NAME = /^[a-z][a-z0-9_]{2,48}$/;
  *
  * A tool: { name, description, level: 'read'|'draft'|'organize'|'full', inputSchema (JSON schema object),
  *   readOnly?: boolean, run: async (args, agent) => string, approval?: string }
+ * `agent.cloud` is false only for the built-in assistant running a local model; external agents and cloud
+ * models count as cloud, so content that must stay local has to be left out when it is true.
  * `run` returns the text for the agent; mail or other third-party content must be wrapped with
  * frameUntrusted(). With `approval`, `run` returns a payload instead, which waits for the user's approval;
  * the type must be built in (send, event, contact, trash) or registered with

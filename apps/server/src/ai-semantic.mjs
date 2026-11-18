@@ -72,8 +72,37 @@ const passage = e =>
  * @param {object} o.ai          AI service (run, get)
  * @param {object} [o.vectors]   vector store (defaults to memory)
  */
-export function createSemanticIndex({ localIndex, ai, vectors = createMemoryVectorStore(), logger = () => {} }) {
+/** The encrypted vector store of the local index when it has one (SQLite), else memory. */
+export function vectorStoreFor(localIndex) {
+  if (typeof localIndex?.putVectors !== 'function') return createMemoryVectorStore();
+  return {
+    persistent: true,
+    putVectors: (id, model, items) => localIndex.putVectors(id, model, items),
+    searchVectors: (id, model, vector, opts) => localIndex.searchVectors(id, model, vector, opts),
+    dropVectors: (id, model) => localIndex.dropVectors(id, model)
+    // Removed messages: the index deletes their vectors itself (tombstones).
+  };
+}
+
+export function createSemanticIndex({
+  localIndex,
+  ai,
+  vectors = vectorStoreFor(localIndex),
+  logger = () => {},
+  stateFile = null
+}) {
   const state = new Map(); // id -> { model, generation, syncedAt, running }
+  // Progress survives a restart only together with persistent vectors.
+  const persisted = vectors.persistent && stateFile;
+  if (persisted)
+    for (const [id, v] of Object.entries(stateFile.get().accounts || {}))
+      state.set(id, { model: v.model, generation: v.generation, syncedAt: v.syncedAt, running: null });
+  const saveState = async () => {
+    if (!persisted) return;
+    const accounts = {};
+    for (const [id, v] of state) accounts[id] = { model: v.model, generation: v.generation, syncedAt: v.syncedAt };
+    await stateFile.save({ accounts }).catch(() => {});
+  };
 
   function model() {
     return ai.get().embedModel;
@@ -129,6 +158,7 @@ export function createSemanticIndex({ localIndex, ai, vectors = createMemoryVect
       }
       await flush();
       state.set(id, { model: m, generation: status.generation, syncedAt: started, running: null });
+      await saveState();
       if (count) {
         logger(`Semantic index ${id}: ${count} messages embedded`);
         void ai.log?.add({ type: 'index', kind: 'embed', accountId: id, count, model: m });
@@ -181,6 +211,7 @@ export function createSemanticIndex({ localIndex, ai, vectors = createMemoryVect
       for (const [key, s] of state) if (!id || key === id) if (s.model) await vectors.dropVectors(key, s.model);
       if (id) state.delete(id);
       else state.clear();
+      await saveState();
     },
     vectors
   };

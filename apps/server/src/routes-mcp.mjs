@@ -86,13 +86,25 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
   }
 
   /** A token for one run of the built-in assistant; valid for at most 20 minutes. */
-  async function internalAgent({ name = 'Levuvo Mail Assistant', level = 'draft', hiddenAccounts = [] } = {}) {
+  async function internalAgent({
+    name = 'Levuvo Mail Assistant',
+    level = 'draft',
+    hiddenAccounts = [],
+    cloud = true
+  } = {}) {
     if (!LEVELS.includes(level)) throw new TypeError(`unknown level ${level}`);
     if (!http.running) await http.start(file.get().enabled ? file.get().port : 0);
     const token = `lvm_${randomBytes(32).toString('hex')}`;
     const key = hashToken(token);
     ephemeral.set(key, {
-      agent: { id: `internal-${key.slice(0, 12)}`, name, level, autoSend: false, hiddenAccounts: [...hiddenAccounts] },
+      agent: {
+        id: `internal-${key.slice(0, 12)}`,
+        name,
+        level,
+        autoSend: false,
+        hiddenAccounts: [...hiddenAccounts],
+        cloud: cloud !== false
+      },
       expires: Date.now() + 20 * 60_000
     });
     return {
@@ -220,7 +232,8 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
         name: skill ? `Levuvo Mail Assistant: ${skill.name}` : 'Levuvo Mail Assistant',
         level: skill?.level === 'read' ? 'read' : 'draft',
         // A cloud model never sees accounts marked "No cloud AI".
-        hiddenAccounts: CLOUD_PROVIDERS.includes(s.provider) ? s.noCloudAccounts || [] : []
+        hiddenAccounts: CLOUD_PROVIDERS.includes(s.provider) ? s.noCloudAccounts || [] : [],
+        cloud: CLOUD_PROVIDERS.includes(s.provider)
       });
       const before = approvals.list().length;
       const result = await ctx.ai.agent(

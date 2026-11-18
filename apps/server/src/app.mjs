@@ -470,6 +470,8 @@ export async function createMailServer({
   }
 
   const aiSettings = await createJsonFile(path.join(dir, 'ai.json'), DEFAULT_AI_SETTINGS);
+  // Progress of the semantic index (model, index generation, last run) per account; no content.
+  const semanticState = await createJsonFile(path.join(dir, 'ai-semantic.json'), { accounts: {} });
   let ai;
   const sidecar =
     aiSidecar ||
@@ -491,6 +493,7 @@ export async function createMailServer({
     ai,
     internalRequest,
     aiForgetHooks: [],
+    semanticState,
     desktop,
     env: effectiveEnv,
     logger,

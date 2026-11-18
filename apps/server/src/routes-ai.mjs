@@ -219,7 +219,12 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  const semantic = createSemanticIndex({ localIndex: ctx.localIndex, ai, logger: ctx.logger });
+  const semantic = createSemanticIndex({
+    localIndex: ctx.localIndex,
+    ai,
+    logger: ctx.logger,
+    stateFile: ctx.semanticState
+  });
   ctx.semantic = semantic;
   ctx.aiForgetHooks.push(() => semantic.forget());
   // Keep the vectors close to the index: every 10 minutes, only while AI search is switched on.
