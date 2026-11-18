@@ -16,6 +16,7 @@ import type { ComposeInitial, OutgoingPayload } from './Composer';
 import MailInstance from './MailInstance';
 import CommandPalette from './CommandPalette';
 import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
+import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
 import { useT } from './i18n';
@@ -93,6 +94,7 @@ function useErrorReporting() {
 function Shell() {
   useDocumentPrefs();
   useErrorReporting();
+  useBundleAssist();
   const { t, locale } = useT();
   const { toast, updateToast, dismiss } = useUi();
   const [prefs] = usePrefs();

@@ -284,6 +284,23 @@ test('assistant helpers: own part of a draft and default event end', async () =>
   assert.equal(defaultEnd('2026-11-23T14:00', false), '2026-11-23T15:00');
   assert.equal(defaultEnd('2026-11-23T23:30', false), '2026-11-23T23:59');
   assert.equal(defaultEnd('2026-11-23', true), '2026-11-23');
+  const { bundleFromClassification } = await import('../src/ai-utils.ts');
+  const mapped = bundleFromClassification([
+    { id: '4', bundle: 'newsletters', from_person: false },
+    { id: '5', bundle: 'finance', from_person: true },
+    { id: '6', bundle: 'work', from_person: false },
+    { id: 'x', bundle: 'notifications' },
+    { id: '7', bundle: 'notifications' }
+  ]);
+  assert.deepEqual(
+    [...mapped],
+    [
+      [4, 'newsletter'],
+      [5, null],
+      [6, null],
+      [7, 'notification']
+    ]
+  );
 });
 
 test('bundle suggestions: optional second opinion over the local rules', () => {

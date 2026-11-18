@@ -280,5 +280,6 @@ export const AI_EN: Record<string, string> = {
   'In Worten, z. B. „Rechnungen von Lieferanten in den Ordner Buchhaltung“':
     'In words, e.g. “invoices from suppliers to the Accounting folder”',
   'Regel in Worten beschreiben': 'Describe a rule in words',
-  'Regel vorschlagen': 'Suggest rule'
+  'Regel vorschlagen': 'Suggest rule',
+  'Vom Assistenten einsortiert': 'Sorted by the assistant'
 };

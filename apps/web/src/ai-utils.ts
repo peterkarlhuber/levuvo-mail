@@ -14,3 +14,21 @@ export function defaultEnd(start: string, allDay: boolean) {
   const d = new Date(Date.UTC(2000, 0, 1, Number(m[2]) + 1, Number(m[3])));
   return Number(m[2]) >= 23 ? `${m[1]}T23:59` : `${m[1]}T${d.toISOString().slice(11, 16)}`;
 }
+
+/** Inbox bundles of the app (types.ts `Bundle`) for the assistant's categories; others stay in the inbox. */
+const AI_BUNDLES: Record<string, 'newsletter' | 'invoice' | 'notification'> = {
+  newsletters: 'newsletter',
+  finance: 'invoice',
+  notifications: 'notification'
+};
+
+/** Maps `classify` items to a bundle per UID. Mail written by a person always stays in the inbox. */
+export function bundleFromClassification(items: { id?: unknown; bundle?: unknown; from_person?: unknown }[]) {
+  const out = new Map<number, 'newsletter' | 'invoice' | 'notification' | null>();
+  for (const item of Array.isArray(items) ? items : []) {
+    const uid = Number(item?.id);
+    if (!Number.isSafeInteger(uid) || uid <= 0) continue;
+    out.set(uid, item.from_person === true ? null : (AI_BUNDLES[String(item.bundle)] ?? null));
+  }
+  return out;
+}
