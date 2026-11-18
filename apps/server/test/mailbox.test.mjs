@@ -46,13 +46,14 @@ function fakeClient(n, { gaps = [] } = {}) {
     },
     async search(query) {
       log.push(['search', query]);
+      let list = uids;
       if (query.uid) {
-        const [, max] = query.uid.split(':').map(Number);
-        return uids.filter(u => u <= max);
+        const [min, max] = query.uid.split(':').map(Number);
+        list = list.filter(u => u >= min && u <= max);
       }
-      if (query.seen === false) return uids.filter(u => u % 2);
-      if (query.text) return uids.filter(u => u % 3 === 0);
-      return uids;
+      if (query.seen === false) list = list.filter(u => u % 2);
+      if (query.text) list = list.filter(u => u % 3 === 0);
+      return list;
     }
   };
 }

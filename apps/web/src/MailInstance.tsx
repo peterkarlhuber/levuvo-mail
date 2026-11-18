@@ -137,6 +137,8 @@ export default function MailInstance({
   const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
   const [filter, setFilter] = useState<Filter>('all');
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
+  // Paging cursor of the local index search ("everywhere"); null when there is no further page.
+  const [localCursor, setLocalCursor] = useState<string | null>(null);
   const [searchBusy, setSearchBusy] = useState(false);
   const searchTimer = useRef<number | null>(null);
   const searchAbort = useRef<AbortController | null>(null);
@@ -366,7 +368,26 @@ export default function MailInstance({
   }, [accountId]);
 
   const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMore || nextBeforeUid === null || unified || everywhere) return;
+    if (everywhere) {
+      if (!hasMore || loadingMore || localCursor === null) return;
+      setLoadingMore(true);
+      const seq = requestSeq.current;
+      try {
+        const data = await getJson<{ messages: Message[]; total: number; nextCursor?: string | null }>(
+          `/api/search/local?q=${encodeURIComponent(query.trim())}&limit=${PAGE}&cursor=${encodeURIComponent(localCursor)}`
+        );
+        if (seq !== requestSeq.current) return;
+        setMessages(previous => [...previous, ...data.messages]);
+        setLocalCursor(data.nextCursor ?? null);
+        setHasMore(Boolean(data.nextCursor));
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoadingMore(false);
+      }
+      return;
+    }
+    if (!hasMore || loadingMore || nextBeforeUid === null || unified) return;
     setLoadingMore(true);
     const seq = requestSeq.current;
     try {
@@ -380,7 +401,19 @@ export default function MailInstance({
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, nextBeforeUid, unified, everywhere, searching, folder, query, accountId, applyPage]);
+  }, [
+    hasMore,
+    loadingMore,
+    nextBeforeUid,
+    unified,
+    everywhere,
+    localCursor,
+    searching,
+    folder,
+    query,
+    accountId,
+    applyPage
+  ]);
 
   // Live updates: the IDLE snapshot replaces the top of the inbox list.
   const appliedSnapshot = useRef(0);
@@ -544,15 +577,16 @@ export default function MailInstance({
       searchAbort.current = controller;
       try {
         if (nextScope === 'everywhere') {
-          const data = await getJson<{ messages: Message[]; total: number }>(
-            `/api/search/local?q=${encodeURIComponent(term)}`,
+          const data = await getJson<{ messages: Message[]; total: number; nextCursor?: string | null }>(
+            `/api/search/local?q=${encodeURIComponent(term)}&limit=${PAGE}`,
             undefined,
             controller.signal
           );
           if (controller.signal.aborted || seq !== requestSeq.current) return;
           setSearchTotal(data.total);
           setMessages(data.messages);
-          setHasMore(false);
+          setLocalCursor(data.nextCursor ?? null);
+          setHasMore(Boolean(data.nextCursor));
           setNextBeforeUid(null);
         } else {
           const data = await getJson<MessagePage>(
@@ -1619,7 +1653,7 @@ export default function MailInstance({
               bulkBusy={actionBusy}
               conversations={prefs.conversations && !everywhere}
               unified={unified || everywhere}
-              hasMore={hasMore && (!query.trim() || searching) && !everywhere}
+              hasMore={hasMore && (!query.trim() || searching || everywhere)}
               loadingMore={loadingMore}
               draggable={writeEnabled}
               folder={folder}
