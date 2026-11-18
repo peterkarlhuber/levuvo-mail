@@ -1714,6 +1714,28 @@ h4 {
   visibility: hidden;
 }
 
+/* Detected appointments (flight, hotel, dates in the text) */
+.event-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-suggestion {
+  position: relative;
+}
+.event-suggestion-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.event-suggestion-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success, var(--text-2));
+  font-weight: 600;
+}
+
 /* Invitation card */
 .invitation-card {
   display: flex;
@@ -2734,6 +2756,7 @@ h4 {
   justify-content: space-between;
 }
 .managed-form label,
+.backup-fields label,
 .event-editor label,
 .contact-form label {
   display: flex;
@@ -2753,6 +2776,10 @@ h4 {
 }
 .managed-form input[readonly] {
   opacity: 0.7;
+}
+.backup-fields {
+  max-width: 560px;
+  margin-bottom: 10px;
 }
 .managed-field-grid {
   display: grid;
@@ -3497,6 +3524,9 @@ h4 {
   margin-top: 30vh;
 }
 .onboarding-retry {
+  align-self: flex-start;
+}
+.onboarding-restore {
   align-self: flex-start;
 }
 .onboarding-motto {

@@ -342,6 +342,13 @@ async function boot() {
     desktop: true,
     sessionSecret: secret,
     env: process.env,
+    // After a restore was staged: start again so the restored data is loaded from the beginning.
+    onRestartRequested: () => {
+      void shutdown().finally(() => {
+        app.relaunch();
+        app.quit();
+      });
+    },
     logger: msg => console.log(`[Levuvo Mail] ${msg}`)
   });
   const { address } = await mailServer.listen();
