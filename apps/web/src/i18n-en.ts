@@ -1806,5 +1806,6 @@ export const EN: Record<string, string> = {
   '{subject} einladen': 'Invite {subject}',
   '{subject} entfernen': 'Remove {subject}',
   'Rolle von {subject} ändern': 'Change the role of {subject}',
-  'Raum „{room}“: {action}': 'Space “{room}”: {action}'
+  'Raum „{room}“: {action}': 'Space “{room}”: {action}',
+  'Aufgaben filtern': 'Filter tasks'
 };

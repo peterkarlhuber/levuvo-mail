@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react';
 import { download } from './api';
+import { Button, Field, IconButton, Segmented } from './ui';
 import { useUi } from './ConfirmDialog';
 import { dateLabel, fullDateLabel, initials, prettySize } from './format';
 import { useT } from './i18n';
@@ -123,18 +124,15 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
         <div className="contacts-head">
           <h1>{t('Räume')}</h1>
           <div className="spaces-head-tools">
-            <button
-              className="icon-button"
+            <IconButton
               onClick={() => void syncNow()}
               disabled={syncing}
-              title={t('Jetzt abgleichen')}
-              aria-label={t('Jetzt abgleichen')}
-            >
-              <RefreshCcw size={16} className={syncing ? 'spin' : ''} />
-            </button>
-            <button className="btn primary small" onClick={() => setCreating(true)}>
+              label={t('Jetzt abgleichen')}
+              icon={<RefreshCcw size={16} className={syncing ? 'spin' : ''} />}
+            />
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
               <Plus size={14} /> {t('Neuer Raum')}
-            </button>
+            </Button>
           </div>
         </div>
         {error && <p className="banner error">{error}</p>}
@@ -279,12 +277,12 @@ function InvitationCard({
         <span className="muted">{t('Diese Einladung ist abgelaufen. Bitte um eine neue.')}</span>
       ) : (
         <div className="space-invite-actions">
-          <button className="btn primary small" disabled={busy} onClick={() => void accept()}>
+          <Button variant="primary" size="sm" disabled={busy} onClick={() => void accept()}>
             <Check size={14} /> {t('Beitreten')}
-          </button>
-          <button className="btn small ghost" disabled={busy} onClick={() => void decline()}>
+          </Button>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => void decline()}>
             {t('Ablehnen')}
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -328,8 +326,7 @@ function CreateSpace({
       }}
     >
       <h2>{t('Neuer Raum')}</h2>
-      <label>
-        {t('Name')}
+      <Field label={t('Name')}>
         <input
           autoFocus
           value={name}
@@ -337,13 +334,11 @@ function CreateSpace({
           onChange={e => setName(e.target.value)}
           placeholder={t('z. B. Umbau Büro oder Kunde Müller')}
         />
-      </label>
-      <label>
-        {t('Beschreibung')}
+      </Field>
+      <Field label={t('Beschreibung')}>
         <textarea value={description} maxLength={2000} rows={3} onChange={e => setDescription(e.target.value)} />
-      </label>
-      <label>
-        {t('Abgleich über das Konto')}
+      </Field>
+      <Field label={t('Abgleich über das Konto')}>
         <select value={accountId} onChange={e => setAccountId(e.target.value)}>
           {configured.map(a => (
             <option key={a.id} value={a.id}>
@@ -352,7 +347,7 @@ function CreateSpace({
             </option>
           ))}
         </select>
-      </label>
+      </Field>
       <p className="muted">
         {t(
           'Änderungen werden Ende-zu-Ende-verschlüsselt als Mails von diesem Konto an die Mitglieder geschickt und landen dort im Ordner „Levuvo Spaces“.'
@@ -360,12 +355,12 @@ function CreateSpace({
       </p>
       {error && <p className="banner error">{error}</p>}
       <div className="space-form-actions">
-        <button type="button" className="btn ghost" onClick={onCancel}>
+        <Button variant="ghost" type="button" onClick={onCancel}>
           {t('Abbrechen')}
-        </button>
-        <button className="btn primary" disabled={busy || !name.trim() || !accountId}>
+        </Button>
+        <Button type="submit" variant="primary" disabled={busy || !name.trim() || !accountId}>
           {t('Raum anlegen')}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -578,9 +573,9 @@ function Notes({ detail, canEdit, run, op }: { detail: SpaceDetail; canEdit: boo
     <div className="space-split">
       <div className="space-side">
         {canEdit && (
-          <button className="btn small" onClick={() => void create()}>
+          <Button size="sm" onClick={() => void create()}>
             <Plus size={14} /> {t('Notiz')}
-          </button>
+          </Button>
         )}
         {detail.notes.map(n => (
           <button
@@ -600,9 +595,8 @@ function Notes({ detail, canEdit, run, op }: { detail: SpaceDetail; canEdit: boo
             <div className="space-note-head">
               <h3>{note.title || t('Ohne Titel')}</h3>
               {canEdit && (
-                <button
-                  className="icon-button"
-                  aria-label={t('Notiz löschen')}
+                <IconButton
+                  label={t('Notiz löschen')}
                   onClick={async () => {
                     if (
                       await ui.confirm({
@@ -614,9 +608,8 @@ function Notes({ detail, canEdit, run, op }: { detail: SpaceDetail; canEdit: boo
                     )
                       void op('note.delete', { id: note.id });
                   }}
-                >
-                  <Trash2 size={15} />
-                </button>
+                  icon={<Trash2 size={15} />}
+                />
               )}
             </div>
             <Suspense fallback={<LoaderCircle className="spin" size={16} />}>
@@ -685,9 +678,9 @@ function CommentThread({
             onChange={e => setText(e.target.value)}
             placeholder={t('Kommentar für die Mitglieder (nicht an Externe)')}
           />
-          <button className="btn small" disabled={!text.trim()}>
+          <Button type="submit" size="sm" disabled={!text.trim()}>
             {t('Kommentieren')}
-          </button>
+          </Button>
         </form>
       )}
     </div>
@@ -743,9 +736,9 @@ function Mails({
                 </ul>
               )}
               {canEdit && (
-                <button className="btn small ghost" onClick={() => void op('mail.remove', { id: m.id })}>
+                <Button variant="ghost" size="sm" onClick={() => void op('mail.remove', { id: m.id })}>
                   <X size={13} /> {t('Aus dem Raum entfernen')}
-                </button>
+                </Button>
               )}
               <CommentThread detail={detail} target={{ kind: 'mail', id: m.id }} canEdit={canEdit} op={op} />
             </div>
@@ -829,18 +822,21 @@ function Tasks({
           />
           <input type="date" value={due} onChange={e => setDue(e.target.value)} aria-label={t('Fällig')} />
           <MemberSelect detail={detail} value={assignee} onChange={setAssignee} label={t('Zuständig')} />
-          <button className="btn small primary" disabled={!title.trim()}>
+          <Button type="submit" variant="primary" size="sm" disabled={!title.trim()}>
             <Plus size={14} /> {t('Hinzufügen')}
-          </button>
+          </Button>
         </form>
       )}
-      <div className="segmented" role="group">
-        {(['all', 'mine', 'done'] as const).map(f => (
-          <button key={f} className={filter === f ? 'active' : ''} onClick={() => setFilter(f)}>
-            {f === 'all' ? t('Offen') : f === 'mine' ? t('Für mich') : t('Erledigt')}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label={t('Aufgaben filtern')}
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: 'all', label: t('Offen') },
+          { value: 'mine', label: t('Für mich') },
+          { value: 'done', label: t('Erledigt') }
+        ]}
+      />
       {!shown.length && <p className="muted">{t('Keine Aufgaben.')}</p>}
       <ul className="space-task-list">
         {shown.map(x => (
@@ -895,13 +891,11 @@ function Tasks({
                       <option value="normal">{t('Normal')}</option>
                       <option value="high">{t('Wichtig')}</option>
                     </select>
-                    <button
-                      className="icon-button"
-                      aria-label={t('Aufgabe löschen')}
+                    <IconButton
+                      label={t('Aufgabe löschen')}
                       onClick={() => void op('task.delete', { id: x.id })}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                      icon={<Trash2 size={14} />}
+                    />
                   </div>
                 )}
                 {x.notes && <p>{x.notes}</p>}
@@ -978,13 +972,13 @@ function Events({
             placeholder={t('Ort')}
             aria-label={t('Ort')}
           />
-          <label className="check">
+          <label className="space-check">
             <input type="checkbox" checked={everyone} onChange={e => setEveryone(e.target.checked)} />{' '}
             {t('Alle Mitglieder')}
           </label>
-          <button className="btn small primary" disabled={!title.trim() || !day}>
+          <Button type="submit" variant="primary" size="sm" disabled={!title.trim() || !day}>
             <Plus size={14} /> {t('Hinzufügen')}
-          </button>
+          </Button>
         </form>
       )}
       {!detail.events.length && <p className="muted">{t('Keine Termine.')}</p>}
@@ -1003,13 +997,11 @@ function Events({
                 : ''}
             </span>
             {canEdit && (
-              <button
-                className="icon-button"
-                aria-label={t('Termin löschen')}
+              <IconButton
+                label={t('Termin löschen')}
                 onClick={() => void op('event.delete', { id: ev.id })}
-              >
-                <Trash2 size={14} />
-              </button>
+                icon={<Trash2 size={14} />}
+              />
             )}
           </li>
         ))}
@@ -1081,8 +1073,8 @@ function Files({
         </select>
         {canEdit && (
           <>
-            <button
-              className="btn small"
+            <Button
+              size="sm"
               onClick={async () => {
                 const name = await ui.prompt({
                   title: t('Neuer Ordner'),
@@ -1093,7 +1085,7 @@ function Files({
               }}
             >
               <Plus size={14} /> {t('Ordner')}
-            </button>
+            </Button>
             <label className={`btn small primary ${busy ? 'disabled' : ''}`}>
               <Upload size={14} /> {t('Hochladen')}
               <input
@@ -1140,9 +1132,7 @@ function Files({
                   </span>
                 )}
               </div>
-              <button className="icon-button" aria-label={t('Herunterladen')} onClick={() => fetchFile(f.id)}>
-                <Download size={15} />
-              </button>
+              <IconButton label={t('Herunterladen')} onClick={() => fetchFile(f.id)} icon={<Download size={15} />} />
               {canEdit && (
                 <>
                   <label
@@ -1157,9 +1147,8 @@ function Files({
                       onChange={e => void upload(e.target.files, f.id).then(() => (e.target.value = ''))}
                     />
                   </label>
-                  <button
-                    className="icon-button"
-                    aria-label={t('Datei löschen')}
+                  <IconButton
+                    label={t('Datei löschen')}
                     onClick={async () => {
                       if (
                         await ui.confirm({
@@ -1171,9 +1160,8 @@ function Files({
                       )
                         void op('file.delete', { id: f.id });
                     }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                    icon={<Trash2 size={15} />}
+                  />
                 </>
               )}
             </li>
@@ -1217,9 +1205,9 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
             <option value="editor">{t('Bearbeiter')}</option>
             <option value="reader">{t('Leser')}</option>
           </select>
-          <button className="btn small primary" disabled={!email.includes('@')}>
+          <Button type="submit" variant="primary" size="sm" disabled={!email.includes('@')}>
             <Plus size={14} /> {t('Einladen')}
-          </button>
+          </Button>
         </form>
       )}
       {detail.owner && (
@@ -1256,8 +1244,10 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
                     <option value="editor">{t('Bearbeiter')}</option>
                     <option value="reader">{t('Leser')}</option>
                   </select>
-                  <button
-                    className="btn small ghost danger"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="danger"
                     onClick={async () => {
                       const ok = await ui.confirm({
                         title: t('{name} entfernen?', { name: m.name || m.email }),
@@ -1276,7 +1266,7 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
                     }}
                   >
                     {t('Entfernen')}
-                  </button>
+                  </Button>
                 </>
               )}
             </li>
@@ -1294,21 +1284,22 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
                     {i.expired ? t('abgelaufen') : t('gültig bis {date}', { date: dateLabel(i.expires) })}
                   </small>
                 </div>
-                <button
-                  className="btn small ghost"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => void run(() => spaces.post(`/${detail.id}/invite/revoke`, { email: i.email }))}
                 >
                   {t('Zurückziehen')}
-                </button>
+                </Button>
                 {i.expired && (
-                  <button
-                    className="btn small"
+                  <Button
+                    size="sm"
                     onClick={() =>
                       void run(() => spaces.post(`/${detail.id}/invite`, { email: i.email, role: i.role }))
                     }
                   >
                     {t('Erneut einladen')}
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}
@@ -1358,22 +1349,20 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
               void op('space.update', { name, description }, t('Gespeichert'));
             }}
           >
-            <label>
-              {t('Name')}
+            <Field label={t('Name')}>
               <input value={name} maxLength={120} onChange={e => setName(e.target.value)} />
-            </label>
-            <label>
-              {t('Beschreibung')}
+            </Field>
+            <Field label={t('Beschreibung')}>
               <textarea value={description} maxLength={2000} rows={3} onChange={e => setDescription(e.target.value)} />
-            </label>
+            </Field>
             <div className="space-form-actions">
-              <button className="btn primary small" disabled={!name.trim()}>
+              <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
                 {t('Speichern')}
-              </button>
+              </Button>
             </div>
           </form>
           <h4>{t('Levuvo Mail Assistant in diesem Raum')}</h4>
-          <label className="check">
+          <label className="space-check">
             <input
               type="checkbox"
               checked={detail.ai.enabled}
@@ -1381,7 +1370,7 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             />{' '}
             {t('Der Assistent darf diesen Raum lesen und Änderungen vorschlagen (jede Änderung erst nach Freigabe)')}
           </label>
-          <label className="check">
+          <label className="space-check">
             <input
               type="checkbox"
               checked={detail.ai.cloudAllowed}
@@ -1389,8 +1378,7 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             />{' '}
             {t('Inhalte dürfen auch an Cloud-Modelle und externe Agenten gehen (sonst nur lokales Modell)')}
           </label>
-          <label>
-            {t('Hinweise für den Assistenten')}
+          <Field label={t('Hinweise für den Assistenten')}>
             <textarea
               value={instructions}
               rows={3}
@@ -1398,11 +1386,11 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
               onChange={e => setInstructions(e.target.value)}
               placeholder={t('z. B. Ansprechpartner, Tonfall gegenüber dem Kunden')}
             />
-          </label>
+          </Field>
           <div className="space-form-actions">
-            <button className="btn small" onClick={() => void op('ai.settings', { instructions }, t('Gespeichert'))}>
+            <Button size="sm" onClick={() => void op('ai.settings', { instructions }, t('Gespeichert'))}>
               {t('Hinweise speichern')}
-            </button>
+            </Button>
           </div>
           {others.length > 0 && (
             <>
@@ -1420,8 +1408,8 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
                     </option>
                   ))}
                 </select>
-                <button
-                  className="btn small"
+                <Button
+                  size="sm"
                   disabled={!transferTo}
                   onClick={async () => {
                     if (
@@ -1435,13 +1423,14 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
                   }}
                 >
                   {t('Übergeben')}
-                </button>
+                </Button>
               </div>
             </>
           )}
           <h4>{t('Raum auflösen')}</h4>
-          <button
-            className="btn small danger"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={async () => {
               if (
                 await ui.confirm({
@@ -1457,14 +1446,15 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             }}
           >
             {t('Auflösen')}
-          </button>
+          </Button>
         </>
       )}
       {!detail.owner && active && (
         <>
           <h4>{t('Raum verlassen')}</h4>
-          <button
-            className="btn small danger"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={async () => {
               if (
                 await ui.confirm({
@@ -1480,14 +1470,15 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             }}
           >
             {t('Verlassen')}
-          </button>
+          </Button>
         </>
       )}
       {!active && detail.status !== 'joining' && (
         <>
           <h4>{t('Kopie auf diesem Gerät')}</h4>
-          <button
-            className="btn small danger"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={async () => {
               if (
                 await ui.confirm({
@@ -1501,7 +1492,7 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             }}
           >
             <Trash2 size={14} /> {t('Kopie löschen')}
-          </button>
+          </Button>
         </>
       )}
       <h4>{t('Abgleich')}</h4>
@@ -1510,12 +1501,12 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
           email: detail.email
         })}
       </p>
-      <button
-        className="btn small"
+      <Button
+        size="sm"
         onClick={() => void run(() => spaces.post(`/${detail.id}/resync`), t('Fehlende Inhalte werden angefragt.'))}
       >
         <RefreshCcw size={14} /> {t('Fehlendes anfragen')}
-      </button>
+      </Button>
     </div>
   );
 }
