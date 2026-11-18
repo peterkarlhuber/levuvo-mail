@@ -25,6 +25,9 @@ import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './
 const CalendarModule = lazy(() => import('./Calendar'));
 const ContactsModule = lazy(() => import('./Contacts'));
 const SettingsModule = lazy(() => import('./Settings'));
+const RestoreOnWelcome = lazy(() =>
+  import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
+);
 const SpacesModule = lazy(() => import('./Spaces'));
 
 type NotificationState = NotificationPermission | 'unsupported';
@@ -40,6 +43,7 @@ export type SettingsTab =
   | 'ai'
   | 'notifications'
   | 'privacy'
+  | 'backup'
   | 'help'
   | 'about';
 // Served from the IMAP IDLE cache on localhost, so a short interval is cheap and keeps "Live" honest.
@@ -97,6 +101,7 @@ function Shell() {
   const [loaded, setLoaded] = useState(false);
   const [accountsError, setAccountsError] = useState('');
   const [credentialsMissing, setCredentialsMissing] = useState(false);
+  const [restoreOnWelcome, setRestoreOnWelcome] = useState(false);
   const [active, setActive] = useState<{ id: string; openUid: number | null; openFolder?: string }>({
     id: 'primary',
     openUid: null
@@ -520,7 +525,20 @@ function Shell() {
               <RefreshCcw size={15} /> {t('Erneut prüfen')}
             </button>
           )}
-          <AccountSettings onChanged={reloadAccounts} onboarding={!credentialsMissing} />
+          {restoreOnWelcome ? (
+            <Suspense fallback={<LoaderCircle className="spin" size={16} />}>
+              <RestoreOnWelcome />
+            </Suspense>
+          ) : (
+            <AccountSettings onChanged={reloadAccounts} onboarding={!credentialsMissing} />
+          )}
+          {!credentialsMissing && (
+            <button className="link-button onboarding-restore" onClick={() => setRestoreOnWelcome(v => !v)}>
+              {restoreOnWelcome
+                ? t('Zurück zur Einrichtung')
+                : t('Umzug von einem anderen Rechner? Sicherung wiederherstellen')}
+            </button>
+          )}
           <p className="onboarding-motto">Less effort. More impact.</p>
         </div>
       </div>

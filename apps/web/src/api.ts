@@ -43,6 +43,7 @@ export type ActionKind =
   | 'calendar-v1'
   | 'contacts-v1'
   | 'crypto-v1'
+  | 'backup-v1'
   | 'ai-v1'
   | 'spaces-v1';
 
@@ -54,6 +55,31 @@ export async function postJson<T>(path: string, body: unknown, action: ActionKin
     body: JSON.stringify(body)
   });
   return parse<T>(res, 'Aktion fehlgeschlagen.');
+}
+
+/** POST that answers with a file (e.g. a backup); errors come as JSON like any other action. */
+export async function postForBlob(path: string, body: unknown, action: ActionKind): Promise<Blob> {
+  const res = await fetch(path, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json', 'X-Levuvo-Action': action },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) await parse<never>(res, 'Aktion fehlgeschlagen.');
+  return await res.blob();
+}
+
+/** Saves a blob as a file in the downloads folder (or asks where, depending on the system). */
+export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export const postAction = <T>(path: string, body: unknown, accountId: string) =>
