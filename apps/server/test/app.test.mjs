@@ -327,3 +327,52 @@ test('Every installation has a stable instance ID for scheduled sending', async 
   t.after(() => again.close());
   assert.equal(again.ctx.instanceId, s.ctx.instanceId);
 });
+
+test('AI and MCP: settings off by default, internal agent reaches the API with the same checks', async t => {
+  const { s } = await server(t);
+  const settings = await s.api.inject({ method: 'GET', url: '/api/ai/settings', headers: GET });
+  assert.equal(settings.statusCode, 200);
+  assert.equal(settings.json().enabled, false);
+  const run = await s.api.inject({
+    method: 'POST',
+    url: '/api/ai/run',
+    headers: { ...POST, 'x-levuvo-action': 'ai-v1' },
+    payload: { kind: 'digest', refs: [] }
+  });
+  assert.equal(run.statusCode, 409);
+  assert.equal(run.json().code, 'ai_disabled');
+  const noAction = await s.api.inject({
+    method: 'POST',
+    url: '/api/ai/settings',
+    headers: POST,
+    payload: { enabled: true }
+  });
+  assert.equal(noAction.statusCode, 403);
+  const mcp = await s.api.inject({ method: 'GET', url: '/api/mcp', headers: GET });
+  assert.equal(mcp.json().enabled, false);
+  assert.equal(mcp.json().running, false);
+
+  const agent = await s.mcp.internalAgent({ level: 'read' });
+  t.after(() => agent.release());
+  const call = body =>
+    fetch(agent.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${agent.token}` },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+  const accounts = await call({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name: 'list_accounts', arguments: {} }
+  });
+  assert.deepEqual(JSON.parse(accounts.result.content[0].text), []);
+  const search = await call({
+    jsonrpc: '2.0',
+    id: 2,
+    method: 'tools/call',
+    params: { name: 'search_messages', arguments: { query: 'rechnung' } }
+  });
+  assert.equal(search.result.isError, undefined, JSON.stringify(search));
+  assert.match(search.result.content[0].text, /untrusted_data/);
+});

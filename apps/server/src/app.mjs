@@ -34,6 +34,7 @@ import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
+import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 
@@ -333,7 +334,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|ai)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|ai|mcp)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -543,6 +544,8 @@ export async function createMailServer({
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerAiRoutes(ctx);
+  const mcp = await setupMcp(ctx, { createJsonFile, dir });
+  ctx.mcp = mcp;
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
@@ -576,6 +579,7 @@ export async function createMailServer({
     settings,
     davService,
     ctx,
+    mcp,
     get port() {
       return activePort;
     },
@@ -586,6 +590,7 @@ export async function createMailServer({
         `Levuvo Mail ${APP_VERSION} · API ${address} · ${desktop ? 'Desktop' : 'Browser'} · Konten: ${accounts.length} · Schlüsselbund ${accountManager.vaultAvailable ? 'verfügbar' : 'nicht verfügbar'}`
       );
       if (background) timers.push(...ctx.startBackgroundJobs());
+      await mcp.start();
       return { address, port: activePort };
     },
     setPortForTesting(port) {
@@ -595,6 +600,7 @@ export async function createMailServer({
       for (const t of timers) clearInterval(t);
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
+      await mcp.stop().catch(() => {});
       await api.close();
     }
   };

@@ -14,6 +14,7 @@ import {
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Row, Section, Segmented, Toggle } from './Settings';
+import { McpSettings } from './SettingsMcp';
 import type { AccountItem } from './types';
 
 type LogEntry = {
@@ -27,6 +28,7 @@ type LogEntry = {
   error?: string;
   agent?: string;
   source?: string;
+  reason?: string;
 };
 
 const FEATURES: { id: AiFeature; label: string; hint: string }[] = [
@@ -288,6 +290,8 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
         ))}
       </Section>
 
+      <McpSettings />
+
       <Section
         title={t('KI-Protokoll')}
         description={t(
@@ -304,7 +308,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 <small>
                   {new Date(e.at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}
                   {e.provider ? ` · ${e.provider}${e.model ? ` ${e.model}` : ''}` : ''}
-                  {e.ok === false ? ` · ${t('fehlgeschlagen')} (${e.error || ''})` : ''}
+                  {e.ok === false ? ` · ${t('fehlgeschlagen')} (${e.error || e.reason || ''})` : ''}
                 </small>
               </span>
             </div>
