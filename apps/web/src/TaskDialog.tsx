@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { postJson } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { useFocusTrap } from './ui/focus';
 import {
   dueFromForm,
   duePresets,
@@ -46,6 +47,7 @@ export default function TaskDialog({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const titleInput = useRef<HTMLInputElement>(null);
+  const trap = useFocusTrap<HTMLDivElement>();
   useEffect(() => {
     titleInput.current?.focus();
     titleInput.current?.select();
@@ -119,15 +121,12 @@ export default function TaskDialog({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <form
+      <div
+        ref={trap}
         className="confirm-card task-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="task-dialog-title"
-        onSubmit={e => {
-          e.preventDefault();
-          void save();
-        }}
         onKeyDown={e => {
           if (e.key === 'Escape') {
             e.stopPropagation();
@@ -135,122 +134,131 @@ export default function TaskDialog({
           }
         }}
       >
-        <h2 id="task-dialog-title">{draft.id ? t('Aufgabe bearbeiten') : t('Neue Aufgabe')}</h2>
-        {draft.mail && (
-          <p className="task-dialog-mail">
-            {t('Aus der E-Mail')}: „{draft.mail.subject || t('(Ohne Betreff)')}“
-          </p>
-        )}
-        <label className="dialog-field">
-          {t('Titel')}
-          <input
-            ref={titleInput}
-            value={title}
-            maxLength={300}
-            onChange={e => {
-              setTitle(e.target.value);
-              setError('');
-            }}
-          />
-        </label>
-        <div className="dialog-field">
-          {t('Fällig')}
-          <div className="task-due-presets">
-            {preset(t('Heute'), presets.today)}
-            {preset(t('Morgen'), presets.tomorrow)}
-            {preset(t('Montag'), presets.monday)}
-            {preset(t('In einer Woche'), presets.week)}
-            <button
-              type="button"
-              className={`chip ${!date ? 'active' : ''}`}
-              onClick={() => {
-                setDate('');
-                setTime('');
-                setRepeat('');
-              }}
-            >
-              {t('Ohne Datum')}
-            </button>
-          </div>
-          <div className="task-due-inputs">
-            <input type="date" aria-label={t('Datum')} value={date} onChange={e => setDate(e.target.value)} />
+        <form
+          className="task-dialog-form"
+          onSubmit={e => {
+            e.preventDefault();
+            void save();
+          }}
+        >
+          <h2 id="task-dialog-title">{draft.id ? t('Aufgabe bearbeiten') : t('Neue Aufgabe')}</h2>
+          {draft.mail && (
+            <p className="task-dialog-mail">
+              {t('Aus der E-Mail')}: „{draft.mail.subject || t('(Ohne Betreff)')}“
+            </p>
+          )}
+          <label className="dialog-field">
+            {t('Titel')}
             <input
-              type="time"
-              aria-label={t('Uhrzeit (optional)')}
-              value={time}
-              disabled={!date}
-              onChange={e => setTime(e.target.value)}
+              ref={titleInput}
+              data-autofocus
+              value={title}
+              maxLength={300}
+              onChange={e => {
+                setTitle(e.target.value);
+                setError('');
+              }}
             />
-          </div>
-        </div>
-        <div className="task-dialog-row">
-          <label className="dialog-field">
-            {t('Erinnerung')}
-            <select value={remind} onChange={e => setRemind(e.target.value as ReminderChoice)}>
-              <option value="none">{t('Keine')}</option>
-              {timed && <option value="atDue">{t('Zur Fälligkeit')}</option>}
-              {timed && <option value="before15">{t('15 Minuten vorher')}</option>}
-              {timed && <option value="before60">{t('1 Stunde vorher')}</option>}
-              {date && <option value="morning">{t('Am Tag um 9:00')}</option>}
-              {date && <option value="dayBefore">{t('Am Vortag um 9:00')}</option>}
-              <option value="custom">{t('Eigene Zeit …')}</option>
-            </select>
           </label>
-          <label className="dialog-field">
-            {t('Wiederholen')}
-            <select value={date ? repeat : ''} disabled={!date} onChange={e => setRepeat(e.target.value)}>
-              <option value="">{t('Nie')}</option>
-              <option value="DAILY:1">{t('Täglich')}</option>
-              <option value="WEEKLY:1">{t('Wöchentlich')}</option>
-              <option value="WEEKLY:2">{t('Alle zwei Wochen')}</option>
-              <option value="MONTHLY:1">{t('Monatlich')}</option>
-              <option value="MONTHLY:3">{t('Vierteljährlich')}</option>
-              <option value="YEARLY:1">{t('Jährlich')}</option>
-            </select>
-          </label>
-        </div>
-        {remind === 'custom' && (
-          <input
-            type="datetime-local"
-            aria-label={t('Erinnerung')}
-            value={customRemind}
-            onChange={e => setCustomRemind(e.target.value)}
-          />
-        )}
-        <div className="dialog-field">
-          {t('Priorität')}
-          <div className="segmented task-priority" role="group" aria-label={t('Priorität')}>
-            {priorities.map(([p, label]) => (
+          <div className="dialog-field">
+            {t('Fällig')}
+            <div className="task-due-presets">
+              {preset(t('Heute'), presets.today)}
+              {preset(t('Morgen'), presets.tomorrow)}
+              {preset(t('Montag'), presets.monday)}
+              {preset(t('In einer Woche'), presets.week)}
               <button
                 type="button"
-                key={p}
-                className={`prio-${p} ${priority === p ? 'active' : ''}`}
-                aria-pressed={priority === p}
-                onClick={() => setPriority(p)}
+                className={`chip ${!date ? 'active' : ''}`}
+                onClick={() => {
+                  setDate('');
+                  setTime('');
+                  setRepeat('');
+                }}
               >
-                {label}
+                {t('Ohne Datum')}
               </button>
-            ))}
+            </div>
+            <div className="task-due-inputs">
+              <input type="date" aria-label={t('Datum')} value={date} onChange={e => setDate(e.target.value)} />
+              <input
+                type="time"
+                aria-label={t('Uhrzeit (optional)')}
+                value={time}
+                disabled={!date}
+                onChange={e => setTime(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-        <label className="dialog-field">
-          {t('Notiz')}
-          <textarea rows={3} value={notes} maxLength={10_000} onChange={e => setNotes(e.target.value)} />
-        </label>
-        {error && (
-          <p className="dialog-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="confirm-actions">
-          <button type="button" className="btn" onClick={onClose}>
-            {t('Abbrechen')}
-          </button>
-          <button type="submit" className="btn primary" disabled={busy}>
-            {t('Speichern')}
-          </button>
-        </div>
-      </form>
+          <div className="task-dialog-row">
+            <label className="dialog-field">
+              {t('Erinnerung')}
+              <select value={remind} onChange={e => setRemind(e.target.value as ReminderChoice)}>
+                <option value="none">{t('Keine')}</option>
+                {timed && <option value="atDue">{t('Zur Fälligkeit')}</option>}
+                {timed && <option value="before15">{t('15 Minuten vorher')}</option>}
+                {timed && <option value="before60">{t('1 Stunde vorher')}</option>}
+                {date && <option value="morning">{t('Am Tag um 9:00')}</option>}
+                {date && <option value="dayBefore">{t('Am Vortag um 9:00')}</option>}
+                <option value="custom">{t('Eigene Zeit …')}</option>
+              </select>
+            </label>
+            <label className="dialog-field">
+              {t('Wiederholen')}
+              <select value={date ? repeat : ''} disabled={!date} onChange={e => setRepeat(e.target.value)}>
+                <option value="">{t('Nie')}</option>
+                <option value="DAILY:1">{t('Täglich')}</option>
+                <option value="WEEKLY:1">{t('Wöchentlich')}</option>
+                <option value="WEEKLY:2">{t('Alle zwei Wochen')}</option>
+                <option value="MONTHLY:1">{t('Monatlich')}</option>
+                <option value="MONTHLY:3">{t('Vierteljährlich')}</option>
+                <option value="YEARLY:1">{t('Jährlich')}</option>
+              </select>
+            </label>
+          </div>
+          {remind === 'custom' && (
+            <input
+              type="datetime-local"
+              aria-label={t('Erinnerung')}
+              value={customRemind}
+              onChange={e => setCustomRemind(e.target.value)}
+            />
+          )}
+          <div className="dialog-field">
+            {t('Priorität')}
+            <div className="segmented task-priority" role="group" aria-label={t('Priorität')}>
+              {priorities.map(([p, label]) => (
+                <button
+                  type="button"
+                  key={p}
+                  className={`prio-${p} ${priority === p ? 'active' : ''}`}
+                  aria-pressed={priority === p}
+                  onClick={() => setPriority(p)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="dialog-field">
+            {t('Notiz')}
+            <textarea rows={3} value={notes} maxLength={10_000} onChange={e => setNotes(e.target.value)} />
+          </label>
+          {error && (
+            <p className="dialog-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="confirm-actions">
+            <button type="button" className="btn" onClick={onClose}>
+              {t('Abbrechen')}
+            </button>
+            <button type="submit" className="btn primary" disabled={busy}>
+              {t('Speichern')}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

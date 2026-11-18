@@ -38,6 +38,7 @@
 - **Vectors for the AI assistant:** embeddings are stored in the same encrypted file (int8, 1 byte per dimension) and searched exactly by cosine similarity (about 25 ms for 20,000 vectors with 1024 dimensions). Removing a message, clearing the index or changing the mailbox of an account removes them too.
 
 ### Fixes
+- **Tasks, accessibility:** the task dialog keeps keyboard focus inside while it is open and returns it on close, is announced as a dialog, and the rail badge reads "n due today" to screen readers.
 - **Mail list:** the quick actions shown on hover no longer cover subject and preview.
 - **Phones:** the message list scrolls again and its last rows are no longer hidden behind the navigation.
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".

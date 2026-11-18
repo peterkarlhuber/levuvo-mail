@@ -169,6 +169,12 @@ test(
         await page.locator('.rail-item').nth(4).click();
         await page.locator('.tasks-module').waitFor();
         await axe(page, 'tasks');
+        await page.locator('.tasks-sidebar .btn.primary').click();
+        await page.locator('.task-dialog').waitFor();
+        assert.ok(await page.locator('.task-dialog').evaluate(d => d.contains(document.activeElement)));
+        await axe(page, 'task dialog');
+        await page.keyboard.press('Escape');
+        await page.locator('.task-dialog').waitFor({ state: 'detached' });
         await page.locator('.rail-item[aria-label="Assistent"]').click();
         await page.locator('.assistant-panel').waitFor();
         await axe(page, 'assistant');
