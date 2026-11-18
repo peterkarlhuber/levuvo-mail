@@ -1,14 +1,10 @@
-import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { useT } from './i18n';
+import { useFocusTrap } from './ui/focus';
 
 export function useModalFocus(onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
-    return () => previous?.focus?.();
-  }, []);
+  const ref = useFocusTrap<HTMLDivElement>();
   const onKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'Escape') {
       e.stopPropagation();

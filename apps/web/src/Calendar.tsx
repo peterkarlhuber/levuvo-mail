@@ -23,6 +23,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Segmented, useFocusTrap } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo, EventAttachment } from './types';
@@ -338,6 +339,7 @@ function EventAttachments({
 
 function ScopeDialog({ title, onChoose }: { title: string; onChoose: (scope: 'this' | 'all' | null) => void }) {
   const { t } = useT();
+  const trap = useFocusTrap<HTMLDivElement>();
   return (
     <div
       className="modal-scrim confirm-scrim"
@@ -347,6 +349,7 @@ function ScopeDialog({ title, onChoose }: { title: string; onChoose: (scope: 'th
       }}
     >
       <div
+        ref={trap}
         className="confirm-card"
         role="alertdialog"
         aria-modal="true"
@@ -387,6 +390,7 @@ function EventEditor({
   onSaved: () => void;
 }) {
   const { t, locale } = useT();
+  const trap = useFocusTrap<HTMLFormElement>();
   const { confirm, toast } = useUi();
   const [d, setD] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -581,6 +585,7 @@ function EventEditor({
       }}
     >
       <form
+        ref={trap}
         className="modal-card event-editor"
         role="dialog"
         aria-modal="true"
@@ -1458,19 +1463,15 @@ export default function CalendarModule({
           <button className="icon-button" aria-label={t('Aktualisieren')} onClick={() => void load()} disabled={busy}>
             <RefreshCcw size={16} className={busy ? 'spin' : ''} />
           </button>
-          <div className="segmented" role="radiogroup" aria-label={t('Ansicht')}>
-            {(['day', 'week', 'month', 'agenda'] as View[]).map(v => (
-              <button
-                key={v}
-                role="radio"
-                aria-checked={view === v}
-                className={view === v ? 'active' : ''}
-                onClick={() => changeView(v)}
-              >
-                {{ day: t('Tag'), week: t('Woche'), month: t('Monat'), agenda: t('Agenda') }[v]}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label={t('Ansicht')}
+            value={view}
+            onChange={changeView}
+            options={(['day', 'week', 'month', 'agenda'] as View[]).map(v => ({
+              value: v,
+              label: { day: t('Tag'), week: t('Woche'), month: t('Monat'), agenda: t('Agenda') }[v]
+            }))}
+          />
         </header>
         <CloudConsentBanner errors={cloudErrors} onDone={load} />
         {errors.length > 0 && (

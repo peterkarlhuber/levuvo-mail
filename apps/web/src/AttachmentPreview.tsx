@@ -3,6 +3,7 @@ import { Download, FileText, LoaderCircle, X } from 'lucide-react';
 import { download } from './api';
 import { prettySize } from './format';
 import { useT } from './i18n';
+import { useFocusTrap } from './ui/focus';
 import type { Attachment } from './types';
 
 /** Preview of an image, PDF or text attachment (mail and calendar). `url` ends with `&inline=1`. */
@@ -16,6 +17,7 @@ export default function AttachmentPreview({
   onClose: () => void;
 }) {
   const { t } = useT();
+  const trap = useFocusTrap<HTMLDivElement>();
   const type = att.mimeType.toLowerCase();
   // PDFs and text are loaded here (with the session cookie) and shown from a blob: URL, so the
   // built-in PDF viewer never has to fetch the document itself.
@@ -59,7 +61,9 @@ export default function AttachmentPreview({
       }}
     >
       <div
+        ref={trap}
         className="preview-panel"
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={t('Vorschau: {name}', { name: att.filename })}

@@ -204,3 +204,13 @@ test('Tracking pixels: tiny, hidden and known tracker images are recognised', ()
   for (const img of no) assert.equal(isTrackingImage(img), false, JSON.stringify(img));
   assert.equal(trackerHost('https://www.mailtrack.io/x.png'), 'mailtrack.io');
 });
+
+test('Design tokens: stylesheets use the shared scale (no raw sizes, layers, radii, colours)', async () => {
+  const { findViolations } = await import('../../../scripts/check-design-tokens.mjs');
+  const v = findViolations(root);
+  assert.deepEqual(
+    v.map(x => `${x.file}:${x.line} ${x.prop}: ${x.value} → ${x.hint}`),
+    [],
+    'Use the tokens from docs/design-system.md'
+  );
+});

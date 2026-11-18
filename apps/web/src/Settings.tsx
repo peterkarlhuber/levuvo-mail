@@ -25,6 +25,7 @@ import {
 import AccountSettings from './AccountSettings';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
+import { Segmented } from './ui';
 import { useT } from './i18n';
 import { usePrefs } from './prefs';
 import { ShortcutsDialog } from './Panels';
@@ -77,34 +78,7 @@ export function Row({ label, hint, children }: { label: string; hint?: string; c
     </div>
   );
 }
-export function Segmented<T extends string | number>({
-  value,
-  options,
-  onChange,
-  label
-}: {
-  value: T;
-  options: { value: T; label: ReactNode }[];
-  onChange: (v: T) => void;
-  label: string;
-}) {
-  return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
-      {options.map(o => (
-        <button
-          key={String(o.value)}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          className={value === o.value ? 'active' : ''}
-          onClick={() => onChange(o.value)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+export { Segmented };
 export function Toggle({
   checked,
   onChange,

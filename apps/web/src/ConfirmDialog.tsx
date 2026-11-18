@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { useT } from './i18n';
+import { useFocusTrap } from './ui/focus';
 
 export type ConfirmOptions = {
   title: string;
@@ -57,6 +58,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0);
   const primary = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const trap = useFocusTrap<HTMLFormElement>(!!pending);
 
   const confirm = useCallback(
     (o: ConfirmOptions) => new Promise<boolean>(resolve => setPending({ kind: 'confirm', ...o, resolve })),
@@ -119,6 +121,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           }}
         >
           <form
+            ref={trap}
             className="confirm-card"
             role="alertdialog"
             aria-modal="true"

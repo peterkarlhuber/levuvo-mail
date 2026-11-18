@@ -24,6 +24,7 @@ import TemplateMenu from './TemplateMenu';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
 import { useT } from './i18n';
+import { Segmented, useFocusTrap } from './ui';
 import WhenMenu from './WhenMenu';
 import { FOLLOW_UP_DAYS } from './when';
 import { usePrefs } from './prefs';
@@ -109,6 +110,7 @@ export default function Composer({
   onSubmit
 }: Props) {
   const { t, locale } = useT();
+  const trap = useFocusTrap<HTMLElement>();
   const { confirm, prompt, toast } = useUi();
   const [prefs] = usePrefs();
   const [from, setFrom] = useState(initial.from || identities[0]?.email || '');
@@ -512,6 +514,7 @@ export default function Composer({
       }}
     >
       <section
+        ref={trap}
         className={`compose-panel ${dragging ? 'is-dragging-files' : ''}`}
         role="dialog"
         aria-modal="true"
@@ -625,26 +628,16 @@ export default function Composer({
 
             <div className="compose-options">
               <TemplateMenu onInsert={tpl => void insertTemplate(tpl)} onSaveCurrent={() => void saveAsTemplate()} />
-              <div className="segmented small" role="radiogroup" aria-label={t('Format')}>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={format === 'html'}
-                  className={format === 'html' ? 'active' : ''}
-                  onClick={() => switchFormat('html')}
-                >
-                  {t('Formatiert')}
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={format === 'text'}
-                  className={format === 'text' ? 'active' : ''}
-                  onClick={() => switchFormat('text')}
-                >
-                  {t('Nur Text')}
-                </button>
-              </div>
+              <Segmented
+                size="sm"
+                label={t('Format')}
+                value={format}
+                onChange={switchFormat}
+                options={[
+                  { value: 'html', label: t('Formatiert') },
+                  { value: 'text', label: t('Nur Text') }
+                ]}
+              />
               <div className="security-options">
                 <ShieldCheck size={14} />
                 <select
