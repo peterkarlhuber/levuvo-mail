@@ -278,6 +278,48 @@ test('Tracking pixels: tiny, hidden and known tracker images are recognised', ()
   assert.equal(trackerHost('https://www.mailtrack.io/x.png'), 'mailtrack.io');
 });
 
+test('Contact card: address book match and shared appointments', async () => {
+  const { pickContact, sharedEvents } = await import('../src/contact-card.ts');
+  const c = (name, email, extra = {}) => ({ name, emails: [{ value: email, type: 'work' }], phones: [], ...extra });
+  const picked = pickContact(
+    [c('', 'Anna@X.at'), c('Anna Muster', 'anna@x.at', { organization: 'X GmbH' }), c('Bob', 'bob@x.at')],
+    'anna@x.at'
+  );
+  assert.equal(picked.name, 'Anna Muster');
+  assert.equal(pickContact([c('Bob', 'bob@x.at')], 'anna@x.at'), null);
+
+  const ev = (summary, start, end, who, extra = {}) => ({
+    uid: summary,
+    url: `/${summary}`,
+    summary,
+    start,
+    end,
+    allDay: false,
+    organizer: null,
+    attendees: who.map(email => ({ email, name: '', partstat: 'ACCEPTED' })),
+    ...extra
+  });
+  const now = new Date('2026-11-18T12:00:00Z');
+  const list = [
+    ev('Alt', '2026-10-01T08:00:00Z', '2026-10-01T09:00:00Z', ['anna@x.at']),
+    ev('Neuer', '2026-11-10T08:00:00Z', '2026-11-10T09:00:00Z', ['ANNA@x.at']),
+    ev('Fremd', '2026-11-20T08:00:00Z', '2026-11-20T09:00:00Z', ['bob@x.at']),
+    ev('Bald', '2026-11-25T08:00:00Z', '2026-11-25T09:00:00Z', [], { organizer: { email: 'anna@x.at', name: '' } }),
+    ev('Morgen', '2026-11-19T08:00:00Z', '2026-11-19T09:00:00Z', ['anna@x.at']),
+    ev('Morgen', '2026-11-19T08:00:00Z', '2026-11-19T09:00:00Z', ['anna@x.at']),
+    ev('Laeuft', '2026-11-18T11:00:00Z', '2026-11-18T13:00:00Z', ['anna@x.at'])
+  ];
+  const r = sharedEvents(list, 'anna@x.at', now);
+  assert.deepEqual(
+    r.upcoming.map(e => e.summary),
+    ['Laeuft', 'Morgen', 'Bald']
+  );
+  assert.deepEqual(
+    r.past.map(e => e.summary),
+    ['Neuer', 'Alt']
+  );
+});
+
 test('assistant helpers: own part of a draft and default event end', async () => {
   const { ownPart, defaultEnd } = await import('../src/ai-utils.ts');
   assert.equal(ownPart('<p>Hi</p><p>-- </p><p>Sig</p>', ['<p>-- </p>', '<blockquote']), '<p>Hi</p>');
