@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sun,
   UserRound,
+  Users,
   type LucideIcon
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
@@ -179,6 +180,15 @@ export default function CommandPalette({
         icon: Contact2,
         keywords: 'adressbuch',
         run: () => onModule('contacts')
+      },
+      {
+        id: 'm:spaces',
+        group: area,
+        label: t('Räume'),
+        hint: 'Alt+4',
+        icon: Users,
+        keywords: 'spaces projekte team zusammenarbeit',
+        run: () => onModule('spaces')
       }
     );
     const set = t('Einstellungen');

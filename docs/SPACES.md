@@ -66,8 +66,9 @@ members is framed as untrusted data. Every change (`room_create`, `room_create_n
 `room_add_mail`) waits for the user's approval because other members see it. Inviting, removing
 members and changing roles (`room_invite`, `room_remove_member`, `room_set_role`) additionally need
 the highest agent level. Dissolving a space, deleting the local copy, keys and the space's
-assistant settings are not available to the assistant at all. Per space the owner can forbid cloud
-models (`cloudAllowed`, default off).
+assistant settings are not available to the assistant at all. Cloud models and external agents only
+see a space if its owner allowed it (`cloudAllowed`, default off); the built-in assistant with a
+local model always may.
 
 ## Limits
 

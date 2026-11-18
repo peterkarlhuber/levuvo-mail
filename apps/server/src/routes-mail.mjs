@@ -1,5 +1,6 @@
 // Mail routes: folders, lists, search, reading, actions, drafts, sending, scheduling,
 // filters (Sieve), local index and background jobs.
+import { SPACES_FOLDER } from './spaces/mail-transport.mjs';
 import { folderName, cleanLimit, cleanBeforeUid } from './config.mjs';
 import { publicAccounts, accountScopedRequestKey } from './accounts.mjs';
 import { validFolder, validUid, validAttachmentIndex, downloadHeaders, attachmentBytes } from './message-utils.mjs';
@@ -231,6 +232,8 @@ export function registerMailRoutes(ctx) {
               total: Number.isSafeInteger(folder.status?.messages) ? folder.status.messages : null
             }))
             .filter(folder => folder.selectable)
+            // Transport folder of shared spaces: managed by Levuvo, not shown as a mail folder.
+            .filter(folder => folder.path.split(folder.delimiter || '/').at(-1) !== SPACES_FOLDER)
         };
       }, request.mailAccount)
     )

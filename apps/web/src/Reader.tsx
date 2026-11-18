@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   AlarmClock,
   AlertTriangle,
@@ -36,6 +36,7 @@ import {
   Trash2,
   Unlock,
   WifiOff,
+  Users,
   X
 } from 'lucide-react';
 import { accountPath, ApiError, download, getJson, postJson } from './api';
@@ -46,6 +47,7 @@ import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
+const AddToSpaceMenu = lazy(() => import('./SpacePick'));
 import type {
   Attachment,
   CalendarInfo,
@@ -804,6 +806,7 @@ export default function Reader(props: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [preview, setPreview] = useState<Attachment | null>(null);
   const [menu, setMenu] = useState(false);
+  const [spacePick, setSpacePick] = useState(false);
   const [snoozeMenu, setSnoozeMenu] = useState(false);
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
@@ -1063,7 +1066,26 @@ export default function Reader(props: Props) {
                     >
                       <Download size={14} /> {t('Als .eml speichern')}
                     </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(false);
+                        setSpacePick(true);
+                      }}
+                    >
+                      <Users size={14} /> {t('In Raum legen')}
+                    </button>
                   </div>
+                )}
+                {spacePick && detail && (
+                  <Suspense fallback={null}>
+                    <AddToSpaceMenu
+                      accountId={accountId}
+                      folder={detail.folder}
+                      uid={detail.uid}
+                      onDone={() => setSpacePick(false)}
+                    />
+                  </Suspense>
                 )}
               </div>
             </div>

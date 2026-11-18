@@ -119,16 +119,19 @@ export function registerSpaceTools(ctx, { service }) {
     const untrusted = (value, label) =>
       frameUntrusted(JSON.stringify(value, null, 1), `levuvo:room ${label}`.slice(0, 120));
     /** Spaces the assistant may see: the user is an active member and the owner did not turn it off. */
-    async function rooms() {
+    // Cloud models (and external agents) only see spaces whose owner allowed it; only the
+    // built-in assistant with a local model has agent.cloud === false.
+    async function rooms(agent) {
+      const cloud = agent?.cloud !== false;
       const s = await service();
       return s
         .list()
         .spaces.filter(r => r.status === 'active' || r.status === 'joining')
         .map(r => ({ ...r, ai: r.status === 'active' ? s.detail(r.id).ai : { enabled: true } }))
-        .filter(r => r.ai.enabled !== false);
+        .filter(r => r.ai.enabled !== false && (!cloud || r.ai.cloudAllowed === true));
     }
-    async function room(ref) {
-      const list = await rooms();
+    async function room(ref, agent) {
+      const list = await rooms(agent);
       const value = String(ref || '').trim();
       const found = list.find(r => r.id === value) || list.find(r => r.name.toLowerCase() === value.toLowerCase());
       if (!found) throw toolError('Space not found or not available to the assistant. Use list_rooms.');
@@ -204,8 +207,8 @@ export function registerSpaceTools(ctx, { service }) {
         description:
           'List the shared spaces ("Räume") the user is a member of: id, name, role, members, open tasks, last change.',
         inputSchema: obj({}),
-        run: async () => {
-          const list = await rooms();
+        run: async (_a, agent) => {
+          const list = await rooms(agent);
           return untrusted(
             list.map(r => ({
               id: r.id,
@@ -229,8 +232,8 @@ export function registerSpaceTools(ctx, { service }) {
         description:
           'Everything in one space: members, notes (scratchpad), tasks, events, pinned mails, comments and files. Cite items by kind and id.',
         inputSchema: obj({ room: ROOM }, ['room']),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           return untrusted({ ...roomOverview(detail), instructions: detail.ai.instructions || '' }, detail.name);
         }
       },
@@ -241,8 +244,8 @@ export function registerSpaceTools(ctx, { service }) {
         description:
           'What changed in a space since a point in time (default: last 24 hours), with who did it. For "what happened since yesterday" summaries.',
         inputSchema: obj({ room: ROOM, since: { type: 'string', description: 'ISO date/time' } }, ['room']),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           const since =
             a.since && !Number.isNaN(Date.parse(a.since))
               ? new Date(a.since).toISOString()
@@ -268,11 +271,11 @@ export function registerSpaceTools(ctx, { service }) {
         description:
           'Search notes, tasks, events, pinned mails, comments and file names in one space or all spaces. Each hit has a source {room, kind, id} to cite.',
         inputSchema: obj({ query: { type: 'string', minLength: 2, maxLength: 200 }, room: ROOM }, ['query']),
-        run: async a => {
+        run: async (a, agent) => {
           const s = await service();
           const targets = a.room
-            ? [(await room(a.room)).detail]
-            : (await rooms()).filter(r => r.status === 'active').map(r => s.detail(r.id));
+            ? [(await room(a.room, agent)).detail]
+            : (await rooms(agent)).filter(r => r.status === 'active').map(r => s.detail(r.id));
           const hits = targets.flatMap(d => searchRoom(d, a.query).map(h => ({ ...h, roomName: d.name })));
           return untrusted(hits.slice(0, 50), 'search');
         }
@@ -287,8 +290,8 @@ export function registerSpaceTools(ctx, { service }) {
           'room',
           'file'
         ]),
-        run: async a => {
-          const { s, detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
           const file = detail.files.find(f => f.id === a.file || f.name === a.file);
           if (!file) throw toolError('File not found in this space.');
           const v = a.version ? file.versions[a.version - 1] : file.versions.at(-1);
@@ -363,8 +366,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'title']
         ),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           writable(detail);
           return change(
             detail,
@@ -394,8 +397,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'note', 'text']
         ),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           writable(detail);
           const note = detail.notes.find(n => n.id === a.note || n.title === a.note);
           if (!note) throw toolError('Note not found.');
@@ -425,8 +428,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'title']
         ),
-        run: async a => {
-          const { s, detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
           writable(detail);
           const data = {
             id: s.newId(),
@@ -462,8 +465,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'task']
         ),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           writable(detail);
           const task = detail.tasks.find(t => t.id === a.task || t.title === a.task);
           if (!task) throw toolError('Task not found.');
@@ -503,8 +506,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'title', 'start']
         ),
-        run: async a => {
-          const { s, detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
           writable(detail);
           const data = {
             id: s.newId(),
@@ -540,8 +543,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'text']
         ),
-        run: async a => {
-          const { s, detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
           writable(detail);
           const kind = a.target_kind || 'space';
           if (kind !== 'space' && !ID.test(String(a.target_id || '')))
@@ -576,8 +579,8 @@ export function registerSpaceTools(ctx, { service }) {
           },
           ['room', 'folder', 'uid']
         ),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           writable(detail);
           return change(
             detail,
@@ -598,8 +601,8 @@ export function registerSpaceTools(ctx, { service }) {
           { room: ROOM, email: { type: 'string', maxLength: 320 }, role: { enum: ['editor', 'reader'] } },
           ['room', 'email']
         ),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           if (!detail.owner) throw toolError('Only the owner of the space can invite.');
           return change(
             detail,
@@ -616,8 +619,8 @@ export function registerSpaceTools(ctx, { service }) {
         approval: 'room_change',
         description: 'Remove a member from a space the user owns. The space key is replaced afterwards.',
         inputSchema: obj({ room: ROOM, member: { type: 'string' } }, ['room', 'member']),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           if (!detail.owner) throw toolError('Only the owner of the space can remove members.');
           const id = member(detail, a.member);
           const m = detail.members.find(x => x.id === id);
@@ -634,8 +637,8 @@ export function registerSpaceTools(ctx, { service }) {
           'member',
           'role'
         ]),
-        run: async a => {
-          const { detail } = await room(a.room);
+        run: async (a, agent) => {
+          const { detail } = await room(a.room, agent);
           if (!detail.owner) throw toolError('Only the owner of the space can change roles.');
           const id = member(detail, a.member);
           const m = detail.members.find(x => x.id === id);
