@@ -51,7 +51,7 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
     case 'trash':
       return t('Nachricht in den Papierkorb verschieben');
     default:
-      return a.type;
+      return typeof a.summary?.title === 'string' ? a.summary.title : a.type;
   }
 }
 

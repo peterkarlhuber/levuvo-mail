@@ -32,6 +32,7 @@ const TASK_FEATURE = {
   rewrite: 'rewrite',
   compose: 'compose',
   attachment_check: 'attachmentCheck',
+  presend: 'attachmentCheck',
   prioritize: 'prioritize',
   classify: 'classify',
   extract: 'extract',

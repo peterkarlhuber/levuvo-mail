@@ -11,7 +11,8 @@ import {
   createMcpHandler,
   createMcpHttpServer,
   freeSlots,
-  frameUntrusted
+  frameUntrusted,
+  mcpToolRegistry
 } from '../src/mcp-server.mjs';
 import { createJsonFile } from '../src/app.mjs';
 
@@ -203,4 +204,52 @@ test('HTTP endpoint: loopback host, no browsers, bearer token, stdio bridge', as
   assert.equal(replies.length, 2);
   assert.equal(replies[0].result.serverInfo.name, 'levuvo-mail');
   assert.ok(replies[1].result.tools.length > 5);
+});
+
+test('other modules register tools and approval types through the shared registry', async t => {
+  const { ctx, agents, handle, approvals } = await setup(t);
+  const registry = mcpToolRegistry(ctx);
+  const done = [];
+  registry.registerApproval('room_post', {
+    summary: p => ({ room: p.room, text: p.text.slice(0, 50) }),
+    execute: async p => {
+      done.push(p);
+      return { posted: true };
+    }
+  });
+  registry.register([
+    {
+      name: 'list_rooms',
+      level: 'read',
+      readOnly: true,
+      description: 'List rooms.',
+      inputSchema: { type: 'object', properties: {} },
+      run: async () => JSON.stringify([{ id: 'r1' }])
+    },
+    {
+      name: 'post_to_room',
+      level: 'draft',
+      approval: 'room_post',
+      description: 'Post to a room after approval.',
+      inputSchema: { type: 'object', properties: { room: { type: 'string' }, text: { type: 'string' } } },
+      run: async a => ({ room: a.room, text: a.text })
+    }
+  ]);
+  assert.throws(() => registry.register({ name: 'list_rooms', level: 'read' }), /already|required/);
+  assert.throws(
+    () =>
+      registry.register({ name: 'x_bad', level: 'root', description: '', inputSchema: { type: 'object' }, run() {} }),
+    /level/
+  );
+  const { agent: reader } = await agents.create({ name: 'R', level: 'read' });
+  const names = (await handle(reader, rpc('tools/list'))).result.tools.map(x => x.name);
+  assert.ok(names.includes('list_rooms') && !names.includes('post_to_room'));
+  const { agent: writer } = await agents.create({ name: 'W', level: 'draft' });
+  const out = await handle(
+    writer,
+    rpc('tools/call', { name: 'post_to_room', arguments: { room: 'r1', text: 'Hallo' } })
+  );
+  assert.equal(JSON.parse(out.result.content[0].text).status, 'pending_approval');
+  const [item] = approvals.list();
+  assert.deepEqual(item.summary, { room: 'r1', text: 'Hallo' });
 });

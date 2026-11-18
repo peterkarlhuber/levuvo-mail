@@ -642,10 +642,71 @@ function summarize(type, payload) {
   if (type === 'trash') return { folder: payload.folder, uid: payload.uid };
   return {};
 }
+function summarizeAny(registry, type, payload) {
+  if (BUILTIN_APPROVALS.includes(type)) return summarize(type, payload);
+  try {
+    return registry?.approval(type)?.summary(payload) || {};
+  } catch {
+    return {};
+  }
+}
+
+// ------------------------------------------------------------------ registry
+
+const BUILTIN_APPROVALS = ['send', 'event', 'contact', 'trash'];
+const TOOL_NAME = /^[a-z][a-z0-9_]{2,48}$/;
+
+/**
+ * Tools that other modules add to the MCP server (for example the shared rooms). Every module calls
+ * `mcpToolRegistry(ctx).register([...])`; the server sees new tools at once, with the same permission
+ * levels, rate limit, log and approvals as the built-in ones.
+ *
+ * A tool: { name, description, level: 'read'|'draft'|'organize'|'full', inputSchema (JSON schema object),
+ *   readOnly?: boolean, run: async (args, agent) => string, approval?: string }
+ * `run` returns the text for the agent; mail or other third-party content must be wrapped with
+ * frameUntrusted(). With `approval`, `run` returns a payload instead, which waits for the user's approval;
+ * the type must be built in (send, event, contact, trash) or registered with
+ * `registerApproval(type, { summary: payload => object, execute: async payload => result })`.
+ */
+export function createToolRegistry() {
+  const tools = new Map();
+  const approvalTypes = new Map();
+  return {
+    register(defs) {
+      for (const d of Array.isArray(defs) ? defs : [defs]) {
+        if (!TOOL_NAME.test(d?.name || '')) throw new TypeError(`invalid tool name ${d?.name}`);
+        if (tools.has(d.name)) throw new TypeError(`tool ${d.name} already registered`);
+        if (!LEVELS.includes(d.level)) throw new TypeError(`tool ${d.name}: unknown level ${d.level}`);
+        if (typeof d.run !== 'function' || typeof d.description !== 'string' || d.inputSchema?.type !== 'object')
+          throw new TypeError(`tool ${d.name}: description, inputSchema and run are required`);
+        if (d.approval && !BUILTIN_APPROVALS.includes(d.approval) && !approvalTypes.has(d.approval))
+          throw new TypeError(`tool ${d.name}: unknown approval ${d.approval}`);
+        tools.set(d.name, { ...d, readOnly: Boolean(d.readOnly) && !d.approval });
+      }
+    },
+    registerApproval(type, { summary, execute }) {
+      if (!TOOL_NAME.test(type) || BUILTIN_APPROVALS.includes(type) || approvalTypes.has(type))
+        throw new TypeError(`invalid approval type ${type}`);
+      if (typeof summary !== 'function' || typeof execute !== 'function')
+        throw new TypeError(`approval ${type}: summary and execute are required`);
+      approvalTypes.set(type, { summary, execute });
+    },
+    list: () => [...tools.values()],
+    approval: type => approvalTypes.get(type) || null
+  };
+}
+/** The registry shared by all modules of one app instance. */
+export function mcpToolRegistry(ctx) {
+  ctx.mcpTools ||= createToolRegistry();
+  return ctx.mcpTools;
+}
 
 // ------------------------------------------------------------------ protocol
 
 export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log, version = '0' }) {
+  const registry = mcpToolRegistry(ctx);
+  const builtin = tools;
+  const all = () => [...builtin, ...registry.list().filter(t => !builtin.some(b => b.name === t.name))];
   const rate = new Map();
   const allowed = (tool, agent) => rank(agent.level) >= rank(tool.level);
   function limited(agentId) {
@@ -656,7 +717,7 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
     return list.length > RATE_PER_MINUTE;
   }
   async function callTool(agent, name, args) {
-    const tool = tools.find(t => t.name === name);
+    const tool = all().find(t => t.name === name);
     if (!tool || !allowed(tool, agent)) {
       void log.add({
         type: 'tool',
@@ -685,7 +746,7 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
           agent,
           type: tool.approval,
           payload: result,
-          summary: summarize(tool.approval, result)
+          summary: summarizeAny(registry, tool.approval, result)
         });
         void log.add({ type: 'tool', agent: agent.name, tool: name, ok: true, approval: item.id });
         return {
@@ -737,7 +798,7 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
         return reply({});
       case 'tools/list':
         return reply({
-          tools: tools
+          tools: all()
             .filter(t => allowed(t, agent))
             .map(t => ({
               name: t.name,

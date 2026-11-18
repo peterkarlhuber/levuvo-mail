@@ -8,7 +8,8 @@ import {
   createApprovals,
   createMcpHandler,
   createMcpHttpServer,
-  hashToken
+  hashToken,
+  mcpToolRegistry
 } from './mcp-server.mjs';
 import { resolveSidecar } from './ai-sidecar.mjs';
 
@@ -62,8 +63,11 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
           { folder: p.folder, action: 'trash' },
           'mail-v1'
         );
-      default:
-        throw new Error('Unbekannte Freigabe.');
+      default: {
+        const custom = mcpToolRegistry(ctx).approval(type);
+        if (!custom) throw new Error('Unbekannte Freigabe.');
+        return custom.execute(p);
+      }
     }
   }
   ctx.executeApproved = executeApproved;
