@@ -150,3 +150,48 @@ test('Spaces over mail: MIME round trip and assistant helpers', async () => {
     [{ room: 'r1', kind: 'note', id: 'n1' }]
   );
 });
+
+test('Spaces tools: reads are framed, changes wait for approval, cloud agents see only allowed spaces', async t => {
+  const { people } = await setup(t);
+  const [anna] = people;
+  const { registerSpaceTools } = await import('../src/spaces/tools.mjs');
+  const tools = new Map();
+  const approvals = new Map();
+  const registry = {
+    register: defs => defs.forEach(d => tools.set(d.name, d)),
+    registerApproval: (type, def) => approvals.set(type, def)
+  };
+  const frame = (text, source) => `<untrusted_data source="${source}">${text}</untrusted_data>`;
+  const ctx = { accounts: () => [anna.account], spaces: { addMail: async () => ({ id: 'x' }) } };
+  registerSpaceTools(ctx, { service: async () => anna.service, registry, frame });
+  const space = await anna.service.create({ name: 'Kunde Müller', accountId: anna.account.id });
+  const local = { cloud: false };
+  const cloud = { cloud: true };
+
+  // Never offered: dissolving, deleting, keys, assistant settings.
+  for (const name of tools.keys()) assert.doesNotMatch(name, /dissolve|delete|key|setting/);
+  assert.ok(tools.get('room_add_task').approval === 'room_change');
+  assert.equal(tools.get('room_invite').level, 'full');
+
+  const listed = await tools.get('list_rooms').run({}, local);
+  assert.match(listed, /^<untrusted_data/);
+  assert.match(listed, /Kunde Müller/);
+  // Cloud models only see spaces whose owner allowed it (default: not allowed).
+  assert.doesNotMatch(await tools.get('list_rooms').run({}, cloud), /Kunde Müller/);
+  await assert.rejects(tools.get('read_room').run({ room: space.id }, cloud), /not available/);
+  await anna.service.apply(space.id, 'ai.settings', { cloudAllowed: true });
+  assert.match(await tools.get('list_rooms').run({}, cloud), /Kunde Müller/);
+
+  // A change is only a payload until the user approves it.
+  const payload = await tools
+    .get('room_add_task')
+    .run({ room: 'Kunde Müller', title: 'Angebot schicken', assignee: anna.email }, local);
+  assert.equal(anna.service.detail(space.id).tasks.length, 0);
+  assert.match(approvals.get('room_change').summary(payload).title, /Kunde Müller.*Angebot schicken/);
+  await approvals.get('room_change').execute(payload);
+  assert.equal(anna.service.detail(space.id).tasks[0].title, 'Angebot schicken');
+
+  // The owner can switch the assistant off for a space.
+  await anna.service.apply(space.id, 'ai.settings', { enabled: false });
+  assert.doesNotMatch(await tools.get('list_rooms').run({}, local), /Kunde Müller/);
+});

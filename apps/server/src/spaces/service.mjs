@@ -210,50 +210,66 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
   }
 
   let flushing = null;
-  /** Sends what is waiting. Failed mails are retried later with growing pauses. */
-  async function flush() {
-    if (flushing) return flushing;
-    flushing = (async () => {
-      let sent = 0;
-      for (const r of store.all()) {
-        if (!r.outbox?.length) continue;
-        const keep = [];
-        let account;
-        try {
-          account = accountFor(r.accountId, r.email);
-        } catch {
+  let flushAgain = false;
+  /** One pass over every outbox. Items queued meanwhile stay queued for the next pass. */
+  async function flushPass() {
+    let sent = 0;
+    for (const r of store.all()) {
+      if (!r.outbox?.length) continue;
+      let account;
+      try {
+        account = accountFor(r.accountId, r.email);
+      } catch {
+        continue;
+      }
+      const items = r.outbox;
+      r.outbox = [];
+      const keep = [];
+      const state = stateOf(r);
+      for (const item of items) {
+        if (item.nextAt > Date.now()) {
+          keep.push(item);
           continue;
         }
-        const state = stateOf(r);
-        for (const item of r.outbox) {
-          if (item.nextAt > Date.now()) {
-            keep.push(item);
-            continue;
+        try {
+          for (const envelope of await buildEnvelopes(r, item)) {
+            await transport.send({
+              accountId: account.id,
+              from: r.email,
+              to: item.email,
+              kind: item.kind,
+              spaceName: state.name || r.name || '',
+              inviterName: r.myName || account.name || '',
+              envelope
+            });
+            sent++;
           }
-          try {
-            for (const envelope of await buildEnvelopes(r, item)) {
-              await transport.send({
-                accountId: account.id,
-                from: r.email,
-                to: item.email,
-                kind: item.kind,
-                spaceName: state.name || r.name || '',
-                inviterName: r.myName || account.name || '',
-                envelope
-              });
-              sent++;
-            }
-          } catch (err) {
-            item.tries++;
-            item.error = String(err.code || err.message || 'send_failed').slice(0, 100);
-            item.nextAt = Date.now() + Math.min(6 * 3600_000, 30_000 * 2 ** Math.min(item.tries, 10));
-            if (item.tries < 30) keep.push(item);
-            else logger(`spaces: giving up on a ${item.kind} mail after ${item.tries} attempts`);
-          }
+        } catch (err) {
+          item.tries++;
+          item.error = String(err.code || err.message || 'send_failed').slice(0, 100);
+          item.nextAt = Date.now() + Math.min(6 * 3600_000, 30_000 * 2 ** Math.min(item.tries, 10));
+          if (item.tries < 30) keep.push(item);
+          else logger(`spaces: giving up on a ${item.kind} mail after ${item.tries} attempts`);
         }
-        r.outbox = keep;
-        await store.save(r);
       }
+      // Anything queued while this pass was sending comes after the retries.
+      r.outbox = [...keep, ...r.outbox];
+      await store.save(r);
+    }
+    return sent;
+  }
+  /** Sends what is waiting. Failed mails are retried later with growing pauses. */
+  async function flush() {
+    if (flushing) {
+      flushAgain = true;
+      return flushing;
+    }
+    flushing = (async () => {
+      let sent = 0;
+      do {
+        flushAgain = false;
+        sent += await flushPass();
+      } while (flushAgain);
       return sent;
     })().finally(() => {
       flushing = null;

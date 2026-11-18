@@ -28,6 +28,28 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 
 Decrypted content is not stored – not even for the offline view.
 
+## AI features (optional, off by default)
+
+The AI features (Settings → AI & agents) are switched off until you switch them on.
+
+- **Local model (default):** The AI component of the app (a Python process shipped with it, based on
+  Orkexa) sends the content of the messages you apply an AI function to only to **Ollama on this
+  computer** (address 127.0.0.1). Nothing leaves the device. Other addresses are refused.
+- **Cloud model (only with consent):** If you choose Anthropic or OpenAI, the app asks for your consent
+  first and records the date and the version of the consent text. From then on, the content of the
+  messages you apply an AI function to is sent to that provider and processed under its terms, possibly
+  outside the EU. Legal basis: consent (Art. 6(1)(a) GDPR), revocable at any time ("Withdraw consent").
+  Accounts marked "No cloud AI" are never processed by a cloud model. The API key is stored only in the
+  keychain. For use in an organization, a data processing agreement (Art. 28 GDPR) with the provider is
+  required.
+- **Semantic search** computes its vectors always locally with Ollama, also when a cloud model is chosen.
+- **What is stored:** the AI settings (app data folder, no key) and an **AI log** of what the AI and
+  agents did (time, function or tool, provider, model, result) **without message content**, kept for 30
+  days on this device. It is not used to monitor anyone's performance.
+- **Transparency:** AI results are labelled as AI-generated and are never sent, moved or deleted without
+  your action.
+- "Delete all AI data" removes settings, consents, keys, the log and agent access at once.
+
 ## Connections to the internet
 
 - **Mail servers** (IMAP, SMTP, ManageSieve for filters/vacation reply) – always encrypted, certificates are verified.
@@ -46,6 +68,7 @@ Decrypted content is not stored – not even for the offline view.
 - Calendar/contact accounts, keys and certificates can be removed individually in the settings.
 - Shared spaces: leaving a space or dissolving it (owner) stops syncing; afterwards the local copy can be deleted under Spaces. Copies on other members' devices are under their control.
 - The search index can be switched off under Settings → Search & offline (it is deleted in the process).
+- All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
 - After uninstalling, the app data folder can be deleted: macOS `~/Library/Application Support/Levuvo Mail`, Windows `%APPDATA%\Levuvo Mail`.
 
 ## Your rights

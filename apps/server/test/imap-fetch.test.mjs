@@ -70,7 +70,9 @@ test('fetchUidOne returns null when only unsolicited entries arrive', async () =
 });
 
 test('hasRequestedFields checks every requested field', () => {
-  assert.equal(hasRequestedFields({ size: 0 }, { size: true }), true);
+  assert.equal(hasRequestedFields({ size: 12 }, { size: true }), true);
+  // Size 0 is Dovecot's stand-in for a message already expunged on another connection.
+  assert.equal(hasRequestedFields({ size: 0 }, { size: true }), false);
   assert.equal(hasRequestedFields({ size: '1' }, { size: true }), false);
   assert.equal(hasRequestedFields({ flags: [] }, { flags: true }), false);
   assert.equal(hasRequestedFields({ bodyParts: new Map([['1', Buffer.alloc(0)]]) }, { bodyParts: ['1'] }), true);

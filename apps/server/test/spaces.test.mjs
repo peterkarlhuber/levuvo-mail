@@ -324,3 +324,21 @@ test('Spaces: locked keychain keeps spaces closed and files untouched', async t 
   await assert.rejects(openSpaceStore({ dir, vault: other }), { code: 'spaces_locked' });
   assert.equal(other.get('local', 'spaces-key'), '', 'no new key for existing data');
 });
+
+test('Spaces: changes queued while mails are being sent are not lost', async t => {
+  const { office, anna, ben, all } = await threePeople(t);
+  const space = await anna.service.create({ name: 'Gleichzeitig', accountId: anna.accountId });
+  await joinSpace(office, anna, ben, space.id, 'editor', all);
+  const first = anna.service.apply(space.id, 'task.upsert', { id: anna.service.newId(), title: 'Eins' });
+  // A second change while the first flush is still running.
+  await anna.service.apply(space.id, 'task.upsert', { id: anna.service.newId(), title: 'Zwei' });
+  await first;
+  await office.deliver(all);
+  assert.deepEqual(
+    ben.service
+      .detail(space.id)
+      .tasks.map(x => x.title)
+      .sort(),
+    ['Eins', 'Zwei']
+  );
+});

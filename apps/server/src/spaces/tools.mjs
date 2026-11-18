@@ -106,7 +106,8 @@ export function searchRoom(detail, query, { limit = 30 } = {}) {
 
 const TEXTUAL = /^(text\/|application\/(json|xml|csv|x-ndjson|javascript|x-yaml))/i;
 
-export function registerSpaceTools(ctx, { service }) {
+export function registerSpaceTools(ctx, { service, registry = null, frame = null }) {
+  if (registry && frame) return register(registry, frame);
   // The MCP server comes from the assistant module; without it there is nothing to register.
   void import('../mcp-server.mjs')
     .then(mod => {

@@ -37,6 +37,7 @@ export type SettingsTab =
   | 'dav'
   | 'security'
   | 'search'
+  | 'ai'
   | 'notifications'
   | 'privacy'
   | 'help'

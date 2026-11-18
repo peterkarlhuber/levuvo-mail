@@ -31,9 +31,17 @@ export function collectTexts(root) {
   return { ui, server };
 }
 
+function readDictionary(file, name) {
+  const src = readFileSync(file, 'utf8');
+  return Function(`return (${src.slice(src.indexOf('{', src.indexOf(name)), src.lastIndexOf('}') + 1)})`)();
+}
+
 export function loadDictionary(root) {
-  const src = readFileSync(join(root, 'apps/web/src/i18n-en.ts'), 'utf8');
-  return Function(`return (${src.slice(src.indexOf('{', src.indexOf('EN')), src.lastIndexOf('}') + 1)})`)();
+  const extra = readdirSync(join(root, 'apps/web/src')).filter(f => /^i18n-.+-en\.ts$/.test(f));
+  return Object.assign(
+    readDictionary(join(root, 'apps/web/src/i18n-en.ts'), 'EN'),
+    ...extra.map(f => readDictionary(join(root, 'apps/web/src', f), '_EN'))
+  );
 }
 
 export function missingTranslations(root) {

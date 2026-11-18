@@ -36,7 +36,15 @@ export async function getJson<T>(path: string, accountId?: string, signal?: Abor
 }
 
 export type ActionKind =
-  'mail-v1' | 'accounts-v1' | 'draft-v1' | 'send-v1' | 'calendar-v1' | 'contacts-v1' | 'crypto-v1' | 'spaces-v1';
+  | 'mail-v1'
+  | 'accounts-v1'
+  | 'draft-v1'
+  | 'send-v1'
+  | 'calendar-v1'
+  | 'contacts-v1'
+  | 'crypto-v1'
+  | 'ai-v1'
+  | 'spaces-v1';
 
 export async function postJson<T>(path: string, body: unknown, action: ActionKind, accountId?: string): Promise<T> {
   const res = await fetch(accountPath(path, accountId), {

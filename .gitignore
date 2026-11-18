@@ -18,3 +18,11 @@ accounts.json
 # Test fixtures (worthless test keys)
 !apps/server/test/fixtures/*.p12
 test/e2e/screenshots/
+
+# AI sidecar (Python)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+build/ai-runtime/

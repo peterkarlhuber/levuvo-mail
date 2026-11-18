@@ -341,14 +341,21 @@ export function registerMailRoutes(ctx) {
     const ids = request.query?.account ? [String(request.query.account)] : ctx.accounts().map(a => a.id);
     const known = new Set(ctx.accounts().map(a => a.id));
     const labels = Object.fromEntries(ctx.accounts().map(a => [a.id, a.label]));
-    const hits = await localIndex.search(
+    const cursor = typeof request.query?.cursor === 'string' ? request.query.cursor : null;
+    if (cursor !== null && !/^\d{1,9}$/.test(cursor)) return reply.code(400).send({ error: 'Ungültiger Cursor.' });
+    const page = await localIndex.searchPage(
       ids.filter(id => known.has(id)),
       q,
-      { folder: typeof request.query?.folder === 'string' ? request.query.folder : null }
+      {
+        folder: typeof request.query?.folder === 'string' ? request.query.folder : null,
+        limit: cleanLimit(request.query?.limit, 100),
+        cursor
+      }
     );
     return {
-      messages: hits.map(h => ({ ...h, accountLabel: labels[h.accountId] })),
-      total: hits.length,
+      messages: page.messages.map(h => ({ ...h, accountLabel: labels[h.accountId] })),
+      total: page.total,
+      nextCursor: page.nextCursor,
       source: 'local'
     };
   });
