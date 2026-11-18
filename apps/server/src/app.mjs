@@ -38,6 +38,7 @@ import { applyPendingRestore, pendingRestore } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
+import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -346,7 +347,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|spaces)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -408,7 +409,7 @@ export async function createMailServer({
         retryable: err.retryable === true
       });
     }
-    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected)_/.test(err.code)) {
+    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces)_/.test(err.code)) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
     }
@@ -561,6 +562,7 @@ export async function createMailServer({
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
   registerAiRoutes(ctx);
+  registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
@@ -603,7 +605,12 @@ export async function createMailServer({
       logger(
         `Levuvo Mail ${APP_VERSION} · API ${address} · ${desktop ? 'Desktop' : 'Browser'} · Konten: ${accounts.length} · Schlüsselbund ${accountManager.vaultAvailable ? 'verfügbar' : 'nicht verfügbar'}`
       );
-      if (background) timers.push(...ctx.startBackgroundJobs());
+      if (background) {
+        timers.push(...ctx.startBackgroundJobs());
+        // Shared spaces: fetch and send sync mails.
+        setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
+        timers.push(setInterval(() => void ctx.spaces.tick(), 60_000));
+      }
       return { address, port: activePort };
     },
     setPortForTesting(port) {
@@ -614,6 +621,7 @@ export async function createMailServer({
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
       await api.close();
+      localIndex.close();
     }
   };
 }

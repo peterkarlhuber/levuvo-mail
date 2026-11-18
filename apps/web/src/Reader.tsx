@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   AlarmClock,
   AlertTriangle,
@@ -36,6 +36,7 @@ import {
   Trash2,
   Unlock,
   WifiOff,
+  Users,
   X
 } from 'lucide-react';
 import { accountPath, ApiError, download, getJson, postJson } from './api';
@@ -48,6 +49,7 @@ import { EventSuggestions } from './EventSuggestions';
 import ContactCard from './ContactCard';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
+const AddToSpaceMenu = lazy(() => import('./SpacePick'));
 import type {
   Attachment,
   CalendarInfo,
@@ -808,6 +810,7 @@ export default function Reader(props: Props) {
   const [menu, setMenu] = useState(false);
   // Contact card of the sender, per message (closes when another message is opened).
   const [cardFor, setCardFor] = useState<string | null>(null);
+  const [spacePick, setSpacePick] = useState(false);
   const [snoozeMenu, setSnoozeMenu] = useState(false);
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
@@ -1067,7 +1070,26 @@ export default function Reader(props: Props) {
                     >
                       <Download size={14} /> {t('Als .eml speichern')}
                     </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(false);
+                        setSpacePick(true);
+                      }}
+                    >
+                      <Users size={14} /> {t('In Raum legen')}
+                    </button>
                   </div>
+                )}
+                {spacePick && detail && (
+                  <Suspense fallback={null}>
+                    <AddToSpaceMenu
+                      accountId={accountId}
+                      folder={detail.folder}
+                      uid={detail.uid}
+                      onDone={() => setSpacePick(false)}
+                    />
+                  </Suspense>
                 )}
               </div>
             </div>

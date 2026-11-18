@@ -20,6 +20,8 @@
 - **Search index:** a folder whose message count and UIDNEXT did not change is not listed again on each background run (read/unread changes are still picked up). "Search everywhere" loads its results in pages of 40 with the exact hit count instead of a fixed top 100, sorted newest first without sorting every hit.
 - **Search index for other features:** `entries()` and `removedKeys()` report new and removed index entries incrementally (stable keys, a generation ID that changes on rebuild), so features built on the index do not copy it.
 - **Benchmark:** `npm run bench:mailbox` measures paging, IMAP search and the index on 100,000 synthetic messages and fails when an upper bound is exceeded; it runs in CI.
+- **Search index as encrypted SQLite:** the index is now one SQLite database per account, encrypted as a whole with SQLCipher (AES-256, HMAC-SHA512; key in the system keychain as before). Only changes are written, so the limit rises from 25,000 to 250,000 messages per account; a search over 100,000 messages takes about 25–110 ms. Full-text search uses FTS5: word beginnings everywhere, plus substrings in subject, sender and recipients. The old index file is migrated on first start and then deleted.
+- **Vectors for the AI assistant:** embeddings are stored in the same encrypted file (int8, 1 byte per dimension) and searched exactly by cosine similarity (about 25 ms for 20,000 vectors with 1024 dimensions). Removing a message, clearing the index or changing the mailbox of an account removes them too.
 
 ### Fixes
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".

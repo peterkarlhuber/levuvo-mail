@@ -136,7 +136,7 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
 
 - **In diesem Ordner:** Suchfeld (Taste /) durchsucht Betreff, Absender und Inhalt auf dem Mailserver.
 - **Überall:** Schalter „Überall“ neben dem Suchfeld durchsucht alle Ordner und Konten über den
-  **lokalen, verschlüsselten Suchindex** – auch ohne Internet. Der Index wird im Hintergrund aufgebaut
+  **lokalen, verschlüsselten Suchindex** (SQLite, mit SQLCipher verschlüsselt) – auch ohne Internet. Der Index wird im Hintergrund aufgebaut
   (Einstellungen → Suche & Offline: Status, „Jetzt aktualisieren“, „Neu aufbauen“, abschalten).
 - **Offline:** Ohne Verbindung zeigt die App zuletzt geladene Listen und Nachrichten bzw. den Text aus dem
   Index. Verschieben und Senden sind erst wieder online möglich.

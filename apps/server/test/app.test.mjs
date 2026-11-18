@@ -327,3 +327,62 @@ test('Every installation has a stable instance ID for scheduled sending', async 
   t.after(() => again.close());
   assert.equal(again.ctx.instanceId, s.ctx.instanceId);
 });
+
+test('Spaces API: create a space, add a task, upload and download a file', async t => {
+  const { s } = await server(t);
+  await addAccount(s);
+  const accounts = (await s.api.inject({ method: 'GET', url: '/api/accounts', headers: GET })).json();
+  const accountId = (accounts.accounts || accounts)[0].id;
+  const H = { ...POST, 'x-levuvo-action': 'spaces-v1' };
+  const empty = await s.api.inject({ method: 'GET', url: '/api/spaces', headers: GET });
+  assert.equal(empty.statusCode, 200);
+  assert.deepEqual(empty.json().spaces, []);
+  const denied = await s.api.inject({
+    method: 'POST',
+    url: '/api/spaces/create',
+    headers: POST,
+    payload: { name: 'X' }
+  });
+  assert.equal(denied.statusCode, 403);
+  const created = await s.api.inject({
+    method: 'POST',
+    url: '/api/spaces/create',
+    headers: H,
+    payload: { name: 'Umbau', accountId }
+  });
+  assert.equal(created.statusCode, 200, created.body);
+  const id = created.json().id;
+  const op = await s.api.inject({
+    method: 'POST',
+    url: `/api/spaces/${id}/op`,
+    headers: H,
+    payload: { type: 'task.upsert', data: { id: 'c'.repeat(32), title: 'Fliesen aussuchen' } }
+  });
+  assert.equal(op.statusCode, 200, op.body);
+  const bad = await s.api.inject({
+    method: 'POST',
+    url: `/api/spaces/${id}/op`,
+    headers: H,
+    payload: { type: 'member.add', data: {} }
+  });
+  assert.equal(bad.statusCode, 400);
+  const up = await s.api.inject({
+    method: 'POST',
+    url: `/api/spaces/${id}/files/upload?name=plan.txt&mime=text/plain`,
+    headers: {
+      ...GET,
+      origin: `http://${HOST}`,
+      'content-type': 'application/octet-stream',
+      'x-levuvo-action': 'spaces-v1'
+    },
+    payload: Buffer.from('Grundriss')
+  });
+  assert.equal(up.statusCode, 200, up.body);
+  const detail = (await s.api.inject({ method: 'GET', url: `/api/spaces/${id}`, headers: GET })).json();
+  assert.equal(detail.tasks[0].title, 'Fliesen aussuchen');
+  assert.equal(detail.files[0].name, 'plan.txt');
+  const down = await s.api.inject({ method: 'GET', url: `/api/spaces/${id}/files/${up.json().id}`, headers: GET });
+  assert.equal(down.body, 'Grundriss');
+  assert.match(down.headers['content-disposition'], /attachment/);
+  assert.equal(down.headers['content-type'], 'application/octet-stream');
+});
