@@ -144,3 +144,30 @@ test('with a persistent store, progress survives a restart and nothing is embedd
   const restarted = createSemanticIndex({ localIndex: idx, ai, vectors, stateFile });
   assert.deepEqual(await restarted.sync('a1'), { embedded: 0 });
 });
+
+test('with the encrypted local index: vectors are stored there and found by meaning', async t => {
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { createLocalIndex } = await import('../src/local-index.mjs');
+  const { syntheticMailbox } = await import('./helpers/synthetic-mailbox.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-sem-'));
+  const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 7) });
+  t.after(() => {
+    index.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  await index.sync(syntheticMailbox(12, { textChars: 40 }), 'acc', [{ path: 'INBOX', flags: new Set() }]);
+  const calls = [];
+  const ai = fakeAi(calls);
+  let saved = { accounts: {} };
+  const stateFile = { get: () => saved, save: async v => (saved = v) };
+  const semantic = createSemanticIndex({ localIndex: index, ai, stateFile });
+  const first = await semantic.sync('acc');
+  assert.equal(first.embedded, 12);
+  assert.equal((await index.status('acc')).vectors, 12, 'vectors live in the index file');
+  const hits = await semantic.search(['acc'], 'egal');
+  assert.ok(hits.length > 0 && hits.every(h => h.accountId === 'acc' && Number.isInteger(h.uid)));
+  // A restart reuses the stored vectors.
+  assert.deepEqual(await createSemanticIndex({ localIndex: index, ai, stateFile }).sync('acc'), { embedded: 0 });
+});
