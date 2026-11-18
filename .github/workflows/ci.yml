@@ -36,6 +36,8 @@ jobs:
       - run: npm run format:check
       - name: Tests (server, UI, desktop configuration, i18n)
         run: npm test
+      - name: Large mailbox benchmark (100k synthetic messages, upper bounds)
+        run: npm run bench:mailbox
       - run: npm run check:i18n
       - run: npm run typecheck
       - run: npm run build
