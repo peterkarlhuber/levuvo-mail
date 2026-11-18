@@ -21,7 +21,7 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Events and contacts | on your CalDAV/CardDAV server; in memory while displayed | calendar, address book, invitations |
 | Passwords, OAuth sign-in tokens, private PGP/S/MIME keys, index key | exclusively in the operating system keychain (macOS Keychain / Windows Credential Manager) | sign-in, decryption, signing |
 | Account settings (address, servers, folders, sender addresses, signatures), CalDAV/CardDAV accounts, public keys and certificates, app settings | files in the app data folder, readable only by your user account | connections, encryption |
-| Local search index: subject, sender, date and the first 3,000 characters of text (no attachments; end-to-end encrypted messages only in their unreadable, encrypted form) | app data folder, **encrypted with AES-256-GCM**; can be switched off and deleted | search across all folders, offline reading |
+| Local search index: subject, sender, date and the first 3,000 characters of text (no attachments; end-to-end encrypted messages only in their unreadable, encrypted form); with the AI assistant on, also numeric embeddings (vectors) of these texts | app data folder, SQLite database **encrypted as a whole with SQLCipher (AES-256, HMAC-SHA512)**, key in the system keychain; can be switched off and deleted | search across all folders, offline reading |
 | Display (language, theme, column width), notification counters (message IDs only) | local app storage | convenience |
 | Address suggestions, preview texts, offline view | in memory only | faster work |
 

@@ -614,6 +614,7 @@ export async function createMailServer({
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
       await api.close();
+      localIndex.close();
     }
   };
 }
