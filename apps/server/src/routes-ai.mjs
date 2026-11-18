@@ -3,6 +3,7 @@
 import { htmlToText } from './html-mail.mjs';
 import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 import { contactPayload, eventPayload } from './mcp-server.mjs';
+import { createSemanticIndex } from './ai-semantic.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
@@ -162,6 +163,24 @@ export function registerAiRoutes(ctx) {
           out.messages = (await loadThread(accountId, body.refs)).map(messageForAi);
         return out;
       }
+      case 'ask': {
+        const question = clientText(input.question, 500).trim();
+        if (!question) throw Object.assign(new Error('Bitte eine Frage eingeben.'), { statusCode: 400 });
+        const ids = accountId ? [accountId] : ctx.accounts().map(a => a.id);
+        const hits = await semantic.search(ids, question, { limit: 8 });
+        body.sourceMap = hits.map(h => ({ accountId: h.accountId, folder: h.folder, uid: h.uid, subject: h.subject }));
+        return {
+          lang,
+          question,
+          sources: hits.map((h, i) => ({
+            id: `s${i + 1}`,
+            from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
+            date: h.date,
+            subject: h.subject,
+            text: String(h.text || '').slice(0, 2500)
+          }))
+        };
+      }
       case 'attachment_check':
         return { lang, subject: clientText(input.subject, 300), text: clientText(input.text, 6000) };
       case 'presend':
@@ -200,6 +219,43 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
+  const semantic = createSemanticIndex({ localIndex: ctx.localIndex, ai, logger: ctx.logger });
+  ctx.semantic = semantic;
+  ctx.aiForgetHooks.push(() => semantic.forget());
+  // Keep the vectors close to the index: every 10 minutes, only while AI search is switched on.
+  const syncAll = async () => {
+    for (const a of ctx.accounts()) await semantic.sync(a.id).catch(() => null);
+  };
+  setTimeout(() => void syncAll(), 60_000).unref?.();
+  setInterval(() => void syncAll(), 10 * 60_000).unref?.();
+  // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
+  api.get('/api/ai/search', async (request, reply) => {
+    const { q: query, account, folder } = request.query || {};
+    try {
+      ai.ensureAllowed('search', null);
+      const ids = account ? [String(account)].filter(id => accountOf(id)) : ctx.accounts().map(a => a.id);
+      const hits = await semantic.search(ids, String(query || ''), {
+        limit: 30,
+        folder: folder ? String(folder) : null
+      });
+      return {
+        messages: hits.map(h => ({
+          accountId: h.accountId,
+          folder: h.folder,
+          uid: h.uid,
+          subject: h.subject,
+          fromName: h.fromName,
+          fromEmail: h.fromEmail,
+          date: h.date,
+          score: Math.round(h.score * 1000) / 1000
+        })),
+        model: ai.get().embedModel,
+        generated: true
+      };
+    } catch (err) {
+      return aiError(reply, err);
+    }
+  });
   api.get('/api/ai/status', async () => ({ settings: ai.publicSettings(), runtime: await ai.status() }));
   api.get('/api/ai/models', async (_request, reply) => {
     try {
@@ -225,6 +281,10 @@ export function registerAiRoutes(ctx) {
       ai.ensureAllowed(null, accountId);
       const input = await prepare(kind, body);
       const result = await ai.run(kind, input, { accountId });
+      if (kind === 'ask' && Array.isArray(body.sourceMap))
+        result.sources = (result.sources || [])
+          .map(id => body.sourceMap[Number(String(id).slice(1)) - 1])
+          .filter(Boolean);
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {
       return aiError(reply, err);

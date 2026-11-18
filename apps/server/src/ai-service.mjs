@@ -273,21 +273,24 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     async run(kind, input, { accountId = null, source = 'user' } = {}) {
       const feature = TASK_FEATURE[kind];
       if (!feature) throw invalid('Unbekannte KI-Funktion.');
-      const s = ensureAllowed(feature, accountId);
-      // Embeddings always run on the local Ollama, also when a cloud model writes the answers.
+      // Embeddings always run on the local Ollama, also when a cloud model writes the answers, so the
+      // per-account cloud block does not apply to them.
+      const s = ensureAllowed(feature, kind === 'embed' ? null : accountId);
       const started = Date.now();
       try {
         const result = await sidecar.call('task', { kind, input });
-        void log.add({
-          type: 'task',
-          kind,
-          provider: kind === 'embed' ? 'ollama' : s.provider,
-          model: s.model,
-          accountId,
-          source,
-          ok: true,
-          ms: Date.now() - started
-        });
+        // Background indexing would flood the log; the indexer writes one entry per run instead.
+        if (source !== 'index')
+          void log.add({
+            type: 'task',
+            kind,
+            provider: kind === 'embed' ? 'ollama' : s.provider,
+            model: s.model,
+            accountId,
+            source,
+            ok: true,
+            ms: Date.now() - started
+          });
         return result;
       } catch (err) {
         void log.add({

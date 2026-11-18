@@ -229,5 +229,6 @@ export const AI_EN: Record<string, string> = {
   Lockerer: 'More casual',
   'Rechtschreibung korrigieren': 'Fix spelling',
   'Auf Englisch': 'In English',
-  'Auf Deutsch': 'In German'
+  'Auf Deutsch': 'In German',
+  'Bitte eine Frage eingeben.': 'Please enter a question.'
 };
