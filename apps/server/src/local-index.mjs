@@ -128,7 +128,7 @@ export function createLocalIndex({ dir, getKey, maxPerAccount = 25_000 }) {
         const raw = [];
         for await (const m of client.fetch(
           batch,
-          { uid: true, envelope: true, internalDate: true, flags: true, bodyStructure: true },
+          { uid: true, envelope: true, internalDate: true, flags: true, bodyStructure: true, size: true },
           { uid: true }
         ))
           raw.push(m);

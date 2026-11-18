@@ -9,6 +9,25 @@
 
 const isObject = value => value !== null && typeof value === 'object';
 
+/**
+ * True for the stand-in Dovecot returns for a message that another connection has already
+ * expunged (deleted or moved elsewhere) while this connection has not been told yet:
+ * `RFC822.SIZE 0`, `INTERNALDATE` 1970-01-01, an all-NIL `ENVELOPE` and an empty body.
+ * The message no longer exists, so such an entry must never be listed or opened; listed,
+ * it showed up as an empty "(no subject)" row from "Unknown" that could not be deleted.
+ */
+export function isExpungedPlaceholder(message) {
+  if (!isObject(message)) return false;
+  // No real message has zero bytes.
+  if (message.size === 0) return true;
+  if ((Buffer.isBuffer(message.source) || message.source instanceof Uint8Array) && message.source.length === 0)
+    return true;
+  const date = message.internalDate;
+  const epoch = date instanceof Date && date.getTime() === 0;
+  const emptyEnvelope = isObject(message.envelope) && !Object.values(message.envelope).some(v => v !== undefined);
+  return epoch && (emptyEnvelope || message.envelope === undefined);
+}
+
 function hasBodyPart(message, key) {
   const parts = message?.bodyParts;
   if (!(parts instanceof Map)) return false;
@@ -19,7 +38,7 @@ function hasBodyPart(message, key) {
 
 /** True when `message` carries every field `query` asked for (the UID itself is checked separately). */
 export function hasRequestedFields(message, query = {}) {
-  if (!isObject(message)) return false;
+  if (!isObject(message) || isExpungedPlaceholder(message)) return false;
   if (query.source && !Buffer.isBuffer(message.source) && !(message.source instanceof Uint8Array)) return false;
   if (query.size && (!Number.isSafeInteger(message.size) || message.size < 0)) return false;
   if (query.flags && !(message.flags instanceof Set)) return false;
@@ -80,10 +99,16 @@ export async function fetchUidOne(client, uid, query = {}, { optional = [] } = {
   const required = { ...fullQuery };
   for (const field of optional) delete required[field];
   const matches = [];
+  let gone = false;
   // Always drain the iterator: leaving it early would cut the running FETCH short.
   for await (const message of client.fetch(String(wanted), fullQuery, { uid: true })) {
-    if (isObject(message) && message.uid === wanted) matches.push(message);
+    if (isObject(message) && message.uid === wanted) {
+      // The message is gone on the server: nothing usable can be merged from other entries.
+      if (isExpungedPlaceholder(message)) gone = true;
+      else matches.push(message);
+    }
   }
+  if (gone) return null;
   // A complete answer wins outright; otherwise merge partial entries for this UID.
   const complete = matches.find(message => hasRequestedFields(message, required));
   if (complete) return complete;

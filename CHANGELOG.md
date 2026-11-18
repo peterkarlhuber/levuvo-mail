@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- **Inbox:** no more empty "(no subject)" entry from "Unknown" that cannot be deleted. When a message is deleted or moved on another connection (this app's own action, a second computer, a phone) and the live connection has not been told yet, Dovecot still answers for it with an empty stand-in (size 0, date 1970, no sender or subject). Such entries are now ignored in the list, the live inbox, the reading pane, the local search index and before moving or deleting.
+
+### Tests
+- Regression tests drive the real IMAP client against a server that answers with Dovecot's stand-in for an already expunged message.
+
 ## 2.2.2 – 13 November 2026
 
 ### Fixes

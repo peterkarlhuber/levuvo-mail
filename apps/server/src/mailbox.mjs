@@ -2,8 +2,10 @@
 // Every function uses EXAMINE (readOnly lock) and BODY.PEEK: listing never marks mail as read.
 import { toMessageInfo } from './config.mjs';
 import { attachPreviews, hasAttachments } from './previews.mjs';
+import { isExpungedPlaceholder } from './imap-fetch.mjs';
 
-const LIST_QUERY = { envelope: true, flags: true, internalDate: true, uid: true, bodyStructure: true };
+// RFC822.SIZE costs nothing and identifies Dovecot's stand-in for an already expunged message.
+const LIST_QUERY = { envelope: true, flags: true, internalDate: true, uid: true, bodyStructure: true, size: true };
 
 export function safeImapInteger(value) {
   if (value === null || value === undefined) return null;
@@ -19,14 +21,15 @@ export function safeImapInteger(value) {
  * runs to the iterator, including unsolicited flag updates the server pushes for new or
  * changed mail (e.g. `* 12 FETCH (FLAGS (\Recent))`). Those carry no envelope and often
  * no UID; listed as is, they showed up as empty "(no subject)" messages that could not
- * be deleted.
+ * be deleted. The same happens with the stand-in Dovecot returns for a message another
+ * connection has just deleted or moved (see `isExpungedPlaceholder`).
  */
 export function completeFetchResults(raw, requestedUids = null) {
   const wanted = requestedUids ? new Set(requestedUids.map(Number)) : null;
   const byUid = new Map();
   for (const message of raw) {
     const uid = message?.uid;
-    if (!Number.isSafeInteger(uid) || uid < 1 || !message.envelope) continue;
+    if (!Number.isSafeInteger(uid) || uid < 1 || !message.envelope || isExpungedPlaceholder(message)) continue;
     if (wanted && !wanted.has(uid)) continue;
     if (!byUid.has(uid)) byUid.set(uid, message);
   }
