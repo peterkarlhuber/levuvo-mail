@@ -5,6 +5,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek, ymd } from '../src/calendar-utils.ts';
 import { orderFolders } from '../src/folder-utils.ts';
+import { applySuggestions, bundleSuggester, registerBundleSuggester } from '../src/bundle-suggest.ts';
 import { isTrackingImage, trackerHost } from '../src/trackers.ts';
 import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
@@ -288,4 +289,37 @@ test('Templates: a shortcut right before the cursor is found', () => {
   assert.equal(shortcutAt('Danke ;mfgx', list), null);
   assert.equal(shortcutAt('Danke mfg', list), null);
   assert.equal(shortcutAt(';', list), null);
+});
+
+test('bundle suggestions: optional second opinion over the local rules', () => {
+  const base = { fromName: 'X', fromEmail: 'x@y.test', subject: 'S', date: null, unread: false };
+  const messages = [
+    { ...base, uid: 1, bundle: 'newsletter' },
+    { ...base, uid: 2, bundle: null },
+    { ...base, uid: 3 }
+  ];
+  assert.equal(applySuggestions(messages, new Map()), messages);
+  const out = applySuggestions(
+    messages,
+    new Map([
+      [1, { bundle: null, source: 'ai', reason: 'persönlich' }],
+      [2, { bundle: 'invoice', source: 'ai' }],
+      [3, { bundle: null, source: 'ai' }]
+    ])
+  );
+  assert.deepEqual(
+    out.map(m => [m.uid, m.bundle ?? null, m.bundleSource ?? null]),
+    [
+      [1, null, 'ai'],
+      [2, 'invoice', 'ai'],
+      [3, null, null]
+    ]
+  );
+  assert.equal(out[0].bundleReason, 'persönlich');
+  assert.equal(bundleSuggester(), null);
+  const fn = async () => new Map();
+  registerBundleSuggester(fn);
+  assert.equal(bundleSuggester(), fn);
+  registerBundleSuggester(null);
+  assert.equal(bundleSuggester(), null);
 });

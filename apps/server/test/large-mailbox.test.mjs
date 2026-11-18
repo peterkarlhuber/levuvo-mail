@@ -6,8 +6,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { listMessages, searchFolder, uidsBefore } from '../src/mailbox.mjs';
-import { createLocalIndex, entryKey } from '../src/local-index.mjs';
+import { createLocalIndex as openIndex, entryKey } from '../src/local-index.mjs';
 import { syntheticMailbox } from './helpers/synthetic-mailbox.mjs';
+
+// Every index a test opens is closed before its directory is removed (Windows keeps open
+// database files locked).
+const opened = [];
+const createLocalIndex = options => {
+  const index = openIndex(options);
+  opened.push(index);
+  return index;
+};
+function cleanup(dir) {
+  for (const index of opened.splice(0)) index.close();
+  rmSync(dir, { recursive: true, force: true });
+}
 
 const PAGE = 40;
 
@@ -62,7 +75,7 @@ test('IMAP search on later pages only covers UIDs below the cursor', async () =>
 
 test('Index: unchanged folders skip the full UID listing; changes are still picked up', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-big-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const key = randomBytes(32);
   const index = createLocalIndex({ dir, getKey: async () => key, maxPerAccount: 3_000 });
   const client = syntheticMailbox(2_000, { textChars: 300 });
@@ -83,7 +96,7 @@ test('Index: unchanged folders skip the full UID listing; changes are still pick
 
 test('Index: a folder cut short by the budget keeps syncing although nothing changed', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-big-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 1) });
   const client = syntheticMailbox(300, { textChars: 50 });
   const folders = [{ path: 'INBOX', flags: new Set() }];
@@ -95,7 +108,7 @@ test('Index: a folder cut short by the budget keeps syncing although nothing cha
 
 test('Index search pages newest first with an exact total', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-big-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 2) });
   const client = syntheticMailbox(1_600, { textChars: 0 }); // subjects only
   await index.sync(client, 'acc', [{ path: 'INBOX', flags: new Set() }], { budget: 5_000 });
@@ -117,7 +130,7 @@ test('Index search pages newest first with an exact total', async t => {
 
 test('Index: entries() and removedKeys() report changes incrementally', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-big-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const key = Buffer.alloc(32, 3);
   const index = createLocalIndex({ dir, getKey: async () => key });
   const client = syntheticMailbox(50, { textChars: 80 });
