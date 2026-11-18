@@ -1,10 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { createLocalIndex, encrypt, decrypt, normalize } from '../src/local-index.mjs';
+import { createLocalIndex as openIndex, encrypt, decrypt, normalize } from '../src/local-index.mjs';
+
+// Every index a test opens is closed before its directory is removed (Windows keeps open
+// database files locked).
+const opened = [];
+const createLocalIndex = options => {
+  const index = openIndex(options);
+  opened.push(index);
+  return index;
+};
+function cleanup(dir) {
+  for (const index of opened.splice(0)) index.close();
+  rmSync(dir, { recursive: true, force: true });
+}
 
 function mailbox(messages) {
   return {
@@ -42,12 +55,13 @@ test('Index is encrypted, matches without umlauts/case, removes deleted messages
       { path: 'INBOX', flags: new Set() },
       { path: 'INBOX.Trash', specialUse: '\\Trash', flags: new Set() }
     ]);
-    const file = readdirSync(dir).find(f => f.endsWith('.lvx'));
-    const bytes = readFileSync(join(dir, file));
-    assert.ok(
-      !bytes.includes(Buffer.from('Olivenöl')) && !bytes.includes(Buffer.from('Rechnung')),
-      'plain text not in the file'
-    );
+    const files = readdirSync(dir).filter(f => f.includes('.lvdb'));
+    assert.ok(files.length >= 1);
+    for (const f of files) {
+      const bytes = readFileSync(join(dir, f));
+      for (const word of ['Olivenöl', 'olivenol', 'Rechnung', 'rechnung', 'SQLite format'])
+        assert.ok(!bytes.includes(Buffer.from(word)), `"${word}" not in plain text in ${f}`);
+    }
     assert.deepEqual(
       (await index.search(['acc'], 'MULLER olivenol')).map(h => h.uid),
       [1]
@@ -60,11 +74,13 @@ test('Index is encrypted, matches without umlauts/case, removes deleted messages
     assert.equal((await reopened.status('acc')).messages, 2);
     await reopened.sync(mailbox(msgs.slice(0, 1)), 'acc', [{ path: 'INBOX', flags: new Set() }]);
     assert.deepEqual(await reopened.search(['acc'], 'rechnung'), []);
+    // As after a restart with a lost key: nothing else holds the file open (Windows locks it).
+    for (const open of opened.splice(0)) open.close();
     const wrongKey = createLocalIndex({ dir, getKey: async () => randomBytes(32) });
     assert.equal((await wrongKey.status('acc')).messages, 0, 'wrong key → empty index');
     assert.equal((await createLocalIndex({ dir, getKey: async () => null }).status('acc')).enabled, false);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    cleanup(dir);
   }
 });
 
@@ -77,7 +93,7 @@ test('Encryption detects tampering; normalization', () => {
   assert.equal(normalize('Größe Ärger'), 'grosse arger');
 });
 
-test('Index file is only rewritten when something changed', async () => {
+test('An unchanged sync writes nothing to the database', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-index-'));
   try {
     const key = randomBytes(32);
@@ -85,21 +101,27 @@ test('Index file is only rewritten when something changed', async () => {
     const msgs = [{ uid: 1, subject: 'Hallo', from: 'Anna', text: 'Text', date: '2026-10-01' }];
     const folders = [{ path: 'INBOX', flags: new Set() }];
     await index.sync(mailbox(msgs), 'acc', folders);
-    const file = join(
-      dir,
-      readdirSync(dir).find(f => f.endsWith('.lvx'))
-    );
-    const first = readFileSync(file);
+    const snapshot = () =>
+      readdirSync(dir)
+        .filter(f => f.includes('.lvdb'))
+        .sort()
+        .map(f => {
+          const s = statSync(join(dir, f));
+          return `${f}:${s.size}:${s.mtimeMs}`;
+        })
+        .join('|');
+    const first = snapshot();
     await index.sync(mailbox(msgs), 'acc', folders);
-    assert.ok(readFileSync(file).equals(first), 'unchanged index is not re-encrypted and rewritten');
+    assert.equal(snapshot(), first, 'unchanged index is not written');
     await index.sync(
       mailbox([...msgs, { uid: 2, subject: 'Neu', from: 'Max', text: 'x', date: '2026-10-02' }]),
       'acc',
       folders
     );
-    assert.ok(!readFileSync(file).equals(first), 'a new message is saved');
+    assert.notEqual(snapshot(), first, 'a new message is saved');
+    assert.equal((await index.search(['acc'], 'neu')).length, 1);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    cleanup(dir);
   }
 });
 
@@ -141,7 +163,7 @@ function flagMailbox(messages, { condstore = false } = {}) {
 test('Index: read/unread changes from other devices reach the offline search (AUD-007)', async t => {
   for (const condstore of [false, true]) {
     const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    t.after(() => cleanup(dir));
     const key = randomBytes(32);
     const index = createLocalIndex({ dir, getKey: async () => key });
     const messages = [{ uid: 1, subject: 'Rechnung Oktober', text: 'x', flags: [], modseq: 5n }];
@@ -163,7 +185,7 @@ test('Index: read/unread changes from other devices reach the offline search (AU
 
 test('Index: data of a previous mailbox never shows up after the account changes (AUD-003)', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-idx-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  t.after(() => cleanup(dir));
   const key = randomBytes(32);
   let identity = 'mailbox-A';
   const index = createLocalIndex({ dir, getKey: async () => key, getIdentity: () => identity });

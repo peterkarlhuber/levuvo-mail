@@ -191,6 +191,12 @@ function General() {
             onChange={v => setPrefs({ conversations: v })}
           />
         </Row>
+        <Row
+          label={t('Posteingang bündeln')}
+          hint={t('Newsletter, Rechnungen und Benachrichtigungen erscheinen gesammelt oben im Posteingang.')}
+        >
+          <Toggle label={t('Posteingang bündeln')} checked={prefs.bundles} onChange={v => setPrefs({ bundles: v })} />
+        </Row>
       </Section>
       <Section title={t('Schreiben')}>
         <Row label={t('Standardformat')}>
