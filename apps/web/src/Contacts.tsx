@@ -155,7 +155,20 @@ export default function ContactsModule({
     );
   }, [data, query, locale]);
   const current = contacts.find(c => key(c) === selected) || null;
-  const books = data?.addressBooks || [];
+  // The address book on this device has built-in German names on the server side.
+  const books = useMemo(
+    () =>
+      (data?.addressBooks || []).map(b =>
+        b.source === 'local'
+          ? { ...b, accountLabel: t('Auf diesem Gerät'), name: b.name === 'Kontakte' ? t('Kontakte') : b.name }
+          : b
+      ),
+    [data, t]
+  );
+  const typeLabel = (type: string) =>
+    ({ work: t('Arbeit'), home: t('Privat'), cell: t('Mobil'), mobile: t('Mobil'), other: t('Andere') })[type] || type;
+  const onlyLocal = books.length > 0 && books.every(b => b.source === 'local');
+  const bookOf = (c: Contact) => books.find(b => b.accountId === c.accountId && b.url === c.addressBookUrl);
 
   function startNew() {
     if (!books.length) {
@@ -424,6 +437,13 @@ export default function ContactsModule({
                 {(current.title || current.organization) && (
                   <p className="muted">{[current.title, current.organization].filter(Boolean).join(' · ')}</p>
                 )}
+                {books.length > 1 && bookOf(current) && (
+                  <p className="muted">
+                    <small>
+                      {bookOf(current)?.name} · {bookOf(current)?.accountLabel}
+                    </small>
+                  </p>
+                )}
               </div>
             </div>
             <div className="contact-actions">
@@ -459,7 +479,7 @@ export default function ContactsModule({
                     <button className="link-button" onClick={() => onCompose(e.value)}>
                       {e.value}
                     </button>
-                    <small>{e.type}</small>
+                    <small>{typeLabel(e.type)}</small>
                   </dd>
                 </div>
               ))}
@@ -470,7 +490,7 @@ export default function ContactsModule({
                   </dt>
                   <dd>
                     <a href={`tel:${p.value.replace(/[^\d+]/g, '')}`}>{p.value}</a>
-                    <small>{p.type}</small>
+                    <small>{typeLabel(p.type)}</small>
                   </dd>
                 </div>
               ))}
@@ -521,6 +541,18 @@ export default function ContactsModule({
               <span className="period">.</span>
             </h2>
             <p>{t('Wähle links einen Kontakt oder lege einen neuen an.')}</p>
+            {onlyLocal && (
+              <>
+                <p className="muted">
+                  {t(
+                    'Neue Kontakte werden verschlüsselt auf diesem Gerät gespeichert. Ein Adressbuch (CardDAV, Microsoft 365 oder Google) kannst du jederzeit zusätzlich verbinden.'
+                  )}
+                </p>
+                <button className="btn" onClick={onOpenSettings}>
+                  {t('Adressbuch verbinden')}
+                </button>
+              </>
+            )}
           </div>
         )}
       </main>

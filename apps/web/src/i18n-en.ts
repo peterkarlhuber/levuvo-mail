@@ -1288,6 +1288,15 @@ export const EN: Record<string, string> = {
   'Diese Nachricht ist keine geschützte Nachricht.': 'This message is not a protected message.',
   'Für jeden Empfänger ohne Einrichtung: beim Schreiben „Mit Passwort schützen“ wählen und das Passwort auf anderem Weg (SMS, Telefon) mitteilen – der Empfänger öffnet die Datei im Browser. OpenPGP: Schlüssel erzeugen oder importieren (Einstellungen → Sicherheit). S/MIME: Zertifikat als .p12 importieren. Beim Verfassen „Signieren“/„Verschlüsseln“ wählen.':
     'For any recipient without setup: choose “Protect with password” when writing and share the password on another channel (SMS, phone) – the recipient opens the file in a browser. OpenPGP: create or import keys (Settings → Security). S/MIME: import a .p12 certificate. Choose “Sign”/“Encrypt” when writing.',
+  'Neue Kontakte werden verschlüsselt auf diesem Gerät gespeichert. Ein Adressbuch (CardDAV, Microsoft 365 oder Google) kannst du jederzeit zusätzlich verbinden.':
+    'New contacts are stored encrypted on this device. You can connect an address book (CardDAV, Microsoft 365 or Google) at any time as well.',
+  'Die Kontakte auf diesem Gerät brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
+    'The contacts on this device need the system keychain. It is not available right now.',
+  'Die Kontakte auf diesem Gerät lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'The contacts on this device cannot be opened with the key from the keychain.',
+  'Kontakt nicht gefunden.': 'Contact not found.',
+  'Das Adressbuch auf diesem Gerät ist voll.': 'The address book on this device is full.',
+  'Die Kontakte auf diesem Gerät sind nicht verfügbar.': 'The contacts on this device are not available.',
   'Versand nicht bestätigt: Die Verbindung brach während des Sendens ab. Bitte in „Gesendet“ oder beim Empfänger prüfen. Levuvo Mail sendet diese Nachricht nicht automatisch erneut – „Bearbeiten“ macht sie wieder zum Entwurf, Löschen verwirft sie.':
     'Sending not confirmed: the connection dropped while sending. Please check “Sent” or with the recipient. Levuvo Mail does not resend this message automatically – “Edit” turns it back into a draft, deleting discards it.',
   'Geplanter Versand fehlgeschlagen: Der Server hat die Nachricht abgelehnt, sie wurde nicht gesendet. „Bearbeiten“ macht sie wieder zum Entwurf.':
