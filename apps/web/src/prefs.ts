@@ -7,6 +7,8 @@ export type Prefs = {
   language: 'system' | 'de' | 'en';
   markReadOnOpen: boolean;
   conversations: boolean;
+  /** Inbox: newsletters, invoices and notifications collapsed into bundles. */
+  bundles: boolean;
   listWidth: number;
   sendDelay: number;
   calendarView: 'month' | 'week' | 'day' | 'agenda';
@@ -20,6 +22,7 @@ export const DEFAULT_PREFS: Prefs = {
   language: 'system',
   markReadOnOpen: true,
   conversations: false,
+  bundles: true,
   listWidth: 400,
   sendDelay: 10,
   calendarView: 'week',
@@ -35,6 +38,7 @@ function read(): Prefs {
       language: v.language === 'de' || v.language === 'en' ? v.language : 'system',
       markReadOnOpen: v.markReadOnOpen !== false,
       conversations: v.conversations === true,
+      bundles: v.bundles !== false,
       listWidth:
         typeof v.listWidth === 'number' && v.listWidth >= 300 && v.listWidth <= 680
           ? v.listWidth
