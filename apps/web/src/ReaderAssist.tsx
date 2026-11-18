@@ -113,7 +113,11 @@ export function ReaderAssist({ accountId, folder, uid }: { accountId: string; fo
 
   async function apply(key: string, type: 'event' | 'task' | 'contact', data: Record<string, unknown>) {
     try {
-      await postJson('/api/ai/apply', { type, data, source: 'reader' }, 'ai-v1');
+      await postJson(
+        '/api/ai/apply',
+        { type, data, source: 'reader', mail: type === 'task' ? { accountId, folder, uid } : undefined },
+        'ai-v1'
+      );
       setSaved(old => new Set(old).add(key));
       toast({
         text:

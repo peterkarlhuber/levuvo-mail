@@ -355,7 +355,17 @@ test('AI and MCP: settings off by default, internal agent reaches the API with t
     s.api.inject({ method: 'POST', url: '/api/ai/apply', headers: { ...POST, 'x-levuvo-action': 'ai-v1' }, payload });
   assert.equal((await apply({ type: 'shell', data: {} })).statusCode, 400);
   assert.equal((await apply({ type: 'event', data: { summary: 'x' } })).statusCode, 400);
-  assert.ok([200, 409].includes((await apply({ type: 'task', data: { title: 'x' } })).statusCode));
+  assert.equal((await apply({ type: 'task', data: { title: 'x' } })).statusCode, 200);
+  const linked = await apply({
+    type: 'task',
+    data: { title: 'y' },
+    mail: { accountId: 'nope', folder: 'INBOX', uid: 4 }
+  });
+  assert.equal(linked.statusCode, 200);
+  const tasks = (await s.api.inject({ method: 'GET', url: '/api/tasks?view=all', headers: GET })).json();
+  const y = (tasks.tasks || tasks).find(x => x.title === 'y');
+  assert.equal(y.source, 'ai');
+  assert.equal(y.mail, null, 'unknown account: no mail link');
 
   const skills = await s.api.inject({ method: 'GET', url: '/api/ai/skills', headers: GET });
   assert.ok(skills.json().skills.some(x => x.id === 'briefing' && x.level === 'read'));
@@ -395,6 +405,15 @@ test('AI and MCP: settings off by default, internal agent reaches the API with t
   });
   assert.equal(search.result.isError, undefined, JSON.stringify(search));
   assert.match(search.result.content[0].text, /untrusted_data/);
+
+  // A task from the reading pane keeps the link to its mail (known accounts only).
+  await addAccount(s);
+  const acc = (await s.api.inject({ method: 'GET', url: '/api/accounts', headers: GET })).json();
+  const accId = (acc.accounts || acc)[0].id;
+  await apply({ type: 'task', data: { title: 'z' }, mail: { accountId: accId, folder: 'INBOX', uid: 4 } });
+  const all = (await s.api.inject({ method: 'GET', url: '/api/tasks?view=all', headers: GET })).json();
+  const z = (all.tasks || all).find(x => x.title === 'z');
+  assert.deepEqual([z.mail.accountId, z.mail.folder, z.mail.uid], [accId, 'INBOX', 4]);
 });
 
 test('Spaces API: create a space, add a task, upload and download a file', async t => {

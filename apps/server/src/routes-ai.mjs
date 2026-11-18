@@ -322,10 +322,26 @@ export function registerAiRoutes(ctx) {
           throw Object.assign(new Error('Aufgaben sind noch nicht verfügbar.'), { statusCode: 409 });
         const title = clientText(d.title, 300).trim();
         if (!title) throw invalidApply('Titel fehlt.');
+        // Link back to the mail the suggestion came from (only for a known account).
+        const m = request.body?.mail;
+        const uid = Number(m?.uid);
+        let mail = null;
+        if (m && ctx.accounts().some(a => a.id === m.accountId) && Number.isInteger(uid) && uid > 0) {
+          const folder = clientText(m.folder, 1000);
+          const meta = await ctx.localIndex?.text?.(m.accountId, folder, uid).catch(() => null);
+          mail = {
+            accountId: m.accountId,
+            folder,
+            uid,
+            subject: clientText(meta?.subject, 1000),
+            from: clientText(meta?.fromEmail, 400)
+          };
+        }
         await ctx.tasks.save({
           title,
           due: clientText(d.due, 40) || null,
           notes: clientText(d.notes, 2000),
+          mail,
           source: 'ai'
         });
       } else throw invalidApply('Unbekannter Vorschlag.');
