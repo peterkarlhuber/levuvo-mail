@@ -623,6 +623,7 @@ export async function createMailServer({
       await sidecar.stop().catch(() => {});
       await mcp.stop().catch(() => {});
       await api.close();
+      localIndex.close();
     }
   };
 }
