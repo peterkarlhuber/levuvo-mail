@@ -273,12 +273,13 @@ export function McpSettings() {
         ))}
         <Row label={t('Neuer Agent')} hint={t('Der Zugangsschlüssel wird nur einmal angezeigt.')}>
           <input
+            aria-label={t('Name des Agenten')}
             placeholder={t('z. B. Claude Desktop')}
             value={name}
             maxLength={60}
             onChange={e => setName(e.target.value)}
           />
-          <select value={level} onChange={e => setLevel(e.target.value as Level)}>
+          <select aria-label={t('Rechte des Agenten')} value={level} onChange={e => setLevel(e.target.value as Level)}>
             {(Object.keys(LEVEL_LABELS) as Level[]).map(l => (
               <option key={l} value={l}>
                 {t(LEVEL_LABELS[l])}

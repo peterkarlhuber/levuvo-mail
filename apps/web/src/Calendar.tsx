@@ -24,6 +24,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Segmented, useFocusTrap } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
@@ -342,6 +343,7 @@ function EventAttachments({
 
 function ScopeDialog({ title, onChoose }: { title: string; onChoose: (scope: 'this' | 'all' | null) => void }) {
   const { t } = useT();
+  const trap = useFocusTrap<HTMLDivElement>();
   return (
     <div
       className="modal-scrim confirm-scrim"
@@ -351,6 +353,7 @@ function ScopeDialog({ title, onChoose }: { title: string; onChoose: (scope: 'th
       }}
     >
       <div
+        ref={trap}
         className="confirm-card"
         role="alertdialog"
         aria-modal="true"
@@ -391,6 +394,7 @@ function EventEditor({
   onSaved: () => void;
 }) {
   const { t, locale } = useT();
+  const trap = useFocusTrap<HTMLFormElement>();
   const { confirm, toast } = useUi();
   const [d, setD] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -585,6 +589,7 @@ function EventEditor({
       }}
     >
       <form
+        ref={trap}
         className="modal-card event-editor"
         role="dialog"
         aria-modal="true"
@@ -881,7 +886,10 @@ export default function CalendarModule({
   const drag = useRef<{ e: CalendarEvent; grab: number } | null>(null);
   const [dropOn, setDropOn] = useState('');
   const [miniMonth, setMiniMonth] = useState(() => startOfDay(new Date()));
-  const [view, setView] = useState<View>(prefs.calendarView);
+  // A 7-day grid is unreadable on a phone: start with the day view there.
+  const [view, setView] = useState<View>(() =>
+    prefs.calendarView === 'week' && window.matchMedia?.('(max-width: 640px)').matches ? 'day' : prefs.calendarView
+  );
   // Open tasks are shown on their due day (from the Tasks module, stored on this computer).
   const { tasks } = useTasks();
   const [taskEdit, setTaskEdit] = useState<TaskDraft | null>(null);
@@ -969,6 +977,10 @@ export default function CalendarModule({
     grid.current.scrollTo({ top: HOUR_PX * Math.max(0, firstHour - 0.5) });
   }, [view, range.from, range.to, events]);
 
+  const newEventNow = () =>
+    openNew(
+      new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), Math.min(17, new Date().getHours() + 1))
+    );
   const changeView = (v: View) => {
     setView(v);
     setPrefs({ calendarView: v });
@@ -1227,7 +1239,14 @@ export default function CalendarModule({
           </div>
         ))}
       </div>
-      <div className="time-grid" ref={grid} style={{ '--days': days.length } as CSSProperties}>
+      <div
+        className="time-grid"
+        ref={grid}
+        style={{ '--days': days.length } as CSSProperties}
+        tabIndex={0}
+        role="region"
+        aria-label={t('Zeitraster')}
+      >
         <div className="hours">
           {Array.from({ length: 24 }, (_, h) => (
             <span key={h} style={{ top: h * HOUR_PX }}>
@@ -1415,19 +1434,7 @@ export default function CalendarModule({
   return (
     <div className="calendar-module">
       <aside className="calendar-sidebar">
-        <button
-          className="compose-button"
-          onClick={() =>
-            openNew(
-              new Date(
-                anchor.getFullYear(),
-                anchor.getMonth(),
-                anchor.getDate(),
-                Math.min(17, new Date().getHours() + 1)
-              )
-            )
-          }
-        >
+        <button className="compose-button" onClick={newEventNow}>
           <Plus size={17} />
           <span>{t('Neuer Termin')}</span>
         </button>
@@ -1488,20 +1495,24 @@ export default function CalendarModule({
           <button className="icon-button" aria-label={t('Aktualisieren')} onClick={() => void load()} disabled={busy}>
             <RefreshCcw size={16} className={busy ? 'spin' : ''} />
           </button>
-          <div className="segmented" role="radiogroup" aria-label={t('Ansicht')}>
-            {(['day', 'week', 'month', 'agenda'] as View[]).map(v => (
-              <button
-                key={v}
-                role="radio"
-                aria-checked={view === v}
-                className={view === v ? 'active' : ''}
-                onClick={() => changeView(v)}
-              >
-                {{ day: t('Tag'), week: t('Woche'), month: t('Monat'), agenda: t('Agenda') }[v]}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label={t('Ansicht')}
+            value={view}
+            onChange={changeView}
+            options={(['day', 'week', 'month', 'agenda'] as View[]).map(v => ({
+              value: v,
+              label: { day: t('Tag'), week: t('Woche'), month: t('Monat'), agenda: t('Agenda') }[v]
+            }))}
+          />
         </header>
+        <button
+          className="compose-fab calendar-fab"
+          onClick={newEventNow}
+          aria-label={t('Neuer Termin')}
+          title={t('Neuer Termin')}
+        >
+          <Plus size={24} aria-hidden="true" />
+        </button>
         <CloudConsentBanner errors={cloudErrors} onDone={load} />
         {errors.length > 0 && (
           <div className="error-banner" role="alert">
@@ -1567,7 +1578,7 @@ function MiniMonth({
           <ChevronRight size={15} />
         </button>
       </div>
-      <div className="mini-month-grid" role="grid">
+      <div className="mini-month-grid" role="group" aria-label={label}>
         {days.slice(0, 7).map(d => (
           <span key={`h${ymd(d)}`} className="mini-weekday" aria-hidden="true">
             {weekday.format(d)}

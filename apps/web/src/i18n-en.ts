@@ -1480,6 +1480,14 @@ export const EN: Record<string, string> = {
   '{count} Tracker blockiert': '{count} trackers blocked',
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
     'Tracking pixels removed, even when images are loaded: {hosts}',
+  Zeitraster: 'Time grid',
+  '{n} ungelesen': '{n} unread',
+  Kontaktliste: 'Contact list',
+  'Name des Agenten': 'Agent name',
+  'Rechte des Agenten': 'Agent permissions',
+  'Assistent, {n} Freigaben offen': 'Assistant, {n} approvals pending',
+  Assistent: 'Assistant',
+  Kontakt: 'Contact',
   // Template shortcuts
   'Kürzel (optional)': 'Shortcut (optional)',
   'Im Text ;Kürzel und Leertaste oder Tab tippen, um die Vorlage einzufügen.':

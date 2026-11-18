@@ -118,7 +118,7 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
   };
 
   return (
-    <div className="spaces-module">
+    <main className="spaces-module">
       <aside className="spaces-list" aria-label={t('Räume')}>
         <div className="contacts-head">
           <h1>{t('Räume')}</h1>
@@ -220,7 +220,7 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
           </div>
         )}
       </section>
-    </div>
+    </main>
   );
 }
 

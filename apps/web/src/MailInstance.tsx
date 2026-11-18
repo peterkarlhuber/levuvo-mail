@@ -1431,7 +1431,8 @@ export default function MailInstance({
             <div className="message-title-row">
               <button
                 className="mobile-menu icon-button"
-                aria-label={t('Menü')}
+                aria-label={t('Ordner')}
+                aria-expanded={mobileSidebar}
                 onClick={() => setMobileSidebar(!mobileSidebar)}
               >
                 <Menu size={20} />
@@ -1440,6 +1441,15 @@ export default function MailInstance({
                 {listTitle}
                 <span className="period">.</span>
               </h1>
+              <button
+                className="compose-fab"
+                onClick={beginNewMessage}
+                disabled={!status?.configured}
+                aria-label={t('Neue Nachricht')}
+                title={t('Neue Nachricht')}
+              >
+                <PenSquare size={22} aria-hidden="true" />
+              </button>
               <span
                 className={`connection-pill ${stale ? 'offline' : pushState?.connected ? 'live' : health?.error || pushState?.error ? 'error' : ''}`}
                 title={
@@ -1745,48 +1755,48 @@ export default function MailInstance({
               />
             </>
           )}
+          <div
+            className="column-resizer"
+            role="separator"
+            aria-label={t('Listenbreite ändern')}
+            aria-orientation="vertical"
+            aria-valuemin={300}
+            aria-valuemax={680}
+            aria-valuenow={listWidth}
+            tabIndex={0}
+            title={t('Ziehen oder Pfeiltasten · Doppelklick setzt zurück')}
+            onPointerDown={e => {
+              if (e.button !== 0) return;
+              resizeAnchor.current = { x: e.clientX, width: listWidth };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={e => {
+              if (resizeAnchor.current) resizeList(resizeAnchor.current.width + e.clientX - resizeAnchor.current.x);
+            }}
+            onPointerUp={e => {
+              resizeAnchor.current = null;
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+              setPrefs({ listWidth });
+            }}
+            onPointerCancel={() => {
+              resizeAnchor.current = null;
+            }}
+            onDoubleClick={() => {
+              resizeList(400);
+              setPrefs({ listWidth: 400 });
+            }}
+            onKeyDown={e => {
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              e.preventDefault();
+              e.stopPropagation();
+              const w = Math.max(300, Math.min(680, listWidth + (e.key === 'ArrowRight' ? 20 : -20)));
+              setListWidth(w);
+              setPrefs({ listWidth: w });
+            }}
+          >
+            <GripVertical size={14} />
+          </div>
         </main>
-        <div
-          className="column-resizer"
-          role="separator"
-          aria-label={t('Listenbreite ändern')}
-          aria-orientation="vertical"
-          aria-valuemin={300}
-          aria-valuemax={680}
-          aria-valuenow={listWidth}
-          tabIndex={0}
-          title={t('Ziehen oder Pfeiltasten · Doppelklick setzt zurück')}
-          onPointerDown={e => {
-            if (e.button !== 0) return;
-            resizeAnchor.current = { x: e.clientX, width: listWidth };
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }}
-          onPointerMove={e => {
-            if (resizeAnchor.current) resizeList(resizeAnchor.current.width + e.clientX - resizeAnchor.current.x);
-          }}
-          onPointerUp={e => {
-            resizeAnchor.current = null;
-            if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-            setPrefs({ listWidth });
-          }}
-          onPointerCancel={() => {
-            resizeAnchor.current = null;
-          }}
-          onDoubleClick={() => {
-            resizeList(400);
-            setPrefs({ listWidth: 400 });
-          }}
-          onKeyDown={e => {
-            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-            e.preventDefault();
-            e.stopPropagation();
-            const w = Math.max(300, Math.min(680, listWidth + (e.key === 'ArrowRight' ? 20 : -20)));
-            setListWidth(w);
-            setPrefs({ listWidth: w });
-          }}
-        >
-          <GripVertical size={14} />
-        </div>
         <Reader
           accountId={accountId}
           message={unified || everywhere ? null : selected}

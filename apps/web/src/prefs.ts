@@ -102,6 +102,10 @@ export function useDocumentPrefs() {
       const theme = prefs.theme === 'system' ? (media?.matches ? 'light' : 'dark') : prefs.theme;
       document.documentElement.dataset.theme = theme;
       document.documentElement.style.colorScheme = theme;
+      // Browser / installed-app title bar follows the theme (matches --bg).
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', theme === 'light' ? '#ffffff' : '#0b0b0b');
     };
     apply();
     media?.addEventListener?.('change', apply);

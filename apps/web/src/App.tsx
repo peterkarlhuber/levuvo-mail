@@ -601,17 +601,21 @@ function Shell() {
             className={`rail-item ${module === item.id ? 'active' : ''}`}
             onClick={() => setModule(item.id)}
             title={`${item.label} (Alt+${item.key})`}
-            aria-label={item.label}
             aria-current={module === item.id ? 'page' : undefined}
           >
-            <item.icon size={20} strokeWidth={1.8} />
+            <item.icon size={20} strokeWidth={1.8} aria-hidden="true" />
             {item.id === 'mail' && unseenTotal > 0 && (
-              <span className="rail-badge">{unseenTotal > 99 ? '99+' : unseenTotal}</span>
+              <span className="rail-badge" aria-hidden="true">
+                {unseenTotal > 99 ? '99+' : unseenTotal}
+              </span>
             )}
             {item.id === 'tasks' && tasksDue > 0 && (
               <span className="rail-badge">{tasksDue > 99 ? '99+' : tasksDue}</span>
             )}
             <span className="rail-label">{item.label}</span>
+            {item.id === 'mail' && unseenTotal > 0 && (
+              <span className="sr-only">, {t('{n} ungelesen', { n: unseenTotal })}</span>
+            )}
           </button>
         ))}
         <span className="rail-spacer" />
@@ -619,14 +623,21 @@ function Shell() {
           className={`rail-item ${assistantOpen ? 'active' : ''}`}
           onClick={() => setAssistantOpen(o => !o)}
           title={t('Levuvo Mail Assistant (Strg/⌘+J)')}
-          aria-label={t('Levuvo Mail Assistant')}
+          aria-label={
+            pendingApprovals > 0 ? t('Assistent, {n} Freigaben offen', { n: pendingApprovals }) : t('Assistent')
+          }
           aria-expanded={assistantOpen}
         >
-          <Sparkles size={19} strokeWidth={1.8} />
-          {pendingApprovals > 0 && <span className="rail-badge">{pendingApprovals}</span>}
+          <Sparkles size={19} strokeWidth={1.8} aria-hidden="true" />
+          {pendingApprovals > 0 && (
+            <span className="rail-badge" aria-hidden="true">
+              {pendingApprovals > 99 ? '99+' : pendingApprovals}
+            </span>
+          )}
+          <span className="rail-label rail-mobile-only">{t('Assistent')}</span>
         </button>
         <button
-          className="rail-item"
+          className="rail-item rail-desktop-only"
           onClick={() => window.dispatchEvent(new Event('levuvo:palette'))}
           title={t('Befehle (Strg/⌘+K)')}
           aria-label={t('Befehle')}
@@ -634,7 +645,7 @@ function Shell() {
           <Command size={19} strokeWidth={1.8} />
         </button>
         <button
-          className={`rail-item ${module === 'settings' && settingsTab === 'help' ? 'active' : ''}`}
+          className={`rail-item rail-desktop-only ${module === 'settings' && settingsTab === 'help' ? 'active' : ''}`}
           onClick={() => openSettings('help')}
           title={t('Hilfe')}
           aria-label={t('Hilfe')}
@@ -648,6 +659,7 @@ function Shell() {
           aria-label={t('Einstellungen')}
         >
           <Settings2 size={20} strokeWidth={1.8} />
+          <span className="rail-label rail-mobile-only">{t('Einstellungen')}</span>
         </button>
       </nav>
       <div className="module-host">

@@ -13,7 +13,8 @@ import {
   StickyNote,
   Trash2,
   Upload,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
@@ -279,8 +280,8 @@ export default function ContactsModule({
   );
 
   return (
-    <div className="contacts-module">
-      <aside className="contacts-list">
+    <main className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
+      <section className="contacts-list" aria-label={t('Kontaktliste')}>
         <div className="contacts-head">
           <h1>
             {t('Kontakte')}
@@ -330,30 +331,41 @@ export default function ContactsModule({
             }}
           />
         </div>
-        <div className="contact-rows" role="list">
+        <div className="contact-rows" role={contacts.length ? 'list' : undefined}>
           {contacts.map(c => (
-            <button
-              role="listitem"
-              key={key(c)}
-              className={`contact-row ${selected === key(c) ? 'selected' : ''}`}
-              onClick={() => {
-                setSelected(key(c));
-                setEdit(null);
-              }}
-            >
-              <span className="reader-avatar small">{initials(c.name)}</span>
-              <span>
-                <strong>{c.name}</strong>
-                <small>{c.emails[0]?.value || c.organization || c.phones[0]?.value}</small>
-              </span>
-            </button>
+            <div role="listitem" key={key(c)} className="contact-row-item">
+              <button
+                aria-current={selected === key(c) ? 'true' : undefined}
+                className={`contact-row ${selected === key(c) ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelected(key(c));
+                  setEdit(null);
+                }}
+              >
+                <span className="reader-avatar small">{initials(c.name)}</span>
+                <span>
+                  <strong>{c.name}</strong>
+                  <small>{c.emails[0]?.value || c.organization || c.phones[0]?.value}</small>
+                </span>
+              </button>
+            </div>
           ))}
           {!contacts.length && (
             <p className="muted center">{query ? t('Keine Treffer.') : t('Noch keine Kontakte.')}</p>
           )}
         </div>
-      </aside>
-      <main className="contact-detail">
+      </section>
+      <section className="contact-detail" aria-label={t('Kontakt')}>
+        <button
+          type="button"
+          className="contacts-back btn ghost small"
+          onClick={() => {
+            setSelected(null);
+            setEdit(null);
+          }}
+        >
+          <ArrowLeft size={16} aria-hidden="true" /> {t('Kontakte')}
+        </button>
         <CloudConsentBanner errors={data.errors} onDone={load} />
         {otherErrors.length > 0 && (
           <div className="error-banner">
@@ -555,7 +567,7 @@ export default function ContactsModule({
             )}
           </div>
         )}
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

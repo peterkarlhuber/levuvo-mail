@@ -1,0 +1,267 @@
+/* Tasks module (Welle 3). */
+.tasks-module {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.tasks-sidebar .folder-item {
+  flex: none;
+}
+.tasks-sidebar .btn.primary {
+  justify-content: center;
+  margin-bottom: var(--space-1-5);
+}
+.tasks-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-7);
+  overflow-y: auto;
+  gap: var(--space-2-5);
+}
+.task-option {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.task-quick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--muted);
+}
+.task-quick input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: var(--space-2-5) 0;
+  font: inherit;
+  color: var(--text);
+  outline: none;
+}
+.task-list {
+  display: flex;
+  flex-direction: column;
+}
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-1);
+  border-bottom: 1px solid var(--border);
+}
+.task-row:hover {
+  background: var(--surface-hover);
+}
+.task-check {
+  margin-top: 1px;
+}
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  border: 0;
+  background: none;
+  padding: var(--space-0-5) 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.task-main strong {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.task-row.done .task-main strong {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.task-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.task-mail-ref {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-notes {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-row.due-overdue .task-due,
+.task-hint-row.due-overdue strong {
+  color: var(--danger);
+  font-weight: var(--weight-semibold);
+}
+.task-row.due-today .task-due {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.task-prio.prio-high {
+  color: var(--danger);
+}
+.task-prio.prio-medium {
+  color: var(--warn);
+}
+.task-dialog textarea {
+  font: inherit;
+  resize: vertical;
+}
+.task-dialog-mail {
+  font-size: var(--text-sm);
+}
+.task-dialog-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2-5);
+}
+.task-due-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+.chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.task-due-inputs {
+  display: flex;
+  gap: var(--space-2);
+}
+.task-priority button.active.prio-high {
+  color: var(--danger);
+}
+.task-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.task-hint-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-size: var(--text-md);
+}
+.task-hint-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.event-chip.task-chip {
+  --c: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px dashed var(--c);
+  background: transparent;
+  color: var(--text-2);
+}
+.event-chip.task-chip.prio-high {
+  --c: var(--danger);
+}
+.agenda-item.task-agenda .agenda-time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Detected appointments (flight, hotel, dates in the text) */
+.event-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.event-suggestion {
+  position: relative;
+}
+.event-suggestion-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.event-suggestion-done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--success, var(--text-2));
+  font-weight: var(--weight-semibold);
+}
+
+/* Tasks */
+.task-dialog textarea {
+  font: inherit;
+  resize: vertical;
+}
+.task-dialog-mail {
+  font-size: var(--text-sm);
+}
+.task-due-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+.chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.task-due-inputs {
+  display: flex;
+  gap: var(--space-2);
+}
+.task-list-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-3);
+}
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.task-row .followup-main {
+  flex: 1;
+  min-width: 0;
+}
+.task-row.done strong {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.task-row.due-overdue .task-due {
+  color: var(--danger);
+  font-weight: var(--weight-semibold);
+}
+.task-row.due-today .task-due {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}

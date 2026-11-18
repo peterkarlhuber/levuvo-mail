@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### New
+- **Design foundation:** one shared scale for spacing, type, weights, radii, layers and elevation; type sizes are now in rem, so the system font size setting is respected. Shared, accessible building blocks (button, icon button, field, segmented control, dialog, toolbar with overflow menu) for all new screens, documented in `docs/design-system.md`. `npm test` rejects raw sizes, layers, radii and colours in the stylesheets.
+- **Phones and tablets:** bottom navigation instead of the side rail, a floating compose button, the reading pane full screen with its actions in a bottom bar, the composer full screen, contacts as list → detail with a back button, the calendar starting with the day view and a new-event button (also on tablets). Filter chips stay available, settings tabs scroll in one row and settings rows wrap instead of cutting off labels. Safe areas (notch, home indicator) are respected; touch screens get 44px controls.
+- **Install metadata:** web app manifest and icons; the title bar colour follows the light/dark theme.
+- **Accessibility:** WCAG 2.2 AA checked with axe-core on every main view (dark/light, desktop/phone) in CI (`npm run test:a11y`), together with keyboard checks. One main landmark per view, headings in order, 24px target sizes, labelled settings fields, unread count read out on the mail button, labelled mini month and time grid. "Increase contrast" strengthens borders and secondary text, Windows high contrast keeps selected states, switches and badges visible. No horizontal scrolling down to 320px width (400 % zoom).
+- **Keyboard:** every dialog (composer, confirmations, event editor, shortcuts, attachment preview, command palette) keeps focus inside while open and returns it to the button that opened it. Segmented controls (design, language, calendar view, format) work with the arrow keys and are a single tab stop.
 - **Contact card in the reading pane:** a click on the sender shows the address book entry (organization, phone), the latest mails with this person, shared appointments from the connected calendars (next and past) and the files exchanged with them (same source as the attachment overview). Read from the encrypted local search index (or the inbox when the index is off); nothing is looked up online.
 - **Templates:** a template can have a shortcut such as `;mfg`. Typing the shortcut followed by space or Tab in the composer inserts the template in place, placeholders filled in. Shortcuts are shown in the template menu and must be unique.
 - **Attachment overview:** a new “Attachments” entry in the sidebar (also in the command palette) lists every file of a folder, newest first, with sender, subject, size and date. Filter by file name, sender or subject, or type an e-mail address to see only the files exchanged with that contact. Files can be downloaded directly (with the usual warning for dangerous file types) or the message opened. Only the message structure is read, not the bodies, and nothing is marked as read.
@@ -33,6 +38,8 @@
 - **Vectors for the AI assistant:** embeddings are stored in the same encrypted file (int8, 1 byte per dimension) and searched exactly by cosine similarity (about 25 ms for 20,000 vectors with 1024 dimensions). Removing a message, clearing the index or changing the mailbox of an account removes them too.
 
 ### Fixes
+- **Mail list:** the quick actions shown on hover no longer cover subject and preview.
+- **Phones:** the message list scrolls again and its last rows are no longer hidden behind the navigation.
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
 
 ### Fixes

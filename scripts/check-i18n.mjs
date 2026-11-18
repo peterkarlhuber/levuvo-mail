@@ -9,8 +9,8 @@ const unquote = raw => Function(`return '${raw}'`)();
 export function collectTexts(root) {
   const ui = new Set();
   const server = new Set();
-  for (const f of readdirSync(join(root, 'apps/web/src'))) {
-    if (!/\.tsx?$/.test(f) || f.startsWith('i18n')) continue;
+  for (const f of readdirSync(join(root, 'apps/web/src'), { recursive: true })) {
+    if (!/\.tsx?$/.test(f) || /(^|\/)i18n/.test(f)) continue;
     const s = readFileSync(join(root, 'apps/web/src', f), 'utf8');
     for (const m of s.matchAll(/\bt\(\s*'((?:[^'\\\n]|\\.)*)'/g)) ui.add(unquote(m[1]));
     for (const m of s.matchAll(/(?:parse<T>\(res, |new Error\()'((?:[^'\\\n]|\\.)*)'/g)) ui.add(unquote(m[1]));

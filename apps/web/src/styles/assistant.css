@@ -1,0 +1,186 @@
+/* Levuvo Mail Assistant: reader, composer, panel, filters (AI). */
+/* Levuvo Mail Assistant in the reading pane */
+.reader-ai {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-1-5) 0;
+}
+.reader-ai-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+.reader-ai-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: var(--space-2-5) var(--space-3);
+  font-size: var(--text-md);
+}
+.reader-ai-card p {
+  margin: var(--space-1-5) 0;
+}
+.reader-ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+.ai-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.ai-summary {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-5);
+}
+.ai-hint {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ai-translation {
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow: auto;
+}
+.ai-suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.ai-suggestion > span {
+  flex: 1;
+  min-width: 0;
+}
+.ai-taken {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.ai-risk-high {
+  color: var(--danger);
+}
+.ai-risk-medium {
+  color: var(--warning, var(--danger));
+}
+
+/* Levuvo Mail Assistant panel */
+.assistant-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-modal);
+  width: min(420px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--elevation-2);
+}
+.assistant-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3-5);
+  border-bottom: 1px solid var(--border);
+}
+.assistant-title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.assistant-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-3) var(--space-3-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--text-md);
+}
+.assistant-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+.assistant-skills .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  color: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.assistant-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.assistant-prompt {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--space-1-5) var(--space-2-5);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-text);
+  white-space: pre-wrap;
+}
+.assistant-answer {
+  padding: var(--space-2) var(--space-2-5);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.assistant-answer p {
+  margin: 0 0 var(--space-1-5);
+}
+.assistant-report {
+  white-space: pre-wrap;
+}
+.assistant-sources {
+  margin: 0 0 var(--space-1-5);
+  padding-left: var(--space-5);
+}
+.assistant-approvals h3 {
+  font-size: var(--text-md);
+  margin: var(--space-1) 0;
+}
+.assistant-input {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1-5);
+  flex-wrap: wrap;
+  padding: var(--space-2-5) var(--space-3-5);
+  border-top: 1px solid var(--border);
+}
+.assistant-input textarea {
+  flex: 1;
+  min-width: 160px;
+  resize: none;
+}
+
+.filter-assist {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: var(--space-2);
+  color: var(--muted);
+}
+.filter-assist input {
+  flex: 1;
+  min-width: 0;
+}

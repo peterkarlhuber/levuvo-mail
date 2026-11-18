@@ -1,0 +1,159 @@
+/* ---------- Contacts ---------- */
+.contacts-list {
+  width: 320px;
+  flex: none;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3) 0;
+  gap: var(--space-2-5);
+  min-height: 0;
+}
+.contacts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1);
+}
+.contacts-head h1 {
+  font-size: var(--title-size);
+  letter-spacing: -0.8px;
+}
+.contacts-list .searchbox {
+  /* .searchbox grows in toolbars; in this column it would take half the height. */
+  flex: none;
+}
+.contacts-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  padding: 0 var(--space-1);
+}
+.contacts-tools .muted {
+  flex: 1;
+}
+.contact-rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: var(--space-3);
+}
+.contact-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  border: 0;
+  background: transparent;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+.contact-row:hover {
+  background: var(--surface-hover);
+}
+.contact-row.selected {
+  background: var(--selected);
+}
+.contact-row > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.contact-row strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-row small {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.contact-card,
+.contact-form {
+  padding: var(--space-8) var(--space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 760px;
+}
+.contact-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+.contact-hero h2 {
+  font-size: var(--text-4xl);
+  letter-spacing: -0.5px;
+}
+.contact-hero p {
+  margin: var(--space-1) 0 0;
+}
+.contact-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.contact-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+.contact-fields > div {
+  display: flex;
+  gap: var(--space-3-5);
+  padding: var(--space-2-5) 0;
+  border-top: 1px solid var(--border);
+}
+.contact-fields dt {
+  color: var(--muted);
+  padding-top: var(--space-0-5);
+}
+.contact-fields dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  overflow-wrap: anywhere;
+}
+.contact-fields dd small {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.entry-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+}
+.entry-row {
+  display: flex;
+  gap: var(--space-1-5);
+  align-items: center;
+}
+.entry-row input {
+  flex: 1;
+}

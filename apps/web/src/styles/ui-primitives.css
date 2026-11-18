@@ -1,0 +1,183 @@
+/* =====================================================================
+   UI primitives (apps/web/src/ui) – shared by every module.
+   ===================================================================== */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.btn,
+.icon-button {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+}
+.btn-icon,
+.icon-button-glyph {
+  display: inline-flex;
+}
+.icon-button.small {
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+}
+
+/* Field */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-2);
+}
+.field-required {
+  color: var(--danger);
+}
+.field-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.field-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+  font-weight: var(--weight-semibold);
+}
+.field.has-error :is(input, select, textarea) {
+  border-color: var(--danger);
+}
+
+/* Dialog (becomes a bottom sheet on phones) */
+.ui-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.ui-dialog {
+  width: min(560px, 100%);
+  max-height: min(90dvh, 900px);
+  overflow-y: auto;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+  outline: none;
+}
+.ui-dialog-sm {
+  width: min(440px, 100%);
+}
+.ui-dialog-lg {
+  width: min(760px, 100%);
+}
+.ui-dialog-form {
+  display: contents;
+}
+.ui-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) 0 var(--space-6);
+}
+.ui-dialog-title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.3px;
+}
+.ui-dialog-description {
+  margin: var(--space-2) var(--space-6) 0;
+  color: var(--text-2);
+  line-height: var(--leading-normal);
+}
+.ui-dialog-body {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+}
+.ui-dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6) var(--space-5);
+}
+@media (max-width: 640px) {
+  .ui-dialog-scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .ui-dialog,
+  .ui-dialog-sm,
+  .ui-dialog-lg {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .ui-dialog-footer > * {
+    flex: 1 1 auto;
+  }
+}
+
+/* Toolbar with overflow menu */
+.ui-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ui-toolbar-items {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.ui-toolbar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+.ui-toolbar-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+.toolbar-item.icon-only {
+  padding: 0;
+  width: var(--control-h);
+  height: var(--control-h);
+}
+.toolbar-item {
+  height: var(--control-h);
+}
+.ui-toolbar .menu {
+  right: 0;
+}

@@ -1,0 +1,119 @@
+/* ---------- App frame & rail ---------- */
+.app-frame {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.rail {
+  width: 72px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+}
+.rail-logo {
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--space-3-5);
+  display: grid;
+  place-items: center;
+}
+.rail-logo img {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+}
+.rail-item {
+  position: relative;
+  width: 62px;
+  padding: var(--space-2) 0 var(--space-1-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--muted);
+}
+.rail-item:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.rail-item.active {
+  color: var(--text);
+  background: var(--selected);
+}
+.rail-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.1px;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rail-badge {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  display: grid;
+  place-items: center;
+}
+.rail-spacer {
+  flex: 1;
+}
+.module-host {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.module {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.module[hidden] {
+  display: none;
+}
+.module-loading {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.empty-module {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--muted);
+}
+.empty-module h2 {
+  color: var(--text);
+  font-size: var(--text-4xl);
+  letter-spacing: -0.5px;
+}
+.empty-module p {
+  max-width: 460px;
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}

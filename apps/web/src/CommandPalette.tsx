@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
 import { useT } from './i18n';
+import { useFocusTrap } from './ui/focus';
 import { usePrefs } from './prefs';
 import type { Module, SettingsTab } from './App';
 import type { AccountItem } from './types';
@@ -62,6 +63,7 @@ export default function CommandPalette({
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const trap = useFocusTrap<HTMLDivElement>(open);
   const list = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -293,7 +295,7 @@ export default function CommandPalette({
   let lastGroup = '';
   return (
     <div className="palette-scrim" onMouseDown={e => e.target === e.currentTarget && show(false)}>
-      <div className="palette" role="dialog" aria-modal="true" aria-label={t('Befehle')}>
+      <div ref={trap} className="palette" role="dialog" aria-modal="true" aria-label={t('Befehle')}>
         <div className="palette-input">
           <Search size={17} aria-hidden="true" />
           <input

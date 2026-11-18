@@ -1,0 +1,295 @@
+/* =====================================================================
+   Mobile app shell (≤ 640px): bottom navigation, compose button,
+   full-screen reader with a bottom action bar, safe areas.
+   ===================================================================== */
+.compose-fab,
+.contacts-back,
+.rail-mobile-only {
+  display: none;
+}
+@media (max-width: 640px) {
+  .app-frame {
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+  }
+  .module-host {
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  }
+  .rail {
+    order: 2;
+    position: fixed;
+    z-index: var(--z-drawer);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border-right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .rail-logo,
+  .rail-spacer,
+  .rail-desktop-only {
+    display: none;
+  }
+  .rail-item {
+    flex: 1 1 0;
+    width: auto;
+    min-width: var(--touch-target);
+    padding: var(--space-1-5) 0;
+    justify-content: center;
+    border-radius: 0;
+  }
+  .rail-item.active {
+    background: transparent;
+    color: var(--text);
+  }
+  .rail-item.active > svg {
+    background: var(--selected);
+    border-radius: var(--radius-full);
+    padding: var(--space-0-5) var(--space-3);
+    box-sizing: content-box;
+  }
+  .rail-label,
+  .rail-mobile-only {
+    display: block;
+    font-size: var(--text-xs);
+  }
+  .rail-badge {
+    right: calc(50% - 26px);
+  }
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .message-column {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  /* Last rows stay reachable above the floating compose button. */
+  .message-list {
+    padding-bottom: calc(56px + var(--space-8));
+  }
+  .workspace,
+  .module {
+    min-height: 0;
+  }
+  .compose-fab {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    z-index: var(--z-sticky);
+    right: calc(var(--space-4) + env(safe-area-inset-right));
+    bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + var(--space-4));
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: var(--elevation-3);
+  }
+  .filter-chips {
+    margin-left: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .filter-chips button {
+    flex: none;
+    min-height: var(--touch-target);
+  }
+
+  /* Reader: full screen, actions in a bar at the bottom (thumb reach, no wrapping). */
+  .reader-column.reader-open {
+    padding-top: env(safe-area-inset-top);
+  }
+  .reader-content {
+    padding: var(--space-2) var(--space-4) calc(var(--bottom-nav-h) + var(--space-6) + env(safe-area-inset-bottom));
+  }
+  .reader-toolbar {
+    flex-wrap: nowrap;
+  }
+  .reader-primary-actions {
+    flex-wrap: nowrap;
+    margin-left: auto;
+  }
+  .reader-secondary-actions {
+    position: fixed;
+    z-index: var(--z-sticky);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: var(--space-1);
+    min-height: var(--bottom-nav-h);
+    padding: var(--space-2) calc(var(--space-3) + env(safe-area-inset-right))
+      calc(var(--space-2) + env(safe-area-inset-bottom)) calc(var(--space-3) + env(safe-area-inset-left));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+  }
+  .reader-toolbar button:not(.icon-button) {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    justify-content: center;
+  }
+  /* Very narrow screens (or 400 % zoom): scroll instead of shrinking the buttons. */
+  .reader-secondary-actions {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .reader-secondary-actions > * {
+    flex: none;
+  }
+  .reader-secondary-actions > select {
+    flex: 1 0 88px;
+    min-width: 88px;
+    max-width: 120px;
+    min-height: var(--touch-target);
+  }
+  .reader-secondary-actions .menu {
+    position: fixed;
+    left: var(--space-2);
+    right: var(--space-2);
+    top: auto;
+    bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + var(--space-1));
+    max-height: 60dvh;
+    overflow-y: auto;
+  }
+
+  /* Contacts: list or detail, never both. */
+  .contacts-module.has-detail .contacts-list,
+  .contacts-module:not(.has-detail) .contact-detail {
+    display: none;
+  }
+  .contacts-module {
+    overflow: hidden;
+  }
+  .contacts-list {
+    flex: 1;
+    min-height: 0;
+  }
+  .contact-detail {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .contacts-back {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-bottom: var(--space-2);
+  }
+
+  /* Calendar header wraps into two tidy rows. */
+  .calendar-header,
+  .calendar-toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+/* Touch screens: every control reaches the 44px target. */
+@media (pointer: coarse) {
+  .icon-button {
+    width: var(--touch-target);
+    height: var(--touch-target);
+  }
+  .segmented button,
+  .folder-item,
+  .menu button,
+  .text-button,
+  .rail-item {
+    min-height: var(--touch-target);
+  }
+  .message-select {
+    width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+  .message-row .message-select {
+    padding-left: 0;
+  }
+  .message-select input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+  .message-item {
+    padding-left: 0;
+  }
+  .folder-more,
+  .flag-button,
+  .scope-toggle,
+  .searchbox input {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}
+@media (max-width: 960px) and (min-width: 641px) {
+  .calendar-fab {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    z-index: var(--z-sticky);
+    right: var(--space-6);
+    bottom: var(--space-6);
+    width: 56px;
+    height: 56px;
+    border: 0;
+    border-radius: var(--radius-lg);
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: var(--elevation-3);
+  }
+}
+@media (max-width: 640px) {
+  .rail-label {
+    max-width: none;
+  }
+  .compose-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+  .compose-panel {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+  .compose-controls {
+    flex-wrap: wrap;
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  }
+  .compose-controls .followup-select {
+    flex: 1 1 100%;
+  }
+  .compose-controls .spacer {
+    display: none;
+  }
+  .compose-controls > .btn,
+  .compose-controls > .split-button {
+    flex: 1 1 0;
+  }
+  .compose-controls > .split-button > .btn.primary:first-child {
+    flex: 1;
+  }
+  .calendar-toolbar h1 {
+    order: -1;
+    flex: 1 1 100%;
+    font-size: var(--text-2xl);
+    margin: 0;
+  }
+  .calendar-toolbar .segmented {
+    margin-left: auto;
+  }
+}

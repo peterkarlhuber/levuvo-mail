@@ -17,7 +17,7 @@ export const APP_CSP = [
   "child-src 'self'",
   "worker-src 'none'",
   "object-src 'none'",
-  "manifest-src 'none'",
+  "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
   "frame-ancestors 'none'"
@@ -45,7 +45,8 @@ export function safeStaticFile(root, requestedUrl) {
   if (pathname.startsWith('/api/') || pathname.includes('\\') || pathname.includes('\0')) return null;
   const parts = pathname.split('/').filter(Boolean);
   if (parts.some(part => part === '..' || part === '.')) return null;
-  const allowed = /^\/(?:assets\/[A-Za-z0-9_.-]+\.(?:js|css|png|svg|woff2?)|(?:favicon|levuvo-header-logo)\.png)$/;
+  const allowed =
+    /^\/(?:assets\/[A-Za-z0-9_.-]+\.(?:js|css|png|svg|woff2?)|(?:favicon|levuvo-header-logo|apple-touch-icon|icon-192|icon-512|icon-maskable-512)\.png|manifest\.webmanifest)$/;
   if (!allowed.test(pathname)) return null;
   const resolved = path.resolve(root, ...parts);
   if (!resolved.startsWith(path.resolve(root) + path.sep)) return null;
@@ -66,6 +67,8 @@ export function contentTypeForAsset(filename) {
       return 'font/woff';
     case '.woff2':
       return 'font/woff2';
+    case '.webmanifest':
+      return 'application/manifest+json; charset=utf-8';
     default:
       return 'application/octet-stream';
   }

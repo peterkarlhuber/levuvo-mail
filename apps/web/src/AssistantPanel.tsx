@@ -147,7 +147,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
     <aside className="assistant-panel" aria-label={t('Levuvo Mail Assistant')}>
       <header className="assistant-head">
         <Sparkles size={16} aria-hidden="true" />
-        <strong>{t('Levuvo Mail Assistant')}</strong>
+        <h2 className="assistant-title">{t('Levuvo Mail Assistant')}</h2>
         <span className="ai-label">{t('KI')}</span>
         <button className="icon-button" aria-label={t('Schließen')} onClick={onClose}>
           <X size={16} />

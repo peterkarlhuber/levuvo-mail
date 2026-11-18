@@ -224,7 +224,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
   };
 
   return (
-    <div className="tasks-module">
+    <main className="tasks-module">
       <aside className="calendar-sidebar tasks-sidebar">
         <button
           className="btn primary"
@@ -318,6 +318,6 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
         )}
       </section>
       {editing && <TaskDialog draft={editing} onClose={() => setEditing(null)} />}
-    </div>
+    </main>
   );
 }
