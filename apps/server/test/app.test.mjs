@@ -208,3 +208,57 @@ test('Desktop mode does not start without a valid session key', async () => {
     /Sitzungsschlüssel/
   );
 });
+
+test('Changing the login of an account drops cached data of the previous mailbox (AUD-003)', async t => {
+  const { s } = await server(t);
+  const id = await addAccount(s);
+  const { ctx } = s;
+  ctx.detailCache.set(`${id}|INBOX|1`, { data: { subject: 'Alt' }, at: Date.now() });
+  ctx.listCache.set(`${id}|INBOX|40|`, { data: [], at: Date.now() });
+  ctx.previewCache.set(`${id}:INBOX:5:1`, 'Vorschau alt');
+  await ctx.followups.addSnoozed(
+    id,
+    'INBOX',
+    { folder: 'Z', uidValidity: '5', items: [{ uid: '1' }] },
+    '2030-01-01T00:00:00.000Z'
+  );
+  // Only the label changes: same mailbox, nothing is dropped.
+  const label = await s.api.inject({
+    method: 'POST',
+    url: '/api/accounts/update',
+    headers: { ...POST, 'x-levuvo-action': 'accounts-v1' },
+    payload: { id, label: 'Arbeit' }
+  });
+  assert.equal(label.statusCode, 200, label.body);
+  assert.ok(ctx.detailCache.get(`${id}|INBOX|1`));
+  // Another login for the same account ID: everything of the old mailbox goes.
+  const other = await s.api.inject({
+    method: 'POST',
+    url: '/api/accounts/update',
+    headers: { ...POST, 'x-levuvo-action': 'accounts-v1' },
+    payload: { id, user: 'anna@example.org', password: 'pw2' }
+  });
+  assert.equal(other.statusCode, 200, other.body);
+  assert.equal(ctx.detailCache.get(`${id}|INBOX|1`), undefined);
+  assert.equal(ctx.listCache.get(`${id}|INBOX|40|`), undefined);
+  assert.equal(ctx.previewCache.get(`${id}:INBOX:5:1`), undefined);
+  await new Promise(r => setTimeout(r, 20));
+  assert.equal(ctx.followups.snoozed(id).length, 0);
+});
+
+test('Every installation has a stable instance ID for scheduled sending', async t => {
+  const { s, dir } = await server(t);
+  assert.match(s.ctx.instanceId, /^[a-f0-9]{32}$/);
+  const again = await createMailServer({
+    desktop: true,
+    sessionSecret: SECRET,
+    env: {},
+    vault: vault(),
+    accountsFile: join(dir, 'accounts.json'),
+    staticRoot: join(dir, 'dist'),
+    watch: false,
+    background: false
+  });
+  t.after(() => again.close());
+  assert.equal(again.ctx.instanceId, s.ctx.instanceId);
+});
