@@ -4,6 +4,7 @@ export type MailCommand =
   | { type: 'compose' }
   | { type: 'search' }
   | { type: 'followups' }
+  | { type: 'attachments' }
   | { type: 'shortcuts' }
   | { type: 'folder'; path: string };
 
