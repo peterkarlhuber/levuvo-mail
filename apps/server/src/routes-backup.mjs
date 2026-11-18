@@ -108,7 +108,7 @@ export function registerBackupRoutes(ctx) {
     );
 
     guard('/api/backup/cancel', async () => {
-      await cancelRestore(ctx.dataDir);
+      await cancelRestore(ctx.dataDir, ctx.store);
       backupState.pending = false;
       return { ok: true };
     });
