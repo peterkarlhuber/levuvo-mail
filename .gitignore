@@ -25,4 +25,5 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-build/ai-runtime/
+build/ai-runtime/*
+!build/ai-runtime/README.md

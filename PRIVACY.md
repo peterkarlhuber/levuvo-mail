@@ -30,7 +30,7 @@ Decrypted content is not stored – not even for the offline view.
 
 ## Backups
 
-A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, templates, snooze and follow-up entries, your own PGP/S/MIME keys and the assistant's settings and activity log. It does **not** contain account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
+A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, templates, snooze and follow-up entries, your own PGP/S/MIME keys, shared spaces (still encrypted, together with the space key and the member identity from the keychain, so the restored device stays a member) and the assistant's settings and activity log. It does **not** contain account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
 
 The file is encrypted with a password of your choice (scrypt key derivation, AES-256-GCM); without it the backup cannot be read, not even by Levuvo. Only the creation date and app version are readable without the password. Restoring checks the file first and replaces the data on this device at the next start; the previous data is kept in `before-restore/` in the app data folder (the last three restores) and can be deleted there. Since a backup contains personal data of others (contacts, appointments), store it as carefully as the computer itself and delete outdated copies.
 ## AI features (optional, off by default)
@@ -53,7 +53,22 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   days on this device. It is not used to monitor anyone's performance.
 - **Transparency:** AI results are labelled as AI-generated and are never sent, moved or deleted without
   your action.
-- "Delete all AI data" removes settings, consents, keys, the log and agent access at once.
+- **Semantic index:** the vectors for semantic search are derived from the encrypted local search index
+  and kept on this device only, encrypted in the local search index (in older index versions only in
+  memory). They are deleted with the index and are not part of backups.
+- **Agents and the MCP server (off by default):** If you switch on the MCP server, AI agents that you
+  connect yourself (for example Claude Desktop) can use the mailbox through it, only from this computer
+  (127.0.0.1) and with a token you create per agent. What the agent's own model does with the data is
+  governed by that agent's provider; Levuvo Mail cannot control it. Sending, events with attendees, new
+  contacts and moving to the trash wait for your approval. Pending approvals (with the prepared content)
+  are kept for at most 7 days; after a decision only a summary remains.
+- **Routines and tasks of the built-in assistant** use the same MCP server with a token that is valid for
+  at most 20 minutes and exists only in memory. With a cloud model, accounts marked "No cloud AI" are
+  invisible to the routine.
+- "Delete all AI data" removes settings, consents, keys, the log, own routines, approvals and agent access
+  at once.
+- For organizations: templates for an internal usage policy, the record of processing activities, the
+  security concept and a short AI guide for users are in [docs/ai](docs/ai/).
 
 ## Connections to the internet
 

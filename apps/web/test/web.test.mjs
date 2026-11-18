@@ -288,6 +288,32 @@ test('Design tokens: stylesheets use the shared scale (no raw sizes, layers, rad
   );
 });
 
+test('assistant helpers: own part of a draft and default event end', async () => {
+  const { ownPart, defaultEnd } = await import('../src/ai-utils.ts');
+  assert.equal(ownPart('<p>Hi</p><p>-- </p><p>Sig</p>', ['<p>-- </p>', '<blockquote']), '<p>Hi</p>');
+  assert.equal(ownPart('Nur Text', ['\n-- \n']), 'Nur Text');
+  assert.equal(defaultEnd('2026-11-23T14:00', false), '2026-11-23T15:00');
+  assert.equal(defaultEnd('2026-11-23T23:30', false), '2026-11-23T23:59');
+  assert.equal(defaultEnd('2026-11-23', true), '2026-11-23');
+  const { bundleFromClassification } = await import('../src/ai-utils.ts');
+  const mapped = bundleFromClassification([
+    { id: '4', bundle: 'newsletters', from_person: false },
+    { id: '5', bundle: 'finance', from_person: true },
+    { id: '6', bundle: 'work', from_person: false },
+    { id: 'x', bundle: 'notifications' },
+    { id: '7', bundle: 'notifications' }
+  ]);
+  assert.deepEqual(
+    [...mapped],
+    [
+      [4, 'newsletter'],
+      [5, null],
+      [6, null],
+      [7, 'notification']
+    ]
+  );
+});
+
 test('Templates: a shortcut right before the cursor is found', () => {
   const list = [
     { id: '1', name: 'Gruß', subject: '', html: '<p>MfG</p>', shortcut: 'mfg' },

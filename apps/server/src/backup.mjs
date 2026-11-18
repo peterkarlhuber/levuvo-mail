@@ -38,6 +38,18 @@ const KEEP_SAFETY_COPIES = 3;
 const LOCAL = 'local';
 
 /**
+ * Shared spaces (spaces/store.mjs) are a folder of files that stay encrypted with the keychain
+ * entry `spaces-key`; the member identity `spaces-identity` decrypts the space keys sent to this
+ * device. The folder is copied as is, and both entries always travel and are set together.
+ */
+const SPACES_DIR = 'spaces';
+const SPACES_SECRETS = ['spaces-key', 'spaces-identity'];
+const STAGED_SECRET = name => `restore-pending-${name}`;
+const PREVIOUS_SECRET = name => `${name}-before-restore`;
+const SPACE_PATH = /^(?:[a-f0-9]{32}\.lvs|index\.lvs|blobs\/[a-f0-9]{16,64}\.\d{1,6})$/;
+const MAX_SPACE_FILES = 50_000;
+
+/**
  * Files in the data folder that a backup contains. `encrypted` names the keychain entry
  * (account `local`) whose key encrypts the file on disk; the backup holds the decrypted JSON.
  */
@@ -54,6 +66,8 @@ export const BACKUP_FILES = {
   'tasks-local.json': { kind: 'json', encrypted: 'tasks-key' },
   'ai.json': { kind: 'json' },
   'ai-log.jsonl': { kind: 'jsonl' },
+  // Own assistant routines. ai-semantic.json (index progress) stays out: vectors are rebuilt.
+  'ai-skills.json': { kind: 'json' },
   // MCP settings and agents (token hashes only). mcp-approvals.json is short-lived and stays out.
   'mcp.json': { kind: 'json' }
 };
@@ -138,7 +152,7 @@ function parseJsonFile(name, text) {
 }
 
 /** What a backup contains, for display before and after restoring. Counts only, no content. */
-export function summarize(files) {
+export function summarize(files, spaces = null) {
   const json = name => {
     try {
       return files[name] && BACKUP_FILES[name].kind === 'json' ? JSON.parse(files[name]) : null;
@@ -160,8 +174,32 @@ export function summarize(files) {
     followups: count(json('followups.json')?.followups),
     ownKeys: count(crypto?.pgp?.own) + count(crypto?.smime?.own),
     settings: Boolean(files['app-settings.json']),
-    assistant: Boolean(files['ai.json'] || files['ai-log.jsonl'] || files['mcp.json'])
+    assistant: Boolean(files['ai.json'] || files['ai-log.jsonl'] || files['mcp.json']),
+    spaces: Object.keys(spaces || {}).filter(p => /^[a-f0-9]{32}\.lvs$/.test(p)).length
   };
+}
+
+/** Files of the spaces folder as relative path → base64, only names the spaces store writes. */
+async function collectSpaces(dir) {
+  const root = path.join(dir, SPACES_DIR);
+  const out = {};
+  const walk = async rel => {
+    const entries = await readdir(path.join(root, rel), { withFileTypes: true }).catch(err => {
+      if (err.code === 'ENOENT') return [];
+      throw err;
+    });
+    for (const entry of entries) {
+      const name = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory() && name === 'blobs') await walk(name);
+      else if (entry.isFile() && SPACE_PATH.test(name)) {
+        if (Object.keys(out).length >= MAX_SPACE_FILES)
+          throw fail('Die Daten sind zu groß für eine Sicherung.', 'backup_too_large', 413);
+        out[name] = (await readFile(path.join(root, name))).toString('base64');
+      }
+    }
+  };
+  await walk('');
+  return out;
 }
 
 /** Collects the device data (decrypted) into a plain object. Fails instead of leaving data out. */
@@ -212,7 +250,25 @@ export async function collectBackupContent({ dir, accountsPath, vault }) {
       if (value) secrets[name] = value;
     }
   }
-  return { files, secrets };
+  const spaces = await collectSpaces(dir);
+  for (const value of Object.values(spaces)) {
+    total += value.length;
+    if (total > MAX_CONTENT_BYTES) throw fail('Die Daten sind zu groß für eine Sicherung.', 'backup_too_large', 413);
+  }
+  const localSecrets = {};
+  if (Object.keys(spaces).length) {
+    for (const name of SPACES_SECRETS) {
+      const value = vault?.available ? vault.get(LOCAL, name) : '';
+      if (!value)
+        throw fail(
+          'Die Räume auf diesem Gerät sind gesperrt (Schlüsselbund). Die Sicherung wäre unvollständig und wurde nicht erstellt.',
+          'backup_locked',
+          423
+        );
+      localSecrets[name] = value;
+    }
+  }
+  return { files, secrets, spaces, localSecrets };
 }
 
 /** Encrypts backup content with a password. Returns the file content (UTF-8 JSON text). */
@@ -230,7 +286,9 @@ export async function encryptBackup(content, password, { app = '', kdf = DEFAULT
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   cipher.setAAD(headerAad(header));
-  const plain = await gzip(Buffer.from(JSON.stringify({ ...content, summary: summarize(content.files) }), 'utf8'));
+  const plain = await gzip(
+    Buffer.from(JSON.stringify({ ...content, summary: summarize(content.files, content.spaces) }), 'utf8')
+  );
   const data = Buffer.concat([cipher.update(plain), cipher.final()]);
   return `${JSON.stringify({
     ...header,
@@ -325,7 +383,35 @@ function validateContent(content, doc) {
     if (allowed.has(name) && typeof value === 'string' && value.length <= 64 * 1024) secrets[name] = value;
   const uiPrefs =
     content.uiPrefs && typeof content.uiPrefs === 'object' && !Array.isArray(content.uiPrefs) ? content.uiPrefs : null;
-  return { files, secrets, uiPrefs, createdAt: doc.createdAt, app: String(doc.app || ''), summary: summarize(files) };
+  const spaces = {};
+  const givenSpaces = content.spaces && typeof content.spaces === 'object' ? content.spaces : {};
+  for (const [name, value] of Object.entries(givenSpaces)) {
+    // Only the names the spaces store writes; anything else (e.g. "../x") is refused, never a path.
+    if (!SPACE_PATH.test(name) || typeof value !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(value))
+      throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
+    spaces[name] = value;
+  }
+  const localSecrets = {};
+  if (Object.keys(spaces).length) {
+    for (const name of SPACES_SECRETS) {
+      const value = content.localSecrets?.[name];
+      if (typeof value !== 'string' || !value || value.length > 64 * 1024)
+        throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
+      localSecrets[name] = value;
+    }
+    if (!/^[0-9a-f]{64}$/i.test(localSecrets['spaces-key']))
+      throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
+  }
+  return {
+    files,
+    secrets,
+    spaces,
+    localSecrets,
+    uiPrefs,
+    createdAt: doc.createdAt,
+    app: String(doc.app || ''),
+    summary: summarize(files, spaces)
+  };
 }
 
 async function writePrivate(filename, text) {
@@ -381,6 +467,19 @@ export async function stageRestore({ dir, accountsPath, vault, backup }) {
     staged.push(name);
   }
   for (const [name, value] of Object.entries(backup.secrets)) vault.set('crypto', name, value);
+  const spaces = Object.entries(backup.spaces || {});
+  for (const [name, value] of spaces) {
+    const target = path.join(pending, SPACES_DIR, ...name.split('/'));
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, Buffer.from(value, 'base64'), { mode: 0o600 });
+  }
+  if (spaces.length) {
+    // The spaces keys replace this device's ones only at the restart; until then they wait in the
+    // keychain under a staging name (never on disk), so cancelling leaves the current spaces intact.
+    await mkdir(path.join(pending, SPACES_DIR), { recursive: true, mode: 0o700 });
+    for (const name of SPACES_SECRETS) vault.set(LOCAL, STAGED_SECRET(name), backup.localSecrets[name]);
+    staged.push(SPACES_DIR);
+  }
   // The manifest is written last: without it, a half-written staging folder is never applied.
   await writePrivate(
     path.join(pending, 'manifest.json'),
@@ -398,8 +497,39 @@ export async function pendingRestore(dir) {
   }
 }
 
-export async function cancelRestore(dir) {
+export async function cancelRestore(dir, vault = null) {
   await rm(path.join(dir, PENDING_DIR), { recursive: true, force: true });
+  for (const name of SPACES_SECRETS) {
+    try {
+      vault?.delete?.(LOCAL, STAGED_SECRET(name));
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
+/** Replaces the spaces folder and, together with it, both spaces keychain entries. */
+async function applySpaces({ dir, pending, safety, vault, staged }) {
+  const target = path.join(dir, SPACES_DIR);
+  const source = path.join(pending, SPACES_DIR);
+  const hasStaged = staged && (await stat(source).catch(() => null));
+  if (!staged || hasStaged) {
+    // The backup replaces everything: spaces the backup does not have are set aside as well.
+    await rename(target, path.join(safety, SPACES_DIR)).catch(err => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+    if (hasStaged) await rename(source, target);
+  }
+  if (!staged || !vault?.available) return;
+  const next = SPACES_SECRETS.map(name => [name, vault.get(LOCAL, STAGED_SECRET(name))]);
+  if (next.some(([, value]) => !value)) return; // already applied before an interruption
+  for (const [name] of next) {
+    // The set-aside copy stays readable with the previous keys.
+    const previous = vault.get(LOCAL, name);
+    if (previous) vault.set(LOCAL, PREVIOUS_SECRET(name), previous);
+  }
+  for (const [name, value] of next) vault.set(LOCAL, name, value);
+  for (const [name] of next) vault.delete?.(LOCAL, STAGED_SECRET(name));
 }
 
 const accountIdentity = a =>
@@ -450,6 +580,7 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
   const safety = path.join(dir, SAFETY_DIR, stamp);
   await mkdir(safety, { recursive: true, mode: 0o700 });
   const staged = new Set(manifest.files.filter(name => Object.hasOwn(BACKUP_FILES, name)));
+  const spacesStaged = manifest.files.includes(SPACES_DIR);
   const beforeAccounts = (await readIfExists(fileLocation(dir, 'accounts.json', accountsPath))) || '';
   const beforeDav = (await readIfExists(path.join(dir, 'dav.json'))) || '';
   for (const name of Object.keys(BACKUP_FILES)) {
@@ -463,6 +594,7 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
     });
     if (hasStaged) await rename(source, target);
   }
+  await applySpaces({ dir, pending, safety, vault, staged: spacesStaged });
   dropStaleSecrets(
     vault,
     beforeAccounts,

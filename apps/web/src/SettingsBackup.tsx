@@ -26,6 +26,7 @@ type Summary = {
   ownKeys: number;
   settings: boolean;
   assistant: boolean;
+  spaces?: number;
 };
 type RestoreResult = { createdAt: string; summary: Summary; uiPrefs: unknown; canRestart: boolean };
 
@@ -89,7 +90,7 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
     const ok = await confirm({
       title: t('Sicherung wiederherstellen?'),
       message: t(
-        'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.',
+        'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.',
         { date: createdAt ? when(createdAt) : '–' }
       ),
       confirmLabel: t('Wiederherstellen'),
@@ -150,7 +151,8 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
       t('{count} Vorlagen', { count: s.templates }),
       t('{count} Wiedervorlagen und {followups} Antwort-Erinnerungen', { count: s.snoozed, followups: s.followups }),
       s.ownKeys ? t('{count} eigene Schlüssel (PGP/S/MIME)', { count: s.ownKeys }) : '',
-      s.assistant ? t('Einstellungen und Protokoll des Assistenten') : ''
+      s.assistant ? t('Einstellungen und Protokoll des Assistenten') : '',
+      s.spaces ? t('{count} gemeinsame Räume', { count: s.spaces }) : ''
     ].filter(Boolean);
 
   const pending = status?.pending;
@@ -211,7 +213,7 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
           <Section
             title={t('Sicherung erstellen')}
             description={t(
-              'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.'
+              'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel, gemeinsame Räume und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.'
             )}
           >
             <div className="managed-field-grid backup-fields">

@@ -88,8 +88,17 @@ jobs:
           echo "runner=${{ matrix.runner }} platform=${{ matrix.platform }} target-arch=${{ matrix.arch }}"
           node -p "'node ' + process.version + ' ' + process.platform + '/' + process.arch"
           git rev-parse HEAD
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.arch }}
       - name: Install (exact lockfile)
         run: npm ci --no-fund
+      - name: Bundled AI runtime (Python, Orkexa, sidecar)
+        shell: bash
+        run: |
+          python -m pip install --require-hashes -r apps/ai/requirements-build.txt
+          node scripts/build-ai-runtime.mjs --arch ${{ matrix.arch }}
       - name: Tests on the target platform (incl. native keychain module)
         run: npm test
       - name: Unsigned test installer

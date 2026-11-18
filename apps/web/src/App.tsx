@@ -8,6 +8,7 @@ import {
   Mail,
   RefreshCcw,
   Settings2,
+  Sparkles,
   Users
 } from 'lucide-react';
 import AccountSettings from './AccountSettings';
@@ -15,6 +16,8 @@ import { ConfirmProvider, useUi } from './ConfirmDialog';
 import type { ComposeInitial, OutgoingPayload } from './Composer';
 import MailInstance from './MailInstance';
 import CommandPalette from './CommandPalette';
+import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
+import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
 import { useT } from './i18n';
@@ -93,6 +96,7 @@ function useErrorReporting() {
 function Shell() {
   useDocumentPrefs();
   useErrorReporting();
+  useBundleAssist();
   const { t, locale } = useT();
   const { toast, updateToast, dismiss } = useUi();
   const [prefs] = usePrefs();
@@ -107,6 +111,8 @@ function Shell() {
     openUid: null
   });
   const [module, setModule] = useState<Module>('mail');
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = usePendingApprovals();
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [snapshots, setSnapshots] = useState<Record<string, InboxSnapshot>>({});
   const [pollState, setPollState] = useState<Record<string, { checkedAt: number | null; error?: string }>>({});
@@ -586,6 +592,23 @@ function Shell() {
         ))}
         <span className="rail-spacer" />
         <button
+          className={`rail-item ${assistantOpen ? 'active' : ''}`}
+          onClick={() => setAssistantOpen(o => !o)}
+          title={t('Levuvo Mail Assistant (Strg/⌘+J)')}
+          aria-label={
+            pendingApprovals > 0 ? t('Assistent, {n} Freigaben offen', { n: pendingApprovals }) : t('Assistent')
+          }
+          aria-expanded={assistantOpen}
+        >
+          <Sparkles size={19} strokeWidth={1.8} aria-hidden="true" />
+          {pendingApprovals > 0 && (
+            <span className="rail-badge" aria-hidden="true">
+              {pendingApprovals > 99 ? '99+' : pendingApprovals}
+            </span>
+          )}
+          <span className="rail-label rail-mobile-only">{t('Assistent')}</span>
+        </button>
+        <button
           className="rail-item rail-desktop-only"
           onClick={() => window.dispatchEvent(new Event('levuvo:palette'))}
           title={t('Befehle (Strg/⌘+K)')}
@@ -668,7 +691,20 @@ function Shell() {
           </Suspense>
         )}
       </div>
-      <ModuleShortcuts onModule={setModule} />
+      <AssistantPanel
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onOpenMessage={m => {
+          setModule('mail');
+          setActive({ id: m.accountId, openUid: m.uid, openFolder: m.folder });
+        }}
+        onOpenSettings={() => {
+          setAssistantOpen(false);
+          openSettings('ai');
+        }}
+        onPending={setPendingApprovals}
+      />
+      <ModuleShortcuts onModule={setModule} onAssistant={() => setAssistantOpen(o => !o)} />
       <CommandPalette
         accounts={accounts}
         activeAccountId={active.id}
@@ -680,9 +716,14 @@ function Shell() {
   );
 }
 
-function ModuleShortcuts({ onModule }: { onModule: (m: Module) => void }) {
+function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => void; onAssistant: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        onAssistant();
+        return;
+      }
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       const map: Record<string, Module> = {
         '1': 'mail',
@@ -699,7 +740,7 @@ function ModuleShortcuts({ onModule }: { onModule: (m: Module) => void }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onModule]);
+  }, [onModule, onAssistant]);
   return null;
 }
 

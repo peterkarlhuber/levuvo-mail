@@ -1,4 +1,4 @@
 # Runtime dependencies of the AI sidecar, pinned to exact commits (Tabrion and Orkexa are not on a
 # package index). scripts/build-ai-runtime.mjs installs exactly these into the bundled Python.
 tabrion @ git+https://github.com/peterkarlhuber/tabrion.git@5bc690e2de74a92cd44bb4522cf2533cc2c8d14f
-orkexa[openai,anthropic] @ git+https://github.com/peterkarlhuber/orkexa.git@be0f824066e7b5adcb631cf7d3c691a90175b37d
+orkexa[openai,anthropic] @ git+https://github.com/peterkarlhuber/orkexa.git@2f725211af0b37db809b74d1384fa71c9ee0c45e

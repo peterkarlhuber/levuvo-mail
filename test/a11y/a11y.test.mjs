@@ -166,6 +166,11 @@ test(
         await page.locator('.rail-item').nth(3).click();
         await page.locator('.spaces-module').waitFor();
         await axe(page, 'spaces');
+        await page.locator('.rail-item[aria-label="Assistent"]').click();
+        await page.locator('.assistant-panel').waitFor();
+        await axe(page, 'assistant');
+        await page.locator('.rail-item[aria-label="Assistent"]').click();
+        await page.locator('.assistant-panel').waitFor({ state: 'detached' });
         await page.locator('.rail-item[aria-label="Einstellungen"]').click();
         for (const tab of settingsTabs) {
           await page.locator('.settings-nav button', { hasText: tab }).first().click();
@@ -198,7 +203,7 @@ test(
         [1, 'phone calendar'],
         [2, 'phone contacts'],
         [3, 'phone spaces'],
-        [4, 'phone settings']
+        [5, 'phone settings']
       ]) {
         await page.locator('.rail-item:visible').nth(index).click();
         await page.waitForTimeout(300);

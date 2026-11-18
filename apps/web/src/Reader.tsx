@@ -59,6 +59,7 @@ import type {
   SecurityCheck,
   SecurityReport
 } from './types';
+import { ReaderAssist } from './ReaderAssist';
 
 export type ReaderAction =
   'markRead' | 'markUnread' | 'flag' | 'unflag' | 'archive' | 'trash' | 'move' | 'spam' | 'notSpam';
@@ -1184,6 +1185,7 @@ export default function Reader(props: Props) {
           {detail && !detail.stale && (
             <ThreadPanel accountId={accountId} detail={detail} onOpen={props.onOpenThreadMessage} />
           )}
+          {detail && !detail.stale && <ReaderAssist accountId={accountId} folder={detail.folder} uid={detail.uid} />}
 
           {detail?.stale && (
             <div className="reader-security offline">
