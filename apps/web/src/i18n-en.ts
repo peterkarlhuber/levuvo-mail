@@ -1321,5 +1321,10 @@ export const EN: Record<string, string> = {
     'This mail server does not store status keywords. “Send later” is not available here.',
   'Speichern der geplanten Nachricht nicht bestätigt.': 'Saving the scheduled message was not confirmed.',
   'Ob die geplante Nachricht gespeichert wurde, ist unklar. Bitte zuerst im Ordner „Entwürfe“ nachsehen, bevor du sie erneut planst.':
-    'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.'
+    'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.',
+  // Tracking pixels
+  '1 Tracker blockiert': '1 tracker blocked',
+  '{count} Tracker blockiert': '{count} trackers blocked',
+  'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
+    'Tracking pixels removed, even when images are loaded: {hosts}'
 };

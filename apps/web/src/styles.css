@@ -1485,6 +1485,13 @@ h4 {
 .reader-security > span {
   flex: 1;
 }
+.reader-security > .tracker-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+}
 .reader-security.offline,
 .reader-security.warning {
   background: var(--warn-bg);

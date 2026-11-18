@@ -11,6 +11,7 @@ import {
   CloudOff,
   Download,
   Eye,
+  EyeOff,
   FilePenLine,
   FileText,
   Forward,
@@ -39,7 +40,7 @@ import {
 } from 'lucide-react';
 import { accountPath, ApiError, download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
-import { sanitizedEmailDocument } from './email-document';
+import { renderEmailDocument, sanitizedEmailDocument } from './email-document';
 import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText, initials, prettySize } from './format';
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
@@ -883,10 +884,12 @@ export default function Reader(props: Props) {
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
   const allowRemote = remoteFor === detail?.uid;
-  const htmlDocument = useMemo(
-    () => (detail?.html ? sanitizedEmailDocument(detail.html, { allowRemoteImages: allowRemote }) : ''),
+  const rendered = useMemo(
+    () => (detail?.html ? renderEmailDocument(detail.html, { allowRemoteImages: allowRemote }) : null),
     [detail?.html, allowRemote]
   );
+  const htmlDocument = rendered?.html || '';
+  const trackers = rendered?.trackers || [];
   // The calendar part of an invitation is shown as the invitation card, not as a file.
   const visibleAttachments =
     detail?.attachments.filter(
@@ -1288,6 +1291,19 @@ export default function Reader(props: Props) {
                       {t('Geschützte Ansicht · Links fragen vor dem Öffnen nach')}
                       {detail.remoteContent && !allowRemote ? ` · ${t('externe Bilder blockiert')}` : ''}
                     </span>
+                    {trackers.length > 0 && (
+                      <span
+                        className="tracker-badge"
+                        title={t('Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}', {
+                          hosts: [...new Set(trackers.filter(Boolean))].join(', ') || '–'
+                        })}
+                      >
+                        <EyeOff size={13} />{' '}
+                        {trackers.length === 1
+                          ? t('1 Tracker blockiert')
+                          : t('{count} Tracker blockiert', { count: trackers.length })}
+                      </span>
+                    )}
                     {detail.remoteContent && !allowRemote && (
                       <button className="text-button" onClick={() => setRemoteFor(detail.uid)}>
                         <Image size={13} /> {t('Bilder laden')}
