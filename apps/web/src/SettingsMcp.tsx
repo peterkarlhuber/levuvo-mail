@@ -26,7 +26,7 @@ type McpState = {
 export type Approval = {
   id: string;
   agentName: string;
-  type: 'send' | 'event' | 'contact' | 'trash';
+  type: 'send' | 'event' | 'contact' | 'trash' | 'room_change' | (string & {});
   summary: Record<string, unknown>;
   status: string;
   createdAt: string;
@@ -50,6 +50,25 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
       return t('Kontakt speichern: {name}', { name: s.name || '' });
     case 'trash':
       return t('Nachricht in den Papierkorb verschieben');
+    case 'room_change': {
+      const v = { room: s.room || '', subject: s.subject || '' };
+      const action: Record<string, string> = {
+        create_room: t('Neuen Raum „{subject}“ anlegen', v),
+        create_note: t('Notiz „{subject}“ anlegen', v),
+        append_note: t('Notiz „{subject}“ ergänzen', { subject: s.subject || t('Ohne Titel') }),
+        add_task: t('Aufgabe „{subject}“ anlegen', v),
+        update_task: t('Aufgabe „{subject}“ ändern', v),
+        add_event: t('Termin „{subject}“ eintragen', v),
+        comment: t('Kommentar schreiben'),
+        add_mail: t('Mail in den Raum legen'),
+        invite: t('{subject} einladen', v),
+        remove_member: t('{subject} entfernen', v),
+        set_role: t('Rolle von {subject} ändern', v)
+      };
+      const text = action[s.kind];
+      if (!text) return typeof a.summary?.title === 'string' ? a.summary.title : a.type;
+      return s.kind === 'create_room' ? text : t('Raum „{room}“: {action}', { room: v.room, action: text });
+    }
     default:
       return typeof a.summary?.title === 'string' ? a.summary.title : a.type;
   }

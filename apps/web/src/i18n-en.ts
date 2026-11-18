@@ -1710,5 +1710,18 @@ export const EN: Record<string, string> = {
   'Fehlendes anfragen': 'Request missing content',
   '{count} gemeinsame Räume': '{count} shared spaces',
   'Die Räume auf diesem Gerät sind gesperrt (Schlüsselbund). Die Sicherung wäre unvollständig und wurde nicht erstellt.':
-    'The spaces on this device are locked (keychain). The backup would be incomplete and was not created.'
+    'The spaces on this device are locked (keychain). The backup would be incomplete and was not created.',
+  // Shared spaces: assistant approvals
+  'Neuen Raum „{subject}“ anlegen': 'Create new space “{subject}”',
+  'Notiz „{subject}“ anlegen': 'Create note “{subject}”',
+  'Notiz „{subject}“ ergänzen': 'Add to note “{subject}”',
+  'Aufgabe „{subject}“ anlegen': 'Create task “{subject}”',
+  'Aufgabe „{subject}“ ändern': 'Change task “{subject}”',
+  'Termin „{subject}“ eintragen': 'Add event “{subject}”',
+  'Kommentar schreiben': 'Write a comment',
+  'Mail in den Raum legen': 'Add the mail to the space',
+  '{subject} einladen': 'Invite {subject}',
+  '{subject} entfernen': 'Remove {subject}',
+  'Rolle von {subject} ändern': 'Change the role of {subject}',
+  'Raum „{room}“: {action}': 'Space “{room}”: {action}'
 };
