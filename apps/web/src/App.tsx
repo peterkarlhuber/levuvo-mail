@@ -4,10 +4,12 @@ import {
   CircleHelp,
   Command,
   Contact2,
+  ListTodo,
   LoaderCircle,
   Mail,
   RefreshCcw,
   Settings2,
+  Sparkles,
   Users
 } from 'lucide-react';
 import AccountSettings from './AccountSettings';
@@ -15,15 +17,19 @@ import { ConfirmProvider, useUi } from './ConfirmDialog';
 import type { ComposeInitial, OutgoingPayload } from './Composer';
 import MailInstance from './MailInstance';
 import CommandPalette from './CommandPalette';
+import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
+import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
 import { useT } from './i18n';
 import { accountMarkerKey, detectArrivals, type NotificationCursor } from './notification-tracker';
 import { useDocumentPrefs, usePrefs } from './prefs';
+import { useTaskBadge } from './task-reminders';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
 const CalendarModule = lazy(() => import('./Calendar'));
 const ContactsModule = lazy(() => import('./Contacts'));
+const TasksModule = lazy(() => import('./Tasks'));
 const SettingsModule = lazy(() => import('./Settings'));
 const RestoreOnWelcome = lazy(() =>
   import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
@@ -31,7 +37,7 @@ const RestoreOnWelcome = lazy(() =>
 const SpacesModule = lazy(() => import('./Spaces'));
 
 type NotificationState = NotificationPermission | 'unsupported';
-export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'settings';
+export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'tasks' | 'settings';
 export type SettingsTab =
   | 'general'
   | 'accounts'
@@ -93,6 +99,7 @@ function useErrorReporting() {
 function Shell() {
   useDocumentPrefs();
   useErrorReporting();
+  useBundleAssist();
   const { t, locale } = useT();
   const { toast, updateToast, dismiss } = useUi();
   const [prefs] = usePrefs();
@@ -107,6 +114,8 @@ function Shell() {
     openUid: null
   });
   const [module, setModule] = useState<Module>('mail');
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = usePendingApprovals();
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [snapshots, setSnapshots] = useState<Record<string, InboxSnapshot>>({});
   const [pollState, setPollState] = useState<Record<string, { checkedAt: number | null; error?: string }>>({});
@@ -290,6 +299,27 @@ function Shell() {
     const timer = window.setInterval(() => void check(), 30_000);
     return () => window.clearInterval(timer);
   }, [runtime, t, locale, toast]);
+
+  // Tasks: badge in the rail; reminders in the browser (the desktop app notifies natively).
+  const onTaskReminder = useCallback(
+    (task: { title: string; notes: string }) => {
+      toast({
+        text: `${t('Erinnerung')}: ${task.title}`,
+        kind: 'info',
+        timeout: 15000,
+        action: { label: t('Aufgaben'), run: () => setModule('tasks') }
+      });
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(task.title, { body: task.notes.slice(0, 120), icon: '/favicon.png' });
+        } catch {
+          /* blocked */
+        }
+      }
+    },
+    [t, toast]
+  );
+  const tasksDue = useTaskBadge({ browserReminders: Boolean(runtime && !runtime.desktop), onReminder: onTaskReminder });
 
   // Follow-ups in the browser (the desktop app notifies from the main process).
   useEffect(() => {
@@ -549,7 +579,8 @@ function Shell() {
     { id: 'mail', label: t('E-Mail'), icon: Mail, key: '1' },
     { id: 'calendar', label: t('Kalender'), icon: CalendarDays, key: '2' },
     { id: 'contacts', label: t('Kontakte'), icon: Contact2, key: '3' },
-    { id: 'spaces', label: t('Räume'), icon: Users, key: '4' }
+    { id: 'spaces', label: t('Räume'), icon: Users, key: '4' },
+    { id: 'tasks', label: t('Aufgaben'), icon: ListTodo, key: '5' }
   ];
   const unseenTotal = Object.values(snapshots).reduce((n, s) => n + (s.unseen || 0), 0);
   const fallback = (
@@ -578,6 +609,9 @@ function Shell() {
                 {unseenTotal > 99 ? '99+' : unseenTotal}
               </span>
             )}
+            {item.id === 'tasks' && tasksDue > 0 && (
+              <span className="rail-badge">{tasksDue > 99 ? '99+' : tasksDue}</span>
+            )}
             <span className="rail-label">{item.label}</span>
             {item.id === 'mail' && unseenTotal > 0 && (
               <span className="sr-only">, {t('{n} ungelesen', { n: unseenTotal })}</span>
@@ -585,6 +619,23 @@ function Shell() {
           </button>
         ))}
         <span className="rail-spacer" />
+        <button
+          className={`rail-item ${assistantOpen ? 'active' : ''}`}
+          onClick={() => setAssistantOpen(o => !o)}
+          title={t('Levuvo Mail Assistant (Strg/⌘+J)')}
+          aria-label={
+            pendingApprovals > 0 ? t('Assistent, {n} Freigaben offen', { n: pendingApprovals }) : t('Assistent')
+          }
+          aria-expanded={assistantOpen}
+        >
+          <Sparkles size={19} strokeWidth={1.8} aria-hidden="true" />
+          {pendingApprovals > 0 && (
+            <span className="rail-badge" aria-hidden="true">
+              {pendingApprovals > 99 ? '99+' : pendingApprovals}
+            </span>
+          )}
+          <span className="rail-label rail-mobile-only">{t('Assistent')}</span>
+        </button>
         <button
           className="rail-item rail-desktop-only"
           onClick={() => window.dispatchEvent(new Event('levuvo:palette'))}
@@ -651,6 +702,16 @@ function Shell() {
             <SpacesModule accounts={accounts} />
           </Suspense>
         )}
+        {module === 'tasks' && (
+          <Suspense fallback={fallback}>
+            <TasksModule
+              onOpenMail={mail => {
+                setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                setModule('mail');
+              }}
+            />
+          </Suspense>
+        )}
         {module === 'settings' && (
           <Suspense fallback={fallback}>
             <SettingsModule
@@ -668,7 +729,20 @@ function Shell() {
           </Suspense>
         )}
       </div>
-      <ModuleShortcuts onModule={setModule} />
+      <AssistantPanel
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onOpenMessage={m => {
+          setModule('mail');
+          setActive({ id: m.accountId, openUid: m.uid, openFolder: m.folder });
+        }}
+        onOpenSettings={() => {
+          setAssistantOpen(false);
+          openSettings('ai');
+        }}
+        onPending={setPendingApprovals}
+      />
+      <ModuleShortcuts onModule={setModule} onAssistant={() => setAssistantOpen(o => !o)} />
       <CommandPalette
         accounts={accounts}
         activeAccountId={active.id}
@@ -680,15 +754,21 @@ function Shell() {
   );
 }
 
-function ModuleShortcuts({ onModule }: { onModule: (m: Module) => void }) {
+function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => void; onAssistant: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        onAssistant();
+        return;
+      }
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       const map: Record<string, Module> = {
         '1': 'mail',
         '2': 'calendar',
         '3': 'contacts',
         '4': 'spaces',
+        '5': 'tasks',
         ',': 'settings'
       };
       const target = map[e.key];
@@ -699,7 +779,7 @@ function ModuleShortcuts({ onModule }: { onModule: (m: Module) => void }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onModule]);
+  }, [onModule, onAssistant]);
   return null;
 }
 

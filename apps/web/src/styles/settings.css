@@ -110,7 +110,8 @@
   margin-left: auto;
   max-width: 100%;
 }
-.settings-row-label strong {
+.settings-row-label strong,
+.settings-row-label label {
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }

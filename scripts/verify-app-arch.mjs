@@ -4,7 +4,7 @@
 // of the wrong architecture from being shipped as an installer.
 //   node scripts/verify-app-arch.mjs <win|mac> <arm64|x64>
 import { closeSync, openSync, readSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 const PE = { 0x8664: 'x64', 0xaa64: 'arm64', 0x14c: 'ia32' };
 const MACHO = { 0x0100000c: 'arm64', 0x01000007: 'x64' };
@@ -69,8 +69,17 @@ if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
       ? files.find(f => f.endsWith(join('', 'Levuvo Mail.exe')))
       : files.find(f => f.endsWith(join('Contents', 'MacOS', 'Levuvo Mail')));
   const natives = files.filter(f => f.endsWith('.node'));
-  const targets = [main, ...natives].filter(Boolean);
+  // Bundled AI runtime: the interpreter and every compiled extension must match too.
+  const runtime = files.filter(
+    f => f.includes(`${sep}ai-runtime${sep}`) && /(\.so|\.pyd|\.dylib|\.dll|python3?\.exe|python3\.\d+)$/.test(f)
+  );
+  const interpreter = runtime.find(f => /(python\.exe|python3\.\d+)$/.test(f));
+  const targets = [main, ...natives, ...runtime].filter(Boolean);
   let failed = !main;
+  if (!interpreter) {
+    console.error('✗ Bundled AI runtime (Python interpreter) not found');
+    failed = true;
+  }
   if (!main) console.error('✗ Main executable “Levuvo Mail” not found');
   if (!natives.length) {
     console.error('✗ No native .node module (keychain) found');

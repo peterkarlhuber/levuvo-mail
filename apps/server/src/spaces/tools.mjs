@@ -106,6 +106,22 @@ export function searchRoom(detail, query, { limit = 30 } = {}) {
 
 const TEXTUAL = /^(text\/|application\/(json|xml|csv|x-ndjson|javascript|x-yaml))/i;
 
+/** German fallback text of a proposed change (the interface translates by `kind`). */
+const CHANGE_LABELS = {
+  create_room: s => `Neuen Raum „${s}“ anlegen`,
+  create_note: s => `Notiz „${s}“ anlegen`,
+  append_note: s => `Notiz „${s || 'Ohne Titel'}“ ergänzen`,
+  add_task: s => `Aufgabe „${s}“ anlegen`,
+  update_task: s => `Aufgabe „${s}“ ändern`,
+  add_event: s => `Termin „${s}“ eintragen`,
+  comment: () => 'Kommentar schreiben',
+  add_mail: () => 'Mail in den Raum legen',
+  invite: s => `${s} einladen`,
+  remove_member: s => `${s} entfernen`,
+  set_role: s => `Rolle von ${s} ändern`
+};
+const changeLabel = (kind, subject) => CHANGE_LABELS[kind](subject);
+
 export function registerSpaceTools(ctx, { service, registry = null, frame = null }) {
   if (registry && frame) return register(registry, frame);
   // The MCP server comes from the assistant module; without it there is nothing to register.
@@ -159,6 +175,8 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
       summary: p => ({
         title: `Raum „${p.roomName}“: ${p.label}`,
         room: p.roomName,
+        kind: p.kind || '',
+        subject: p.subject || '',
         action: p.action,
         details: p.preview
       }),
@@ -190,11 +208,14 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
         }
       }
     });
-    const change = (detail, action, label, data, preview = {}) => ({
+    // `kind` and `subject` let the interface show the approval in the user's language.
+    const change = (detail, action, [kind, subject = ''], data, preview = {}) => ({
       room: detail?.id || null,
       roomName: detail?.name || data.name,
       action,
-      label,
+      kind,
+      subject,
+      label: changeLabel(kind, subject),
       data,
       preview
     });
@@ -342,7 +363,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             null,
             'create_room',
-            `Neuen Raum „${String(a.name).slice(0, 120)}“ anlegen`,
+            ['create_room', String(a.name).slice(0, 120)],
             {
               name: String(a.name).slice(0, 120),
               description: String(a.description || '').slice(0, 2000),
@@ -373,7 +394,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'create_note',
-            `Notiz „${String(a.title).slice(0, 80)}“ anlegen`,
+            ['create_note', String(a.title).slice(0, 80)],
             {
               title: String(a.title).slice(0, 200),
               text: String(a.text || '').slice(0, 50_000),
@@ -406,7 +427,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'append_note',
-            `Notiz „${note.title || 'Ohne Titel'}“ ergänzen`,
+            ['append_note', note.title || ''],
             { id: note.id, text: String(a.text).slice(0, 50_000), checklist: a.checklist === true },
             { text: short(a.text, 2000) }
           );
@@ -443,7 +464,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'op',
-            `Aufgabe „${data.title.slice(0, 80)}“ anlegen`,
+            ['add_task', data.title.slice(0, 80)],
             { type: 'task.upsert', data },
             { due: data.due, assignee: a.assignee || '' }
           );
@@ -482,7 +503,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'op',
-            `Aufgabe „${task.title.slice(0, 80)}“ ändern`,
+            ['update_task', task.title.slice(0, 80)],
             { type: 'task.upsert', data },
             { status: a.status || '', assignee: a.assignee || '', due: a.due || '' }
           );
@@ -523,7 +544,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'op',
-            `Termin „${data.title.slice(0, 80)}“ eintragen`,
+            ['add_event', data.title.slice(0, 80)],
             { type: 'event.upsert', data },
             { start: a.start, end: a.end || '' }
           );
@@ -555,13 +576,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
             target: { kind, id: kind === 'space' ? '' : a.target_id },
             text: String(a.text).slice(0, 20_000)
           };
-          return change(
-            detail,
-            'op',
-            'Kommentar schreiben',
-            { type: 'comment.add', data },
-            { text: short(a.text, 1000) }
-          );
+          return change(detail, 'op', ['comment'], { type: 'comment.add', data }, { text: short(a.text, 1000) });
         }
       },
       {
@@ -586,7 +601,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'add_mail',
-            'Mail in den Raum legen',
+            ['add_mail'],
             { account: a.account, folder: a.folder, uid: a.uid, withAttachments: a.with_attachments === true },
             { folder: a.folder, uid: a.uid }
           );
@@ -608,7 +623,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'invite',
-            `${String(a.email).slice(0, 120)} einladen`,
+            ['invite', String(a.email).slice(0, 120)],
             { email: String(a.email).slice(0, 320), role: a.role || 'editor' },
             { role: a.role || 'editor' }
           );
@@ -625,7 +640,13 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           if (!detail.owner) throw toolError('Only the owner of the space can remove members.');
           const id = member(detail, a.member);
           const m = detail.members.find(x => x.id === id);
-          return change(detail, 'remove_member', `${m.name || m.email} entfernen`, { member: id }, { email: m.email });
+          return change(
+            detail,
+            'remove_member',
+            ['remove_member', m.name || m.email],
+            { member: id },
+            { email: m.email }
+          );
         }
       },
       {
@@ -646,7 +667,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           return change(
             detail,
             'set_role',
-            `Rolle von ${m.name || m.email} ändern`,
+            ['set_role', m.name || m.email],
             { member: id, role: a.role },
             { role: a.role }
           );

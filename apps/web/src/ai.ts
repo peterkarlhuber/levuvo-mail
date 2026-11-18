@@ -18,6 +18,12 @@ export type AiFeature =
   | 'search'
   | 'agents';
 
+export type AiProfile = {
+  tone: 'auto' | 'friendly' | 'formal' | 'casual' | 'brief';
+  address: 'auto' | 'du' | 'sie';
+  signoff: string;
+  instructions: string;
+};
 export type AiSettings = {
   enabled: boolean;
   provider: AiProvider;
@@ -27,6 +33,7 @@ export type AiSettings = {
   features: Record<AiFeature, boolean>;
   consents: Partial<Record<AiProvider, { version: string; at: string }>>;
   noCloudAccounts: string[];
+  profile?: AiProfile;
   keys: Partial<Record<AiProvider, boolean>>;
   consentVersion: string;
   vaultAvailable: boolean;
@@ -45,6 +52,20 @@ export type MessageRef = { folder: string; uid: number };
 export type AiResult<T> = { kind: string; result: T; provider: AiProvider; model: string; generated: true };
 
 export const isCloud = (p: AiProvider) => p !== 'ollama';
+
+/** Suggested local models. All are open-weight with a permissive license; any other Ollama model works too. */
+export const DEFAULT_LOCAL_MODEL = 'qwen3.5:9b';
+export const LOCAL_MODELS = [
+  { id: 'qwen3.5:9b', note: 'Standard, ab 16 GB RAM (Apache 2.0)' },
+  { id: 'qwen3.5:4b', note: 'Klein, ab 8 GB RAM (Apache 2.0)' },
+  { id: 'qwen3.5:27b', note: 'Groß, ab 32 GB RAM (Apache 2.0)' },
+  { id: 'mistral-small3.2', note: 'Groß, ab 32 GB RAM (Apache 2.0)' }
+];
+export const DEFAULT_EMBED_MODEL = 'qwen3-embedding:0.6b';
+export const EMBED_MODELS = [
+  { id: 'qwen3-embedding:0.6b', note: 'Standard, klein und mehrsprachig (Apache 2.0)' },
+  { id: 'bge-m3', note: 'Alternative, mehrsprachig (MIT)' }
+];
 
 export const aiSettings = () => getJson<AiSettings>('/api/ai/settings');
 export const aiStatus = () => getJson<{ settings: AiSettings; runtime: AiRuntime }>('/api/ai/status');
@@ -100,3 +121,5 @@ export function aiErrorText(code: string | undefined, t: (s: string) => string) 
       return t('KI-Funktion fehlgeschlagen.');
   }
 }
+
+export { defaultEnd, ownPart } from './ai-utils';

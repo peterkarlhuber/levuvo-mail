@@ -33,6 +33,7 @@ let mailServer;
 let backgroundMonitor;
 let reminderMonitor;
 let followupTimer;
+let taskTimer;
 let updater = { enabled: false, check: async () => ({ status: 'disabled' }) };
 let appOrigin = '';
 const activeNativeNotifications = new Set();
@@ -66,6 +67,7 @@ async function shutdown() {
   backgroundMonitor?.stop();
   reminderMonitor?.stop();
   if (followupTimer) clearInterval(followupTimer);
+  if (taskTimer) clearInterval(taskTimer);
   try {
     await mailServer?.close();
   } catch {
@@ -247,7 +249,8 @@ function configureMenu() {
         submenu: [
           { label: t('mail'), accelerator: 'Alt+1', click: () => navigate({ module: 'mail' }) },
           { label: t('calendar'), accelerator: 'Alt+2', click: () => navigate({ module: 'calendar' }) },
-          { label: t('contacts'), accelerator: 'Alt+3', click: () => navigate({ module: 'contacts' }) }
+          { label: t('contacts'), accelerator: 'Alt+3', click: () => navigate({ module: 'contacts' }) },
+          { label: t('tasks'), accelerator: 'Alt+5', click: () => navigate({ module: 'tasks' }) }
         ]
       }
     ])
@@ -275,7 +278,7 @@ function navigate(detail) {
   showWindow();
   if (!windowRef || windowRef.isDestroyed()) return;
   const safe = JSON.stringify({
-    module: ['mail', 'calendar', 'contacts', 'settings'].includes(detail.module) ? detail.module : 'mail',
+    module: ['mail', 'calendar', 'contacts', 'tasks', 'settings'].includes(detail.module) ? detail.module : 'mail',
     ...(typeof detail.accountId === 'string' ? { accountId: detail.accountId.slice(0, 40) } : {}),
     ...(detail.compose ? { compose: true } : {})
   });
@@ -404,6 +407,33 @@ async function boot() {
     }
   }, 60_000);
   followupTimer.unref?.();
+  // Task reminders: the server hands out each due reminder once (also to the browser UI).
+  taskTimer = setInterval(async () => {
+    try {
+      const response = await mailServer.api.inject({
+        method: 'POST',
+        url: '/api/tasks/reminders/claim',
+        headers: {
+          host: hostHeader,
+          origin: appOrigin,
+          cookie: `levuvo_desktop_session=${secret}`,
+          'content-type': 'application/json',
+          'x-levuvo-action': 'mail-v1'
+        },
+        payload: {}
+      });
+      if (response.statusCode !== 200) return;
+      for (const task of response.json().tasks || [])
+        nativeNotify({
+          title: `${t('taskReminder')}: ${task.title}`,
+          body: task.notes?.slice(0, 120) || '',
+          module: 'tasks'
+        });
+    } catch {
+      /* server busy or tasks locked */
+    }
+  }, 60_000);
+  taskTimer.unref?.();
   await startCrashReporting(localGet);
 
   // httpOnly cookie, rotated on every launch; the API rejects requests without it.

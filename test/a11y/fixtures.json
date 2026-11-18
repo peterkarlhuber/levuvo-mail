@@ -890,14 +890,14 @@
   },
   "GET /api/ai/status": {
     "status": 200,
-    "contentType": "application/json; charset=utf-8",
+    "contentType": "application/json",
     "body": {
       "settings": {
         "enabled": false,
         "provider": "ollama",
-        "model": "qwen3.5:4b",
+        "model": "qwen3.5:9b",
         "baseUrl": "http://127.0.0.1:11434",
-        "embedModel": "nomic-embed-text",
+        "embedModel": "qwen3-embedding:0.6b",
         "features": {
           "digest": true,
           "translate": true,
@@ -914,23 +914,28 @@
         },
         "consents": {},
         "noCloudAccounts": [],
-        "keys": {
-          "anthropic": false,
-          "openai": false
+        "profile": {
+          "tone": "auto",
+          "address": "auto",
+          "signoff": "",
+          "instructions": ""
         },
-        "consentVersion": "2026-11-18",
+        "keys": {},
+        "consentVersion": "1",
         "vaultAvailable": true
       },
       "runtime": {
-        "available": false,
-        "reason": "stopped",
-        "enabled": false
+        "available": true,
+        "version": "1.0.0",
+        "ollama": {
+          "running": false
+        }
       }
     }
   },
   "GET /api/ai/log": {
     "status": 200,
-    "contentType": "application/json; charset=utf-8",
+    "contentType": "application/json",
     "body": {
       "entries": []
     }
@@ -953,6 +958,69 @@
       },
       "spaces": [],
       "invitations": []
+    }
+  },
+  "GET /api/ai/settings": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "enabled": false,
+      "provider": "ollama",
+      "model": "qwen3.5:9b",
+      "baseUrl": "http://127.0.0.1:11434",
+      "embedModel": "qwen3-embedding:0.6b",
+      "features": {
+        "digest": true,
+        "translate": true,
+        "reply": true,
+        "rewrite": true,
+        "compose": true,
+        "attachmentCheck": true,
+        "prioritize": true,
+        "classify": true,
+        "extract": true,
+        "assess": true,
+        "search": true,
+        "agents": true
+      },
+      "consents": {},
+      "noCloudAccounts": [],
+      "profile": {
+        "tone": "auto",
+        "address": "auto",
+        "signoff": "",
+        "instructions": ""
+      },
+      "keys": {},
+      "consentVersion": "1",
+      "vaultAvailable": true
+    }
+  },
+  "GET /api/ai/skills": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "skills": []
+    }
+  },
+  "GET /api/mcp/approvals": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "pending": []
+    }
+  },
+  "GET /api/mcp": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "enabled": false,
+      "port": 4791,
+      "running": false,
+      "url": "http://127.0.0.1:4791/mcp",
+      "agents": [],
+      "pending": 0,
+      "bridge": null
     }
   }
 }

@@ -61,6 +61,7 @@ export function registerAccountRoutes(ctx) {
     await ctx.localIndex.clear(request.body.id);
     await ctx.followups.forgetAccount(request.body.id);
     await ctx.screening?.clear(request.body.id);
+    await ctx.tasks.forgetAccount(request.body.id);
     refreshAccounts();
     return result;
   });

@@ -18,6 +18,7 @@ import {
   HelpCircle,
   Image,
   KeyRound,
+  ListTodo,
   LoaderCircle,
   MailX,
   Lock,
@@ -46,6 +47,10 @@ import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText,
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
 import { EventSuggestions } from './EventSuggestions';
+import TaskDialog from './TaskDialog';
+import { TaskHint } from './TaskHint';
+import ContactCard from './ContactCard';
+import { taskTitleFromSubject } from './tasks';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
 const AddToSpaceMenu = lazy(() => import('./SpacePick'));
@@ -59,6 +64,7 @@ import type {
   SecurityCheck,
   SecurityReport
 } from './types';
+import { ReaderAssist } from './ReaderAssist';
 
 export type ReaderAction =
   'markRead' | 'markUnread' | 'flag' | 'unflag' | 'archive' | 'trash' | 'move' | 'spam' | 'notSpam';
@@ -807,6 +813,9 @@ export default function Reader(props: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [preview, setPreview] = useState<Attachment | null>(null);
   const [menu, setMenu] = useState(false);
+  const [taskFor, setTaskFor] = useState<Detail | null>(null);
+  // Contact card of the sender, per message (closes when another message is opened).
+  const [cardFor, setCardFor] = useState<string | null>(null);
   const [spacePick, setSpacePick] = useState(false);
   const [snoozeMenu, setSnoozeMenu] = useState(false);
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
@@ -963,6 +972,14 @@ export default function Reader(props: Props) {
                 )}
               </div>
               <button
+                disabled={!detail}
+                onClick={() => detail && setTaskFor(detail)}
+                title={t('Als Aufgabe anlegen')}
+                aria-label={t('Als Aufgabe anlegen')}
+              >
+                <ListTodo size={16} />
+              </button>
+              <button
                 disabled={!writeEnabled || !message || actionBusy}
                 onClick={() => props.onAction(unread ? 'markRead' : 'markUnread')}
                 title={unread ? t('Als gelesen markieren (U)') : t('Als ungelesen markieren (U)')}
@@ -1094,21 +1111,47 @@ export default function Reader(props: Props) {
 
           <h2>{header.subject}</h2>
           <div className="reader-meta">
-            <div className="reader-avatar" aria-hidden="true">
-              {initials(header.fromName)}
-            </div>
-            <div className="reader-sender">
-              <div className="sender-name">{header.fromName}</div>
-              {header.fromEmail && header.fromEmail.toLowerCase() !== header.fromName.toLowerCase() && (
-                <div className="sender-email" title={header.fromEmail}>
-                  {header.fromEmail}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              className="reader-sender-button"
+              disabled={!header.fromEmail}
+              aria-expanded={cardFor === `${detail?.uid}|${header.fromEmail}`}
+              title={t('Kontaktkarte anzeigen')}
+              onClick={() =>
+                setCardFor(c =>
+                  c === `${detail?.uid}|${header.fromEmail}` ? null : `${detail?.uid}|${header.fromEmail}`
+                )
+              }
+            >
+              <div className="reader-avatar" aria-hidden="true">
+                {initials(header.fromName)}
+              </div>
+              <div className="reader-sender">
+                <div className="sender-name">{header.fromName}</div>
+                {header.fromEmail && header.fromEmail.toLowerCase() !== header.fromName.toLowerCase() && (
+                  <div className="sender-email" title={header.fromEmail}>
+                    {header.fromEmail}
+                  </div>
+                )}
+              </div>
+            </button>
             <time className="reader-date" title={fullDateLabel(header.date)}>
               {fullDateLabel(header.date)}
             </time>
           </div>
+          {detail && header.fromEmail && cardFor === `${detail.uid}|${header.fromEmail}` && (
+            <ContactCard
+              accountId={accountId}
+              email={header.fromEmail}
+              name={header.fromName}
+              currentUid={detail.uid}
+              onOpenMail={(folder, uid) => {
+                setCardFor(null);
+                props.onOpenThreadMessage(folder, uid);
+              }}
+              onClose={() => setCardFor(null)}
+            />
+          )}
           {detail && (detail.to.length > 0 || detail.cc.length > 0 || detail.replyTo.length > 0) && (
             <div className="recipient-panel">
               {detail.to.length > 0 && (
@@ -1184,6 +1227,7 @@ export default function Reader(props: Props) {
           {detail && !detail.stale && (
             <ThreadPanel accountId={accountId} detail={detail} onOpen={props.onOpenThreadMessage} />
           )}
+          {detail && !detail.stale && <ReaderAssist accountId={accountId} folder={detail.folder} uid={detail.uid} />}
 
           {detail?.stale && (
             <div className="reader-security offline">
@@ -1214,6 +1258,7 @@ export default function Reader(props: Props) {
           ) : detail ? (
             <div className="message-detail">
               {detail.invitation && <InvitationCard accountId={accountId} detail={detail} />}
+              <TaskHint accountId={accountId} detail={detail} />
               {detail.eventSuggestions?.length ? (
                 <EventSuggestions key={`${detail.folder}|${detail.uid}`} detail={detail} />
               ) : null}
@@ -1326,6 +1371,22 @@ export default function Reader(props: Props) {
           ) : null}
           {preview && detail && (
             <AttachmentPreview url={attUrl(preview, true)} att={preview} onClose={() => setPreview(null)} />
+          )}
+          {taskFor && (
+            <TaskDialog
+              draft={{
+                title: taskTitleFromSubject(taskFor.subject),
+                mail: {
+                  accountId,
+                  folder: taskFor.folder,
+                  uid: taskFor.uid,
+                  messageId: taskFor.messageId || null,
+                  subject: taskFor.subject,
+                  from: taskFor.from[0]?.name || taskFor.from[0]?.email || ''
+                }
+              }}
+              onClose={() => setTaskFor(null)}
+            />
           )}
         </div>
       ) : (

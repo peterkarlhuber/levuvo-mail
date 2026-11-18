@@ -75,13 +75,18 @@ export function Row({ label, hint, children }: { label: string; hint?: string; c
   // Fields inside a row get the row's label and hint as accessible name and description,
   // unless they carry their own (WCAG 1.3.1 / 4.1.2).
   useLayoutEffect(() => {
-    control.current?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea').forEach(el => {
+    const fields = [
+      ...(control.current?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea') ?? [])
+    ];
+    fields.forEach(el => {
       const named =
         el.getAttribute('aria-label') ||
         (el.getAttribute('aria-labelledby') && !el.dataset.rowLabel) ||
-        (el as HTMLInputElement).labels?.length;
+        ((el as HTMLInputElement).labels?.length && !el.dataset.rowLabel);
       if (!named) {
-        el.setAttribute('aria-labelledby', `${id}-label`);
+        // A single field gets the row's visible <label>; several share it via aria-labelledby.
+        if (fields.length === 1 && (!el.id || el.id === `${id}-field`)) el.id = `${id}-field`;
+        else el.setAttribute('aria-labelledby', `${id}-label`);
         el.dataset.rowLabel = '1';
       }
       if (hint && !el.getAttribute('aria-describedby')) el.setAttribute('aria-describedby', `${id}-hint`);
@@ -90,7 +95,9 @@ export function Row({ label, hint, children }: { label: string; hint?: string; c
   return (
     <div className="settings-row">
       <div className="settings-row-label">
-        <strong id={`${id}-label`}>{label}</strong>
+        <label id={`${id}-label`} htmlFor={`${id}-field`}>
+          {label}
+        </label>
         {hint && <small id={`${id}-hint`}>{hint}</small>}
       </div>
       <div className="settings-row-control" ref={control}>

@@ -104,6 +104,10 @@ jobs:
       - name: Tests
         working-directory: apps/ai
         run: python -m pytest -q
+      - name: Bundled runtime (hashed lock, git pins, smoke test)
+        run: |
+          python -m pip install --require-hashes -r apps/ai/requirements-build.txt
+          node scripts/build-ai-runtime.mjs --out "$RUNNER_TEMP/ai-runtime"
 
   desktop-build:
     name: Desktop build (unsigned)

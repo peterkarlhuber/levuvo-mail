@@ -288,6 +288,103 @@ test('Design tokens: stylesheets use the shared scale (no raw sizes, layers, rad
   );
 });
 
+test('Tasks: title from subject, due values, due state and presets', async () => {
+  const { taskTitleFromSubject, dueFromForm, formFromDue, dueDay, dueState, duePresets } =
+    await import('../src/tasks.ts');
+  assert.equal(taskTitleFromSubject('AW: Re: Fwd: Angebot Küche'), 'Angebot Küche');
+  assert.equal(dueFromForm('', '10:00'), null);
+  assert.equal(dueFromForm('2026-12-01', ''), '2026-12-01');
+  const timed = dueFromForm('2026-12-01', '09:30');
+  assert.equal(new Date(timed).getHours(), 9);
+  assert.deepEqual(formFromDue(timed), { date: '2026-12-01', time: '09:30' });
+  assert.deepEqual(formFromDue('2026-12-01'), { date: '2026-12-01', time: '' });
+  assert.deepEqual(formFromDue(null), { date: '', time: '' });
+  assert.equal(dueDay(timed), '2026-12-01');
+  const now = new Date(2026, 10, 18, 12, 0); // Wed 18 Nov 2026, local
+  assert.equal(dueState({ due: '2026-11-17', done: false }, now), 'overdue');
+  assert.equal(dueState({ due: '2026-11-18', done: false }, now), 'today');
+  assert.equal(dueState({ due: new Date(2026, 10, 18, 9, 0).toISOString(), done: false }, now), 'overdue');
+  assert.equal(dueState({ due: '2026-11-22', done: false }, now), 'soon');
+  assert.equal(dueState({ due: '2026-12-22', done: false }, now), 'later');
+  assert.equal(dueState({ due: '2026-11-17', done: true }, now), 'none');
+  assert.equal(dueState({ due: null, done: false }, now), 'none');
+  assert.deepEqual(duePresets(now), {
+    today: '2026-11-18',
+    tomorrow: '2026-11-19',
+    monday: '2026-11-23',
+    week: '2026-11-25'
+  });
+  assert.equal(duePresets(new Date(2026, 10, 23, 8)).monday, '2026-11-30'); // on a Monday: the next one
+});
+
+test('Contact card: address book match and shared appointments', async () => {
+  const { pickContact, sharedEvents } = await import('../src/contact-card.ts');
+  const c = (name, email, extra = {}) => ({ name, emails: [{ value: email, type: 'work' }], phones: [], ...extra });
+  const picked = pickContact(
+    [c('', 'Anna@X.at'), c('Anna Muster', 'anna@x.at', { organization: 'X GmbH' }), c('Bob', 'bob@x.at')],
+    'anna@x.at'
+  );
+  assert.equal(picked.name, 'Anna Muster');
+  assert.equal(pickContact([c('Bob', 'bob@x.at')], 'anna@x.at'), null);
+
+  const ev = (summary, start, end, who, extra = {}) => ({
+    uid: summary,
+    url: `/${summary}`,
+    summary,
+    start,
+    end,
+    allDay: false,
+    organizer: null,
+    attendees: who.map(email => ({ email, name: '', partstat: 'ACCEPTED' })),
+    ...extra
+  });
+  const now = new Date('2026-11-18T12:00:00Z');
+  const list = [
+    ev('Alt', '2026-10-01T08:00:00Z', '2026-10-01T09:00:00Z', ['anna@x.at']),
+    ev('Neuer', '2026-11-10T08:00:00Z', '2026-11-10T09:00:00Z', ['ANNA@x.at']),
+    ev('Fremd', '2026-11-20T08:00:00Z', '2026-11-20T09:00:00Z', ['bob@x.at']),
+    ev('Bald', '2026-11-25T08:00:00Z', '2026-11-25T09:00:00Z', [], { organizer: { email: 'anna@x.at', name: '' } }),
+    ev('Morgen', '2026-11-19T08:00:00Z', '2026-11-19T09:00:00Z', ['anna@x.at']),
+    ev('Morgen', '2026-11-19T08:00:00Z', '2026-11-19T09:00:00Z', ['anna@x.at']),
+    ev('Laeuft', '2026-11-18T11:00:00Z', '2026-11-18T13:00:00Z', ['anna@x.at'])
+  ];
+  const r = sharedEvents(list, 'anna@x.at', now);
+  assert.deepEqual(
+    r.upcoming.map(e => e.summary),
+    ['Laeuft', 'Morgen', 'Bald']
+  );
+  assert.deepEqual(
+    r.past.map(e => e.summary),
+    ['Neuer', 'Alt']
+  );
+});
+
+test('assistant helpers: own part of a draft and default event end', async () => {
+  const { ownPart, defaultEnd } = await import('../src/ai-utils.ts');
+  assert.equal(ownPart('<p>Hi</p><p>-- </p><p>Sig</p>', ['<p>-- </p>', '<blockquote']), '<p>Hi</p>');
+  assert.equal(ownPart('Nur Text', ['\n-- \n']), 'Nur Text');
+  assert.equal(defaultEnd('2026-11-23T14:00', false), '2026-11-23T15:00');
+  assert.equal(defaultEnd('2026-11-23T23:30', false), '2026-11-23T23:59');
+  assert.equal(defaultEnd('2026-11-23', true), '2026-11-23');
+  const { bundleFromClassification } = await import('../src/ai-utils.ts');
+  const mapped = bundleFromClassification([
+    { id: '4', bundle: 'newsletters', from_person: false },
+    { id: '5', bundle: 'finance', from_person: true },
+    { id: '6', bundle: 'work', from_person: false },
+    { id: 'x', bundle: 'notifications' },
+    { id: '7', bundle: 'notifications' }
+  ]);
+  assert.deepEqual(
+    [...mapped],
+    [
+      [4, 'newsletter'],
+      [5, null],
+      [6, null],
+      [7, 'notification']
+    ]
+  );
+});
+
 test('Templates: a shortcut right before the cursor is found', () => {
   const list = [
     { id: '1', name: 'Gruß', subject: '', html: '<p>MfG</p>', shortcut: 'mfg' },
@@ -332,4 +429,63 @@ test('bundle suggestions: optional second opinion over the local rules', () => {
   assert.equal(bundleSuggester(), fn);
   registerBundleSuggester(null);
   assert.equal(bundleSuggester(), null);
+});
+
+test('Tasks: reminder choices, views and tasks of a mail', async () => {
+  const { reminderFor, reminderChoice, filterView, viewCounts, tasksForMail, tasksInRange } =
+    await import('../src/tasks.ts');
+  const due = new Date(2026, 11, 3, 14, 30).toISOString();
+  assert.equal(reminderFor('none', due), null);
+  assert.equal(reminderFor('atDue', due), due);
+  assert.equal(reminderFor('before15', due), new Date(2026, 11, 3, 14, 15).toISOString());
+  assert.equal(reminderFor('before60', due), new Date(2026, 11, 3, 13, 30).toISOString());
+  assert.equal(reminderFor('morning', '2026-12-03'), new Date(2026, 11, 3, 9, 0).toISOString());
+  assert.equal(reminderFor('dayBefore', '2026-12-01'), new Date(2026, 10, 30, 9, 0).toISOString());
+  assert.equal(reminderFor('custom', null, '2026-12-02T08:05'), new Date(2026, 11, 2, 8, 5).toISOString());
+  assert.equal(reminderFor('custom', null, ''), null);
+  assert.equal(reminderFor('morning', null), null);
+  assert.equal(reminderChoice(new Date(2026, 11, 3, 13, 30).toISOString(), due), 'before60');
+  assert.equal(reminderChoice(new Date(2026, 11, 1, 7, 0).toISOString(), due), 'custom');
+  assert.equal(reminderChoice(null, due), 'none');
+
+  const now = new Date(2026, 10, 18, 12, 0);
+  const t = (id, due, extra = {}) => ({
+    id,
+    due,
+    done: false,
+    priority: 'none',
+    doneAt: null,
+    createdAt: id,
+    ...extra
+  });
+  const list = [
+    t('b-old', '2026-11-10'),
+    t('c-today', '2026-11-18', { priority: 'low' }),
+    t('a-today-high', '2026-11-18', { priority: 'high' }),
+    t('d-soon', '2026-11-21'),
+    t('e-later', '2026-12-30'),
+    t('f-none', null),
+    t('g-done', '2026-11-18', { done: true, doneAt: '2026-11-18T08:00:00Z' })
+  ];
+  assert.deepEqual(
+    filterView(list, 'today', now).map(x => x.id),
+    ['b-old', 'a-today-high', 'c-today']
+  );
+  assert.deepEqual(
+    filterView(list, 'upcoming', now).map(x => x.id),
+    ['d-soon']
+  );
+  assert.deepEqual(viewCounts(list, now), { today: 3, upcoming: 1, overdue: 1, open: 6, done: 1, all: 7 });
+  assert.deepEqual(
+    tasksInRange(list, '2026-11-18', '2026-11-22').map(x => x.id),
+    ['c-today', 'a-today-high', 'd-soon']
+  );
+  const mailTask = { done: false, mail: { accountId: 'a', folder: 'INBOX', uid: 5, messageId: '<x@y>' } };
+  assert.equal(tasksForMail([mailTask], { accountId: 'a', folder: 'INBOX', uid: 5, messageId: null }).length, 1);
+  assert.equal(tasksForMail([mailTask], { accountId: 'a', folder: 'Archiv', uid: 77, messageId: '<x@y>' }).length, 1);
+  assert.equal(tasksForMail([mailTask], { accountId: 'b', folder: 'INBOX', uid: 5, messageId: '<x@y>' }).length, 0);
+  assert.equal(
+    tasksForMail([{ ...mailTask, done: true }], { accountId: 'a', folder: 'INBOX', uid: 5, messageId: null }).length,
+    0
+  );
 });

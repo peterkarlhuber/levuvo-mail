@@ -3,6 +3,7 @@
 import { createScreeningStore } from './screening.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
+import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -37,9 +38,11 @@ import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
 import { applyPendingRestore, pendingRestore } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
+import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
+import { registerTaskRoutes } from './routes-tasks.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -202,6 +205,13 @@ export async function createMailServer({
     localContactsError = err;
     return null;
   });
+  // Like the device calendar: a locked keychain must not stop the app, tasks are then unavailable.
+  const tasks = await openTaskFile({ filename: path.join(dir, 'tasks-local.json'), vault: store })
+    .then(file => createTaskStore(file))
+    .catch(err => {
+      logger(`tasks unavailable: ${err.code || err.message}`);
+      return lockedTaskStore(err);
+    });
   const pgp = createPgp({ meta: cryptoMeta, vault: store });
   const smime = createSmime({ meta: cryptoMeta, vault: store });
   // Random ID of this installation: marks scheduled messages this device is responsible for.
@@ -288,6 +298,7 @@ export async function createMailServer({
       void localIndex.clear(id).catch(() => {});
       void followups.forgetAccount(id).catch(() => {});
       void screening.clear(id).catch(() => {});
+      void tasks.forgetAccount(id).catch(() => {});
     }
   }
   function refreshAccounts() {
@@ -350,7 +361,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|spaces)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -486,6 +497,8 @@ export async function createMailServer({
   }
 
   const aiSettings = await createJsonFile(path.join(dir, 'ai.json'), DEFAULT_AI_SETTINGS);
+  // Progress of the semantic index (model, index generation, last run) per account; no content.
+  const semanticState = await createJsonFile(path.join(dir, 'ai-semantic.json'), { accounts: {} });
   let ai;
   const sidecar =
     aiSidecar ||
@@ -507,6 +520,7 @@ export async function createMailServer({
     ai,
     internalRequest,
     aiForgetHooks: [],
+    semanticState,
     desktop,
     env: effectiveEnv,
     logger,
@@ -529,6 +543,7 @@ export async function createMailServer({
     followups,
     screening,
     templates,
+    tasks,
     watchers,
     previewCache,
     listCache,
@@ -566,7 +581,10 @@ export async function createMailServer({
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
   registerAiRoutes(ctx);
+  const mcp = await setupMcp(ctx, { createJsonFile, dir });
+  ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
+  registerTaskRoutes(ctx);
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
@@ -600,6 +618,7 @@ export async function createMailServer({
     settings,
     davService,
     ctx,
+    mcp,
     get port() {
       return activePort;
     },
@@ -615,6 +634,7 @@ export async function createMailServer({
         setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
         timers.push(setInterval(() => void ctx.spaces.tick(), 60_000));
       }
+      await mcp.start();
       return { address, port: activePort };
     },
     setPortForTesting(port) {
@@ -624,6 +644,7 @@ export async function createMailServer({
       for (const t of timers) clearInterval(t);
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
+      await mcp.stop().catch(() => {});
       await api.close();
       localIndex.close();
     }
