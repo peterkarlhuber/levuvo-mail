@@ -1337,5 +1337,10 @@ export const EN: Record<string, string> = {
     'The calendar server rejected the event because it is too large. Please make the attachments smaller or remove them.',
   'Der lokale Kalender ist voll. Bitte große Anhänge entfernen oder in einem verbundenen Kalender speichern.':
     'The device calendar is full. Please remove large attachments or save them in a connected calendar.',
-  'Dieser Anhang ist ein Link und wird im Browser geöffnet.': 'This attachment is a link and opens in the browser.'
+  'Dieser Anhang ist ein Link und wird im Browser geöffnet.': 'This attachment is a link and opens in the browser.',
+  // Tracking pixels
+  '1 Tracker blockiert': '1 tracker blocked',
+  '{count} Tracker blockiert': '{count} trackers blocked',
+  'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
+    'Tracking pixels removed, even when images are loaded: {hosts}'
 };
