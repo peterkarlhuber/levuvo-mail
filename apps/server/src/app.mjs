@@ -33,6 +33,8 @@ import { registerAccountRoutes } from './routes-accounts.mjs';
 import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
+import { registerBackupRoutes } from './routes-backup.mjs';
+import { applyPendingRestore, pendingRestore } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
@@ -141,6 +143,7 @@ export async function createMailServer({
   fetchImpl = globalThis.fetch,
   watch = true,
   background = true,
+  onRestartRequested = null,
   aiSidecar = null,
   logger = () => {}
 } = {}) {
@@ -152,6 +155,16 @@ export async function createMailServer({
   const api = Fastify({ logger: false, bodyLimit: 16 * 1024 });
   let activePort = desktop ? 0 : browserPort;
   const allowedBrowserOrigins = new Set(['http://127.0.0.1:5173', 'http://localhost:5173']);
+  // A restore staged before the last restart replaces the data files before any store reads them.
+  const backupState = { pending: false, restored: null };
+  try {
+    const applied = await applyPendingRestore({ dir, accountsPath, vault: store, logger });
+    if (applied) backupState.restored = { createdAt: applied.createdAt, appliedAt: new Date().toISOString() };
+  } catch (err) {
+    // The staged files stay in place and are tried again on the next start; nothing is lost.
+    logger(`restore could not be applied: ${err.code || err.message}`);
+  }
+  backupState.pending = Boolean(await pendingRestore(dir));
 
   const accountManager = await createAccountManager({
     env: effectiveEnv,
@@ -334,7 +347,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|ai|mcp)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -538,7 +551,11 @@ export async function createMailServer({
     ownAddresses,
     accountAddresses,
     port: () => activePort,
-    version: APP_VERSION
+    version: APP_VERSION,
+    dataDir: dir,
+    accountsPath,
+    backupState,
+    requestRestart: typeof onRestartRequested === 'function' ? onRestartRequested : null
   };
 
   api.get('/api/runtime', async () => ({ desktop, version: APP_VERSION, platform: process.platform }));
@@ -546,6 +563,7 @@ export async function createMailServer({
   registerMailRoutes(ctx);
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
+  registerBackupRoutes(ctx);
   registerAiRoutes(ctx);
   const mcp = await setupMcp(ctx, { createJsonFile, dir });
   ctx.mcp = mcp;

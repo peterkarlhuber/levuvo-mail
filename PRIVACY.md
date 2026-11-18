@@ -27,6 +27,11 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 
 Decrypted content is not stored – not even for the offline view.
 
+## Backups
+
+A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, templates, snooze and follow-up entries, your own PGP/S/MIME keys and the assistant's settings and activity log. It does **not** contain account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
+
+The file is encrypted with a password of your choice (scrypt key derivation, AES-256-GCM); without it the backup cannot be read, not even by Levuvo. Only the creation date and app version are readable without the password. Restoring checks the file first and replaces the data on this device at the next start; the previous data is kept in `before-restore/` in the app data folder (the last three restores) and can be deleted there. Since a backup contains personal data of others (contacts, appointments), store it as carefully as the computer itself and delete outdated copies.
 ## AI features (optional, off by default)
 
 The AI features (Settings → AI & agents) are switched off until you switch them on.
@@ -80,6 +85,7 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - Removing an email account deletes the local setup, the keychain entries and the search index of that account. Emails on the server remain unchanged.
 - Calendar/contact accounts, keys and certificates can be removed individually in the settings.
 - The search index can be switched off under Settings → Search & offline (it is deleted in the process).
+- Backup files you saved yourself are not touched by Levuvo; delete them yourself when no longer needed. Safety copies from a restore are in `before-restore/` in the app data folder.
 - All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
 - After uninstalling, the app data folder can be deleted: macOS `~/Library/Application Support/Levuvo Mail`, Windows `%APPDATA%\Levuvo Mail`.
 

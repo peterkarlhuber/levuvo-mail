@@ -44,6 +44,7 @@ import { renderEmailDocument, sanitizedEmailDocument } from './email-document';
 import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText, initials, prettySize } from './format';
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
+import { EventSuggestions } from './EventSuggestions';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
 import type {
@@ -1193,6 +1194,9 @@ export default function Reader(props: Props) {
           ) : detail ? (
             <div className="message-detail">
               {detail.invitation && <InvitationCard accountId={accountId} detail={detail} />}
+              {detail.eventSuggestions?.length ? (
+                <EventSuggestions key={`${detail.folder}|${detail.uid}`} detail={detail} />
+              ) : null}
               {detail.protected && (
                 <ProtectedCard key={`${detail.folder}|${detail.uid}`} accountId={accountId} detail={detail} />
               )}
