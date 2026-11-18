@@ -103,7 +103,8 @@ test('Previews: an unsolicited FETCH for the same UID is not cached as an empty 
 test('Thread seed ignores an unsolicited flags entry that arrives first', async () => {
   const client = fakeClient(
     function* (range, query) {
-      if (query.headers) {
+      // The seed lookup asks for headers only; the list query also asks for the structure.
+      if (query.headers && !query.bodyStructure) {
         yield seenUpdate(10);
         yield {
           uid: 10,

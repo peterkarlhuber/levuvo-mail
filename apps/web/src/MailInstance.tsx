@@ -41,10 +41,22 @@ import { isInbox, isSnoozeFolder, orderFolders, special } from './folder-utils';
 import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } from './mail-sync';
 import FollowupList from './FollowupList';
 import AttachmentOverview from './AttachmentOverview';
+import { BundleHeader, BundleRows } from './Bundles';
+import { applySuggestions, bundleSuggester, type BundleSuggestion } from './bundle-suggest';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
-import type { AccountItem, ApiStatus, Detail, Folder, Identity, InboxSnapshot, Message, MessagePage } from './types';
+import type {
+  AccountItem,
+  ApiStatus,
+  Bundle,
+  Detail,
+  Folder,
+  Identity,
+  InboxSnapshot,
+  Message,
+  MessagePage
+} from './types';
 
 export const UNIFIED = '\u0000unified';
 export const FOLLOWUPS = '\u0000followups';
@@ -136,6 +148,8 @@ export default function MailInstance({
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
   const [filter, setFilter] = useState<Filter>('all');
+  const [bundle, setBundle] = useState<Bundle | null>(null);
+  const [suggestions, setSuggestions] = useState<Map<number, BundleSuggestion>>(() => new Map());
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   // Paging cursor of the local index search ("everywhere"); null when there is no further page.
   const [localCursor, setLocalCursor] = useState<string | null>(null);
@@ -210,17 +224,45 @@ export default function MailInstance({
     return names[special(f)] || f.name;
   };
 
+  // Inbox bundles: only in the inbox itself, not while searching.
+  const bundling =
+    prefs.bundles &&
+    Boolean(currentFolder && isInbox(currentFolder)) &&
+    !unified &&
+    !everywhere &&
+    !searching &&
+    !query.trim();
+  // Optional second opinion on bundles (AI); the local rules stay the default.
+  const bundled = useMemo(
+    () => (bundling ? applySuggestions(messages, suggestions) : messages),
+    [bundling, messages, suggestions]
+  );
+  useEffect(() => setSuggestions(new Map()), [accountId]);
+  useEffect(() => {
+    const suggest = bundleSuggester();
+    if (!bundling || !suggest || !messages.length) return;
+    let active = true;
+    suggest(messages, accountId)
+      .then(found => {
+        if (active && found.size) setSuggestions(old => new Map([...old, ...found]));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [bundling, messages, accountId]);
   const visibleMessages = useMemo(() => {
-    let list = messages;
+    let list = bundled;
     if (!searching && !unified && query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(m => `${m.subject} ${m.fromName} ${m.fromEmail}`.toLowerCase().includes(q));
     }
+    if (bundling) list = bundle ? list.filter(m => m.bundle === bundle) : list.filter(m => !m.bundle);
     if (filter === 'unread') list = list.filter(m => m.unread);
     if (filter === 'flagged') list = list.filter(m => m.flagged);
     if (filter === 'attachments') list = list.filter(m => m.hasAttachments);
     return list;
-  }, [messages, query, searching, unified, filter]);
+  }, [bundled, query, searching, unified, filter, bundling, bundle]);
   const visibleUids = useMemo(() => visibleMessages.map(m => m.uid), [visibleMessages]);
   const selected =
     unified || everywhere
@@ -543,6 +585,7 @@ export default function MailInstance({
     setReaderOpen(false);
     selectUid(null, false);
     setFolder(path);
+    setBundle(null);
     setQuery('');
     setScope('folder');
     setSearchTotal(null);
@@ -1644,46 +1687,62 @@ export default function MailInstance({
               }}
             />
           ) : (
-            <MessageList
-              messages={visibleMessages}
-              selectedUid={selectedUid}
-              selectedKey={selectedKey}
-              checkedUids={checkedUids}
-              busy={busy || searchBusy}
-              bulkBusy={actionBusy}
-              conversations={prefs.conversations && !everywhere}
-              unified={unified || everywhere}
-              hasMore={hasMore && (!query.trim() || searching || everywhere)}
-              loadingMore={loadingMore}
-              draggable={writeEnabled}
-              folder={folder}
-              accountId={accountId}
-              emptyText={
-                everywhere
-                  ? t(
-                      'Keine Treffer im lokalen Suchindex. Der Index wird im Hintergrund aufgebaut (Einstellungen → Suche & Offline).'
-                    )
-                  : filter !== 'all'
-                    ? t('Keine passenden Nachrichten unter den geladenen.')
+            <>
+              {bundling &&
+                (bundle ? (
+                  <BundleHeader
+                    bundle={bundle}
+                    messages={bundled}
+                    accountId={accountId}
+                    folder={folder}
+                    writeEnabled={writeEnabled}
+                    onBack={() => setBundle(null)}
+                    onAction={(action, uids) => void runAction(action, uids)}
+                  />
+                ) : (
+                  <BundleRows messages={bundled} onOpen={setBundle} />
+                ))}
+              <MessageList
+                messages={visibleMessages}
+                selectedUid={selectedUid}
+                selectedKey={selectedKey}
+                checkedUids={checkedUids}
+                busy={busy || searchBusy}
+                bulkBusy={actionBusy}
+                conversations={prefs.conversations && !everywhere}
+                unified={unified || everywhere}
+                hasMore={hasMore && (!query.trim() || searching || everywhere)}
+                loadingMore={loadingMore}
+                draggable={writeEnabled}
+                folder={folder}
+                accountId={accountId}
+                emptyText={
+                  everywhere
+                    ? t(
+                        'Keine Treffer im lokalen Suchindex. Der Index wird im Hintergrund aufgebaut (Einstellungen → Suche & Offline).'
+                      )
+                    : filter !== 'all'
+                      ? t('Keine passenden Nachrichten unter den geladenen.')
+                      : undefined
+                }
+                onSelect={openMessage}
+                onToggleChecked={(uid, checked) =>
+                  setCheckedUids(old => (checked ? Array.from(new Set([...old, uid])) : old.filter(x => x !== uid)))
+                }
+                onToggleFlag={writeEnabled ? m => void runAction(m.flagged ? 'unflag' : 'flag', [m.uid]) : undefined}
+                quick={
+                  writeEnabled && !isDraftFolder
+                    ? {
+                        archive: archiveExists && currentFolder?.specialUse !== '\\Archive',
+                        trash: !isTrash,
+                        onAction: (m, action) => void runAction(action, [m.uid]),
+                        onSnooze: (m, until) => void snooze([m.uid], until)
+                      }
                     : undefined
-              }
-              onSelect={openMessage}
-              onToggleChecked={(uid, checked) =>
-                setCheckedUids(old => (checked ? Array.from(new Set([...old, uid])) : old.filter(x => x !== uid)))
-              }
-              onToggleFlag={writeEnabled ? m => void runAction(m.flagged ? 'unflag' : 'flag', [m.uid]) : undefined}
-              quick={
-                writeEnabled && !isDraftFolder
-                  ? {
-                      archive: archiveExists && currentFolder?.specialUse !== '\\Archive',
-                      trash: !isTrash,
-                      onAction: (m, action) => void runAction(action, [m.uid]),
-                      onSnooze: (m, until) => void snooze([m.uid], until)
-                    }
-                  : undefined
-              }
-              onLoadMore={() => void loadMore()}
-            />
+                }
+                onLoadMore={() => void loadMore()}
+              />
+            </>
           )}
         </main>
         <div

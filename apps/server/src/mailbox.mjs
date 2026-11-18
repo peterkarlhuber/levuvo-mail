@@ -3,9 +3,20 @@
 import { toMessageInfo } from './config.mjs';
 import { attachPreviews, hasAttachments } from './previews.mjs';
 import { isExpungedPlaceholder } from './imap-fetch.mjs';
+import { BUNDLE_HEADERS, classifyMessage } from './bundles.mjs';
 
 // RFC822.SIZE costs nothing and identifies Dovecot's stand-in for an already expunged message.
-const LIST_QUERY = { envelope: true, flags: true, internalDate: true, uid: true, bodyStructure: true, size: true };
+// A handful of list headers (a few hundred bytes) let the inbox bundle newsletters,
+// invoices and notifications without downloading bodies.
+const LIST_QUERY = {
+  envelope: true,
+  flags: true,
+  internalDate: true,
+  uid: true,
+  bodyStructure: true,
+  size: true,
+  headers: BUNDLE_HEADERS
+};
 
 export function safeImapInteger(value) {
   if (value === null || value === undefined) return null;
@@ -36,17 +47,41 @@ export function completeFetchResults(raw, requestedUids = null) {
   return [...byUid.values()];
 }
 
+const envelopeSubject = message => String(message.envelope?.subject || '');
+
+/** File names of attachments in a BODYSTRUCTURE (for spotting invoices). */
+function attachmentNames(structure) {
+  const names = [];
+  const walk = node => {
+    if (!node || typeof node !== 'object' || names.length >= 10) return;
+    if (Array.isArray(node.childNodes)) node.childNodes.forEach(walk);
+    const name = node.dispositionParameters?.filename || node.parameters?.name;
+    if (name) names.push(String(name));
+  };
+  walk(structure);
+  return names;
+}
+
 export async function fetchInfos(client, range, { uidRange = false, previewCache, keyPrefix }) {
   const raw = [];
   for await (const message of client.fetch(range, LIST_QUERY, uidRange ? { uid: true } : undefined)) {
     raw.push(message);
   }
   const requested = uidRange && Array.isArray(range) ? range : null;
-  const infos = completeFetchResults(raw, requested).map(message => ({
-    ...toMessageInfo(message),
-    hasAttachments: hasAttachments(message.bodyStructure),
-    bodyStructure: message.bodyStructure
-  }));
+  const infos = completeFetchResults(raw, requested).map(message => {
+    const info = toMessageInfo(message);
+    return {
+      ...info,
+      hasAttachments: hasAttachments(message.bodyStructure),
+      bundle: classifyMessage({
+        fromEmail: info.fromEmail,
+        subject: envelopeSubject(message),
+        headers: message.headers,
+        attachmentNames: attachmentNames(message.bodyStructure)
+      }),
+      bodyStructure: message.bodyStructure
+    };
+  });
   await attachPreviews(client, infos, { cache: previewCache, keyPrefix });
   for (const info of infos) delete info.bodyStructure;
   return infos.sort((a, b) => b.uid - a.uid);
