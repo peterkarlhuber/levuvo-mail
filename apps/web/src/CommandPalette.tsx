@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   BellRing,
+  Paperclip,
   CalendarDays,
   CircleHelp,
   Contact2,
@@ -122,6 +123,14 @@ export default function CommandPalette({
         icon: BellRing,
         keywords: 'follow up erinnerung',
         run: mail(() => sendMailCommand({ type: 'followups' }))
+      },
+      {
+        id: 'attachments',
+        group: go,
+        label: t('Anhänge: alle Dateien eines Ordners'),
+        icon: Paperclip,
+        keywords: 'anhang dateien attachments files pdf',
+        run: mail(() => sendMailCommand({ type: 'attachments' }))
       },
       {
         id: 'shortcuts',

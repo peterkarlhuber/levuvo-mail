@@ -40,6 +40,7 @@ import { publishFolders, type MailCommand } from './command-bus';
 import { isInbox, isSnoozeFolder, orderFolders, special } from './folder-utils';
 import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } from './mail-sync';
 import FollowupList from './FollowupList';
+import AttachmentOverview from './AttachmentOverview';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
@@ -47,6 +48,7 @@ import type { AccountItem, ApiStatus, Detail, Folder, Identity, InboxSnapshot, M
 
 export const UNIFIED = '\u0000unified';
 export const FOLLOWUPS = '\u0000followups';
+export const ATTACHMENTS = '\u0000attachments';
 const PAGE = 40;
 type Filter = 'all' | 'unread' | 'flagged' | 'attachments';
 const PROTECTED = new Set(['\\Inbox', '\\Drafts', '\\Sent', '\\Trash', '\\Junk', '\\Archive']);
@@ -166,6 +168,12 @@ export default function MailInstance({
 
   const unified = folder === UNIFIED;
   const followupView = folder === FOLLOWUPS;
+  const attachmentView = folder === ATTACHMENTS;
+  // Views without their own message list (follow-ups, attachment overview).
+  const panelView = followupView || attachmentView;
+  // The last real folder: the attachment overview starts there.
+  const lastRealFolder = useRef('INBOX');
+  if (!folder.startsWith('\u0000')) lastRealFolder.current = folder;
   const everywhere = scope === 'everywhere' && query.trim().length >= 2;
   const searching = query.trim().length >= 2 && !unified;
   const accountReady = Boolean(status?.configured);
@@ -257,7 +265,7 @@ export default function MailInstance({
       setBusy(true);
       setError('');
       try {
-        if (path === FOLLOWUPS) {
+        if (path === FOLLOWUPS || path === ATTACHMENTS) {
           setMessages([]);
           setHasMore(false);
           setNextBeforeUid(null);
@@ -1094,6 +1102,7 @@ export default function MailInstance({
     if (c.type === 'compose') beginNewMessage();
     else if (c.type === 'search') document.querySelector<HTMLInputElement>('.searchbox input')?.focus();
     else if (c.type === 'followups') chooseFolder(FOLLOWUPS);
+    else if (c.type === 'attachments') chooseFolder(ATTACHMENTS);
     else if (c.type === 'shortcuts') setShortcuts(true);
     else if (c.type === 'folder') chooseFolder(c.path);
   };
@@ -1123,11 +1132,13 @@ export default function MailInstance({
   const resizeList = (width: number) => setListWidth(Math.max(300, Math.min(680, Math.round(width))));
   const listTitle = followupView
     ? t('Nachfassen')
-    : unified
-      ? t('Alle Posteingänge')
-      : everywhere
-        ? t('Suche in allen Ordnern')
-        : folderLabel(currentFolder);
+    : attachmentView
+      ? t('Anhänge')
+      : unified
+        ? t('Alle Posteingänge')
+        : everywhere
+          ? t('Suche in allen Ordnern')
+          : folderLabel(currentFolder);
   const menuFolder = folderMenu ? folders.find(f => f.path === folderMenu.path) : null;
   const filters: { id: Filter; label: string; icon?: typeof Star }[] = [
     { id: 'all', label: t('Alle') },
@@ -1181,6 +1192,14 @@ export default function MailInstance({
                     {followupsDue}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => chooseFolder(ATTACHMENTS)}
+                className={`folder-item ${attachmentView ? 'active' : ''}`}
+                title={t('Alle Dateien eines Ordners oder Kontakts')}
+              >
+                <Paperclip size={16} strokeWidth={1.8} />
+                <span>{t('Anhänge')}</span>
               </button>
               {ordered.map(({ folder: f, depth }) => {
                 const Icon = folderIcon(f);
@@ -1374,7 +1393,7 @@ export default function MailInstance({
                 <RefreshCcw size={17} className={busy ? 'spin' : ''} />
               </button>
             </div>
-            {!unified && !followupView && (
+            {!unified && !panelView && (
               <div className="search-row">
                 <label className="searchbox">
                   <Search size={16} />
@@ -1419,7 +1438,7 @@ export default function MailInstance({
                 </button>
               </div>
             )}
-            {!followupView && (
+            {!panelView && (
               <div className="list-toolbar">
                 {!unified && !everywhere && (
                   <label className="select-all">
@@ -1563,7 +1582,18 @@ export default function MailInstance({
               </button>
             </div>
           )}
-          {followupView ? (
+          {attachmentView ? (
+            <AttachmentOverview
+              accountId={accountId}
+              folders={folders}
+              initialFolder={lastRealFolder.current}
+              folderLabel={folderLabel}
+              onOpenMessage={(path, uid) => {
+                pendingOpen.current = uid;
+                chooseFolder(path);
+              }}
+            />
+          ) : followupView ? (
             <FollowupList
               accounts={accounts}
               onChanged={setFollowupsDue}
