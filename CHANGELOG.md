@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### New
+- **Attachments in events:** files can be attached to events, shown, previewed (images, PDF, text), downloaded and removed in the event editor (button or drag & drop). In the device calendar and CalDAV calendars the files are stored in the event itself (iCalendar `ATTACH`, up to 5 MB per file and 10 MB per event), so they also appear in other apps and in `.ics` exports; links attached by other apps open in the browser. Microsoft 365 stores them as event attachments (up to 3 MB per file). Google Calendar shows its Google Drive attachments, which can be opened and removed; new files are attached there via Google Drive. Invitations carry the files as normal e-mail attachments, and moving an event to another calendar takes them along.
+
 ### Fixes (audit of 2.2.2)
 - **Send later – sent at most once, also with several devices:** the send state now lives in IMAP keywords on the scheduled message (`scheduled → claimed → sending → sent | failed | unconfirmed`). The device that scheduled a message sends it; another device takes over only after two minutes, and a two-flag claim on the server keeps both from sending at the same moment. A scheduler run never overlaps with the next one.
 - **Send later – nothing gets stuck or lost silently:** a claim left behind by a device that stopped before SMTP is released after ten minutes. If SMTP may have started (crash, lost connection during DATA), the message is shown as "sending not confirmed" in the reading pane and is never resent automatically; a copy in "Sent" settles it. Refusals before DATA are shown as failed (nothing was sent).

@@ -4,6 +4,10 @@
 // Invitations to attendees are sent by the provider itself (Exchange / Google).
 
 import { stripTags } from './html-mail.mjs';
+import { base64Size, checkAttachmentTotal, safeFilename, safeMimeType, withoutId } from './calendar-model.mjs';
+
+/** Microsoft Graph takes files up to 3 MB in one request (larger ones need an upload session). */
+const GRAPH_ATTACH_MAX = 3 * 1024 * 1024;
 
 export const CLOUD_PREFIX = 'cloud:';
 export const GRAPH_SCOPES = [
@@ -183,7 +187,9 @@ function graphAdapter(call) {
         name: a.emailAddress?.name || '',
         partstat: GRAPH_PARTSTAT[a.status?.response] || 'NEEDS-ACTION'
       })),
-      alarms: e.isReminderOn && Number.isInteger(e.reminderMinutesBeforeStart) ? [e.reminderMinutesBeforeStart] : []
+      alarms: e.isReminderOn && Number.isInteger(e.reminderMinutesBeforeStart) ? [e.reminderMinutesBeforeStart] : [],
+      // Listed on demand (GET /api/calendar/events/attachments), the event list carries no files.
+      hasAttachments: Boolean(e.hasAttachments)
     };
   };
   const body = (model, { forSeries = true } = {}) => {
@@ -289,7 +295,48 @@ function graphAdapter(call) {
     },
     async create(cal, model) {
       const e = await call('POST', `/me/calendars/${encodeURIComponent(cal.id)}/events`, body(model));
-      return { uid: e.iCalUId || e.id, invited: model.attendees.length };
+      return { id: e.id, uid: e.iCalUId || e.id, invited: model.attendees.length };
+    },
+    async attachments(eventId) {
+      const r = await call(
+        'GET',
+        `/me/events/${encodeURIComponent(eventId)}/attachments?$select=id,name,contentType,size`
+      );
+      return (r.value || [])
+        .filter(a => !a['@odata.type'] || a['@odata.type'] === '#microsoft.graph.fileAttachment')
+        .map(a => ({
+          id: String(a.id),
+          name: safeFilename(a.name),
+          type: safeMimeType(a.contentType),
+          size: Number(a.size) || 0
+        }));
+    },
+    async attachment(eventId, attachmentId) {
+      const a = await call(
+        'GET',
+        `/me/events/${encodeURIComponent(eventId)}/attachments/${encodeURIComponent(attachmentId)}`
+      );
+      if (typeof a.contentBytes !== 'string') throw fail('Anhang nicht gefunden.', 'attachment_missing', 404);
+      return {
+        id: String(a.id),
+        name: safeFilename(a.name),
+        type: safeMimeType(a.contentType),
+        size: base64Size(a.contentBytes),
+        data: a.contentBytes
+      };
+    },
+    async addAttachment(eventId, a) {
+      if (a.size > GRAPH_ATTACH_MAX)
+        throw fail('Microsoft 365 nimmt hier Dateien bis 3 MB pro Anhang an.', 'attachment_too_large', 413);
+      await call('POST', `/me/events/${encodeURIComponent(eventId)}/attachments`, {
+        '@odata.type': '#microsoft.graph.fileAttachment',
+        name: a.name,
+        contentType: a.type,
+        contentBytes: a.data
+      });
+    },
+    async removeAttachment(eventId, attachmentId) {
+      await call('DELETE', `/me/events/${encodeURIComponent(eventId)}/attachments/${encodeURIComponent(attachmentId)}`);
     },
     async update(eventId, model, { series }) {
       await call('PATCH', `/me/events/${encodeURIComponent(eventId)}`, body(model, { forSeries: series }));
@@ -334,6 +381,17 @@ function graphAdapter(call) {
   };
 }
 
+/** Google stores attachments as links to Google Drive files. */
+function googleAttachments(e) {
+  return (e.attachments || []).map((a, i) => ({
+    id: String(i),
+    name: safeFilename(a.title, `Anhang ${i + 1}`),
+    type: safeMimeType(a.mimeType),
+    size: 0,
+    ...(/^https:\/\//i.test(String(a.fileUrl || '')) ? { uri: a.fileUrl } : {})
+  }));
+}
+
 function googleAdapter(call, endpoints) {
   const C = endpoints.googleCalendar;
   const P = endpoints.googlePeople;
@@ -373,7 +431,10 @@ function googleAdapter(call, endpoints) {
         name: a.displayName || '',
         partstat: GOOGLE_PARTSTAT[a.responseStatus] || 'NEEDS-ACTION'
       })),
-      alarms: e.reminders?.useDefault ? [] : (e.reminders?.overrides || []).map(o => o.minutes).filter(Number.isInteger)
+      alarms: e.reminders?.useDefault
+        ? []
+        : (e.reminders?.overrides || []).map(o => o.minutes).filter(Number.isInteger),
+      attachments: googleAttachments(e)
     };
   };
   const body = (model, { forSeries = true } = {}) => ({
@@ -482,11 +543,12 @@ function googleAdapter(call, endpoints) {
       const e = await call('POST', `${cal(c.id)}/events?sendUpdates=${notify ? 'all' : 'none'}`, body(model));
       return { uid: e.iCalUID || e.id, invited: notify ? model.attendees.length : 0 };
     },
-    async update(eventId, model, { series, notify, calendar }) {
+    /** `attachments`: Drive links to keep (only sent when the list changed). */
+    async update(eventId, model, { series, notify, calendar, attachments = null }) {
       await call(
         'PATCH',
-        `${cal(calendar.id)}/events/${encodeURIComponent(eventId)}?sendUpdates=${notify ? 'all' : 'none'}`,
-        body(model, { forSeries: series })
+        `${cal(calendar.id)}/events/${encodeURIComponent(eventId)}?sendUpdates=${notify ? 'all' : 'none'}${attachments ? '&supportsAttachments=true' : ''}`,
+        { ...body(model, { forSeries: series }), ...(attachments ? { attachments } : {}) }
       );
       return { invited: notify ? model.attendees.length : 0 };
     },
@@ -720,15 +782,89 @@ export function createCloudService({
     }) {
       const { account, cal } = await calendarFor(accountId, calendarUrl);
       const a = adapter(account);
-      if (!url) return a.create(cal, model, { notify });
-      if (scope === 'this' || !seriesId)
-        return a.update(rawId(url), model, { series: scope !== 'this', notify, calendar: cal });
-      const master = await a.event(rawId(seriesId), cal);
-      return a.update(rawId(seriesId), shiftModel(model, a.masterStart(master), occurrenceStart), {
-        series: true,
-        notify,
-        calendar: cal
-      });
+      const list = Array.isArray(model.attachments) ? model.attachments : null;
+      const google = account.oauthProvider === 'google';
+      if (google && list?.some(x => x.data !== undefined))
+        throw fail(
+          'Google Kalender speichert Anhänge als Google-Drive-Dateien. Dateien bitte in Google Drive ablegen und dort anhängen.',
+          'attachment_unsupported',
+          422
+        );
+      if (list) checkAttachmentTotal(list.filter(x => x.data !== undefined));
+      // Google: kept Drive links are sent with the update; removed ones are left out.
+      let keep = null;
+      if (google && list && url) {
+        const current = await a.event(rawId(seriesId || url), cal);
+        const ids = new Set(list.filter(x => x.id !== undefined).map(x => x.id));
+        keep = (current.attachments || [])
+          .filter((_x, i) => ids.has(String(i)))
+          .map(x => ({
+            fileUrl: x.fileUrl,
+            title: x.title,
+            mimeType: x.mimeType,
+            ...(x.fileId ? { fileId: x.fileId } : {})
+          }));
+      }
+      let r;
+      if (!url) r = await a.create(cal, model, { notify });
+      else if (scope === 'this' || !seriesId)
+        r = await a.update(rawId(url), model, { series: scope !== 'this', notify, calendar: cal, attachments: keep });
+      else {
+        const master = await a.event(rawId(seriesId), cal);
+        r = await a.update(rawId(seriesId), shiftModel(model, a.masterStart(master), occurrenceStart), {
+          series: true,
+          notify,
+          calendar: cal,
+          attachments: keep
+        });
+      }
+      // Microsoft 365: files are separate resources of the event (of the series for occurrences).
+      if (!google && list) {
+        const target = url ? rawId(seriesId || url) : r.id;
+        const current = url ? await a.attachments(target) : [];
+        const ids = new Set(list.filter(x => x.id !== undefined).map(x => x.id));
+        for (const x of current) if (!ids.has(x.id)) await a.removeAttachment(target, x.id);
+        for (const x of list) if (x.data !== undefined) await a.addAttachment(target, x);
+      }
+      return r;
+    },
+    /** Microsoft 365: attachments of an event (of its series for an occurrence). */
+    async attachments({ accountId, calendarUrl, url, seriesId = null }) {
+      const account = accountById(accountId);
+      if (account.oauthProvider !== 'microsoft') return [];
+      await calendarFor(accountId, calendarUrl);
+      return adapter(account).attachments(rawId(seriesId || url));
+    },
+    /** One attachment with content (Microsoft 365); Google attachments are Drive links. */
+    async attachment({ accountId, calendarUrl, url, seriesId = null, id: attachmentId }) {
+      const account = accountById(accountId);
+      await calendarFor(accountId, calendarUrl);
+      if (account.oauthProvider !== 'microsoft') throw fail('Anhang nicht gefunden.', 'attachment_missing', 404);
+      const a = await adapter(account).attachment(rawId(seriesId || url), attachmentId);
+      return { name: a.name, type: a.type, size: a.size, content: Buffer.from(a.data, 'base64') };
+    },
+    /** All (or the listed) attachments with content, for moving an event to another calendar. */
+    async fullAttachments({ accountId, calendarUrl, url, seriesId = null, list = null }) {
+      const { account, cal } = await calendarFor(accountId, calendarUrl);
+      const a = adapter(account);
+      const target = rawId(seriesId || url);
+      let out;
+      if (account.oauthProvider === 'microsoft') {
+        const ids = list
+          ? list.filter(x => x.id !== undefined).map(x => x.id)
+          : (await a.attachments(target)).map(x => x.id);
+        out = [];
+        for (const one of ids) {
+          out.push(withoutId(await a.attachment(target, one)));
+        }
+      } else {
+        const current = googleAttachments(await a.event(target, cal));
+        const ids = list ? new Set(list.filter(x => x.id !== undefined).map(x => x.id)) : null;
+        out = current.filter(x => !ids || ids.has(x.id)).map(withoutId);
+      }
+      if (list) out.push(...list.filter(x => x.data !== undefined));
+      checkAttachmentTotal(out);
+      return out;
     },
     async deleteEvent({ accountId, calendarUrl, url, scope = 'all', seriesId = null, notify = true }) {
       const { account, cal } = await calendarFor(accountId, calendarUrl);
