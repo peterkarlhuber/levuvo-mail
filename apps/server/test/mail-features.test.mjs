@@ -7,7 +7,11 @@ import {
   analyzeMessage,
   findDeceptiveLinks,
   parseAuthenticationResults,
-  baseDomain
+  baseDomain,
+  imitatedDomain,
+  brandInName,
+  skeleton,
+  BRANDS
 } from '../src/security-analysis.mjs';
 import { stripHeaders, validateSendAt, sendDue, isRetryableSubmitError } from '../src/scheduled.mjs';
 import { newFolderPath, manageFolder, validFolderName } from '../src/folders.mjs';
@@ -96,6 +100,81 @@ test('Phishing-Erkennung', () => {
   });
   assert.equal(ok.level, 'ok');
   assert.deepEqual(findDeceptiveLinks('<a href="https://1.2.3.4/x">Bank</a>'), [{ shown: 'Bank', actual: '1.2.3.4' }]);
+});
+
+test('Phishing: look-alike domains and brand impersonation', () => {
+  const brands = Object.values(BRANDS).flat();
+  assert.equal(skeleton('paypa1'), skeleton('paypal'));
+  assert.equal(skeleton('rnicrosoft'), skeleton('microsoft'));
+  assert.deepEqual(imitatedDomain('paypa1.com', brands), { imitates: 'paypal.com', level: 'danger' });
+  // Cyrillic "а" in "pаypal.com" arrives as Punycode.
+  assert.equal(imitatedDomain('xn--pypal-4ve.com', brands)?.level, 'danger');
+  assert.equal(imitatedDomain('amazom.de', brands)?.level, 'warning');
+  assert.equal(imitatedDomain('paypal-secure.com', brands)?.level, 'warning');
+  assert.equal(imitatedDomain('paypal-secure.com', brands, { loose: false }), null);
+  for (const genuine of ['mail.paypal.com', 'amazon.pl', 'apply.com', 'dhi.com', 'example.org', 'levuvo.at'])
+    assert.equal(imitatedDomain(genuine, brands), null, genuine);
+  assert.equal(imitatedDomain('levuv0.at', ['levuvo.at'])?.imitates, 'levuvo.at');
+
+  assert.equal(brandInName('PayPal Kundenservice'), 'paypal');
+  assert.equal(brandInName('PаyPal'), 'paypal');
+  assert.equal(brandInName('Apple Insider'), null);
+  assert.equal(brandInName('Ing. Müller'), null);
+
+  const codes = (parsed, context) => analyzeMessage(parsed, context).checks.map(c => c.code);
+  assert.ok(codes({ from: { name: 'PayPal', address: 'info@mailer.example' } }).includes('brand_impersonation'));
+  assert.ok(!codes({ from: { name: 'PayPal', address: 'service@paypal.de' } }).includes('brand_impersonation'));
+  // Regional banks send from their own domains.
+  const sparkasse = codes({ from: { name: 'Sparkasse', address: 'info@sparkasse-koelnbonn.de' } });
+  assert.ok(!sparkasse.includes('brand_impersonation') && !sparkasse.includes('lookalike_domain'));
+
+  const ceoFraud = analyzeMessage(
+    { from: { name: 'Peter', address: 'peter@levuv0.at' } },
+    { ownAddresses: ['office@levuvo.at'] }
+  );
+  assert.equal(ceoFraud.level, 'danger');
+  assert.deepEqual(
+    ceoFraud.checks.find(c => c.code === 'lookalike_domain'),
+    { level: 'danger', code: 'lookalike_domain', domain: 'levuv0.at', imitates: 'levuvo.at' }
+  );
+
+  const links = codes({
+    from: { address: 'news@shop.example' },
+    html:
+      '<a href="https://www.amazon-adsystem.com/x">Ad</a><a href="https://g00gle.com/login">Login</a>' +
+      '<a href="https://www.paypal.com@evil.example/">Konto prüfen</a>'
+  });
+  assert.ok(links.includes('lookalike_link') && links.includes('deceptive_link'));
+  assert.deepEqual(findDeceptiveLinks('<a href="https://www.paypal.com@evil.example/">Konto</a>'), [
+    { shown: 'www.paypal.com', actual: 'evil.example' }
+  ]);
+  assert.ok(
+    !codes({
+      from: { address: 'news@shop.example' },
+      html: '<a href="https://www.amazon-adsystem.com/x">Ad</a>'
+    }).includes('lookalike_link')
+  );
+
+  assert.ok(
+    codes({
+      from: { address: 'a@b.example' },
+      html: '<form action="x"><input name="u"><input type="password"></form>'
+    }).includes('password_form')
+  );
+  assert.ok(
+    codes({ from: { address: 'a@b.example' }, attachments: [{ filename: 'Rechnung.html' }] }).includes(
+      'html_attachment'
+    )
+  );
+  assert.ok(
+    !codes({ from: { address: 'a@b.example' }, attachments: [{ filename: 'logo.svg', contentId: '<l>' }] }).includes(
+      'html_attachment'
+    )
+  );
+  // A known contact is not warned about a typo-distance domain, only about exact imitations.
+  assert.ok(!codes({ from: { address: 'x@telecom.de' } }, { knownSender: true }).includes('lookalike_domain'));
+  assert.ok(codes({ from: { address: 'x@telecom.de' } }, { knownSender: false }).includes('lookalike_domain'));
+  assert.ok(codes({ from: { address: 'x@paypa1.com' } }, { knownSender: true }).includes('lookalike_domain'));
 });
 
 test('Send later: time, strip headers, send exactly once', async () => {

@@ -440,6 +440,16 @@ export const EN: Record<string, string> = {
   'Archiv im Anhang: {filename}. Inhalt vor dem Öffnen prüfen.':
     'Archive in attachment: {filename}. Check the contents before opening.',
   'Du hast mit diesem Absender bisher keinen Kontakt gehabt.': 'You have not had contact with this sender before.',
+  'Die Absender-Domain {domain} sieht aus wie {imitates}, ist es aber nicht.':
+    'The sender domain {domain} looks like {imitates}, but it is not.',
+  'Ein Link führt zu {domain}, einer Nachahmung von {imitates}.':
+    'A link leads to {domain}, an imitation of {imitates}.',
+  'Der Absender nennt sich „{brand}“, schreibt aber von {actual}.':
+    'The sender calls itself “{brand}” but writes from {actual}.',
+  'Die Nachricht enthält ein Formular, das ein Passwort abfragt. Seriöse Absender tun das nie per E-Mail.':
+    'The message contains a form that asks for a password. Legitimate senders never do this by e-mail.',
+  'Webseite im Anhang: {filename}. Solche Dateien zeigen oft gefälschte Anmeldeseiten.':
+    'Web page attached: {filename}. Such files often show fake sign-in pages.',
   'Keine Auffälligkeiten erkannt.': 'No issues detected.',
   Weniger: 'Less',
   Details: 'Details',
