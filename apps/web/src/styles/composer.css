@@ -378,3 +378,10 @@
   margin: var(--space-2) 0 0;
   line-height: var(--leading-normal);
 }
+
+/* Template shortcut hint in the template menu (Welle 1). */
+.template-shortcut {
+  margin-left: var(--space-1-5);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}

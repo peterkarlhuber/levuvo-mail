@@ -1232,8 +1232,8 @@ export const EN: Record<string, string> = {
   'Vorlage gespeichert.': 'Template saved.',
   'Vorlage „{name}“ löschen?': 'Delete template “{name}”?',
   'Textbausteine und Vorlagen': 'Snippets and templates',
-  'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ einfügen. Platzhalter werden beim Einfügen ersetzt: {list}':
-    'Recurring replies, offers or greetings. Insert them in the editor via “Templates”. Placeholders are filled in when inserted: {list}',
+  'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ oder per Kürzel einfügen (zum Beispiel ;mfg und Leertaste). Platzhalter werden beim Einfügen ersetzt: {list}':
+    'Recurring replies, offers or greetings. Insert them in the editor via “Templates” or by shortcut (for example ;mfg and space). Placeholders are filled in when inserted: {list}',
   'Noch keine Vorlagen.': 'No templates yet.',
   'ohne Betreff': 'no subject',
   'Betreff (optional)': 'Subject (optional)',
@@ -1403,6 +1403,12 @@ export const EN: Record<string, string> = {
   '{n} ungelesen': '{n} unread',
   Kontaktliste: 'Contact list',
   Kontakt: 'Contact',
+  // Template shortcuts
+  'Kürzel (optional)': 'Shortcut (optional)',
+  'Im Text ;Kürzel und Leertaste oder Tab tippen, um die Vorlage einzufügen.':
+    'Type ;shortcut and space or Tab in the text to insert the template.',
+  'Das Kürzel braucht 2–20 Buchstaben, Ziffern, - oder _.': 'The shortcut needs 2–20 letters, digits, - or _.',
+  'Dieses Kürzel ist schon vergeben.': 'This shortcut is already in use.',
   Sicherung: 'Backup',
   'Mindestens {count} Zeichen.': 'At least {count} characters.',
   'Die Passwörter stimmen nicht überein.': 'The passwords do not match.',

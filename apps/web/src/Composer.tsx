@@ -19,7 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api';
-import { fillTemplate, nameParts, type Template, type TemplateVars } from './templates';
+import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
@@ -126,6 +126,7 @@ export default function Composer({
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const imageInput = useRef<HTMLInputElement>(null);
+  const textArea = useRef<HTMLTextAreaElement>(null);
   const [security, setSecurity] = useState<Security>(initial.security || { method: null, sign: false, encrypt: false });
   const [missing, setMissing] = useState<{ recipients: string[]; own: boolean } | null>(null);
   const [error, setError] = useState('');
@@ -144,12 +145,33 @@ export default function Composer({
     initial.draftUid ? 'saved' : 'idle'
   );
 
+  // Templates with a shortcut: ";mfg" + space or Tab inserts the template in place.
+  const shortcutTemplates = useRef<Template[]>([]);
+  const expandShortcut = useRef<(tpl: Template) => void>(() => {});
+  useEffect(() => {
+    getJson<{ templates: Template[] }>('/api/templates')
+      .then(d => (shortcutTemplates.current = d.templates.filter(x => x.shortcut)))
+      .catch(() => {});
+  }, []);
+
   const editor = useEditor({
     extensions: EXTENSIONS,
     content: initial.html || plainToHtml(initial.text || ''),
     editorProps: {
       attributes: { class: 'compose-editor', 'aria-label': t('Nachricht') },
-      handleDrop: (_view, event) => Boolean(event.dataTransfer?.files?.length)
+      handleDrop: (_view, event) => Boolean(event.dataTransfer?.files?.length),
+      handleKeyDown: (view, event) => {
+        if (!SHORTCUT_KEYS.includes(event.key) || event.ctrlKey || event.metaKey || event.altKey) return false;
+        if (!shortcutTemplates.current.length) return false;
+        const { from, empty } = view.state.selection;
+        if (!empty) return false;
+        const before = view.state.doc.textBetween(Math.max(0, from - 40), from, '\n', '\n');
+        const hit = shortcutAt(before, shortcutTemplates.current);
+        if (!hit) return false;
+        view.dispatch(view.state.tr.delete(from - hit.length, from));
+        expandShortcut.current(hit.template);
+        return true;
+      }
     },
     onUpdate: () => setHtmlVersion(v => v + 1)
   });
@@ -412,12 +434,17 @@ export default function Composer({
       date: new Date().toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
     };
   }
-  async function insertTemplate(tpl: Template) {
+  async function insertTemplate(tpl: Template, at?: number) {
     const vars = await templateVars();
     if (tpl.subject && !subject.trim()) setSubject(fillTemplate(tpl.subject, vars, { html: false }));
     const body = fillTemplate(tpl.html, vars);
     if (format === 'text') {
-      setText(old => `${htmlToPlain(body)}\n\n${old}`.trim());
+      const plain = htmlToPlain(body);
+      if (at !== undefined) {
+        setText(old => old.slice(0, at) + plain + old.slice(at));
+        const caret = at + plain.length;
+        requestAnimationFrame(() => textArea.current?.setSelectionRange(caret, caret));
+      } else setText(old => `${plain}\n\n${old}`.trim());
       return;
     }
     if (!editor) return;
@@ -430,6 +457,7 @@ export default function Composer({
     if (/\{[A-Za-zÄÖÜäöü]+\}/.test(htmlToPlain(body)))
       toast({ text: t('Bitte die markierten Platzhalter ergänzen.'), kind: 'info' });
   }
+  expandShortcut.current = tpl => void insertTemplate(tpl);
   async function saveAsTemplate() {
     const name = await prompt({
       title: t('Als Vorlage speichern'),
@@ -721,10 +749,22 @@ export default function Composer({
               </>
             ) : (
               <textarea
+                ref={textArea}
                 className="compose-body"
                 aria-label={t('Nachricht')}
                 value={text}
                 onChange={e => setText(e.target.value)}
+                onKeyDown={e => {
+                  if (!SHORTCUT_KEYS.includes(e.key) || e.ctrlKey || e.metaKey || e.altKey) return;
+                  const el = e.currentTarget;
+                  if (el.selectionStart !== el.selectionEnd) return;
+                  const hit = shortcutAt(el.value.slice(0, el.selectionStart), shortcutTemplates.current);
+                  if (!hit) return;
+                  e.preventDefault();
+                  const at = el.selectionStart - hit.length;
+                  setText(old => old.slice(0, at) + old.slice(at + hit.length));
+                  void insertTemplate(hit.template, at);
+                }}
                 rows={14}
               />
             )}
