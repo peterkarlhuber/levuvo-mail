@@ -6,7 +6,7 @@ import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import Fastify from 'fastify';
 import imapflow from 'imapflow';
 import { validDesktopCookie, safeStaticFile, contentTypeForAsset, APP_CSP } from './desktop-runtime.mjs';
@@ -94,11 +94,9 @@ export function withoutLegacyEnv(env) {
  */
 export function mailboxIdentity(account) {
   const imap = account?.imap || {};
-  return createHash('sha256')
-    .update(
-      JSON.stringify([String(imap.host || '').toLowerCase(), String(imap.user || '').toLowerCase(), imap.oauth || ''])
-    )
-    .digest('hex');
+  // No secret is part of it; the value is only compared (and kept inside the encrypted index).
+  const provider = account?.auth === 'oauth2' ? String(imap.oauth || 'oauth2') : 'password';
+  return JSON.stringify([String(imap.host || '').toLowerCase(), String(imap.user || '').toLowerCase(), provider]);
 }
 
 /** Small JSON settings file (non-secret data only). */
