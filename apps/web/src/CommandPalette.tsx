@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   BellRing,
+  ArchiveRestore,
   CalendarDays,
   CircleHelp,
   Contact2,
@@ -195,6 +196,7 @@ export default function CommandPalette({
       ['search', t('Suche & Offline'), Search, 'index'],
       ['ai', t('KI & Agenten'), Sparkles, 'ki ai llm ollama agent mcp'],
       ['notifications', t('Mitteilungen'), BellRing, 'benachrichtigung'],
+      ['backup', t('Sicherung'), ArchiveRestore, 'backup wiederherstellen umzug export'],
       ['help', t('Hilfe'), CircleHelp, 'handbuch']
     ];
     for (const [tab, label, icon, keywords] of settings)

@@ -75,6 +75,20 @@ export function usePrefs(): [Prefs, (patch: Partial<Prefs>) => void] {
   return [prefs, update];
 }
 
+/** Preferences for a backup (view settings only). */
+export const prefsForBackup = (): Prefs => ({ ...getPrefs() });
+
+/** Takes preferences from a restored backup; they are checked again when read. */
+export function restorePrefs(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(value));
+    current = null;
+  } catch {
+    /* storage blocked */
+  }
+}
+
 /** Applies theme and language to the document root. */
 export function useDocumentPrefs() {
   const [prefs] = usePrefs();

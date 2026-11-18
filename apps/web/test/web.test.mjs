@@ -176,6 +176,77 @@ test('Inbox sync: a missing message is recognized, removal and flag actions are 
   for (const action of ['markRead', 'markUnread', 'flag', 'unflag']) assert.equal(removesMessages(action), false);
 });
 
+test('Detected appointment becomes a calendar editor model', async () => {
+  const { suggestionToEvent } = await import('../src/event-suggestion.ts');
+  const labels = {
+    kind: { flight: 'Flug', train: 'Zugfahrt', bus: 'Busfahrt', car: 'Mietwagen' },
+    reservation: 'Buchungsnummer',
+    fromMail: 'Aus der E-Mail',
+    untitled: '(Ohne Titel)'
+  };
+  const mail = { subject: 'Ihre Buchung', from: [{ name: 'Airline', email: 'noreply@airline.test' }] };
+  const flight = suggestionToEvent(
+    {
+      kind: 'flight',
+      source: 'schema',
+      summary: 'LH 1234 VIE → FRA',
+      allDay: false,
+      start: '2026-12-12T07:15:00.000Z',
+      end: '2026-12-12T08:50:00.000Z',
+      location: 'Wien (VIE)',
+      description: '',
+      reservationNumber: 'XK4P2Q'
+    },
+    mail,
+    labels,
+    'Europe/Vienna'
+  );
+  assert.equal(flight.summary, 'Flug LH 1234 VIE → FRA');
+  assert.equal(flight.tzid, 'Europe/Vienna');
+  const local = new Date('2026-12-12T07:15:00.000Z');
+  assert.equal(flight.start, `${ymd(local)}T${hm(local)}`);
+  assert.match(flight.description, /^Buchungsnummer: XK4P2Q\n\nAus der E-Mail: „Ihre Buchung“ – Airline$/);
+
+  const text = suggestionToEvent(
+    {
+      kind: 'date',
+      source: 'text',
+      summary: '',
+      allDay: false,
+      start: '2026-12-05T09:00',
+      end: '2026-12-05T09:00',
+      floating: true,
+      location: '',
+      description: '',
+      reservationNumber: ''
+    },
+    { subject: 'Treffen' },
+    labels,
+    'Europe/Vienna'
+  );
+  assert.deepEqual([text.summary, text.start, text.end], ['Treffen', '2026-12-05T09:00', '2026-12-05T10:00']);
+
+  const hotel = suggestionToEvent(
+    {
+      kind: 'hotel',
+      source: 'schema',
+      summary: 'Hotel Sacher',
+      allDay: true,
+      start: '2026-12-12',
+      end: '2026-12-15',
+      location: '',
+      description: '',
+      reservationNumber: ''
+    },
+    {},
+    labels
+  );
+  assert.deepEqual(
+    [hotel.allDay, hotel.start, hotel.end, hotel.summary, hotel.description],
+    [true, '2026-12-12', '2026-12-15', 'Hotel Sacher', '']
+  );
+});
+
 test('Tracking pixels: tiny, hidden and known tracker images are recognised', () => {
   const yes = [
     { src: 'https://example.com/a.gif', width: '1', height: '1' },

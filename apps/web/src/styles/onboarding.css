@@ -37,6 +37,9 @@
 .onboarding-retry {
   align-self: flex-start;
 }
+.onboarding-restore {
+  align-self: flex-start;
+}
 .onboarding-motto {
   font-weight: var(--weight-bold);
   color: var(--muted);

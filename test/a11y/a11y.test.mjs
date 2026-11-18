@@ -135,6 +135,7 @@ test(
       'KI & Agenten',
       'Mitteilungen',
       'Datenschutz',
+      'Sicherung',
       'Hilfe',
       'Über'
     ];

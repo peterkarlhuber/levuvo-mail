@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  ArchiveRestore,
   Bell,
   Bot,
   BookOpen,
@@ -33,6 +34,7 @@ import { FiltersSettings } from './SettingsFilters';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
+import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
@@ -656,6 +658,7 @@ export default function Settings(props: Props) {
     { id: 'ai', label: t('KI & Agenten'), icon: Bot },
     { id: 'notifications', label: t('Mitteilungen'), icon: Bell },
     { id: 'privacy', label: t('Datenschutz'), icon: ShieldCheck },
+    { id: 'backup', label: t('Sicherung'), icon: ArchiveRestore },
     { id: 'help', label: t('Hilfe'), icon: BookOpen },
     { id: 'about', label: t('Über'), icon: Info }
   ];
@@ -713,6 +716,7 @@ export default function Settings(props: Props) {
           />
         )}
         {props.tab === 'privacy' && <Privacy />}
+        {props.tab === 'backup' && <BackupSettings />}
         {props.tab === 'help' && <Help />}
         {props.tab === 'about' && <About runtime={props.runtime} />}
       </main>
