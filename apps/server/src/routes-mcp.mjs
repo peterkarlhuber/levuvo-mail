@@ -12,6 +12,8 @@ import {
   mcpToolRegistry
 } from './mcp-server.mjs';
 import { resolveSidecar } from './ai-sidecar.mjs';
+import { CLOUD_PROVIDERS } from './ai-service.mjs';
+import { createSkills, skillInstruction } from './ai-skills.mjs';
 
 const ACTION = 'ai-v1';
 const q = s => encodeURIComponent(String(s));
@@ -84,13 +86,13 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
   }
 
   /** A token for one run of the built-in assistant; valid for at most 20 minutes. */
-  async function internalAgent({ name = 'Levuvo Mail Assistant', level = 'draft' } = {}) {
+  async function internalAgent({ name = 'Levuvo Mail Assistant', level = 'draft', hiddenAccounts = [] } = {}) {
     if (!LEVELS.includes(level)) throw new TypeError(`unknown level ${level}`);
     if (!http.running) await http.start(file.get().enabled ? file.get().port : 0);
     const token = `lvm_${randomBytes(32).toString('hex')}`;
     const key = hashToken(token);
     ephemeral.set(key, {
-      agent: { id: `internal-${key.slice(0, 12)}`, name, level, autoSend: false },
+      agent: { id: `internal-${key.slice(0, 12)}`, name, level, autoSend: false, hiddenAccounts: [...hiddenAccounts] },
       expires: Date.now() + 20 * 60_000
     });
     return {
@@ -188,7 +190,73 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
     },
     64 * 1024
   );
+  // Routines and delegated tasks of the built-in assistant.
+  const skills = await createSkills({ createJsonFile, dir });
+  api.get('/api/ai/skills', async () => ({ skills: skills.list() }));
+  guard('/api/ai/skills/save', async b => ({ skill: await skills.save(b), skills: skills.list() }));
+  guard('/api/ai/skills/remove', async b => {
+    await skills.remove(String(b.id || ''));
+    return { skills: skills.list() };
+  });
+  let running = 0;
+  api.post('/api/ai/agent', { bodyLimit: 16 * 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const b = request.body || {};
+    const clientText = (v, n) => String(v ?? '').slice(0, n);
+    let lease = null;
+    let counted = false;
+    try {
+      const skill = b.skill ? skills.get(String(b.skill)) : null;
+      if (b.skill && !skill) throw Object.assign(new Error('Unbekannte Routine.'), { statusCode: 400 });
+      // A free task (delegation) may prepare drafts and proposals, never more.
+      const instruction = skill ? skillInstruction(skill, b.params || {}) : clientText(b.instruction, 4000).trim();
+      if (!instruction) throw Object.assign(new Error('Bitte eine Aufgabe eingeben.'), { statusCode: 400 });
+      ctx.ai.ensureAllowed('agents', null);
+      if (running >= 2) throw Object.assign(new Error('Es laufen schon zwei Aufgaben.'), { statusCode: 429 });
+      running += 1;
+      counted = true;
+      const s = ctx.ai.get();
+      lease = await internalAgent({
+        name: skill ? `Levuvo Mail Assistant: ${skill.name}` : 'Levuvo Mail Assistant',
+        level: skill?.level === 'read' ? 'read' : 'draft',
+        // A cloud model never sees accounts marked "No cloud AI".
+        hiddenAccounts: CLOUD_PROVIDERS.includes(s.provider) ? s.noCloudAccounts || [] : []
+      });
+      const before = approvals.list().length;
+      const result = await ctx.ai.agent(
+        {
+          mcpUrl: lease.url,
+          token: lease.token,
+          instruction,
+          allowedTools: skill?.tools || [],
+          maxSteps: 16,
+          now: clientText(b.now, 40) || new Date().toISOString(),
+          timeZone: clientText(b.timeZone, 60),
+          lang: b.lang === 'en' ? 'en' : 'de'
+        },
+        { source: skill ? `routine:${skill.id}` : 'delegated' }
+      );
+      return {
+        report: result.report,
+        steps: result.steps,
+        newApprovals: Math.max(0, approvals.list().length - before),
+        provider: s.provider,
+        model: s.model,
+        generated: true
+      };
+    } catch (err) {
+      const code = err.code || (err.kind ? `ai_${err.kind}` : undefined);
+      return reply
+        .code(err.statusCode || 500)
+        .send({ error: err.statusCode ? err.message : 'Aufgabe fehlgeschlagen.', ...(code ? { code } : {}) });
+    } finally {
+      if (counted) running -= 1;
+      if (lease) await lease.release();
+    }
+  });
+
   ctx.aiForgetHooks.push(async () => {
+    await skills.clear();
     await persistent.clear();
     await approvals.clear();
     ephemeral.clear();

@@ -11,6 +11,7 @@
 // encryption and the AI settings are not reachable at all. Content from mail, events and contacts is
 // returned inside an <untrusted_data> frame. Every call is written to the AI log (no content).
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createServer } from 'node:http';
 import { messageForAi } from './routes-ai.mjs';
 
@@ -58,10 +59,19 @@ const obj = (properties, required = []) => ({ type: 'object', properties, requir
  * The tools. `level` is the minimum permission; `approval` routes the call to the user's approval queue;
  * `readOnly` becomes the MCP readOnlyHint.
  */
+/**
+ * The agent of the tool call in progress. Accounts in `agent.hiddenAccounts` (for example accounts
+ * marked "No cloud AI" while a cloud model runs the built-in assistant) do not exist for that agent.
+ */
+const currentAgent = new AsyncLocalStorage();
+const hidden = () => new Set(currentAgent.getStore()?.hiddenAccounts || []);
+const visibleAccounts = ctx => ctx.accounts().filter(a => !hidden().has(a.id));
+const visible = list => list.filter(x => !x?.accountId || !hidden().has(x.accountId));
+
 export function buildTools(ctx) {
   const call = (method, url, body, action) => ctx.internalRequest(method, url, body, action);
   const accountId = a => {
-    const list = ctx.accounts();
+    const list = visibleAccounts(ctx);
     const id = a ? String(a) : list[0]?.id;
     if (!id || !list.some(x => x.id === id)) throw toolError('Unknown account. Use list_accounts.');
     return id;
@@ -89,7 +99,7 @@ export function buildTools(ctx) {
       description: 'List the mail accounts (id, label, address).',
       inputSchema: obj({}),
       run: async () =>
-        JSON.stringify(ctx.accounts().map(a => ({ id: a.id, label: a.label, address: a.imap?.user || '' })))
+        JSON.stringify(visibleAccounts(ctx).map(a => ({ id: a.id, label: a.label, address: a.imap?.user || '' })))
     },
     {
       name: 'list_folders',
@@ -132,7 +142,38 @@ export function buildTools(ctx) {
           'GET',
           `/api/search/local?q=${q(query)}${a.account ? `&account=${q(accountId(a.account))}` : ''}`
         );
-        return untrustedJson((r.messages || []).slice(0, 30).map(brief), 'levuvo:search results');
+        return untrustedJson(
+          visible(r.messages || [])
+            .slice(0, 30)
+            .map(brief),
+          'levuvo:search results'
+        );
+      }
+    },
+    {
+      name: 'search_by_meaning',
+      level: 'read',
+      readOnly: true,
+      description:
+        'Find messages by meaning rather than exact words (e.g. "invoices from the tax office this year"), using the local semantic index. Returns account, folder and uid for read_message.',
+      inputSchema: obj({ query: { type: 'string', minLength: 2, maxLength: 300 }, account: ACCOUNT }, ['query']),
+      run: async a => {
+        if (!ctx.semantic) throw toolError('Semantic search is not available.');
+        const ids = a.account ? [accountId(a.account)] : visibleAccounts(ctx).map(x => x.id);
+        const hits = await ctx.semantic.search(ids, str(a.query, 300), { limit: 20 });
+        return untrustedJson(
+          hits.map(h => ({
+            accountId: h.accountId,
+            folder: h.folder,
+            uid: h.uid,
+            date: h.date,
+            from: h.fromEmail,
+            fromName: h.fromName,
+            subject: h.subject,
+            score: Math.round(h.score * 100) / 100
+          })),
+          'levuvo:semantic search results'
+        );
       }
     },
     {
@@ -162,14 +203,16 @@ export function buildTools(ctx) {
       inputSchema: obj({ from: { type: 'string' }, to: { type: 'string' } }, ['from', 'to']),
       run: async a => {
         const r = await call('GET', `/api/calendar/events?from=${q(str(a.from, 40))}&to=${q(str(a.to, 40))}`);
-        const events = (r.events || []).slice(0, 200).map(e => ({
-          summary: e.summary,
-          start: e.start,
-          end: e.end,
-          allDay: e.allDay,
-          location: e.location,
-          calendar: e.calendarName || e.calendarUrl
-        }));
+        const events = visible(r.events || [])
+          .slice(0, 200)
+          .map(e => ({
+            summary: e.summary,
+            start: e.start,
+            end: e.end,
+            allDay: e.allDay,
+            location: e.location,
+            calendar: e.calendarName || e.calendarUrl
+          }));
         return untrustedJson(events, 'levuvo:calendar');
       }
     },
@@ -191,7 +234,7 @@ export function buildTools(ctx) {
       run: async a => {
         const r = await call('GET', `/api/calendar/events?from=${q(str(a.from, 40))}&to=${q(str(a.to, 40))}`);
         return JSON.stringify(
-          freeSlots(r.events || [], {
+          freeSlots(visible(r.events || []), {
             from: Date.parse(str(a.from, 40)),
             to: Date.parse(str(a.to, 40)),
             minutes: int(a.minutes, 15, 480, 30),
@@ -210,7 +253,9 @@ export function buildTools(ctx) {
       run: async () => {
         const r = await call('GET', '/api/calendar/calendars');
         return JSON.stringify(
-          (r.calendars || []).filter(c => !c.readOnly).map(c => ({ accountId: c.accountId, url: c.url, name: c.name }))
+          visible(r.calendars || [])
+            .filter(c => !c.readOnly)
+            .map(c => ({ accountId: c.accountId, url: c.url, name: c.name }))
         );
       }
     },
@@ -223,7 +268,7 @@ export function buildTools(ctx) {
       run: async a => {
         const needle = str(a.query, 120).toLowerCase();
         const r = await call('GET', '/api/contacts/list');
-        const hits = (r.contacts || [])
+        const hits = visible(r.contacts || [])
           .filter(c => JSON.stringify([c.name, c.emails, c.organization]).toLowerCase().includes(needle))
           .slice(0, 25)
           .map(c => ({
@@ -734,7 +779,7 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
     if (limited(agent.id))
       return { isError: true, content: [{ type: 'text', text: 'Too many calls, wait a minute.' }] };
     try {
-      const result = await tool.run(args && typeof args === 'object' ? args : {}, agent);
+      const result = await currentAgent.run(agent, () => tool.run(args && typeof args === 'object' ? args : {}, agent));
       if (tool.approval) {
         const direct = tool.approval === 'send' && agent.autoSend;
         if (direct) {

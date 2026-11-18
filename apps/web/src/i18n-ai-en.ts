@@ -230,5 +230,30 @@ export const AI_EN: Record<string, string> = {
   'Rechtschreibung korrigieren': 'Fix spelling',
   'Auf Englisch': 'In English',
   'Auf Deutsch': 'In German',
-  'Bitte eine Frage eingeben.': 'Please enter a question.'
+  'Bitte eine Frage eingeben.': 'Please enter a question.',
+  'Name und Anweisung fehlen.': 'Name and instruction are missing.',
+  'Bitte die Angabe ergänzen.': 'Please fill in the detail.',
+  'Unbekannte Routine.': 'Unknown routine.',
+  'Bitte eine Aufgabe eingeben.': 'Please enter a task.',
+  'Es laufen schon zwei Aufgaben.': 'Two tasks are already running.',
+  'Aufgabe fehlgeschlagen.': 'Task failed.',
+  Tagesbriefing: 'Daily briefing',
+  'Was heute wichtig ist: neue Mails, Termine und offene Aufgaben.':
+    'What matters today: new mail, events and open tasks.',
+  'Offene Antworten': 'Waiting for your reply',
+  'Mails der letzten 7 Tage, die eine Antwort von dir erwarten.':
+    'Messages of the last 7 days that expect your answer.',
+  'Newsletter aufräumen': 'Clean up newsletters',
+  'Welche Newsletter du kaum liest und abbestellen könntest.':
+    'Newsletters you hardly read and could unsubscribe from.',
+  'Meeting vorbereiten': 'Prepare a meeting',
+  'Zum nächsten Termin: worum es geht und was zuletzt besprochen wurde.':
+    'For your next event: what it is about and what was discussed last.',
+  'Termin vereinbaren': 'Arrange a meeting',
+  'Findet freie Zeiten und bereitet eine Mail mit Vorschlägen als Entwurf vor.':
+    'Finds free times and prepares an email with proposals as a draft.',
+  'Mit wem und worum?': 'With whom and about what?',
+  'Antwortentwürfe vorbereiten': 'Prepare reply drafts',
+  'Entwirft Antworten auf offene Mails, du prüfst und sendest selbst.':
+    'Drafts replies to open messages; you review and send them yourself.'
 };

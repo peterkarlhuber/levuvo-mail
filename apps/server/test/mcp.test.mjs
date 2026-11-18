@@ -253,3 +253,12 @@ test('other modules register tools and approval types through the shared registr
   const [item] = approvals.list();
   assert.deepEqual(item.summary, { room: 'r1', text: 'Hallo' });
 });
+
+test('accounts hidden from an agent (no cloud AI) do not exist for it', async t => {
+  const { handle } = await setup(t);
+  const agent = { id: 'internal-x', name: 'Assistant', level: 'read', hiddenAccounts: ['a1'] };
+  const list = await handle(agent, rpc('tools/call', { name: 'list_accounts', arguments: {} }));
+  assert.deepEqual(JSON.parse(list.result.content[0].text), []);
+  const read = await handle(agent, rpc('tools/call', { name: 'read_message', arguments: { uid: 7, account: 'a1' } }));
+  assert.equal(read.result.isError, true);
+});
