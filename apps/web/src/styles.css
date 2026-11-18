@@ -4710,3 +4710,15 @@ h4 {
   min-width: 160px;
   resize: none;
 }
+
+.filter-assist {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.filter-assist input {
+  flex: 1;
+  min-width: 0;
+}

@@ -204,3 +204,16 @@ def test_presend_drops_attachment_issue_when_files_are_attached() -> None:
     out = tasks.presend(engine, {"subject": "x", "text": "anbei", "hasAttachments": True, "recipients": ["a@b.at"]})
     assert [i["kind"] for i in out["issues"]] == ["tone"]
     assert "a@b.at" in engine.calls[0]["system"]
+
+
+def test_filter_rule_only_moves_to_known_folders() -> None:
+    engine = StubEngine(
+        {
+            "name": "Rechnungen",
+            "conditions": [{"field": "subject", "op": "contains", "value": "Rechnung"}],
+            "actions": [{"type": "move", "folder": "Geheim/Unbekannt"}],
+        }
+    )
+    out = tasks.filter_rule(engine, {"text": "Rechnungen ablegen", "folders": ["INBOX", "Rechnungen"]})
+    assert out["actions"] == [{"type": "flag", "folder": ""}]
+    assert "Rechnungen" in engine.calls[0]["system"]

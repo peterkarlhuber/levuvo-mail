@@ -181,6 +181,12 @@ export function registerAiRoutes(ctx) {
           }))
         };
       }
+      case 'filter_rule':
+        return {
+          lang,
+          text: clientText(input.text, 1000),
+          folders: (Array.isArray(input.folders) ? input.folders : []).slice(0, 200).map(f => clientText(f, 200))
+        };
       case 'attachment_check':
         return { lang, subject: clientText(input.subject, 300), text: clientText(input.text, 6000) };
       case 'presend':

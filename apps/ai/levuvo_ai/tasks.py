@@ -468,6 +468,50 @@ def embed(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return {"vectors": engine.embed(texts), "model": engine.config.embed_model}
 
 
+# ---- filters in words --------------------------------------------------------------------
+
+
+class FilterCondition(BaseModel):
+    field: Literal["from", "to", "subject", "any"]
+    op: Literal["contains", "is", "not_contains"]
+    value: str
+
+
+class FilterAction(BaseModel):
+    type: Literal["move", "markRead", "flag"]
+    folder: str = Field(default="", description="Exact folder path from the list, only for move")
+
+
+class FilterRule(BaseModel):
+    name: str
+    match: Literal["all", "any"] = "all"
+    conditions: list[FilterCondition] = Field(min_length=1, max_length=10)
+    actions: list[FilterAction] = Field(min_length=1, max_length=5)
+    stop: bool = True
+    unclear: str = Field(default="", description="What could not be expressed, empty if everything fits")
+
+
+def filter_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """Turns a description in words into a server filter rule (Sieve) for the user to review."""
+    folders = [_text(f, 200) for f in (params.get("folders") or [])[:200] if isinstance(f, str)]
+    result = _ask(
+        engine,
+        f"Turn the user's description into one email filter rule. Rule name in {_lang(params)}, short. Conditions "
+        "test the sender (from), recipients (to), subject or anything (any). Actions: move to a folder, mark as "
+        "read, flag. Never delete. For move, use exactly one folder path from this list: "
+        + ", ".join(folders or ["INBOX"])
+        + ". If something cannot be expressed with these options, explain it in `unclear`.",
+        f"Description from the user (trusted): {_text(params.get('text'), 1000)}",
+        FilterRule,
+        max_tokens=600,
+    )
+    known = set(folders)
+    result["actions"] = [
+        a for a in result.get("actions", []) if a.get("type") != "move" or a.get("folder") in known
+    ] or [{"type": "flag", "folder": ""}]
+    return result
+
+
 TASKS = {
     "digest": digest,
     "translate": translate,
@@ -476,6 +520,7 @@ TASKS = {
     "compose": compose,
     "attachment_check": attachment_check,
     "presend": presend,
+    "filter_rule": filter_rule,
     "prioritize": prioritize,
     "classify": classify,
     "extract": extract,

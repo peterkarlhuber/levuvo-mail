@@ -33,6 +33,7 @@ const TASK_FEATURE = {
   compose: 'compose',
   attachment_check: 'attachmentCheck',
   presend: 'attachmentCheck',
+  filter_rule: 'classify',
   prioritize: 'prioritize',
   classify: 'classify',
   extract: 'extract',

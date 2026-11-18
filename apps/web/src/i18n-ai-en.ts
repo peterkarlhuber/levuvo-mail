@@ -274,5 +274,11 @@ export const AI_EN: Record<string, string> = {
   Aufgabe: 'Task',
   'Frag dein Postfach…': 'Ask your mailbox…',
   'Was soll der Assistent erledigen?': 'What should the assistant do?',
-  'Verlauf leeren': 'Clear history'
+  'Verlauf leeren': 'Clear history',
+  'Regel vorgeschlagen. Nicht umgesetzt: {what}': 'Rule suggested. Not covered: {what}',
+  'Regel vorgeschlagen ({model}). Bitte prüfen und speichern.': 'Rule suggested ({model}). Please review and save.',
+  'In Worten, z. B. „Rechnungen von Lieferanten in den Ordner Buchhaltung“':
+    'In words, e.g. “invoices from suppliers to the Accounting folder”',
+  'Regel in Worten beschreiben': 'Describe a rule in words',
+  'Regel vorschlagen': 'Suggest rule'
 };
