@@ -53,7 +53,9 @@ export const BACKUP_FILES = {
   'contacts-local.json': { kind: 'json', encrypted: 'contacts-key' },
   'tasks-local.json': { kind: 'json', encrypted: 'tasks-key' },
   'ai.json': { kind: 'json' },
-  'ai-log.jsonl': { kind: 'jsonl' }
+  'ai-log.jsonl': { kind: 'jsonl' },
+  // MCP settings and agents (token hashes only). mcp-approvals.json is short-lived and stays out.
+  'mcp.json': { kind: 'json' }
 };
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -158,7 +160,7 @@ export function summarize(files) {
     followups: count(json('followups.json')?.followups),
     ownKeys: count(crypto?.pgp?.own) + count(crypto?.smime?.own),
     settings: Boolean(files['app-settings.json']),
-    assistant: Boolean(files['ai.json'] || files['ai-log.jsonl'])
+    assistant: Boolean(files['ai.json'] || files['ai-log.jsonl'] || files['mcp.json'])
   };
 }
 
