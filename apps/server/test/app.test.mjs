@@ -328,6 +328,75 @@ test('Every installation has a stable instance ID for scheduled sending', async 
   assert.equal(again.ctx.instanceId, s.ctx.instanceId);
 });
 
+test('AI and MCP: settings off by default, internal agent reaches the API with the same checks', async t => {
+  const { s } = await server(t);
+  const settings = await s.api.inject({ method: 'GET', url: '/api/ai/settings', headers: GET });
+  assert.equal(settings.statusCode, 200);
+  assert.equal(settings.json().enabled, false);
+  const run = await s.api.inject({
+    method: 'POST',
+    url: '/api/ai/run',
+    headers: { ...POST, 'x-levuvo-action': 'ai-v1' },
+    payload: { kind: 'digest', refs: [] }
+  });
+  assert.equal(run.statusCode, 409);
+  assert.equal(run.json().code, 'ai_disabled');
+  const noAction = await s.api.inject({
+    method: 'POST',
+    url: '/api/ai/settings',
+    headers: POST,
+    payload: { enabled: true }
+  });
+  assert.equal(noAction.statusCode, 403);
+  const mcp = await s.api.inject({ method: 'GET', url: '/api/mcp', headers: GET });
+  assert.equal(mcp.json().enabled, false);
+  assert.equal(mcp.json().running, false);
+  const apply = payload =>
+    s.api.inject({ method: 'POST', url: '/api/ai/apply', headers: { ...POST, 'x-levuvo-action': 'ai-v1' }, payload });
+  assert.equal((await apply({ type: 'shell', data: {} })).statusCode, 400);
+  assert.equal((await apply({ type: 'event', data: { summary: 'x' } })).statusCode, 400);
+  assert.ok([200, 409].includes((await apply({ type: 'task', data: { title: 'x' } })).statusCode));
+
+  const skills = await s.api.inject({ method: 'GET', url: '/api/ai/skills', headers: GET });
+  assert.ok(skills.json().skills.some(x => x.id === 'briefing' && x.level === 'read'));
+  const aiPost = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'ai-v1' }, payload });
+  const saved = await aiPost('/api/ai/skills/save', {
+    name: 'Rechnungen',
+    instruction: 'Find invoices',
+    level: 'full'
+  });
+  assert.equal(saved.json().skill.level, 'read');
+  const delegated = await aiPost('/api/ai/agent', { instruction: 'Kläre mit Anna einen Termin' });
+  assert.equal(delegated.statusCode, 409);
+  assert.equal(delegated.json().code, 'ai_disabled');
+  assert.equal((await aiPost('/api/ai/agent', { skill: 'schedule', params: {} })).statusCode, 400);
+
+  const agent = await s.mcp.internalAgent({ level: 'read' });
+  t.after(() => agent.release());
+  const call = body =>
+    fetch(agent.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${agent.token}` },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+  const accounts = await call({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name: 'list_accounts', arguments: {} }
+  });
+  assert.deepEqual(JSON.parse(accounts.result.content[0].text), []);
+  const search = await call({
+    jsonrpc: '2.0',
+    id: 2,
+    method: 'tools/call',
+    params: { name: 'search_messages', arguments: { query: 'rechnung' } }
+  });
+  assert.equal(search.result.isError, undefined, JSON.stringify(search));
+  assert.match(search.result.content[0].text, /untrusted_data/);
+});
+
 test('Spaces API: create a space, add a task, upload and download a file', async t => {
   const { s } = await server(t);
   await addAccount(s);

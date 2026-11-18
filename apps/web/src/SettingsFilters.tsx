@@ -4,6 +4,7 @@ import { getJson, postJson, ApiError } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Section } from './Settings';
+import { FilterAssist } from './FilterAssist';
 import type { AccountItem, Folder } from './types';
 
 type Condition = { field: 'from' | 'to' | 'subject' | 'any'; op: 'contains' | 'is' | 'not_contains'; value: string };
@@ -426,6 +427,27 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
               >
                 <Plus size={14} /> {t('Regel hinzufügen')}
               </button>
+            )}
+            {config.rules.length < 50 && (
+              <FilterAssist
+                accountId={accountId}
+                folders={folders.map(f => f.path)}
+                onRule={r =>
+                  update({
+                    rules: [
+                      ...config.rules,
+                      {
+                        name: r.name,
+                        enabled: true,
+                        match: r.match,
+                        conditions: r.conditions,
+                        actions: r.actions.map(a => ({ type: a.type, folder: a.folder || undefined })),
+                        stop: r.stop
+                      }
+                    ]
+                  })
+                }
+              />
             )}
           </Section>
           <div className="settings-sticky-actions">

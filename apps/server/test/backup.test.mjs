@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   applyPendingRestore,
+  cancelRestore,
   collectBackupContent,
   decryptBackup,
   encryptBackup,
@@ -315,4 +316,59 @@ test('Backup routes are rate-limited', async t => {
   );
   assert.equal(codes[10].statusCode, 429);
   assert.equal(codes[10].json().error, 'Zu viele Versuche. Bitte eine Minute warten.');
+});
+
+test('Backup: shared spaces travel as encrypted files together with both keychain entries', async t => {
+  const source = await device(t);
+  const space = 'a'.repeat(32);
+  mkdirSync(join(source.dir, 'spaces', 'blobs'), { recursive: true });
+  write(join(source.dir, 'spaces'), `${space}.lvs`, '{"v":1,"iv":"x","tag":"y","data":"sealed-space"}');
+  write(join(source.dir, 'spaces'), 'index.lvs', '{"v":1,"data":"sealed-index"}');
+  writeFileSync(join(source.dir, 'spaces', 'blobs', `${'b'.repeat(16)}.0`), Buffer.from([0, 1, 2, 255]));
+  write(join(source.dir, 'spaces'), 'stray.txt', 'not part of the store');
+
+  // Without the keys the spaces could never be opened again: no backup instead of a broken one.
+  await assert.rejects(collectBackupContent({ dir: source.dir, vault: source.keys }), e => e.code === 'backup_locked');
+  source.keys.set('local', 'spaces-key', 'c'.repeat(64));
+  source.keys.set('local', 'spaces-identity', '{"identity":"source"}');
+
+  const backup = await decryptBackup(
+    await encryptBackup(await collectBackupContent({ dir: source.dir, vault: source.keys }), PASSWORD, { kdf: FAST }),
+    PASSWORD
+  );
+  assert.equal(backup.summary.spaces, 1);
+  assert.deepEqual(Object.keys(backup.spaces).sort(), [`${space}.lvs`, `blobs/${'b'.repeat(16)}.0`, 'index.lvs']);
+
+  // The new device already has its own spaces and keys.
+  const dir = tmp(t);
+  const keys = vault();
+  mkdirSync(join(dir, 'spaces'), { recursive: true });
+  write(join(dir, 'spaces'), `${'d'.repeat(32)}.lvs`, 'old device space');
+  keys.set('local', 'spaces-key', 'e'.repeat(64));
+  keys.set('local', 'spaces-identity', '{"identity":"target"}');
+
+  await stageRestore({ dir, vault: keys, backup });
+  assert.equal(keys.get('local', 'spaces-key'), 'e'.repeat(64), 'unchanged until the restart');
+  await cancelRestore(dir, keys);
+  assert.equal(keys.get('local', 'restore-pending-spaces-key'), '');
+  assert.ok(existsSync(join(dir, 'spaces', `${'d'.repeat(32)}.lvs`)));
+
+  await stageRestore({ dir, vault: keys, backup });
+  await applyPendingRestore({ dir, vault: keys });
+  assert.equal(keys.get('local', 'spaces-key'), 'c'.repeat(64));
+  assert.equal(keys.get('local', 'spaces-identity'), '{"identity":"source"}');
+  assert.equal(keys.get('local', 'spaces-key-before-restore'), 'e'.repeat(64));
+  assert.equal(keys.get('local', 'restore-pending-spaces-identity'), '');
+  assert.deepEqual(readdirSync(join(dir, 'spaces')).sort(), [`${space}.lvs`, 'blobs', 'index.lvs']);
+  assert.deepEqual([...readFileSync(join(dir, 'spaces', 'blobs', `${'b'.repeat(16)}.0`))], [0, 1, 2, 255]);
+  const [copy] = readdirSync(join(dir, 'before-restore'));
+  assert.ok(existsSync(join(dir, 'before-restore', copy, 'spaces', `${'d'.repeat(32)}.lvs`)));
+
+  // A crafted path inside a backup is refused, never written.
+  const crafted = await encryptBackup(
+    { files: {}, secrets: {}, spaces: { '../evil.lvs': 'AA==' }, localSecrets: {} },
+    PASSWORD,
+    { kdf: FAST }
+  );
+  await assert.rejects(decryptBackup(crafted, PASSWORD), e => e.code === 'backup_invalid');
 });

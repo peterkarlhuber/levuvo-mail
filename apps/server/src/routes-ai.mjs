@@ -1,6 +1,9 @@
 // AI routes: settings, status, models and the AI functions. Message content is loaded here on the
 // server (the UI sends references), so the model gets the same text the reader shows and nothing else.
 import { htmlToText } from './html-mail.mjs';
+import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
+import { contactPayload, eventPayload } from './mcp-server.mjs';
+import { createSemanticIndex } from './ai-semantic.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
@@ -16,6 +19,8 @@ const addr = list =>
 function clientText(value, limit = MAX_CLIENT_TEXT) {
   return String(value ?? '').slice(0, limit);
 }
+
+const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
 
 export function messageForAi(detail) {
   const text = detail.text?.trim() ? detail.text : htmlToText(detail.html || '');
@@ -107,6 +112,7 @@ export function registerAiRoutes(ctx) {
     return samples;
   }
   const own = () => ctx.ownAddresses().join(', ');
+  const profile = () => ({ ...DEFAULT_AI_SETTINGS.profile, ...(ai.publicSettings().profile || {}) });
 
   /** Builds the sidecar input for one AI function from references and client text. */
   async function prepare(kind, body) {
@@ -136,6 +142,7 @@ export function registerAiRoutes(ctx) {
           lang,
           messages: details.map(messageForAi),
           instruction: clientText(input.instruction, 1000),
+          profile: profile(),
           styleSamples: account ? await styleSamples(account) : []
         };
       }
@@ -144,19 +151,54 @@ export function registerAiRoutes(ctx) {
         return { lang, message: messageForAi(d), facts: securityFacts(d) };
       }
       case 'rewrite':
-        return { lang, mode: clientText(input.mode, 20), text: clientText(input.text) };
+        return { lang, mode: clientText(input.mode, 20), text: clientText(input.text), profile: profile() };
       case 'compose': {
         const out = {
           lang,
           bullets: clientText(input.bullets, 3000),
+          profile: profile(),
           styleSamples: account ? await styleSamples(account) : []
         };
         if (Array.isArray(body.refs) && body.refs.length)
           out.messages = (await loadThread(accountId, body.refs)).map(messageForAi);
         return out;
       }
+      case 'ask': {
+        const question = clientText(input.question, 500).trim();
+        if (!question) throw Object.assign(new Error('Bitte eine Frage eingeben.'), { statusCode: 400 });
+        const ids = accountId ? [accountId] : ctx.accounts().map(a => a.id);
+        const hits = await semantic.search(ids, question, { limit: 8 });
+        body.sourceMap = hits.map(h => ({ accountId: h.accountId, folder: h.folder, uid: h.uid, subject: h.subject }));
+        return {
+          lang,
+          question,
+          sources: hits.map((h, i) => ({
+            id: `s${i + 1}`,
+            from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
+            date: h.date,
+            subject: h.subject,
+            text: String(h.text || '').slice(0, 2500)
+          }))
+        };
+      }
+      case 'filter_rule':
+        return {
+          lang,
+          text: clientText(input.text, 1000),
+          folders: (Array.isArray(input.folders) ? input.folders : []).slice(0, 200).map(f => clientText(f, 200))
+        };
       case 'attachment_check':
         return { lang, subject: clientText(input.subject, 300), text: clientText(input.text, 6000) };
+      case 'presend':
+        return {
+          lang,
+          subject: clientText(input.subject, 300),
+          text: clientText(input.text, 6000),
+          hasAttachments: input.hasAttachments === true,
+          recipients: (Array.isArray(input.recipients) ? input.recipients : [])
+            .slice(0, 30)
+            .map(r => clientText(r, 200))
+        };
       case 'prioritize':
       case 'classify':
         return {
@@ -179,6 +221,48 @@ export function registerAiRoutes(ctx) {
     if (!requireAction(request, reply, ACTION)) return;
     try {
       return await ai.save(request.body || {});
+    } catch (err) {
+      return aiError(reply, err);
+    }
+  });
+  const semantic = createSemanticIndex({
+    localIndex: ctx.localIndex,
+    ai,
+    logger: ctx.logger,
+    stateFile: ctx.semanticState
+  });
+  ctx.semantic = semantic;
+  ctx.aiForgetHooks.push(() => semantic.forget());
+  // Keep the vectors close to the index: every 10 minutes, only while AI search is switched on.
+  const syncAll = async () => {
+    for (const a of ctx.accounts()) await semantic.sync(a.id).catch(() => null);
+  };
+  setTimeout(() => void syncAll(), 60_000).unref?.();
+  setInterval(() => void syncAll(), 10 * 60_000).unref?.();
+  // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
+  api.get('/api/ai/search', async (request, reply) => {
+    const { q: query, account, folder } = request.query || {};
+    try {
+      ai.ensureAllowed('search', null);
+      const ids = account ? [String(account)].filter(id => accountOf(id)) : ctx.accounts().map(a => a.id);
+      const hits = await semantic.search(ids, String(query || ''), {
+        limit: 30,
+        folder: folder ? String(folder) : null
+      });
+      return {
+        messages: hits.map(h => ({
+          accountId: h.accountId,
+          folder: h.folder,
+          uid: h.uid,
+          subject: h.subject,
+          fromName: h.fromName,
+          fromEmail: h.fromEmail,
+          date: h.date,
+          score: Math.round(h.score * 1000) / 1000
+        })),
+        model: ai.get().embedModel,
+        generated: true
+      };
     } catch (err) {
       return aiError(reply, err);
     }
@@ -208,9 +292,49 @@ export function registerAiRoutes(ctx) {
       ai.ensureAllowed(null, accountId);
       const input = await prepare(kind, body);
       const result = await ai.run(kind, input, { accountId });
+      if (kind === 'ask' && Array.isArray(body.sourceMap))
+        result.sources = (result.sources || [])
+          .map(id => body.sourceMap[Number(String(id).slice(1)) - 1])
+          .filter(Boolean);
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {
       return aiError(reply, err);
+    }
+  });
+  // "Übernehmen" on an AI suggestion: the user clicked it, so it is saved directly. Events never get
+  // attendees here (no invitations); contacts go to the local address book; tasks to the task list.
+  api.post('/api/ai/apply', { bodyLimit: 32 * 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const { type, data } = request.body || {};
+    const d = data && typeof data === 'object' ? data : {};
+    try {
+      if (type === 'event') {
+        const payload = eventPayload({ ...d, attendees: [] });
+        if (!payload.event.summary || !payload.event.start) throw invalidApply('Titel und Beginn fehlen.');
+        if (!payload.event.end) payload.event.end = payload.event.start;
+        await ctx.internalRequest('POST', '/api/calendar/events/save', payload, 'calendar-v1');
+      } else if (type === 'contact') {
+        const payload = contactPayload(d);
+        if (!payload.contact.name && !payload.contact.emails.length) throw invalidApply('Name oder Adresse fehlt.');
+        await ctx.internalRequest('POST', '/api/contacts/save', payload, 'contacts-v1');
+      } else if (type === 'task') {
+        if (!ctx.tasks?.save)
+          throw Object.assign(new Error('Aufgaben sind noch nicht verfügbar.'), { statusCode: 409 });
+        const title = clientText(d.title, 300).trim();
+        if (!title) throw invalidApply('Titel fehlt.');
+        await ctx.tasks.save({
+          title,
+          due: clientText(d.due, 40) || null,
+          notes: clientText(d.notes, 2000),
+          source: 'ai'
+        });
+      } else throw invalidApply('Unbekannter Vorschlag.');
+      void ai.log.add({ type: 'apply', kind: type, source: clientText(request.body?.source, 40) || 'reader' });
+      return { saved: true };
+    } catch (err) {
+      // 4xx from the target (for example 423 when the task store is locked) is passed on as it is.
+      const status = err.statusCode || err.status || 500;
+      return reply.code(status).send({ error: status < 500 ? err.message : 'Speichern fehlgeschlagen.' });
     }
   });
   api.get('/api/ai/log', async () => ({ entries: await ai.log.list(300) }));

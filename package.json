@@ -39,7 +39,8 @@
     "notices": "node scripts/third-party-notices.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
     "test:e2e": "node --test test/e2e/ui.e2e.mjs",
-    "bench:mailbox": "node scripts/bench-large-mailbox.mjs"
+    "bench:mailbox": "node scripts/bench-large-mailbox.mjs",
+    "ai:runtime": "node scripts/build-ai-runtime.mjs"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.1",
@@ -178,7 +179,17 @@
     "extraMetadata": {
       "main": "apps/desktop/main.mjs"
     },
-    "publish": null
+    "publish": null,
+    "extraResources": [
+      {
+        "from": "build/ai-runtime",
+        "to": "ai-runtime",
+        "filter": [
+          "**/*",
+          "!README.md"
+        ]
+      }
+    ]
   },
   "author": {
     "name": "Levuvo",

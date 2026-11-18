@@ -7,6 +7,7 @@ import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek,
 import { orderFolders } from '../src/folder-utils.ts';
 import { applySuggestions, bundleSuggester, registerBundleSuggester } from '../src/bundle-suggest.ts';
 import { isTrackingImage, trackerHost } from '../src/trackers.ts';
+import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -317,6 +318,45 @@ test('Contact card: address book match and shared appointments', async () => {
     r.past.map(e => e.summary),
     ['Neuer', 'Alt']
   );
+});
+
+test('assistant helpers: own part of a draft and default event end', async () => {
+  const { ownPart, defaultEnd } = await import('../src/ai-utils.ts');
+  assert.equal(ownPart('<p>Hi</p><p>-- </p><p>Sig</p>', ['<p>-- </p>', '<blockquote']), '<p>Hi</p>');
+  assert.equal(ownPart('Nur Text', ['\n-- \n']), 'Nur Text');
+  assert.equal(defaultEnd('2026-11-23T14:00', false), '2026-11-23T15:00');
+  assert.equal(defaultEnd('2026-11-23T23:30', false), '2026-11-23T23:59');
+  assert.equal(defaultEnd('2026-11-23', true), '2026-11-23');
+  const { bundleFromClassification } = await import('../src/ai-utils.ts');
+  const mapped = bundleFromClassification([
+    { id: '4', bundle: 'newsletters', from_person: false },
+    { id: '5', bundle: 'finance', from_person: true },
+    { id: '6', bundle: 'work', from_person: false },
+    { id: 'x', bundle: 'notifications' },
+    { id: '7', bundle: 'notifications' }
+  ]);
+  assert.deepEqual(
+    [...mapped],
+    [
+      [4, 'newsletter'],
+      [5, null],
+      [6, null],
+      [7, 'notification']
+    ]
+  );
+});
+
+test('Templates: a shortcut right before the cursor is found', () => {
+  const list = [
+    { id: '1', name: 'Gruß', subject: '', html: '<p>MfG</p>', shortcut: 'mfg' },
+    { id: '2', name: 'Ohne', subject: '', html: '<p>x</p>' }
+  ];
+  assert.equal(shortcutAt('Danke ;mfg', list)?.template.id, '1');
+  assert.equal(shortcutAt(';MFG', list)?.length, 4);
+  assert.equal(shortcutAt('Danke;mfg', list), null); // inside a word
+  assert.equal(shortcutAt('Danke ;mfgx', list), null);
+  assert.equal(shortcutAt('Danke mfg', list), null);
+  assert.equal(shortcutAt(';', list), null);
 });
 
 test('bundle suggestions: optional second opinion over the local rules', () => {

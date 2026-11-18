@@ -292,6 +292,7 @@ Rückfrage, Passwörter/Token/Schlüssel nur im Schlüsselbund, die App ist nur 
 | E | archivieren |
 | B | zurückstellen |
 | Strg/⌘ + K | Befehlspalette |
+| Strg/⌘ + J | Levuvo Mail Assistant |
 | ! | Spam / kein Spam |
 | Entf | Papierkorb |
 | P | drucken / PDF |
@@ -321,3 +322,49 @@ Rückfrage, Passwörter/Token/Schlüssel nur im Schlüsselbund, die App ist nur 
 
 Siehe `PRIVACY.md` (englisch). Kurz: keine Telemetrie, keine Werbung, keine Levuvo-Server im Datenweg;
 Absturzberichte nur, wenn du sie einschaltest.
+
+## 17 Levuvo Mail Assistant (KI)
+
+Der Assistent ist **standardmäßig aus**. Einschalten unter **Einstellungen → KI & Agenten**. Er arbeitet
+mit einem lokalen Modell auf diesem Computer (Ollama, empfohlen **qwen3.5:9b**, bei 8 GB RAM
+**qwen3.5:4b**); für die Suche nach Bedeutung **Qwen3-Embedding 0.6B**. Fehlt ein Modell, lädt
+„Herunterladen“ es. Cloud-Modelle (Anthropic, OpenAI) gehen nur nach einer Einwilligung und nie für
+Konten mit „Keine Cloud-KI“. Alle Ergebnisse sind als **KI-generiert** gekennzeichnet; gesendet,
+gespeichert oder verschoben wird nur nach deinem Klick.
+
+**In einer Nachricht:** Zusammenfassen (wer will was bis wann, Fristen, Beträge, offene Fragen),
+Übersetzen, Termine/Aufgaben/Kontakte finden und mit „Übernehmen“ speichern, Echtheit prüfen
+(Druck, Zahlungsaufforderung, geänderte IBAN, falscher Absender).
+
+**Beim Schreiben (Knopf „Assistent“):** Antwort vorschlagen (auch aus deinen Stichworten), Stichpunkte zu
+fertiger Mail, Umformulieren (kürzer, höflicher, förmlicher, lockerer, Rechtschreibung, Englisch, Deutsch)
+mit „Rückgängig“. Vor dem Senden prüft der Assistent auf vergessenen Anhang, scharfen Ton, falsche
+Empfänger und sensible Daten; du entscheidest, ob trotzdem gesendet wird.
+
+**Schreibstil:** Tonfall, Anrede (du/Sie), Grußformel und eigene Anweisungen. Ohne Angaben orientiert
+sich der Assistent an deinen gesendeten Mails (nur als Stilvorlage, kein Training).
+
+**Filter in Worten:** unter Einstellungen → Filter z. B. „Rechnungen von Lieferanten in den Ordner
+Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
+
+**Assistent-Fenster (✦ links oder Strg/⌘ + J):**
+- **Frage:** „Wann kommt die Lieferung von Müller?“ – Antwort mit den Quell-Mails zum Anklicken.
+- **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche“ – der Assistent sucht freie Zeiten und legt
+  einen Entwurf an. Gesendet wird nichts.
+- **Routinen:** Tagesbriefing, Offene Antworten, Newsletter aufräumen, Meeting vorbereiten, Termin
+  vereinbaren, Antwortentwürfe vorbereiten.
+- **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt,
+  Papierkorb) – „Freigeben“ oder „Ablehnen“.
+
+**Agenten (MCP-Server):** Unter Einstellungen → KI & Agenten den MCP-Server einschalten, einen Agenten
+anlegen (Stufe Lesen, Entwürfe, Ordnen oder Alles inkl. Senden) und den einmal angezeigten Token bzw. die
+fertige Konfiguration in Claude Desktop oder Claude Code eintragen. Der Server ist nur auf diesem
+Computer erreichbar. Endgültiges Löschen, Konten, Passwörter, Schlüssel und KI-Einstellungen sind für
+Agenten nie zugänglich.
+
+**KI-Protokoll:** zeigt, was KI und Agenten getan haben (ohne Mailinhalte, 30 Tage, nur auf diesem
+Gerät). „Alle KI-Daten löschen“ entfernt Einstellungen, Einwilligungen, Schlüssel, Protokoll, Routinen,
+Freigaben und Agenten.
+
+Für Organisationen: Vorlagen für Nutzungsrichtlinie, Verarbeitungsverzeichnis, Sicherheitskonzept und
+eine KI-Kurzanleitung liegen unter `docs/ai/`.

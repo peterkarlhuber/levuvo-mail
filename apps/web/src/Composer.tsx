@@ -13,14 +13,16 @@ import {
   Paperclip,
   PenLine,
   RefreshCw,
+  LoaderCircle,
   Send,
   ShieldCheck,
   Trash2,
   X
 } from 'lucide-react';
 import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api';
-import { fillTemplate, nameParts, type Template, type TemplateVars } from './templates';
+import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
+import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
 import { useT } from './i18n';
@@ -48,6 +50,8 @@ export type ComposeInitial = {
   draftUidValidity?: string;
   security?: Security;
   scheduledFor?: string;
+  /** The message being answered, for the assistant's reply suggestion. */
+  source?: { folder: string; uid: number };
 };
 export type Security = {
   method: 'pgp' | 'smime' | 'password' | null;
@@ -108,7 +112,7 @@ export default function Composer({
   onClose,
   onSubmit
 }: Props) {
-  const { t, locale } = useT();
+  const { t, locale, lang } = useT();
   const { confirm, prompt, toast } = useUi();
   const [prefs] = usePrefs();
   const [from, setFrom] = useState(initial.from || identities[0]?.email || '');
@@ -124,9 +128,11 @@ export default function Composer({
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
   const imageInput = useRef<HTMLInputElement>(null);
+  const textArea = useRef<HTMLTextAreaElement>(null);
   const [security, setSecurity] = useState<Security>(initial.security || { method: null, sign: false, encrypt: false });
   const [missing, setMissing] = useState<{ recipients: string[]; own: boolean } | null>(null);
   const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [followUpDays, setFollowUpDays] = useState(0);
   const draftId = useRef(initial.draftId || crypto.randomUUID());
@@ -142,12 +148,33 @@ export default function Composer({
     initial.draftUid ? 'saved' : 'idle'
   );
 
+  // Templates with a shortcut: ";mfg" + space or Tab inserts the template in place.
+  const shortcutTemplates = useRef<Template[]>([]);
+  const expandShortcut = useRef<(tpl: Template) => void>(() => {});
+  useEffect(() => {
+    getJson<{ templates: Template[] }>('/api/templates')
+      .then(d => (shortcutTemplates.current = d.templates.filter(x => x.shortcut)))
+      .catch(() => {});
+  }, []);
+
   const editor = useEditor({
     extensions: EXTENSIONS,
     content: initial.html || plainToHtml(initial.text || ''),
     editorProps: {
       attributes: { class: 'compose-editor', 'aria-label': t('Nachricht') },
-      handleDrop: (_view, event) => Boolean(event.dataTransfer?.files?.length)
+      handleDrop: (_view, event) => Boolean(event.dataTransfer?.files?.length),
+      handleKeyDown: (view, event) => {
+        if (!SHORTCUT_KEYS.includes(event.key) || event.ctrlKey || event.metaKey || event.altKey) return false;
+        if (!shortcutTemplates.current.length) return false;
+        const { from, empty } = view.state.selection;
+        if (!empty) return false;
+        const before = view.state.doc.textBetween(Math.max(0, from - 40), from, '\n', '\n');
+        const hit = shortcutAt(before, shortcutTemplates.current);
+        if (!hit) return false;
+        view.dispatch(view.state.tr.delete(from - hit.length, from));
+        expandShortcut.current(hit.template);
+        return true;
+      }
     },
     onUpdate: () => setHtmlVersion(v => v + 1)
   });
@@ -337,6 +364,33 @@ export default function Composer({
     onClose();
   }
 
+  // The user's own part of the message (before signature and quote), for the assistant.
+  const QUOTE_MARKS = [SIGNATURE_SEPARATOR, '<blockquote'];
+  function draftBoundary(current: string) {
+    const own = ownPart(current, QUOTE_MARKS);
+    // Without a signature the quote attribution ("Am … schrieb …:") is the paragraph before the quote.
+    if (!current.includes(SIGNATURE_SEPARATOR) && own.length < current.length) {
+      const p = own.lastIndexOf('<p>');
+      if (p > 0) return own.slice(0, p);
+    }
+    return own;
+  }
+  function getDraft() {
+    if (format === 'text') return ownPart(text, ['\n-- \n', '\n> ']).trim();
+    return htmlToPlain(draftBoundary(editor?.getHTML() || ''));
+  }
+  function setDraft(value: string) {
+    if (format === 'text') {
+      const own = ownPart(text, ['\n-- \n', '\n> ']);
+      setText(`${value.trim()}\n${text.slice(own.trimEnd().length)}`);
+      return;
+    }
+    if (!editor) return;
+    const current = editor.getHTML();
+    const own = draftBoundary(current);
+    editor.commands.setContent(`${plainToHtml(value.trim())}${current.slice(own.length)}`);
+  }
+
   function validate() {
     const all = [...toList, ...ccList, ...bccList];
     const invalid = all.find(a => !EMAIL.test(a));
@@ -365,6 +419,26 @@ export default function Composer({
     }
     if (!subject.trim() && !(await confirm({ title: t('Ohne Betreff senden?'), confirmLabel: t('Senden') }))) return;
     setError('');
+    setChecking(true);
+    const issues = await presendIssues(
+      {
+        accountId,
+        subject,
+        text: getDraft(),
+        recipients: [...toList, ...ccList, ...bccList],
+        hasAttachments: files.length > 0
+      },
+      lang
+    ).finally(() => setChecking(false));
+    if (
+      issues.length &&
+      !(await confirm({
+        title: t('Vor dem Senden prüfen'),
+        message: `${issues.map(i => `• ${i.message}`).join('\n')}\n\n${t('Hinweise des Levuvo Mail Assistant (KI). Trotzdem senden?')}`,
+        confirmLabel: sendAt ? t('Trotzdem planen') : t('Trotzdem senden')
+      }))
+    )
+      return;
     const base = await payloadBase();
     const start = sendAt ? Date.parse(sendAt) : Date.now();
     const payload = followUpDays
@@ -410,12 +484,17 @@ export default function Composer({
       date: new Date().toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
     };
   }
-  async function insertTemplate(tpl: Template) {
+  async function insertTemplate(tpl: Template, at?: number) {
     const vars = await templateVars();
     if (tpl.subject && !subject.trim()) setSubject(fillTemplate(tpl.subject, vars, { html: false }));
     const body = fillTemplate(tpl.html, vars);
     if (format === 'text') {
-      setText(old => `${htmlToPlain(body)}\n\n${old}`.trim());
+      const plain = htmlToPlain(body);
+      if (at !== undefined) {
+        setText(old => old.slice(0, at) + plain + old.slice(at));
+        const caret = at + plain.length;
+        requestAnimationFrame(() => textArea.current?.setSelectionRange(caret, caret));
+      } else setText(old => `${plain}\n\n${old}`.trim());
       return;
     }
     if (!editor) return;
@@ -428,6 +507,7 @@ export default function Composer({
     if (/\{[A-Za-zÄÖÜäöü]+\}/.test(htmlToPlain(body)))
       toast({ text: t('Bitte die markierten Platzhalter ergänzen.'), kind: 'info' });
   }
+  expandShortcut.current = tpl => void insertTemplate(tpl);
   async function saveAsTemplate() {
     const name = await prompt({
       title: t('Als Vorlage speichern'),
@@ -625,6 +705,14 @@ export default function Composer({
 
             <div className="compose-options">
               <TemplateMenu onInsert={tpl => void insertTemplate(tpl)} onSaveCurrent={() => void saveAsTemplate()} />
+              <ComposerAssist
+                accountId={accountId}
+                source={initial.mode === 'reply' || initial.mode === 'replyAll' ? initial.source : undefined}
+                getDraft={getDraft}
+                setDraft={setDraft}
+                subject={subject}
+                setSubject={setSubject}
+              />
               <div className="segmented small" role="radiogroup" aria-label={t('Format')}>
                 <button
                   type="button"
@@ -728,10 +816,22 @@ export default function Composer({
               </>
             ) : (
               <textarea
+                ref={textArea}
                 className="compose-body"
                 aria-label={t('Nachricht')}
                 value={text}
                 onChange={e => setText(e.target.value)}
+                onKeyDown={e => {
+                  if (!SHORTCUT_KEYS.includes(e.key) || e.ctrlKey || e.metaKey || e.altKey) return;
+                  const el = e.currentTarget;
+                  if (el.selectionStart !== el.selectionEnd) return;
+                  const hit = shortcutAt(el.value.slice(0, el.selectionStart), shortcutTemplates.current);
+                  if (!hit) return;
+                  e.preventDefault();
+                  const at = el.selectionStart - hit.length;
+                  setText(old => old.slice(0, at) + old.slice(at + hit.length));
+                  void insertTemplate(hit.template, at);
+                }}
                 rows={14}
               />
             )}
@@ -809,11 +909,12 @@ export default function Composer({
           <div className="split-button">
             <button
               className="btn primary"
-              disabled={!sendEnabled}
+              disabled={!sendEnabled || checking}
               onClick={() => void submit(null)}
               title={t('Strg/⌘ + Enter')}
             >
-              <Send size={15} /> {t('Senden')}
+              {checking ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}{' '}
+              {checking ? t('Wird geprüft…') : t('Senden')}
             </button>
             <button
               className="btn primary split-toggle"

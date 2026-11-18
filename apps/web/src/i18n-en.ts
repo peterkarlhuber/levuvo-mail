@@ -1243,8 +1243,8 @@ export const EN: Record<string, string> = {
   'Vorlage gespeichert.': 'Template saved.',
   'Vorlage „{name}“ löschen?': 'Delete template “{name}”?',
   'Textbausteine und Vorlagen': 'Snippets and templates',
-  'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ einfügen. Platzhalter werden beim Einfügen ersetzt: {list}':
-    'Recurring replies, offers or greetings. Insert them in the editor via “Templates”. Placeholders are filled in when inserted: {list}',
+  'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ oder per Kürzel einfügen (zum Beispiel ;mfg und Leertaste). Platzhalter werden beim Einfügen ersetzt: {list}':
+    'Recurring replies, offers or greetings. Insert them in the editor via “Templates” or by shortcut (for example ;mfg and space). Placeholders are filled in when inserted: {list}',
   'Noch keine Vorlagen.': 'No templates yet.',
   'ohne Betreff': 'no subject',
   'Betreff (optional)': 'Subject (optional)',
@@ -1410,14 +1410,20 @@ export const EN: Record<string, string> = {
   '{count} Tracker blockiert': '{count} trackers blocked',
   'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
     'Tracking pixels removed, even when images are loaded: {hosts}',
+  // Template shortcuts
+  'Kürzel (optional)': 'Shortcut (optional)',
+  'Im Text ;Kürzel und Leertaste oder Tab tippen, um die Vorlage einzufügen.':
+    'Type ;shortcut and space or Tab in the text to insert the template.',
+  'Das Kürzel braucht 2–20 Buchstaben, Ziffern, - oder _.': 'The shortcut needs 2–20 letters, digits, - or _.',
+  'Dieses Kürzel ist schon vergeben.': 'This shortcut is already in use.',
   Sicherung: 'Backup',
   'Mindestens {count} Zeichen.': 'At least {count} characters.',
   'Die Passwörter stimmen nicht überein.': 'The passwords do not match.',
   'Sicherung erstellt. Bewahre sie an einem zweiten Ort auf.': 'Backup created. Keep it in a second place.',
   'Das ist keine Levuvo-Sicherung.': 'This is not a Levuvo backup.',
   'Sicherung wiederherstellen?': 'Restore backup?',
-  'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.':
-    'Settings, accounts, local contacts and calendar, templates, snoozed messages, own keys and assistant data on this device are replaced by the backup from {date}. The current data is kept as a safety copy first. Levuvo restarts afterwards.',
+  'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.':
+    'Settings, accounts, local contacts and calendar, templates, snoozed messages, own keys, spaces and assistant data on this device are replaced by the backup from {date}. The current data is kept as a safety copy first. Levuvo restarts afterwards.',
   Wiederherstellen: 'Restore',
   'Wiederherstellung abgebrochen. Es wurde nichts geändert.': 'Restore cancelled. Nothing was changed.',
   '{count} E-Mail-Konten (ohne Passwörter)': '{count} mail accounts (without passwords)',
@@ -1439,8 +1445,8 @@ export const EN: Record<string, string> = {
   'Bitte Levuvo jetzt beenden und neu starten.': 'Please quit and restart Levuvo now.',
   'Jetzt neu starten': 'Restart now',
   'Sicherung erstellen': 'Create backup',
-  'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.':
-    "Backs up everything that exists only on this device: settings, accounts (without passwords), local contacts, the local calendar with attachments, templates, snoozed messages, own PGP/S/MIME keys and the assistant's data. The file is encrypted with your password (AES-256). Without this password it cannot be opened, not even by Levuvo.",
+  'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel, gemeinsame Räume und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.':
+    "Backs up everything that exists only on this device: settings, accounts (without passwords), local contacts, the local calendar with attachments, templates, snoozed messages, own PGP/S/MIME keys, shared spaces and the assistant's data. The file is encrypted with your password (AES-256). Without this password it cannot be opened, not even by Levuvo.",
   'Passwort für die Sicherung': 'Password for the backup',
   'Passwort wiederholen': 'Repeat password',
   'Speichere die Datei an einem zweiten Ort (USB-Stick, NAS, Cloud-Ordner) und notiere das Passwort sicher. Passwörter der Postfächer, Anmeldungen und API-Schlüssel sind nicht enthalten; der Suchindex wird neu aufgebaut.':
@@ -1712,5 +1718,8 @@ export const EN: Record<string, string> = {
   'Über {email}. Änderungen kommen in der Regel innerhalb einer Minute bei allen an.':
     'Through {email}. Changes usually reach everyone within a minute.',
   'Fehlende Inhalte werden angefragt.': 'Missing content is being requested.',
-  'Fehlendes anfragen': 'Request missing content'
+  'Fehlendes anfragen': 'Request missing content',
+  '{count} gemeinsame Räume': '{count} shared spaces',
+  'Die Räume auf diesem Gerät sind gesperrt (Schlüsselbund). Die Sicherung wäre unvollständig und wurde nicht erstellt.':
+    'The spaces on this device are locked (keychain). The backup would be incomplete and was not created.'
 };
