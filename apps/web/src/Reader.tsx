@@ -18,6 +18,7 @@ import {
   HelpCircle,
   Image,
   KeyRound,
+  ListTodo,
   LoaderCircle,
   MailX,
   Lock,
@@ -46,7 +47,10 @@ import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText,
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
 import { EventSuggestions } from './EventSuggestions';
+import TaskDialog from './TaskDialog';
+import { TaskHint } from './TaskHint';
 import ContactCard from './ContactCard';
+import { taskTitleFromSubject } from './tasks';
 import WhenMenu from './WhenMenu';
 import AttachmentPreview from './AttachmentPreview';
 const AddToSpaceMenu = lazy(() => import('./SpacePick'));
@@ -809,6 +813,7 @@ export default function Reader(props: Props) {
   const [moveTarget, setMoveTarget] = useState('');
   const [preview, setPreview] = useState<Attachment | null>(null);
   const [menu, setMenu] = useState(false);
+  const [taskFor, setTaskFor] = useState<Detail | null>(null);
   // Contact card of the sender, per message (closes when another message is opened).
   const [cardFor, setCardFor] = useState<string | null>(null);
   const [spacePick, setSpacePick] = useState(false);
@@ -966,6 +971,14 @@ export default function Reader(props: Props) {
                   />
                 )}
               </div>
+              <button
+                disabled={!detail}
+                onClick={() => detail && setTaskFor(detail)}
+                title={t('Als Aufgabe anlegen')}
+                aria-label={t('Als Aufgabe anlegen')}
+              >
+                <ListTodo size={16} />
+              </button>
               <button
                 disabled={!writeEnabled || !message || actionBusy}
                 onClick={() => props.onAction(unread ? 'markRead' : 'markUnread')}
@@ -1245,6 +1258,7 @@ export default function Reader(props: Props) {
           ) : detail ? (
             <div className="message-detail">
               {detail.invitation && <InvitationCard accountId={accountId} detail={detail} />}
+              <TaskHint accountId={accountId} detail={detail} />
               {detail.eventSuggestions?.length ? (
                 <EventSuggestions key={`${detail.folder}|${detail.uid}`} detail={detail} />
               ) : null}
@@ -1357,6 +1371,22 @@ export default function Reader(props: Props) {
           ) : null}
           {preview && detail && (
             <AttachmentPreview url={attUrl(preview, true)} att={preview} onClose={() => setPreview(null)} />
+          )}
+          {taskFor && (
+            <TaskDialog
+              draft={{
+                title: taskTitleFromSubject(taskFor.subject),
+                mail: {
+                  accountId,
+                  folder: taskFor.folder,
+                  uid: taskFor.uid,
+                  messageId: taskFor.messageId || null,
+                  subject: taskFor.subject,
+                  from: taskFor.from[0]?.name || taskFor.from[0]?.email || ''
+                }
+              }}
+              onClose={() => setTaskFor(null)}
+            />
           )}
         </div>
       ) : (

@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Contact2,
   FileStack,
+  ListTodo,
   Folder,
   Keyboard,
   Mail,
@@ -200,6 +201,15 @@ export default function CommandPalette({
         icon: Users,
         keywords: 'spaces projekte team zusammenarbeit',
         run: () => onModule('spaces')
+      },
+      {
+        id: 'm:tasks',
+        group: area,
+        label: t('Aufgaben'),
+        hint: 'Alt+5',
+        icon: ListTodo,
+        keywords: 'todo erledigen erinnerung',
+        run: () => onModule('tasks')
       }
     );
     const set = t('Einstellungen');
