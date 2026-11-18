@@ -62,7 +62,7 @@ async function device(t) {
   write(dir, 'crypto.json', { pgp: { own: [{ fingerprint: 'ABCDEF0123456789' }], public: [] } });
   write(dir, 'ai.json', { enabled: true, provider: 'ollama' });
   write(dir, 'ai-log.jsonl', '{"type":"settings"}\n{"type":"summary"}\n');
-  keys.set('crypto', 'pgp:ABCDEF0123456789', '-----BEGIN PGP PRIVATE KEY BLOCK-----');
+  keys.set('crypto', 'pgp:ABCDEF0123456789', 'armored-test-key-material');
   keys.set('primary', 'imap', 'imap-secret-password');
   keys.set('ai', 'key-openai', 'sk-secret');
   const calendar = await createLocalCalendar({ filename: join(dir, 'calendar-local.json'), vault: keys });
@@ -91,7 +91,7 @@ test('Backup: round trip to a new computer with other keychain keys', async t =>
   const file = await encryptBackup({ ...content, uiPrefs: { theme: 'dark' } }, PASSWORD, { app: '9.9.9', kdf: FAST });
 
   // Nothing readable in the file, and no account or AI secret inside the encrypted content.
-  assert.doesNotMatch(file, /Zahnarzt|Berta|anna@example|Vielen Dank|PGP PRIVATE/);
+  assert.doesNotMatch(file, /Zahnarzt|Berta|anna@example|Vielen Dank|armored-test-key-material/);
   const plainContent = JSON.stringify(content);
   assert.doesNotMatch(plainContent, /imap-secret-password|sk-secret/);
   assert.equal(readBackupHeader(file).app, '9.9.9');
@@ -112,7 +112,7 @@ test('Backup: round trip to a new computer with other keychain keys', async t =>
   assert.equal(existsSync(join(target.dir, 'templates.json')), false, 'nothing applied before the restart');
   // Staged calendar and contacts are already encrypted with the new device's keys.
   assert.doesNotMatch(readFileSync(join(target.dir, 'restore-pending', 'contacts-local.json'), 'utf8'), /Berta/);
-  assert.equal(target.keys.get('crypto', 'pgp:ABCDEF0123456789'), '-----BEGIN PGP PRIVATE KEY BLOCK-----');
+  assert.equal(target.keys.get('crypto', 'pgp:ABCDEF0123456789'), 'armored-test-key-material');
 
   const applied = await applyPendingRestore({ dir: target.dir, vault: target.keys });
   assert.ok(applied);
