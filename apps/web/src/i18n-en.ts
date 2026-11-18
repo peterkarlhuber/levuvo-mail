@@ -440,6 +440,16 @@ export const EN: Record<string, string> = {
   'Archiv im Anhang: {filename}. Inhalt vor dem Öffnen prüfen.':
     'Archive in attachment: {filename}. Check the contents before opening.',
   'Du hast mit diesem Absender bisher keinen Kontakt gehabt.': 'You have not had contact with this sender before.',
+  'Die Absender-Domain {domain} sieht aus wie {imitates}, ist es aber nicht.':
+    'The sender domain {domain} looks like {imitates}, but it is not.',
+  'Ein Link führt zu {domain}, einer Nachahmung von {imitates}.':
+    'A link leads to {domain}, an imitation of {imitates}.',
+  'Der Absender nennt sich „{brand}“, schreibt aber von {actual}.':
+    'The sender calls itself “{brand}” but writes from {actual}.',
+  'Die Nachricht enthält ein Formular, das ein Passwort abfragt. Seriöse Absender tun das nie per E-Mail.':
+    'The message contains a form that asks for a password. Legitimate senders never do this by e-mail.',
+  'Webseite im Anhang: {filename}. Solche Dateien zeigen oft gefälschte Anmeldeseiten.':
+    'Web page attached: {filename}. Such files often show fake sign-in pages.',
   'Keine Auffälligkeiten erkannt.': 'No issues detected.',
   Weniger: 'Less',
   Details: 'Details',
@@ -1288,6 +1298,15 @@ export const EN: Record<string, string> = {
   'Diese Nachricht ist keine geschützte Nachricht.': 'This message is not a protected message.',
   'Für jeden Empfänger ohne Einrichtung: beim Schreiben „Mit Passwort schützen“ wählen und das Passwort auf anderem Weg (SMS, Telefon) mitteilen – der Empfänger öffnet die Datei im Browser. OpenPGP: Schlüssel erzeugen oder importieren (Einstellungen → Sicherheit). S/MIME: Zertifikat als .p12 importieren. Beim Verfassen „Signieren“/„Verschlüsseln“ wählen.':
     'For any recipient without setup: choose “Protect with password” when writing and share the password on another channel (SMS, phone) – the recipient opens the file in a browser. OpenPGP: create or import keys (Settings → Security). S/MIME: import a .p12 certificate. Choose “Sign”/“Encrypt” when writing.',
+  'Neue Kontakte werden verschlüsselt auf diesem Gerät gespeichert. Ein Adressbuch (CardDAV, Microsoft 365 oder Google) kannst du jederzeit zusätzlich verbinden.':
+    'New contacts are stored encrypted on this device. You can connect an address book (CardDAV, Microsoft 365 or Google) at any time as well.',
+  'Die Kontakte auf diesem Gerät brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
+    'The contacts on this device need the system keychain. It is not available right now.',
+  'Die Kontakte auf diesem Gerät lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':
+    'The contacts on this device cannot be opened with the key from the keychain.',
+  'Kontakt nicht gefunden.': 'Contact not found.',
+  'Das Adressbuch auf diesem Gerät ist voll.': 'The address book on this device is full.',
+  'Die Kontakte auf diesem Gerät sind nicht verfügbar.': 'The contacts on this device are not available.',
   'Versand nicht bestätigt: Die Verbindung brach während des Sendens ab. Bitte in „Gesendet“ oder beim Empfänger prüfen. Levuvo Mail sendet diese Nachricht nicht automatisch erneut – „Bearbeiten“ macht sie wieder zum Entwurf, Löschen verwirft sie.':
     'Sending not confirmed: the connection dropped while sending. Please check “Sent” or with the recipient. Levuvo Mail does not resend this message automatically – “Edit” turns it back into a draft, deleting discards it.',
   'Geplanter Versand fehlgeschlagen: Der Server hat die Nachricht abgelehnt, sie wurde nicht gesendet. „Bearbeiten“ macht sie wieder zum Entwurf.':
@@ -1302,5 +1321,36 @@ export const EN: Record<string, string> = {
     'This mail server does not store status keywords. “Send later” is not available here.',
   'Speichern der geplanten Nachricht nicht bestätigt.': 'Saving the scheduled message was not confirmed.',
   'Ob die geplante Nachricht gespeichert wurde, ist unklar. Bitte zuerst im Ordner „Entwürfe“ nachsehen, bevor du sie erneut planst.':
-    'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.'
+    'It is unclear whether the scheduled message was saved. Please check the “Drafts” folder before scheduling it again.',
+  // Calendar attachments
+  'Höchstens 20 Anhänge pro Termin.': 'At most 20 attachments per event.',
+  '„{name}“ ist zu groß: Microsoft 365 nimmt hier höchstens 3 MB pro Datei an.':
+    '“{name}” is too large: Microsoft 365 accepts at most 3 MB per file here.',
+  '„{name}“ ist zu groß (höchstens 5 MB pro Datei).': '“{name}” is too large (at most 5 MB per file).',
+  'Die Anhänge sind zusammen zu groß (höchstens 10 MB pro Termin).':
+    'The attachments are too large in total (at most 10 MB per event).',
+  'wird beim Speichern hinzugefügt': 'added when saved',
+  '{name} öffnen': 'Open {name}',
+  'Datei anhängen': 'Attach file',
+  'Bis 3 MB pro Datei, zusammen bis 10 MB.': 'Up to 3 MB per file, 10 MB in total.',
+  'Bis 5 MB pro Datei, zusammen bis 10 MB.': 'Up to 5 MB per file, 10 MB in total.',
+  'Google Kalender hängt Dateien über Google Drive an. Vorhandene Anhänge lassen sich hier öffnen und entfernen.':
+    'Google Calendar attaches files via Google Drive. Existing attachments can be opened and removed here.',
+  'Anhang nicht gefunden. Bitte neu laden.': 'Attachment not found. Please reload.',
+  'Ungültiger Anhang.': 'Invalid attachment.',
+  'Ein Anhang ist zu groß (höchstens 5 MB pro Datei).': 'An attachment is too large (at most 5 MB per file).',
+  'Microsoft 365 nimmt hier Dateien bis 3 MB pro Anhang an.':
+    'Microsoft 365 accepts files up to 3 MB per attachment here.',
+  'Google Kalender speichert Anhänge als Google-Drive-Dateien. Dateien bitte in Google Drive ablegen und dort anhängen.':
+    'Google Calendar stores attachments as Google Drive files. Please put the files in Google Drive and attach them there.',
+  'Der Kalenderserver hat den Termin abgelehnt, weil er zu groß ist. Bitte Anhänge verkleinern oder entfernen.':
+    'The calendar server rejected the event because it is too large. Please make the attachments smaller or remove them.',
+  'Der lokale Kalender ist voll. Bitte große Anhänge entfernen oder in einem verbundenen Kalender speichern.':
+    'The device calendar is full. Please remove large attachments or save them in a connected calendar.',
+  'Dieser Anhang ist ein Link und wird im Browser geöffnet.': 'This attachment is a link and opens in the browser.',
+  // Tracking pixels
+  '1 Tracker blockiert': '1 tracker blocked',
+  '{count} Tracker blockiert': '{count} trackers blocked',
+  'Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}':
+    'Tracking pixels removed, even when images are loaded: {hosts}'
 };

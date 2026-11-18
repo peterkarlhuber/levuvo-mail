@@ -3,22 +3,29 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Download,
+  ExternalLink,
   Eye,
   EyeOff,
+  FileText,
   LoaderCircle,
   MapPin,
+  Paperclip,
   Plus,
   RefreshCcw,
   Repeat,
+  Trash2,
   Users,
   X
 } from 'lucide-react';
-import { getJson, postJson } from './api';
+import { download, fileToBase64, getJson, postJson } from './api';
+import AttachmentPreview from './AttachmentPreview';
+import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
-import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo } from './types';
+import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo, EventAttachment } from './types';
 import {
   addDays,
   DAY_MS,
@@ -60,7 +67,12 @@ type Draft = {
   alarms: number[];
   attendees: string;
   notify: boolean;
+  /** Saved attachments (with id) and files picked in this editor (with file). */
+  attachments: DraftAttachment[];
+  /** Only a changed list is sent, so moving or saving never touches files by accident. */
+  attachmentsChanged: boolean;
 };
+type DraftAttachment = EventAttachment & { file?: File };
 const WEEKDAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
 
 function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calendar: string): Draft {
@@ -89,7 +101,9 @@ function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calend
         .map(a => a.email)
         .filter(a => a !== e.organizer?.email)
         .join(', '),
-      notify: e.attendees.length > 0
+      notify: e.attendees.length > 0,
+      attachments: e.attachments || [],
+      attachmentsChanged: false
     };
   }
   const end = new Date(start.getTime() + 60 * 60_000);
@@ -111,8 +125,215 @@ function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calend
     until: '',
     alarms: allDay ? [] : [15],
     attendees: '',
-    notify: true
+    notify: true,
+    attachments: [],
+    attachmentsChanged: false
   };
+}
+
+const MB = 1024 * 1024;
+const ATTACH_MAX_COUNT = 20;
+const ATTACH_MAX_TOTAL = 10 * MB;
+const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;
+const DANGEROUS =
+  /\.(exe|scr|com|pif|bat|cmd|vbs|vbe|js|jse|wsf|wsh|hta|msi|msix|ps1|psm1|jar|lnk|reg|iso|img|vhd|cpl|appx|dmg|pkg|app|sh)$/i;
+/** Largest file per attachment for a calendar: Microsoft 365 takes 3 MB per request, Google none. */
+const maxFileFor = (source?: CalendarInfo['source']) =>
+  source === 'google' ? 0 : source === 'microsoft' ? 3 * MB : 5 * MB;
+
+function attachmentUrl(e: CalendarEvent, a: EventAttachment, inline = false) {
+  const q = new URLSearchParams({ accountId: e.accountId, calendarUrl: e.calendarUrl, url: e.url, id: a.id });
+  if (e.recurrenceId) q.set('recurrenceId', e.recurrenceId);
+  if (e.seriesId) q.set('seriesId', e.seriesId);
+  return `/api/calendar/events/attachment?${q.toString()}${inline ? '&inline=1' : ''}`;
+}
+
+function EventAttachments({
+  event,
+  source,
+  items,
+  loading,
+  editable,
+  onChange
+}: {
+  event?: CalendarEvent;
+  source?: CalendarInfo['source'];
+  items: DraftAttachment[];
+  loading: boolean;
+  editable: boolean;
+  onChange: (items: DraftAttachment[]) => void;
+}) {
+  const { t } = useT();
+  const { confirm, toast } = useUi();
+  const input = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<EventAttachment | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const maxFile = maxFileFor(source);
+  const total = items.reduce((n, a) => n + (a.uri ? 0 : a.size), 0);
+
+  function add(files: File[]) {
+    const next = [...items];
+    let sum = total;
+    for (const f of files) {
+      if (next.length >= ATTACH_MAX_COUNT) {
+        toast({ text: t('Höchstens 20 Anhänge pro Termin.'), kind: 'error' });
+        break;
+      }
+      if (f.size > maxFile) {
+        toast({
+          text:
+            maxFile === 3 * MB
+              ? t('„{name}“ ist zu groß: Microsoft 365 nimmt hier höchstens 3 MB pro Datei an.', { name: f.name })
+              : t('„{name}“ ist zu groß (höchstens 5 MB pro Datei).', { name: f.name }),
+          kind: 'error'
+        });
+        continue;
+      }
+      if (sum + f.size > ATTACH_MAX_TOTAL) {
+        toast({ text: t('Die Anhänge sind zusammen zu groß (höchstens 10 MB pro Termin).'), kind: 'error' });
+        break;
+      }
+      sum += f.size;
+      next.push({ id: '', name: f.name, type: f.type || 'application/octet-stream', size: f.size, file: f });
+    }
+    onChange(next);
+  }
+  async function save(a: EventAttachment) {
+    if (
+      DANGEROUS.test(a.name) &&
+      !(await confirm({
+        title: t('Potenziell gefährliche Datei'),
+        message: t(
+          '„{name}“ kann Programme ausführen. Nur herunterladen, wenn du die Datei erwartest und dem Absender vertraust.',
+          { name: a.name }
+        ),
+        confirmLabel: t('Trotzdem herunterladen'),
+        danger: true
+      }))
+    )
+      return;
+    if (event) download(attachmentUrl(event, a));
+  }
+  const canAdd = editable && maxFile > 0;
+  if (!items.length && !canAdd && !loading && source !== 'google') return null;
+  return (
+    <div
+      className={`attachment-list event-attachments ${dragging ? 'dragging' : ''}`}
+      onDragOver={ev => {
+        if (!canAdd || !ev.dataTransfer.types.includes('Files')) return;
+        ev.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={ev => {
+        if (!canAdd) return;
+        ev.preventDefault();
+        setDragging(false);
+        add([...ev.dataTransfer.files]);
+      }}
+    >
+      <div className="attachment-heading">
+        <Paperclip size={15} />
+        <span>{t('Anhänge')}</span>
+        <span>{loading ? <LoaderCircle size={13} className="spin" /> : items.length || ''}</span>
+      </div>
+      {items.map((a, i) => {
+        const saved = Boolean(event && a.id && !a.file);
+        return (
+          <div key={`${a.id}-${i}`} className={`attachment-item ${DANGEROUS.test(a.name) ? 'risky' : ''}`}>
+            {a.uri ? <ExternalLink size={18} /> : <FileText size={18} />}
+            <span className="attachment-data">
+              <strong>{a.name}</strong>
+              <small>
+                {a.uri ? t('Link') : prettySize(a.size)}
+                {a.file ? ` · ${t('wird beim Speichern hinzugefügt')}` : ''}
+              </small>
+            </span>
+            {a.uri && (
+              <button
+                type="button"
+                className="icon-button"
+                title={t('Öffnen')}
+                aria-label={t('{name} öffnen', { name: a.name })}
+                onClick={() => window.open(a.uri, '_blank', 'noopener')}
+              >
+                <ExternalLink size={17} />
+              </button>
+            )}
+            {saved && !a.uri && PREVIEWABLE.test(a.type) && (
+              <button
+                type="button"
+                className="icon-button"
+                title={t('Vorschau')}
+                aria-label={t('Vorschau: {name}', { name: a.name })}
+                onClick={() => setPreview(a)}
+              >
+                <Eye size={17} />
+              </button>
+            )}
+            {saved && !a.uri && (
+              <button
+                type="button"
+                className="icon-button"
+                title={t('Herunterladen – unbekannte Dateien vor dem Öffnen prüfen')}
+                aria-label={t('{name} herunterladen', { name: a.name })}
+                onClick={() => void save(a)}
+              >
+                <Download size={17} />
+              </button>
+            )}
+            {editable && (
+              <button
+                type="button"
+                className="icon-button"
+                title={t('Entfernen')}
+                aria-label={t('{name} entfernen', { name: a.name })}
+                onClick={() => onChange(items.filter((_x, j) => j !== i))}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        );
+      })}
+      {canAdd && (
+        <div className="event-attachments-add">
+          <button type="button" className="btn small" onClick={() => input.current?.click()}>
+            <Paperclip size={14} /> {t('Datei anhängen')}
+          </button>
+          <small className="muted">
+            {maxFile === 3 * MB
+              ? t('Bis 3 MB pro Datei, zusammen bis 10 MB.')
+              : t('Bis 5 MB pro Datei, zusammen bis 10 MB.')}
+          </small>
+          <input
+            ref={input}
+            type="file"
+            multiple
+            hidden
+            onChange={ev => {
+              add([...(ev.target.files || [])]);
+              ev.target.value = '';
+            }}
+          />
+        </div>
+      )}
+      {editable && source === 'google' && (
+        <small className="muted">
+          {t(
+            'Google Kalender hängt Dateien über Google Drive an. Vorhandene Anhänge lassen sich hier öffnen und entfernen.'
+          )}
+        </small>
+      )}
+      {preview && event && (
+        <AttachmentPreview
+          url={attachmentUrl(event, preview, true)}
+          att={{ index: 0, filename: preview.name, mimeType: preview.type, size: preview.size, inline: false }}
+          onClose={() => setPreview(null)}
+        />
+      )}
+    </div>
+  );
 }
 
 function ScopeDialog({ title, onChoose }: { title: string; onChoose: (scope: 'this' | 'all' | null) => void }) {
@@ -172,6 +393,25 @@ function EventEditor({
   const [error, setError] = useState('');
   const [scopeFor, setScopeFor] = useState<null | 'save' | 'delete'>(null);
   const e = d.event;
+  const [loadingFiles, setLoadingFiles] = useState(Boolean(e?.source === 'microsoft' && e.hasAttachments));
+  // Microsoft 365 lists the files of an event separately.
+  useEffect(() => {
+    if (!e || e.source !== 'microsoft' || !e.hasAttachments) return;
+    let gone = false;
+    const q = new URLSearchParams({ accountId: e.accountId, calendarUrl: e.calendarUrl, url: e.url });
+    if (e.seriesId) q.set('seriesId', e.seriesId);
+    getJson<{ attachments: EventAttachment[] }>(`/api/calendar/events/attachments?${q.toString()}`)
+      .then(r => {
+        if (!gone) setD(old => (old.attachmentsChanged ? old : { ...old, attachments: r.attachments }));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!gone) setLoadingFiles(false);
+      });
+    return () => {
+      gone = true;
+    };
+  }, [e]);
   const writable = calendars.filter(c => !c.readOnly);
   const cal = calendars.find(c => `${c.accountId}|${c.url}` === d.calendar);
   const invitedByOther = Boolean(
@@ -237,6 +477,14 @@ function EventEditor({
     setBusy(true);
     setError('');
     try {
+      const attachments = d.attachmentsChanged
+        ? await Promise.all(
+            d.attachments.map(async a =>
+              a.file ? { name: a.name, type: a.type, data: (await fileToBase64(a.file)).contentBase64 } : { id: a.id }
+            )
+          )
+        : undefined;
+      const m2 = attachments ? { ...m, attachments } : m;
       const r = await postJson<{ invited: number }>(
         '/api/calendar/events/save',
         {
@@ -249,7 +497,7 @@ function EventEditor({
           seriesId: e?.seriesId || null,
           ...(e ? { targetAccountId: accountId, sourceCalendarUrl: e.calendarUrl } : {}),
           organizer: e?.organizer?.email,
-          event: scope === 'this' ? { ...m, rrule: null } : m,
+          event: scope === 'this' ? { ...m2, rrule: null } : m2,
           notify: d.notify && attendeeList.length > 0
         },
         'calendar-v1'
@@ -342,7 +590,8 @@ function EventEditor({
           if (!readOnly) void save();
         }}
         onKeyDown={ev => {
-          if (ev.key === 'Escape' && !scopeFor) {
+          // An open attachment preview closes first (it listens for Escape itself).
+          if (ev.key === 'Escape' && !scopeFor && !document.querySelector('.preview-panel')) {
             ev.stopPropagation();
             onClose();
           }
@@ -571,6 +820,14 @@ function EventEditor({
             />
           </label>
         </fieldset>
+        <EventAttachments
+          event={e}
+          source={cal?.source}
+          items={d.attachments}
+          loading={loadingFiles}
+          editable={!readOnly && !busy && !loadingFiles}
+          onChange={attachments => set({ attachments, attachmentsChanged: true })}
+        />
         {error && (
           <p className="modal-error" role="alert">
             {error}

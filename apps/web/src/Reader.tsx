@@ -11,6 +11,7 @@ import {
   CloudOff,
   Download,
   Eye,
+  EyeOff,
   FilePenLine,
   FileText,
   Forward,
@@ -39,11 +40,12 @@ import {
 } from 'lucide-react';
 import { accountPath, ApiError, download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
-import { sanitizedEmailDocument } from './email-document';
+import { renderEmailDocument, sanitizedEmailDocument } from './email-document';
 import { addressLabel, currentLocale, dateLabel, fullDateLabel, htmlToPlainText, initials, prettySize } from './format';
 import { useT } from './i18n';
 import { localizeCalendars } from './calendar-utils';
 import WhenMenu from './WhenMenu';
+import AttachmentPreview from './AttachmentPreview';
 import type {
   Attachment,
   CalendarInfo,
@@ -135,6 +137,29 @@ function useCheckText() {
         });
       case 'archive_attachment':
         return t('Archiv im Anhang: {filename}. Inhalt vor dem Öffnen prüfen.', { filename: String(c.filename) });
+      case 'lookalike_domain':
+        return t('Die Absender-Domain {domain} sieht aus wie {imitates}, ist es aber nicht.', {
+          domain: String(c.domain),
+          imitates: String(c.imitates)
+        });
+      case 'lookalike_link':
+        return t('Ein Link führt zu {domain}, einer Nachahmung von {imitates}.', {
+          domain: String(c.domain),
+          imitates: String(c.imitates)
+        });
+      case 'brand_impersonation':
+        return t('Der Absender nennt sich „{brand}“, schreibt aber von {actual}.', {
+          brand: String(c.brand),
+          actual: String(c.actual)
+        });
+      case 'password_form':
+        return t(
+          'Die Nachricht enthält ein Formular, das ein Passwort abfragt. Seriöse Absender tun das nie per E-Mail.'
+        );
+      case 'html_attachment':
+        return t('Webseite im Anhang: {filename}. Solche Dateien zeigen oft gefälschte Anmeldeseiten.', {
+          filename: String(c.filename)
+        });
       case 'first_contact':
         return t('Du hast mit diesem Absender bisher keinen Kontakt gehabt.');
       default:
@@ -444,83 +469,6 @@ function InvitationCard({ accountId, detail }: { accountId: string; detail: Deta
             </button>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function AttachmentPreview({ url, att, onClose }: { url: string; att: Attachment; onClose: () => void }) {
-  const { t } = useT();
-  const type = att.mimeType.toLowerCase();
-  // PDFs and text are loaded here (with the session cookie) and shown from a blob: URL, so the
-  // built-in PDF viewer never has to fetch the document itself.
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState('');
-  useEffect(() => {
-    if (type.startsWith('image/')) return;
-    let revoked = false;
-    let objectUrl = '';
-    fetch(url, { cache: 'no-store' })
-      .then(r => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
-      .then(b => {
-        if (revoked) return;
-        objectUrl = URL.createObjectURL(
-          new Blob([b], { type: type === 'application/pdf' ? 'application/pdf' : 'text/plain;charset=utf-8' })
-        );
-        setBlobUrl(objectUrl);
-      })
-      .catch(() => setFailed(t('Für diesen Dateityp gibt es keine Vorschau.')));
-    return () => {
-      revoked = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [url, type, t]);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div
-      className="modal-scrim preview-scrim"
-      role="presentation"
-      onMouseDown={e => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="preview-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('Vorschau: {name}', { name: att.filename })}
-      >
-        <header>
-          <FileText size={16} />
-          <strong>{att.filename}</strong>
-          <small>{prettySize(att.size)}</small>
-          <button className="btn small" onClick={() => download(url.replace('&inline=1', ''))}>
-            <Download size={14} /> {t('Herunterladen')}
-          </button>
-          <button className="icon-button" aria-label={t('Schließen')} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
-        <div className="preview-body">
-          {type.startsWith('image/') ? (
-            <img src={url} alt={att.filename} />
-          ) : failed ? (
-            <p className="muted">{failed}</p>
-          ) : blobUrl ? (
-            <iframe title={att.filename} src={blobUrl} sandbox={type === 'application/pdf' ? undefined : ''} />
-          ) : (
-            <LoaderCircle className="spin" size={18} />
-          )}
-        </div>
       </div>
     </div>
   );
@@ -860,10 +808,12 @@ export default function Reader(props: Props) {
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
   const allowRemote = remoteFor === detail?.uid;
-  const htmlDocument = useMemo(
-    () => (detail?.html ? sanitizedEmailDocument(detail.html, { allowRemoteImages: allowRemote }) : ''),
+  const rendered = useMemo(
+    () => (detail?.html ? renderEmailDocument(detail.html, { allowRemoteImages: allowRemote }) : null),
     [detail?.html, allowRemote]
   );
+  const htmlDocument = rendered?.html || '';
+  const trackers = rendered?.trackers || [];
   // The calendar part of an invitation is shown as the invitation card, not as a file.
   const visibleAttachments =
     detail?.attachments.filter(
@@ -1265,6 +1215,19 @@ export default function Reader(props: Props) {
                       {t('Geschützte Ansicht · Links fragen vor dem Öffnen nach')}
                       {detail.remoteContent && !allowRemote ? ` · ${t('externe Bilder blockiert')}` : ''}
                     </span>
+                    {trackers.length > 0 && (
+                      <span
+                        className="tracker-badge"
+                        title={t('Tracking-Pixel entfernt, auch wenn Bilder geladen werden: {hosts}', {
+                          hosts: [...new Set(trackers.filter(Boolean))].join(', ') || '–'
+                        })}
+                      >
+                        <EyeOff size={13} />{' '}
+                        {trackers.length === 1
+                          ? t('1 Tracker blockiert')
+                          : t('{count} Tracker blockiert', { count: trackers.length })}
+                      </span>
+                    )}
                     {detail.remoteContent && !allowRemote && (
                       <button className="text-button" onClick={() => setRemoteFor(detail.uid)}>
                         <Image size={13} /> {t('Bilder laden')}

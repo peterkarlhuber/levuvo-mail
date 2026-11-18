@@ -1,16 +1,35 @@
 import DOMPurify from 'dompurify';
+import { isTrackingImage, trackerHost } from './trackers';
 
 // HTML mails are rendered in an iframe with sandbox="allow-popups": no scripts, no
 // same-origin access, no navigation of the app. On top of that:
 //  - DOMPurify removes active content,
 //  - the frame's own CSP blocks every network request except (on request) https images,
-//  - links open via window.open, which the desktop app intercepts and confirms.
+//  - links open via window.open, which the desktop app intercepts and confirms,
+//  - tracking pixels are removed, even when the user loads external images.
+
+// Tracking pixels found by the current sanitize() call (DOMPurify hooks are global).
+let trackers: string[] | null = null;
 
 let hooksInstalled = false;
 function installHooks() {
   if (hooksInstalled) return;
   hooksInstalled = true;
   DOMPurify.addHook('afterSanitizeAttributes', node => {
+    if (node.tagName === 'IMG' && trackers) {
+      const src = node.getAttribute('src') || '';
+      const info = {
+        src,
+        width: node.getAttribute('width'),
+        height: node.getAttribute('height'),
+        style: node.getAttribute('style')
+      };
+      if (isTrackingImage(info)) {
+        trackers.push(trackerHost(src));
+        node.parentNode?.removeChild(node);
+        return;
+      }
+    }
     if (node.tagName === 'A') {
       const href = node.getAttribute('href') || '';
       if (/^(https?:|mailto:)/i.test(href.trim())) {
@@ -25,9 +44,24 @@ function installHooks() {
   });
 }
 
-export function sanitizedEmailDocument(html: string, { allowRemoteImages = false } = {}) {
+export function sanitizedEmailDocument(html: string, options: { allowRemoteImages?: boolean } = {}) {
+  return renderEmailDocument(html, options).html;
+}
+
+/** The sandboxed document plus the tracking pixels that were removed from it. */
+export function renderEmailDocument(html: string, { allowRemoteImages = false } = {}) {
   installHooks();
-  const safe = DOMPurify.sanitize(html, {
+  const found: string[] = [];
+  trackers = found;
+  try {
+    return { html: frame(sanitize(html), allowRemoteImages), trackers: found };
+  } finally {
+    trackers = null;
+  }
+}
+
+function sanitize(html: string) {
+  return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
     WHOLE_DOCUMENT: false,
     FORCE_BODY: true,
@@ -56,6 +90,9 @@ export function sanitizedEmailDocument(html: string, { allowRemoteImages = false
     ],
     FORBID_ATTR: ['srcset', 'formaction', 'ping', 'action']
   });
+}
+
+function frame(safe: string, allowRemoteImages: boolean) {
   const imgSrc = allowRemoteImages ? 'data: https:' : 'data:';
   const csp = `default-src 'none'; img-src ${imgSrc}; style-src 'unsafe-inline'; font-src 'none'; connect-src 'none'; media-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'`;
   return (
