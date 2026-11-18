@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Features
+- **Appointments detected in mails:** flights, train and bus trips, hotel stays, rental cars, table reservations and event tickets (schema.org data in booking mails), plain .ics files and dates with a time in the text ("am 12.12. um 14:30", "on December 4 at 2 pm") are shown above the message and go into a calendar with one click. Detection runs locally; quoted replies and past dates are ignored, invitations keep their own card.
+
 ### Fixes (audit of 2.2.2)
 - **Send later – sent at most once, also with several devices:** the send state now lives in IMAP keywords on the scheduled message (`scheduled → claimed → sending → sent | failed | unconfirmed`). The device that scheduled a message sends it; another device takes over only after two minutes, and a two-flag claim on the server keeps both from sending at the same moment. A scheduler run never overlaps with the next one.
 - **Send later – nothing gets stuck or lost silently:** a claim left behind by a device that stopped before SMTP is released after ten minutes. If SMTP may have started (crash, lost connection during DATA), the message is shown as "sending not confirmed" in the reading pane and is never resent automatically; a copy in "Sent" settles it. Refusals before DATA are shown as failed (nothing was sent).

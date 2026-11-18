@@ -1707,6 +1707,28 @@ h4 {
   visibility: hidden;
 }
 
+/* Detected appointments (flight, hotel, dates in the text) */
+.event-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-suggestion {
+  position: relative;
+}
+.event-suggestion-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.event-suggestion-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success, var(--text-2));
+  font-weight: 600;
+}
+
 /* Invitation card */
 .invitation-card {
   display: flex;

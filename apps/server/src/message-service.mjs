@@ -3,6 +3,7 @@ import { MAX_MESSAGE_BYTES, publicMessage, attachmentBytes } from './message-uti
 import { parseDraftId } from './drafts.mjs';
 import { analyzeMessage } from './security-analysis.mjs';
 import { parseItip } from './calendar-model.mjs';
+import { extractEventSuggestions } from './event-extract.mjs';
 import { findProtectedBox } from './protected-message.mjs';
 import { fetchUidOne } from './imap-fetch.mjs';
 import { scheduleState } from './scheduled.mjs';
@@ -133,6 +134,20 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
         }
       } catch {
         /* malformed calendar data is shown as a normal attachment */
+      }
+    }
+    if (!detail.invitation && !meta.flags?.has('\\Draft')) {
+      try {
+        const suggestions = extractEventSuggestions({
+          html: parsed.html || '',
+          text: parsed.text || '',
+          subject: parsed.subject || '',
+          date: parsed.date || null,
+          ics
+        });
+        if (suggestions.length) detail.eventSuggestions = suggestions;
+      } catch {
+        /* detection is a convenience; the mail is shown without suggestions */
       }
     }
     if (meta.flags?.has('\\Draft')) {

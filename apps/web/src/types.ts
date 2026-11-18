@@ -163,12 +163,28 @@ export type Invitation = {
   isOrganizer: boolean;
 };
 
+export type EventSuggestion = {
+  kind: 'flight' | 'train' | 'bus' | 'hotel' | 'car' | 'restaurant' | 'event' | 'calendar' | 'date';
+  source: 'schema' | 'ics' | 'text';
+  summary: string;
+  allDay: boolean;
+  /** All-day: YYYY-MM-DD (end exclusive). Timed: ISO instant, or local "YYYY-MM-DDTHH:MM" if floating. */
+  start: string;
+  end: string;
+  floating?: boolean;
+  location: string;
+  description: string;
+  reservationNumber: string;
+};
+
 export type DetailExtras = {
   flagged?: boolean;
   unread?: boolean;
   crypto?: CryptoInfo;
   security?: SecurityReport;
   invitation?: Invitation;
+  /** Appointments detected in the mail (schema.org, .ics file, date + time in the text). */
+  eventSuggestions?: EventSuggestion[];
   pgpKeys?: number[];
   scheduledFor?: string;
   /** Send state of a scheduled message (see scheduled.mjs on the server). */
