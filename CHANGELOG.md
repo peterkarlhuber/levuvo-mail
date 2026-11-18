@@ -18,6 +18,9 @@
 ### Fixes
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
 
+### Fixes
+- **Inbox:** no more empty "(no subject)" entry from "Unknown" that cannot be deleted. When a message is deleted or moved on another connection (this app's own action, a second computer, a phone) and the live connection has not been told yet, Dovecot still answers for it with an empty stand-in (size 0, date 1970, no sender or subject). Such entries are now ignored in the list, the live inbox, the reading pane, the local search index and before moving or deleting.
+
 ### Fixes (audit of 2.2.2)
 - **Send later – sent at most once, also with several devices:** the send state now lives in IMAP keywords on the scheduled message (`scheduled → claimed → sending → sent | failed | unconfirmed`). The device that scheduled a message sends it; another device takes over only after two minutes, and a two-flag claim on the server keeps both from sending at the same moment. A scheduler run never overlaps with the next one.
 - **Send later – nothing gets stuck or lost silently:** a claim left behind by a device that stopped before SMTP is released after ten minutes. If SMTP may have started (crash, lost connection during DATA), the message is shown as "sending not confirmed" in the reading pane and is never resent automatically; a copy in "Sent" settles it. Refusals before DATA are shown as failed (nothing was sent).
@@ -30,6 +33,7 @@
 - **Newsletter one-click unsubscribe:** the host is resolved first and refused if any address is internal (also IPv4-mapped IPv6); the request goes to exactly the checked address.
 
 ### Tests
+- Regression tests drive the real IMAP client against a server that answers with Dovecot's stand-in for an already expunged message.
 - Failure tests for two devices sending at the same moment (forced and random interleavings), crashes before and after SMTP, lost APPEND answers, repeated schedule requests, account identity changes, snooze without COPYUID/Message-ID and with a crash between MOVE and tracking, flag changes in the index, calendar write errors, hostile protected-message boxes and DNS answers pointing to internal addresses.
 
 ## 2.2.2 – 13 November 2026
