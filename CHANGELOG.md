@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### New
+- **Templates:** a template can have a shortcut such as `;mfg`. Typing the shortcut followed by space or Tab in the composer inserts the template in place, placeholders filled in. Shortcuts are shown in the template menu and must be unique.
 - **Reading pane:** tracking pixels (invisible 1×1 images and images from known open-tracking services) are removed from HTML mail, even after "Load images". The reading pane shows how many were blocked, e.g. "3 trackers blocked", with the tracker hosts on hover.
 - **Contacts on this device:** contacts can be created, edited, deleted, imported and exported without connecting a CardDAV, Microsoft 365 or Google address book. They are stored as vCards, encrypted with AES-256-GCM; the key lives in the system keychain. Without the keychain (or with a different key) the address book stays locked instead of being replaced by an empty one. Addresses from it are suggested when writing and count as known senders.
 

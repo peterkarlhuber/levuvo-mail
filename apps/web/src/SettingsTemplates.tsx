@@ -54,7 +54,7 @@ export function TemplateSettings() {
     <Section
       title={t('Textbausteine und Vorlagen')}
       description={t(
-        'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ einfügen. Platzhalter werden beim Einfügen ersetzt: {list}',
+        'Wiederkehrende Antworten, Angebote oder Begrüßungen. Im Editor über „Vorlagen“ oder per Kürzel einfügen (zum Beispiel ;mfg und Leertaste). Platzhalter werden beim Einfügen ersetzt: {list}',
         { list: PLACEHOLDERS.join(' ') }
       )}
     >
@@ -68,7 +68,10 @@ export function TemplateSettings() {
           <FileStack size={16} />
           <span>
             <strong>{item.name}</strong>
-            <small>{item.subject || t('ohne Betreff')}</small>
+            <small>
+              {item.subject || t('ohne Betreff')}
+              {item.shortcut ? ` · ;${item.shortcut}` : ''}
+            </small>
           </span>
           <button
             className="icon-button"
@@ -106,6 +109,18 @@ export function TemplateSettings() {
                 value={edit.subject || ''}
                 maxLength={250}
                 onChange={e => setEdit({ ...edit, subject: e.target.value })}
+              />
+            </label>
+            <label>
+              {t('Kürzel (optional)')}
+              <input
+                value={edit.shortcut || ''}
+                maxLength={21}
+                placeholder="mfg"
+                spellCheck={false}
+                autoCapitalize="off"
+                title={t('Im Text ;Kürzel und Leertaste oder Tab tippen, um die Vorlage einzufügen.')}
+                onChange={e => setEdit({ ...edit, shortcut: e.target.value.replace(/^;/, '') })}
               />
             </label>
           </div>

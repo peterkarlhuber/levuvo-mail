@@ -4511,3 +4511,9 @@ h4 {
   color: var(--text);
   font-weight: 600;
 }
+
+.template-shortcut {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
