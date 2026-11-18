@@ -1,4 +1,5 @@
 import { validFolder, validUid } from './message-utils.mjs';
+import { isExpungedPlaceholder } from './imap-fetch.mjs';
 
 const err = (message, statusCode = 400, code = 'invalid_request') =>
   Object.assign(new Error(message), { statusCode, code });
@@ -148,8 +149,10 @@ export async function performMessageAction(client, input) {
     if (client.mailbox?.readOnly) throw err('Der Ordner ist auf dem Server schreibgeschützt.', 403, 'mailbox_readonly');
     // Only UIDs that still exist are touched; never a sequence range.
     const existing = [];
-    for await (const m of client.fetch(uids.join(','), { uid: true }, { uid: true })) {
+    for await (const m of client.fetch(uids.join(','), { uid: true, size: true }, { uid: true })) {
       // Unsolicited FETCH responses may carry no UID or a foreign one; count each UID once.
+      // A message another connection already expunged comes back as an empty stand-in.
+      if (isExpungedPlaceholder(m)) continue;
       const uid = String(m?.uid);
       if (uids.includes(uid) && !existing.includes(uid)) existing.push(uid);
     }

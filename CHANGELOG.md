@@ -5,12 +5,23 @@
 ### New
 - **Templates:** a template can have a shortcut such as `;mfg`. Typing the shortcut followed by space or Tab in the composer inserts the template in place, placeholders filled in. Shortcuts are shown in the template menu and must be unique.
 - **Phishing hints:** the reading pane now also warns about look-alike sender domains (“paypa1.com”, Cyrillic letters, a typo of your own domain such as “levuv0.at”), display names that pose as a brand while the address is from somewhere else, links to look-alike domains, links that hide the real host behind a user name (“https://paypal.com@evil.example”), password forms inside the message and attached web pages (.html, .svg). All checks run locally.
+- **Levuvo Mail Assistant (foundation):** optional AI features, off by default, under Settings → AI & agents. By default a local model (Ollama on this computer) does the work and no content leaves the device; Anthropic or OpenAI can be chosen after a recorded consent, never for accounts marked "No cloud AI". API keys are stored only in the keychain. An AI log records what the AI did (no message content, 30 days), and "Delete all AI data" removes settings, consents, keys and the log at once. The AI component is a separate process based on Orkexa with a minimal environment; mail content always reaches the model marked as untrusted data.
 - **Reading pane:** tracking pixels (invisible 1×1 images and images from known open-tracking services) are removed from HTML mail, even after "Load images". The reading pane shows how many were blocked, e.g. "3 trackers blocked", with the tracker hosts on hover.
 - **Contacts on this device:** contacts can be created, edited, deleted, imported and exported without connecting a CardDAV, Microsoft 365 or Google address book. They are stored as vCards, encrypted with AES-256-GCM; the key lives in the system keychain. Without the keychain (or with a different key) the address book stays locked instead of being replaced by an empty one. Addresses from it are suggested when writing and count as known senders.
 - **Attachments in events:** files can be attached to events, shown, previewed (images, PDF, text), downloaded and removed in the event editor (button or drag & drop). In the device calendar and CalDAV calendars the files are stored in the event itself (iCalendar `ATTACH`, up to 5 MB per file and 10 MB per event), so they also appear in other apps and in `.ics` exports; links attached by other apps open in the browser. Microsoft 365 stores them as event attachments (up to 3 MB per file). Google Calendar shows its Google Drive attachments, which can be opened and removed; new files are attached there via Google Drive. Invitations carry the files as normal e-mail attachments, and moving an event to another calendar takes them along.
 
+### Performance (large mailboxes, AUD-011)
+- **Folder pages:** loading older messages no longer asks the server for every UID below the current position (about 50,000 UIDs per page on a 100k folder). A UID window just below the cursor is searched instead, sized from the folder's UID density and widened only when needed: about 50 UIDs per page, independent of folder size.
+- **Folder search:** further result pages only search the part of the folder below the last hit.
+- **Search index:** a folder whose message count and UIDNEXT did not change is not listed again on each background run (read/unread changes are still picked up). "Search everywhere" loads its results in pages of 40 with the exact hit count instead of a fixed top 100, sorted newest first without sorting every hit.
+- **Search index for other features:** `entries()` and `removedKeys()` report new and removed index entries incrementally (stable keys, a generation ID that changes on rebuild), so features built on the index do not copy it.
+- **Benchmark:** `npm run bench:mailbox` measures paging, IMAP search and the index on 100,000 synthetic messages and fails when an upper bound is exceeded; it runs in CI.
+
 ### Fixes
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
+
+### Fixes
+- **Inbox:** no more empty "(no subject)" entry from "Unknown" that cannot be deleted. When a message is deleted or moved on another connection (this app's own action, a second computer, a phone) and the live connection has not been told yet, Dovecot still answers for it with an empty stand-in (size 0, date 1970, no sender or subject). Such entries are now ignored in the list, the live inbox, the reading pane, the local search index and before moving or deleting.
 
 ### Fixes (audit of 2.2.2)
 - **Send later – sent at most once, also with several devices:** the send state now lives in IMAP keywords on the scheduled message (`scheduled → claimed → sending → sent | failed | unconfirmed`). The device that scheduled a message sends it; another device takes over only after two minutes, and a two-flag claim on the server keeps both from sending at the same moment. A scheduler run never overlaps with the next one.
@@ -24,6 +35,7 @@
 - **Newsletter one-click unsubscribe:** the host is resolved first and refused if any address is internal (also IPv4-mapped IPv6); the request goes to exactly the checked address.
 
 ### Tests
+- Regression tests drive the real IMAP client against a server that answers with Dovecot's stand-in for an already expunged message.
 - Failure tests for two devices sending at the same moment (forced and random interleavings), crashes before and after SMTP, lost APPEND answers, repeated schedule requests, account identity changes, snooze without COPYUID/Message-ID and with a crash between MOVE and tracking, flag changes in the index, calendar write errors, hostile protected-message boxes and DNS answers pointing to internal addresses.
 
 ## 2.2.2 – 13 November 2026
