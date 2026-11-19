@@ -1484,6 +1484,91 @@
       ]
     }
   },
+  "GET /api/automations": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "rules": [
+        {
+          "id": "r1",
+          "name": "Rechnungen von Muster",
+          "accountId": "managed-8998d6a1e1f6",
+          "enabled": true,
+          "match": "all",
+          "conditions": [
+            {
+              "field": "from",
+              "op": "ends_with",
+              "value": "@muster.example"
+            },
+            {
+              "field": "attachment",
+              "op": "yes",
+              "value": ""
+            }
+          ],
+          "actions": [
+            {
+              "type": "task",
+              "title": "Bezahlen: {subject}",
+              "dueDays": 14,
+              "priority": "none"
+            },
+            {
+              "type": "move",
+              "folder": "INBOX"
+            }
+          ],
+          "stop": true,
+          "origin": "ai",
+          "enabledAt": "2026-11-19T10:00:00.000Z",
+          "updatedAt": "2026-11-19T10:00:00.000Z"
+        }
+      ],
+      "log": [
+        {
+          "at": "2026-11-19T11:00:00.000Z",
+          "rule": "Rechnungen von Muster",
+          "accountId": "managed-8998d6a1e1f6",
+          "subject": "Rechnung 2026-117",
+          "actions": ["task", "move"],
+          "ok": true,
+          "done": ["task", "move"]
+        }
+      ]
+    }
+  },
+  "GET /api/scheduling": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "polls": [],
+      "links": [
+        {
+          "id": "l1",
+          "accountId": "managed-8998d6a1e1f6",
+          "title": "Erstgespräch",
+          "minutes": 30,
+          "dayStart": 9,
+          "dayEnd": 17,
+          "weekdays": [1, 2, 3, 4, 5],
+          "daysAhead": 14,
+          "noticeHours": 12,
+          "bufferMinutes": 0,
+          "location": "",
+          "enabled": true,
+          "timeZone": "Europe/Vienna",
+          "lang": "de",
+          "bookings": 2,
+          "calendar": null,
+          "request": {
+            "url": "mailto:anna@example.com?subject=Terminanfrage%3A%20Erstgespr%C3%A4ch%20%5BLV-abcdefghijklmnopqrstuvwx%5D&body=Bitte%20schick%20mir%20freie%20Zeiten.",
+            "subject": "Terminanfrage: Erstgespräch [LV-abcdefghijklmnopqrstuvwx]"
+          }
+        }
+      ]
+    }
+  },
   "GET /api/briefing": {
     "status": 200,
     "contentType": "application/json",

@@ -60,6 +60,8 @@ import { registerBriefingRoutes } from './routes-briefing.mjs';
 import { createCommitmentStore } from './commitments.mjs';
 import { registerCommitmentRoutes } from './routes-commitments.mjs';
 import { registerMeetingPrepRoutes } from './routes-meeting-prep.mjs';
+import { EMPTY_SCHEDULING, registerSchedulingRoutes } from './routes-scheduling.mjs';
+import { EMPTY_AUTOMATIONS, registerAutomationRoutes } from './routes-automations.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -486,7 +488,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy|briefing|commitments|meeting-prep|manual)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|briefing|commitments|meeting-prep|manual)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -552,7 +554,12 @@ export async function createMailServer({
         retryable: err.retryable === true
       });
     }
-    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)) {
+    if (
+      err.code &&
+      /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task|scheduling|automation)_/.test(
+        err.code
+      )
+    ) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
     }
@@ -769,6 +776,18 @@ export async function createMailServer({
   registerBriefingRoutes(ctx);
   registerCommitmentRoutes(ctx);
   registerMeetingPrepRoutes(ctx);
+  registerSchedulingRoutes(ctx, {
+    file: await createSealedJsonFile(path.join(dir, 'scheduling.json'), EMPTY_SCHEDULING, {
+      vault: store,
+      keyName: 'scheduling-key'
+    })
+  });
+  registerAutomationRoutes(ctx, {
+    file: await createSealedJsonFile(path.join(dir, 'automations.json'), EMPTY_AUTOMATIONS, {
+      vault: store,
+      keyName: 'automations-key'
+    })
+  });
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
