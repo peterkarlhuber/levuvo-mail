@@ -46,7 +46,7 @@ export function safeStaticFile(root, requestedUrl) {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.some(part => part === '..' || part === '.')) return null;
   const allowed =
-    /^\/(?:assets\/[A-Za-z0-9_.-]+\.(?:js|css|png|svg|woff2?)|(?:favicon|levuvo-header-logo|apple-touch-icon|icon-192|icon-512|icon-maskable-512)\.png|manifest\.webmanifest)$/;
+    /^\/(?:assets\/[A-Za-z0-9_.-]+\.(?:js|css|png|svg|woff2?)|(?:favicon|levuvo-header-logo|levuvo-wordmark|apple-touch-icon|icon-192|icon-512|icon-maskable-512)\.png|manifest\.webmanifest)$/;
   if (!allowed.test(pathname)) return null;
   const resolved = path.resolve(root, ...parts);
   if (!resolved.startsWith(path.resolve(root) + path.sep)) return null;

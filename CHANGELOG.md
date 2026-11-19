@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Window
+- **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
+- **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).
+
 ### Levuvo's own Ollama
 - **Ollama in the installer, only for Levuvo:** the app ships a pinned Ollama build (0.40.16) and starts it itself when a local model is needed: own models folder and key pair in the app data folder, a free port on 127.0.0.1 only, Ollama's cloud features off, none of your own Ollama settings. An Ollama you installed yourself is never used, started or stopped. It stops after 30 idle minutes and when Levuvo closes.
 - **Choose a model, it downloads:** Settings → AI & agents lists a fixed choice of language models in three sizes (small from 8 GB RAM, standard from 16 GB, large from 32 GB, with EU models of Mistral AI in each) and three search models. Choosing one that is missing downloads it with a progress bar; cancel, resume later, delete, and remove interrupted downloads. The size that fits the computer's memory is suggested on the first start; too large models ask first. No model ships in the installer.

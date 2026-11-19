@@ -22,6 +22,7 @@ import { createUpdater } from './updater.mjs';
 import { classifyExternalUrl, isPreviewFrameUrl } from './links.mjs';
 import { createTranslator } from './i18n.mjs';
 import { createReminderMonitor } from './reminders.mjs';
+import { themeFromColor, titleBarOverlay, windowFrameOptions } from './window-frame.mjs';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const iconFile = path.join(dirname, 'assets', 'levuvo.png');
@@ -457,6 +458,7 @@ async function boot() {
     title: 'Levuvo Mail',
     icon: iconFile,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b0b0b' : '#ffffff',
+    ...windowFrameOptions(process.platform, nativeTheme.shouldUseDarkColors),
     webPreferences: {
       partition: 'persist:levuvo-mail',
       sandbox: true,
@@ -470,6 +472,12 @@ async function boot() {
       backgroundThrottling: true
     }
   });
+  if (process.platform === 'win32') {
+    // The window buttons follow the app theme, which the page publishes as its theme colour.
+    windowRef.webContents.on('did-change-theme-color', (_event, color) => {
+      windowRef?.setTitleBarOverlay(titleBarOverlay(themeFromColor(color, nativeTheme.shouldUseDarkColors)));
+    });
+  }
   windowRef.webContents.setWindowOpenHandler(({ url }) => {
     void openExternalWithConfirmation(url);
     return { action: 'deny' };

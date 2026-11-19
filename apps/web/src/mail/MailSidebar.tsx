@@ -123,7 +123,7 @@ export default function MailSidebar({
       <aside className={`sidebar ${mobileSidebar ? 'sidebar-open' : ''}`}>
         <div className="sidebar-inner">
           <div className="sidebar-brand">
-            <img src="/levuvo-header-logo.png" alt="Levuvo" className="brand-image" />
+            <img src="/levuvo-wordmark.png" alt="Levuvo" className="brand-image" />
             <span className="brand-product">
               mail<span className="brand-dot">.</span>
             </span>

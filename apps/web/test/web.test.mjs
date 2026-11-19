@@ -9,6 +9,7 @@ import { applySuggestions, bundleSuggester, registerBundleSuggester } from '../s
 import { isTrackingImage, remoteImageKey, trackerHost } from '../src/trackers.ts';
 import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
+import { detectWindowFrame } from '../src/window-frame.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -969,4 +970,18 @@ test('Mail reader: selection, open state, detail loading and j/k steps', async (
   assert.equal(step('up', { keyed: true, selectedKey: 'a:3' }), 2);
   assert.equal(step('down', { keyed: true, selectedKey: 'b:2' }), 3);
   assert.equal(stepSelection([], 'down', { keyed: false, selectedKey: null, selectedUid: null }), null);
+});
+
+test('Window frame: only the desktop app on macOS and Windows draws its own title bar area', () => {
+  const chrome =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+  assert.equal(detectWindowFrame(chrome), null, 'a browser keeps its layout');
+  assert.equal(detectWindowFrame(chrome.replace('Safari', 'levuvo-mail/2.5.0 Electron/45.3.1 Safari')), 'mac');
+  assert.equal(
+    detectWindowFrame(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Electron/45.3.1 Safari/537.36'
+    ),
+    'win'
+  );
+  assert.equal(detectWindowFrame('Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0 Electron/45.3.1 Safari/537.36'), null);
 });
