@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Vacation reply
+- **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving. (Manual: Filters and vacation reply)
+- **Vacation reply for Microsoft 365 / Outlook.com and Gmail:** accounts signed in with Microsoft or Google store the reply with the provider (Microsoft Graph mailbox settings, Gmail vacation settings), so it answers while Levuvo Mail is closed: on/off, from/until, audience (all senders, only contacts, only my organization), formatted text and the signature; Gmail also gets the subject. Both providers cannot keep embedded images, so an uploaded logo is left out and the app says so. Needs the new scopes `MailboxSettings.ReadWrite` (Microsoft) and `gmail.settings.basic` plus the Gmail API (Google) in the app registrations (docs/OAUTH-SETUP.md); older accounts are asked once ("Approve"). The editor copy stays on the device, encrypted. (Manual: Filters and vacation reply)
+
 ### Find a time and booking links
 - **Find a time** (calendar toolbar): enter the people, duration, period and hours; Levuvo Mail finds times when everyone is free across your own calendars, the free/busy of colleagues in Microsoft 365 or Google (start and end only, no titles) and calendars shared with you (e.g. Nextcloud, assigned per person). People whose calendar cannot be read are marked and vote by e-mail. Times for everyone come first, otherwise those when most people can. One time can be entered directly with invitations. (Manual: Find a time and polls)
 - **Polls by e-mail, no server of our own:** send up to 8 times; everyone gets their own mail (no addresses of others) with a mailto: link per time that opens a prepared reply in their own mail program; replying with the numbers ("1 and 3") works too. Replies are recognised by a token in the subject, also from people using any other mail program. "Polls" in the calendar shows who can when; "Fix" enters the event and invites everyone. (Manual: Find a time and polls)
@@ -62,9 +66,6 @@
 ## 2.5.0 – 19 November 2026
 
 > **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
-
-### Vacation reply
-- **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving.
 
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.

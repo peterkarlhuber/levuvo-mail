@@ -92,10 +92,12 @@ The **attachment overview** (in the folder bar under **Attachments**) shows all 
 
 Under **Settings → Filters & vacation** you set up rules, for example "emails from invoice@supplier.com into the Accounting folder". The rules run directly on your mail server, so they also work when Levuvo Mail is closed.
 
-- **Vacation reply:** switch it on, enter the period, subject and text, save.
+- **Vacation reply:** switch it on, enter the period, subject and text, save. You format the text like the signature (bold, links, images). **Append the account's signature (with logo)** adds your signature. If you change the signature later, save the vacation reply again.
 - **Rules:** Click **Add rule**, choose a condition (From, To/CC, Subject …) and an action (move, mark as read …), and click **Save on the server**.
 
-This works if your provider offers server filters (the technical term is Sieve or ManageSieve). With Microsoft 365 and Gmail, set up rules in the provider's webmail instead.
+This works if your provider offers server filters (the technical term is Sieve or ManageSieve). The logo then travels inside the reply. If your mail server can only send plain text, Levuvo Mail saves the reply as text and tells you.
+
+**Microsoft 365 and Gmail:** here Levuvo Mail stores the vacation reply directly with Microsoft or Google. You also choose who gets a reply (everyone, only contacts, only your organization). The first time, click **Approve** and confirm on the provider's sign-in page. Neither provider keeps embedded images, so the logo is left out there. For these accounts, set up rules in the provider's webmail.
 
 ## Encrypt confidential messages
 
