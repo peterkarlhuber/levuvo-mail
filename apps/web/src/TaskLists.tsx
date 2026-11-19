@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, Cloud, HardDrive, Layers, Link2, LoaderCircle, RefreshCw, Unlink } from 'lucide-react';
 import { getJson, postJson } from './api';
+import { useOAuthSignIn } from './AccountSettings';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Button, Dialog } from './ui';
@@ -12,6 +13,7 @@ import type { TaskLink, TaskListFilter, TaskListSource, TaskSyncProvider } from 
 export const taskListsChanged = () => window.dispatchEvent(new CustomEvent('levuvo:task-lists-changed'));
 const tasksChanged = () => window.dispatchEvent(new CustomEvent('levuvo:tasks-changed'));
 
+type SourceError = { accountLabel: string; error: string; code?: string; provider?: string; accountId?: string };
 type SyncState = { links: TaskLink[]; busy: boolean; accounts: { id: string; label: string; provider: string }[] };
 
 /** Connected lists; reloads after changes and after each sync. */
@@ -145,14 +147,12 @@ export function ConnectListDialog({ links, onClose }: { links: TaskLink[]; onClo
   const { toast, confirm } = useUi();
   const providerName = useProviderNames();
   const [sources, setSources] = useState<TaskListSource[] | null>(null);
-  const [errors, setErrors] = useState<{ accountLabel: string; error: string }[]>([]);
+  const [errors, setErrors] = useState<SourceError[]>([]);
   const [moveLocal, setMoveLocal] = useState(false);
   const [busy, setBusy] = useState('');
   const load = useCallback(async () => {
     try {
-      const r = await getJson<{ lists: TaskListSource[]; errors: { accountLabel: string; error: string }[] }>(
-        '/api/tasks/sync/sources'
-      );
+      const r = await getJson<{ lists: TaskListSource[]; errors: SourceError[] }>('/api/tasks/sync/sources');
       setSources(r.lists || []);
       setErrors(r.errors || []);
     } catch (e) {
@@ -163,6 +163,8 @@ export function ConnectListDialog({ links, onClose }: { links: TaskLink[]; onClo
   useEffect(() => {
     void load();
   }, [load]);
+  // Microsoft 365 / Google accounts signed in before need a one-time consent for their tasks.
+  const oauth = useOAuthSignIn(load);
 
   async function connect(s: TaskListSource) {
     setBusy(s.listId);
@@ -231,16 +233,32 @@ export function ConnectListDialog({ links, onClose }: { links: TaskLink[]; onClo
           {sources.length === 0 && !errors.length && (
             <p className="task-sync-empty">
               {t(
-                'Keine Aufgabenlisten gefunden. Ein CalDAV-Konto (z. B. Nextcloud) wird unter Einstellungen › Kalender & Kontakte hinzugefügt.'
+                'Keine Aufgabenlisten gefunden. Aufgabenlisten kommen von CalDAV-Konten (z. B. Nextcloud, unter Einstellungen › Kalender & Kontakte) und von Microsoft-365- oder Google-Konten, die mit dem Anbieter angemeldet sind.'
               )}
             </p>
           )}
           {errors.map((e, i) => (
             <p key={i} className="task-list-error" role="alert">
               {e.accountLabel ? `${e.accountLabel}: ` : ''}
-              {e.error}
+              {t(e.error)}
+              {e.code === 'tasks_consent_required' && e.provider && e.accountId && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  className="task-consent"
+                  busy={oauth.busy}
+                  onClick={() => void oauth.start(e.provider!, e.accountId)}
+                >
+                  {oauth.busy ? t('Warte auf Freigabe …') : t('Freigeben')}
+                </Button>
+              )}
             </p>
           ))}
+          {oauth.error && (
+            <p className="task-list-error" role="alert">
+              {oauth.error}
+            </p>
+          )}
           {sources.length > 0 && (
             <ul className="task-sources" aria-label={t('Aufgabenlisten')}>
               {sources.map(s => {

@@ -328,3 +328,6 @@
   color: var(--text-2);
   font-size: var(--text-md);
 }
+.task-list-error .task-consent {
+  margin-left: var(--space-2);
+}
