@@ -15,6 +15,15 @@ Only the latest published version is supported.
 - Dependabot for npm and GitHub Actions.
 - Credentials are stored exclusively in the operating system keychain, never in the repository or the installer.
 
+## Password-protected messages ("Protect with password")
+
+Reviewed 2026-11-19 (`apps/server/src/protected-message.mjs`). The message, its formatting and attachments are sealed into a self-contained HTML file that the recipient opens offline in any browser.
+
+- **Crypto:** PBKDF2-HMAC-SHA256 with 600 000 iterations (OWASP 2023), random 16-byte salt and 12-byte IV per message, AES-256-GCM. Only WebCrypto primitives, so no server and no installation is needed. Argon2 would be stronger against GPU attacks but is not available in WebCrypto.
+- **Passwords:** at least 10 characters; the composer suggests a random 16-character password (~93 bits). Because the file can be attacked offline without any rate limit, easily guessed passwords (few distinct characters, alphabet or digit runs, common words with digits) are refused on both the client and the server. The copied password is removed from the clipboard after one minute. The password is never stored or logged.
+- **Viewer:** strict CSP (`default-src 'none'`, no network, `form-action 'none'`), the body is shown in a sandboxed frame without scripts, attachments are offered as `application/octet-stream` downloads. Inside Levuvo Mail, received protected messages are decrypted locally (bounded iteration count and size, 5 attempts per minute) and shown through the regular HTML sanitizer.
+- **Limits, by design:** the subject, sender, recipients and the password hint stay readable. The viewer file itself is not signed; a party that can modify the mail in transit could replace the viewer. Automatically saved drafts stay unencrypted in the sender's own Drafts folder until sending (the composer says so); the Sent copy contains only the encrypted file.
+
 ## Known open items
 
 State 2.4.0 (internal use only):
