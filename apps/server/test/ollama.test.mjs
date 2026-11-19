@@ -16,7 +16,8 @@ import {
   fitFor,
   ollamaName,
   queryPrefixFor,
-  recommendedTier
+  recommendedTier,
+  variantFor
 } from '../src/ai-model-catalog.mjs';
 import { createOllamaRuntime, ollamaEnv, ollamaPaths, resolveOllama } from '../src/ollama-runtime.mjs';
 import { createModelManager, progressTracker, DISK_RESERVE } from '../src/ollama-models.mjs';
@@ -157,9 +158,13 @@ test('runtime: missing binary fails with runtime_missing', async () => {
 });
 
 /** In-process stand-in for the Ollama HTTP API (tags, pull with progress, delete). */
-async function fakeOllama({ digestFor = e => e.digest, slow = false } = {}) {
+async function fakeOllama({
+  digestFor = (e, runner) => (runner === 'mlx' ? e.mlx.digest : e.digest),
+  slow = false
+} = {}) {
   const installed = new Map();
   const calls = [];
+  const pulls = [];
   const server = http.createServer(async (req, res) => {
     let body = '';
     for await (const c of req) body += c;
@@ -169,6 +174,7 @@ async function fakeOllama({ digestFor = e => e.digest, slow = false } = {}) {
       res.end(JSON.stringify({ models: [...installed.values()] }));
     } else if (req.url === '/api/pull') {
       const entry = MODEL_CATALOG.find(m => ollamaName(m.id) === json.model);
+      pulls.push({ model: json.model, runner: json.runner });
       res.write(`${JSON.stringify({ status: 'pulling manifest' })}\n`);
       const half = Math.floor(entry.size / 2);
       res.write(`${JSON.stringify({ status: 'pulling a', digest: 'sha256:a', total: half, completed: half })}\n`);
@@ -187,7 +193,7 @@ async function fakeOllama({ digestFor = e => e.digest, slow = false } = {}) {
       installed.set(entry.id, {
         name: ollamaName(entry.id),
         size: entry.size,
-        digest: digestFor(entry).replace('sha256:', '')
+        digest: digestFor(entry, json.runner).replace('sha256:', '')
       });
       res.end(`${JSON.stringify({ status: 'success' })}\n`);
     } else if (req.url === '/api/delete') {
@@ -201,7 +207,7 @@ async function fakeOllama({ digestFor = e => e.digest, slow = false } = {}) {
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}`;
-  return { url, installed, calls, close: () => new Promise(r => server.close(r)) };
+  return { url, installed, calls, pulls, close: () => new Promise(r => server.close(r)) };
 }
 const runtimeAt = (url, models) => ({
   ensure: async () => url,
@@ -344,6 +350,131 @@ test('downloads: the parts of one paused model can be discarded while another mo
     await ollama.close();
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('variants: GGUF everywhere, the pinned MLX variant on Apple silicon, requested explicitly', async () => {
+  const qwen = catalogEntry('qwen3.5:9b');
+  assert.deepEqual(variantFor(qwen, 'win32', 'x64'), { runner: 'llamacpp', digest: qwen.digest, size: qwen.size });
+  assert.deepEqual(variantFor(qwen, 'darwin', 'x64').runner, 'llamacpp', 'Intel Macs run GGUF');
+  assert.deepEqual(variantFor(qwen, 'darwin', 'arm64'), { runner: 'mlx', ...qwen.mlx });
+  // The MLX variant of Gemma 4 E2B is too big for the small tier: GGUF on Macs too.
+  assert.equal(variantFor(catalogEntry('gemma4:e2b'), 'darwin', 'arm64').runner, 'llamacpp');
+  assert.equal(variantFor(catalogEntry('bge-m3'), 'darwin', 'arm64').runner, 'llamacpp');
+  for (const m of MODEL_CATALOG)
+    if (m.mlx) {
+      assert.match(m.mlx.digest, /^sha256:[0-9a-f]{64}$/, m.id);
+      assert.notEqual(m.mlx.digest, m.digest, m.id);
+      assert.ok(Number.isSafeInteger(m.mlx.size) && m.mlx.size < m.size * 1.25, `${m.id}: MLX size close to GGUF`);
+    }
+
+  for (const [platform, arch, runner] of [
+    ['darwin', 'arm64', 'mlx'],
+    ['win32', 'x64', 'llamacpp']
+  ]) {
+    const ollama = await fakeOllama();
+    const mm = createModelManager({
+      runtime: runtimeAt(ollama.url, tmp()),
+      statfs: async () => ({ bavail: 1e6, bsize: 1e6 }),
+      platform,
+      arch
+    });
+    try {
+      const listed = (await mm.list()).models.find(m => m.id === 'qwen3.5:9b');
+      assert.equal(listed.size, runner === 'mlx' ? qwen.mlx.size : qwen.size, 'the size of the variant');
+      assert.equal(listed.variant, runner);
+      await mm.download('qwen3.5:9b');
+      await until(async () => (await mm.list()).models.find(m => m.id === 'qwen3.5:9b').job.status === 'done');
+      assert.deepEqual(ollama.pulls, [{ model: 'qwen3.5:9b', runner }]);
+      assert.equal(await mm.isReady('qwen3.5:9b'), true);
+    } finally {
+      await ollama.close();
+    }
+  }
+
+  // The other variant under the same name (what Ollama picks on its own on a Mac) is refused.
+  const ollama = await fakeOllama({ digestFor: e => e.digest });
+  const mm = createModelManager({
+    runtime: runtimeAt(ollama.url, tmp()),
+    statfs: async () => ({ bavail: 1e6, bsize: 1e6 }),
+    platform: 'darwin',
+    arch: 'arm64'
+  });
+  try {
+    await mm.download('qwen3.5:9b');
+    await until(async () => (await mm.list()).models.find(m => m.id === 'qwen3.5:9b').job.status === 'error');
+    assert.equal((await mm.list()).models.find(m => m.id === 'qwen3.5:9b').job.error, 'checksum');
+  } finally {
+    await ollama.close();
+  }
+});
+
+test('catalog check: pins of both variants, moved tags and new variants are reported', async () => {
+  const { checkCatalog } = await import('../../../scripts/ollama/check-catalog.mjs');
+  const { createHash } = await import('node:crypto');
+  const sha = s => `sha256:${createHash('sha256').update(s).digest('hex')}`;
+  const manifest = n =>
+    JSON.stringify({
+      schemaVersion: 2,
+      mediaType: 'application/vnd.docker.distribution.manifest.v2+json',
+      config: { digest: `sha256:${'c'.repeat(64)}`, size: 10 },
+      layers: [{ mediaType: 'application/vnd.ollama.image.model', digest: `sha256:${'d'.repeat(64)}`, size: n }]
+    });
+  const gguf = manifest(990);
+  const mlx = manifest(1190);
+  const blobs = { [sha(gguf)]: gguf, [sha(mlx)]: mlx };
+  const list = children =>
+    JSON.stringify({
+      schemaVersion: 2,
+      mediaType: 'application/vnd.ollama.manifest.list.v2+json',
+      manifests: children.map(([runner, body]) => ({
+        mediaType: 'application/vnd.docker.distribution.manifest.v2+json',
+        digest: sha(body),
+        runner,
+        format: runner === 'mlx' ? 'safetensors' : 'gguf'
+      }))
+    });
+  const served = {
+    'a/manifests/1b': list([
+      ['llamacpp', gguf],
+      ['mlx', mlx]
+    ]),
+    'b/manifests/latest': gguf,
+    'c/manifests/1b': list([
+      ['llamacpp', gguf],
+      ['mlx', mlx]
+    ]),
+    'd/manifests/1b': list([
+      ['llamacpp', gguf],
+      ['mlx', mlx]
+    ])
+  };
+  const fetchImpl = async (url, init = {}) => {
+    const key = url.replace('https://registry.ollama.ai/v2/library/', '');
+    if (key.includes('/blobs/')) {
+      const body = blobs[key.split('/blobs/')[1]];
+      return new Response(body ?? '', { status: body ? 200 : 404 });
+    }
+    assert.match(init.headers.Accept, /manifest\.list\.v2\+json/, 'asks for manifest lists');
+    const body = served[key];
+    return new Response(body ?? '{}', { status: body ? 200 : 404 });
+  };
+  const pin = { digest: sha(gguf), size: 1000 };
+  const catalog = [
+    { id: 'a:1b', ...pin, mlx: { digest: sha(mlx), size: 1200 } }, // both variants pinned
+    { id: 'b', ...pin }, // plain manifest
+    { id: 'c:1b', ...pin }, // MLX offered, not pinned
+    { id: 'd:1b', ...pin, mlx: false }, // MLX offered, reviewed and not used
+    { id: 'e:1b', ...pin } // gone
+  ];
+  assert.deepEqual(await checkCatalog({ catalog, fetchImpl }), [
+    `c:1b (mlx): new variant ${sha(mlx)} (1200 bytes), not pinned`,
+    'e:1b: no longer on the registry'
+  ]);
+  const moved = [{ id: 'a:1b', ...pin, mlx: { digest: `sha256:${'0'.repeat(64)}`, size: 1300 } }];
+  assert.deepEqual(await checkCatalog({ catalog: moved, fetchImpl }), [
+    `a:1b (mlx): digest ${sha(mlx)}, pinned sha256:${'0'.repeat(64)}`,
+    'a:1b (mlx): size 1200, pinned 1300'
+  ]);
 });
 
 test('downloads: refused without disk space and for models outside the catalog', async () => {
