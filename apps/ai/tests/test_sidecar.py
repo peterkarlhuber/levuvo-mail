@@ -216,3 +216,46 @@ def test_filter_rule_only_moves_to_known_folders() -> None:
     out = tasks.filter_rule(engine, {"text": "Rechnungen ablegen", "folders": ["INBOX", "Rechnungen"]})
     assert out["actions"] == [{"type": "flag", "folder": ""}]
     assert "Rechnungen" in engine.calls[0]["system"]
+
+
+def test_automation_rule_keeps_known_folders_and_drops_unsafe_parts() -> None:
+    engine = StubEngine(
+        {
+            "name": "Rechnungen von Muster",
+            "match": "all",
+            "conditions": [
+                {"field": "from", "op": "ends_with", "value": "@muster.at"},
+                {"field": "subject", "op": "contains", "value": ""},
+                {"field": "attachment", "op": "contains", "value": "x"},
+            ],
+            "actions": [
+                {"type": "move", "folder": "Rechnungen"},
+                {"type": "move", "folder": "Geheim"},
+                {"type": "task", "title": "Rechnung {subject} zahlen", "dueDays": 14},
+                {"type": "task", "title": "doppelt"},
+            ],
+            "unclear": "",
+        }
+    )
+    out = tasks.automation_rule(engine, {"text": "Rechnungen von Muster ablegen", "folders": ["INBOX", "Rechnungen"]})
+    assert out["conditions"] == [
+        {"field": "from", "op": "ends_with", "value": "@muster.at"},
+        {"field": "attachment", "op": "yes", "value": ""},
+    ]
+    assert [a["type"] for a in out["actions"]] == ["move", "task"]
+    assert out["actions"][0]["folder"] == "Rechnungen"
+    assert out["actions"][1]["dueDays"] == 14
+    assert "Never delete" in engine.calls[0]["system"]
+    assert "Rechnungen" in engine.calls[0]["system"]
+
+
+def test_automation_rule_without_usable_condition_fails() -> None:
+    engine = StubEngine(
+        {"name": "x", "conditions": [{"field": "from", "op": "contains", "value": " "}], "actions": [{"type": "flag"}]}
+    )
+    try:
+        tasks.automation_rule(engine, {"text": "alles", "folders": []})
+    except RpcError as err:
+        assert err.kind == "invalid_output"
+    else:
+        raise AssertionError("expected RpcError")

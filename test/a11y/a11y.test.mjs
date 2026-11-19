@@ -133,7 +133,9 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     'Konten',
     'Vorlagen',
     'Filter & Abwesenheit',
+    'Automatisierungen',
     'Kalender & Kontakte',
+    'Buchungslinks',
     'Sicherheit',
     'Suche & Offline',
     'KI & Agenten',
@@ -164,6 +166,12 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.rail-item').nth(1).click();
       await page.locator('.calendar-main').waitFor();
       await axe(page, 'calendar');
+      // "Termin finden" (Welle 5): the dialog and its result list.
+      await page.locator('.find-time-button').click();
+      await page.locator('.find-time').waitFor();
+      await axe(page, 'find a time');
+      await page.keyboard.press('Escape');
+      await page.locator('.find-time').waitFor({ state: 'detached' });
       await page.locator('.rail-item').nth(2).click();
       await page.locator('.contacts-module').waitFor();
       await axe(page, 'contacts');

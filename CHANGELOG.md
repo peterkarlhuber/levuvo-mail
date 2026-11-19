@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Find a time and booking links
+- **Find a time** (calendar toolbar): enter the people, duration, period and hours; Levuvo Mail finds times when everyone is free across your own calendars, the free/busy of colleagues in Microsoft 365 or Google (start and end only, no titles) and calendars shared with you (e.g. Nextcloud, assigned per person). People whose calendar cannot be read are marked and vote by e-mail. Times for everyone come first, otherwise those when most people can. One time can be entered directly with invitations.
+- **Polls by e-mail, no server of our own:** send up to 8 times; everyone gets their own mail (no addresses of others) with a mailto: link per time that opens a prepared reply in their own mail program; replying with the numbers ("1 and 3") works too. Replies are recognised by a token in the subject, also from people using any other mail program. "Polls" in the calendar shows who can when; "Fix" enters the event and invites everyone.
+- **Offers to people outside:** the first time picked is booked at once with an invitation; a later pick of a taken time is answered with the times still free.
+- **Booking links** (Settings → Booking links): a mailto: link for your signature or website. Levuvo Mail answers with free times from your calendars (duration, weekdays, hours, notice, buffer, period; never titles), books the time picked and sends the invitation. Never answers automatic mails (RFC 3834: out-of-office, mailing lists) or your own addresses, at most 5 answers per sender and 60 per day. Works while Levuvo Mail is open; replies that arrived in the meantime are handled on the next start.
+- Stored encrypted on this device (scheduling.json, in backups); a poll is deleted 30 days after its last time.
+
+### Automations
+- **Automations** (Settings → Automations): rules Levuvo Mail runs on new inbox mail – conditions on sender, recipient, subject, text or attachments (contains, does not contain, is exactly, ends with), actions move to a folder, mark as read, star and **create a task** linked to the mail (title with {subject}/{from}, due in n days). Unlike server filters they can create tasks; they never delete, reply, forward or send and never move to the trash.
+- **Described in plain words:** with the assistant on, the local AI turns a description into a rule (new AI function `automation_rule`, only the description and folder names, no mail content). The proposal is marked "AI proposal" with the model and only fills the editor.
+- **Checked before it runs:** the rule is shown in plain words built from the rule itself (not by the AI), a dry run lists which of the 50 newest mails it would handle and which task it would create without changing anything, and a rule only runs once switched on – and then only on mail arriving afterwards.
+- **Log** of what the rules did (30 days, subject only, encrypted; automations.json, in backups).
+
 ### Spaces
 - **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
 - **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
