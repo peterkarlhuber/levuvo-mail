@@ -51,6 +51,12 @@ jobs:
         run: |
           npm run notices
           git diff --exit-code THIRD-PARTY-NOTICES.txt
+      - name: Licence policy (npm packages that ship)
+        run: npm run check:licenses
+      - name: SBOM (CycloneDX 1.6) builds and is complete
+        run: node scripts/sbom.mjs --out "$RUNNER_TEMP/levuvo-mail.cdx.json"
+      - name: Compliance documents and support period
+        run: npm run check:compliance
 
   security:
     name: Security (audit, secrets)

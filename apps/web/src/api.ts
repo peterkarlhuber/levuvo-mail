@@ -44,6 +44,7 @@ export type ActionKind =
   | 'contacts-v1'
   | 'crypto-v1'
   | 'backup-v1'
+  | 'privacy-v1'
   | 'ai-v1'
   | 'spaces-v1';
 

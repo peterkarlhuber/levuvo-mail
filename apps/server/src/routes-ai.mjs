@@ -11,6 +11,7 @@ import { mailBudget } from './ai-model-options.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
+const MAX_NEWSLETTERS = 20;
 const MAX_CLIENT_TEXT = 60_000;
 const STYLE_TTL = 60 * 60 * 1000;
 const LOAD_PARALLEL = 3;
@@ -211,6 +212,21 @@ export function registerAiRoutes(ctx) {
           messages: details.map(messageForAi),
           now: clientText(input.now, 40),
           timeZone: clientText(input.timeZone, 60)
+        };
+      }
+      case 'newsletters': {
+        // Weekly overview of the newsletter bundle: up to 20 newsletters of one account, shortened.
+        if (!accountId) throw Object.assign(new Error('Konto fehlt.'), { statusCode: 400, code: 'ai_invalid' });
+        const refs = (Array.isArray(body.refs) ? body.refs : []).slice(0, MAX_NEWSLETTERS);
+        if (!refs.length)
+          throw Object.assign(new Error('Keine Nachricht gewählt.'), { statusCode: 400, code: 'ai_invalid' });
+        const details = await mapLimit(refs, LOAD_PARALLEL, ref => loadDetail(accountId, ref));
+        return {
+          lang,
+          items: details.map((d, i) => {
+            const m = messageForAi(d);
+            return { id: `n${i + 1}`, from: m.from, date: m.date, subject: m.subject, text: m.text.slice(0, 2500) };
+          })
         };
       }
       case 'translate': {
