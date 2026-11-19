@@ -113,6 +113,7 @@
   cover-shot: none,
   cover-alt: "",
   cover: "night",
+  shot-style: "window",
   back: "",
   body,
 ) = {
@@ -201,13 +202,43 @@
         block(width: 166mm, text(size: 13.5pt, fill: night-muted, hyphenate: false, lines(subtitle)))
       }))
       if cover-shot != none {
-        place(top + left, dx: 38mm, dy: 158mm, block(
-          width: 236mm,
-          radius: 10pt,
-          clip: true,
-          stroke: 0.8pt + night-line,
-          image(cover-shot, width: 100%, alt: cover-alt),
-        ))
+        let shot = image(cover-shot, width: 100%, alt: cover-alt)
+        if shot-style == "fade" {
+          // Wide window that fades into the page towards the bottom: no hard cut through text.
+          place(top + left, dx: 12mm, dy: 150mm, block(
+            width: 186mm,
+            radius: 10pt,
+            clip: true,
+            stroke: 0.7pt + rgb(255, 255, 255, 36),
+            shot,
+          ))
+          place(top + left, dx: 0mm, dy: 192mm, pdf.artifact(rect(
+            width: 100%,
+            height: 105mm,
+            fill: gradient.linear(rgb(11, 11, 11, 0), rgb(11, 11, 11, 235), night, night, angle: 90deg),
+          )))
+          place(bottom + left, dx: 22mm, dy: -20mm, text(size: 9pt, weight: "semibold", motto))
+        } else {
+          // The whole window with rounded corners, a fine light edge and a soft glow.
+          let (x, y, w) = (22mm, 146mm, 166mm)
+          for i in range(1, 15) {
+            let o = i * 0.9mm
+            place(top + left, dx: x - o, dy: y - o, pdf.artifact(rect(
+              width: w + 2 * o,
+              height: w * 860 / 1320 + 2 * o,
+              radius: 10pt + o,
+              fill: rgb(255, 255, 255, 2),
+            )))
+          }
+          place(top + left, dx: x, dy: y, block(
+            width: w,
+            radius: 10pt,
+            clip: true,
+            stroke: 0.7pt + rgb(255, 255, 255, 46),
+            shot,
+          ))
+          place(bottom + left, dx: 22mm, dy: -20mm, text(size: 9pt, weight: "semibold", motto))
+        }
       }
     })
   } else if cover == "editorial" {

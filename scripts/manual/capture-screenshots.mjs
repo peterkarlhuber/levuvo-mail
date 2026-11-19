@@ -78,6 +78,19 @@ const SHOTS = [
     }
   },
   {
+    // The cover: the inbox from its first message on, nothing cut at the top of the list.
+    name: 'cover',
+    run: async page => {
+      await openMessage(page);
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('.message-list, .message-list-scroll, [data-list-scroll]'))
+          el.scrollTop = 0;
+      });
+      await page.mouse.move(700, 120);
+      await page.waitForTimeout(200);
+    }
+  },
+  {
     name: 'composer',
     run: async (page, lang) => {
       await openMessage(page);
