@@ -542,7 +542,17 @@ test('REL-LEV-005: the IMAP connection is kept alive while a slow SMTP submissio
   const result = await sendDue(client, {
     now: Date.parse('2026-11-19T10:00:00Z'),
     keepAliveMs: 5,
-    submit: () => new Promise(r => setTimeout(r, 40)),
+    // The submission lasts until three keep-alives went out (at most 2 s): a fixed 40 ms saw only
+    // two NOOPs on Windows runners, whose timers fire in steps of about 15 ms.
+    submit: () =>
+      new Promise(r => {
+        const started = Date.now();
+        const poll = setInterval(() => {
+          if (noops < 3 && Date.now() - started < 2000) return;
+          clearInterval(poll);
+          r();
+        }, 5);
+      }),
     saveSent: async () => {}
   });
   assert.equal(result.results[0].sent, true);
