@@ -1,5 +1,6 @@
 name: Release
-# Creates a DRAFT release (never published automatically) from a verified commit.
+# Creates a DRAFT release (never published automatically) from a verified commit: the commit must be
+# on master and its CI and CodeQL runs must have passed (job `gate`, scripts/release-gate.mjs).
 # Trigger: tag vX.Y.Z (must match package.json) or manual (workflow_dispatch).
 on:
   push:
@@ -40,11 +41,10 @@ jobs:
           if [ "$EVENT" = push ] && [ "$REF_NAME" != "$tag" ]; then
             echo "::error::Tag $REF_NAME does not match package.json ($tag)"; exit 1
           fi
-          if [ "$EVENT" = push ]; then
-            git merge-base --is-ancestor "$GITHUB_SHA" origin/master 2>/dev/null \
-              || git merge-base --is-ancestor "$GITHUB_SHA" origin/main 2>/dev/null \
-              || { echo "::error::Tag commit is not on the default branch"; exit 1; }
-          fi
+          # Tag and manual runs (signed or not): only commits that are on the default branch.
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master 2>/dev/null \
+            || git merge-base --is-ancestor "$GITHUB_SHA" origin/main 2>/dev/null \
+            || { echo "::error::Commit $GITHUB_SHA is not on the default branch"; exit 1; }
           # Existing releases/tags are never overwritten.
           if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
             echo "::error::Release $tag already exists. Bump the version in package.json or delete the draft deliberately."; exit 1
@@ -56,9 +56,31 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+  gate:
+    name: CI and CodeQL passed for this commit
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    # CI may still be running right after the merge: the gate waits up to 90 minutes.
+    timeout-minutes: 100
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Wait for successful CI and CodeQL runs of exactly this SHA (push to master)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: node scripts/release-gate.mjs --repo "$REPO" --sha "$GITHUB_SHA" --branch master
+
   quality:
     name: Quality check
-    needs: [prepare]
+    needs: [prepare, gate]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -79,7 +101,7 @@ jobs:
 
   build:
     name: Build
-    needs: [prepare, quality]
+    needs: [prepare, gate, quality]
     uses: ./.github/workflows/build-desktop.yml
     with:
       signed: ${{ github.event_name == 'workflow_dispatch' && inputs.signed }}
@@ -91,7 +113,7 @@ jobs:
 
   publish:
     name: Create draft release
-    needs: [prepare, build]
+    needs: [prepare, gate, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Only this job may write.
