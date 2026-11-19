@@ -74,8 +74,20 @@ if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
     f => f.includes(`${sep}ai-runtime${sep}`) && /(\.so|\.pyd|\.dylib|\.dll|python3?\.exe|python3\.\d+)$/.test(f)
   );
   const interpreter = runtime.find(f => /(python\.exe|python3\.\d+)$/.test(f));
+  // Levuvo's own Ollama: the server and its runner. On macOS Ollama ships universal binaries, so the
+  // target architecture must be among the ones in the file.
+  const ollama = files.filter(f => f.includes(`${sep}ollama${sep}`) && /[\\/](ollama|llama-server)(\.exe)?$/.test(f));
+  if (!ollama.some(f => /[\\/]ollama(\.exe)?$/.test(f))) {
+    console.error('✗ Bundled Ollama not found');
+  }
   const targets = [main, ...natives, ...runtime].filter(Boolean);
-  let failed = !main;
+  let failed = !main || !ollama.some(f => /[\\/]ollama(\.exe)?$/.test(f));
+  for (const file of ollama) {
+    const found = detectArchitectures(file);
+    const ok = found.includes(arch);
+    console.log(`${ok ? '✓' : '✗'} ${file.slice(root.length + 1)} → ${found.join(',') || 'unknown'} (needs ${arch})`);
+    if (!ok) failed = true;
+  }
   if (!interpreter) {
     console.error('✗ Bundled AI runtime (Python interpreter) not found');
     failed = true;

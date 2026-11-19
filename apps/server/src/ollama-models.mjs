@@ -109,13 +109,15 @@ export function createModelManager({
   }
 
   const publicJob = j =>
-    j && {
-      status: j.status,
-      completed: j.completed,
-      total: j.total,
-      error: j.error || null,
-      startedAt: j.startedAt
-    };
+    j
+      ? {
+          status: j.status,
+          completed: j.completed,
+          total: j.total,
+          error: j.error || null,
+          startedAt: j.startedAt
+        }
+      : null;
 
   async function list() {
     const ram = totalmem();
@@ -156,7 +158,9 @@ export function createModelManager({
     const have = await installed();
     if (have.get(entry.id)?.verified) return;
     // Unknown content under a catalog name: never used, removed right away.
-    await api('/api/delete', { method: 'DELETE', body: JSON.stringify({ model: ollamaName(entry.id) }) }).catch(() => {});
+    await api('/api/delete', { method: 'DELETE', body: JSON.stringify({ model: ollamaName(entry.id) }) }).catch(
+      () => {}
+    );
     throw new ModelError('checksum', 'Prüfsumme stimmt nicht. Das Modell wurde wieder entfernt.');
   }
 
@@ -191,7 +195,10 @@ export function createModelManager({
       await verify(entry);
       job.status = 'done';
       job.completed = job.total;
-      for (const fn of readyListeners) Promise.resolve().then(() => fn(entry.id)).catch(() => {});
+      for (const fn of readyListeners)
+        Promise.resolve()
+          .then(() => fn(entry.id))
+          .catch(() => {});
       void log?.add({ type: 'model_download', model: entry.id, ok: true });
       logger(`ollama: ${entry.id} downloaded and verified`);
     } catch (err) {
@@ -245,7 +252,7 @@ export function createModelManager({
       job.canceled = true;
       job.controller.abort();
     }
-    return publicJob(job) || null;
+    return publicJob(job);
   }
 
   /** Removes the parts of cancelled downloads (only while nothing downloads). */

@@ -16,6 +16,7 @@ they must be built on the respective operating system (native keychain module).
 npm ci
 npm run release:check
 npm run ai:runtime -- --arch arm64       # AI runtime for the installer (x64 for Windows Intel/AMD)
+npm run ollama:runtime -- --arch arm64   # Levuvo's own Ollama (pinned release, checksum, signature)
 npm run desktop:mac                      # or desktop:win:arm64 / desktop:win:x64
 npm run release:manifest -- --arch arm64 # or x64
 ```
@@ -53,6 +54,7 @@ npm run release:check
 # Bundled AI runtime for the machine's architecture (needs Python 3.13 for uv):
 python -m pip install --require-hashes -r apps/ai/requirements-build.txt
 npm run ai:runtime -- --arch arm64  # or x64; the signed build refuses to run without it
+npm run ollama:runtime -- --arch arm64  # or x64; also required by the signed build
 npm run release:signed:mac          # on the Mac
 npm run release:signed:win:x64      # on Windows x64
 npm run release:signed:win:arm64    # on Windows ARM64

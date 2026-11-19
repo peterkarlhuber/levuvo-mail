@@ -206,7 +206,7 @@ export function registerAiRoutes(ctx) {
       const before = ai.get().embedModel;
       const saved = await ai.save(request.body || {});
       // Another search model: its vectors are built in the background (the old ones are dropped).
-      if (saved.embedModel !== before) setTimeout(() => void syncAll(), 0).unref?.();
+      if (saved.embedModel !== before) void syncAll();
       return saved;
     } catch (err) {
       return aiError(reply, err);
@@ -228,7 +228,7 @@ export function registerAiRoutes(ctx) {
   };
   ctx.jobs?.register('semantic-index', syncAll, { every: 10 * 60_000, firstDelay: 60_000 });
   // A newly downloaded search model starts its index right away instead of at the next run.
-  ai.models?.onReady(id => {
+  ai.localModels?.onReady(id => {
     if (id === ai.get().embedModel) void syncAll();
   });
   // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
@@ -268,9 +268,12 @@ export function registerAiRoutes(ctx) {
     }
   });
   // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
-  const localModels = ai.models;
+  const localModels = ai.localModels;
   const noRuntime = reply =>
-    reply.code(409).send({ error: 'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.', code: 'ai_runtime_missing' });
+    reply.code(409).send({
+      error: 'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.',
+      code: 'ai_runtime_missing'
+    });
   api.get('/api/ai/local-models', async (_request, reply) => {
     if (!localModels) return noRuntime(reply);
     try {

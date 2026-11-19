@@ -47,18 +47,23 @@ async function getJson(url, init = {}) {
 
 export async function findProblems(version = LOCK.version) {
   const problems = [];
-  const advisories = await getJson('https://api.github.com/repos/ollama/ollama/security-advisories?per_page=100&state=published');
+  const advisories = await getJson(
+    'https://api.github.com/repos/ollama/ollama/security-advisories?per_page=100&state=published'
+  );
   for (const a of advisories)
     for (const v of a.vulnerabilities || [])
       if (inRange(version, v.vulnerable_version_range))
-        problems.push(`${a.ghsa_id} (${a.severity}): ${a.summary} — fixed in ${v.patched_versions || 'no release yet'}`);
+        problems.push(
+          `${a.ghsa_id} (${a.severity}): ${a.summary} — fixed in ${v.patched_versions || 'no release yet'}`
+        );
   const osv = await getJson('https://api.osv.dev/v1/query', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ package: { name: 'github.com/ollama/ollama', ecosystem: 'Go' }, version: `v${version}` })
   });
-  for (const v of osv.vulns || []) if (!problems.some(p => (v.aliases || []).some(id => p.startsWith(id))))
-    problems.push(`${v.id}: ${v.summary || v.details?.slice(0, 120) || 'see osv.dev'}`);
+  for (const v of osv.vulns || [])
+    if (!problems.some(p => (v.aliases || []).some(id => p.startsWith(id))))
+      problems.push(`${v.id}: ${v.summary || v.details?.slice(0, 120) || 'see osv.dev'}`);
   return problems;
 }
 

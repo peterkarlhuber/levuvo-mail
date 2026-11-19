@@ -2,7 +2,7 @@
   "version": "0.40.16",
   "source": "https://github.com/ollama/ollama/releases/tag/v0.40.16",
   "license": "MIT",
-  "signers": { "darwin": "3MU9H2V9Y9", "win32": "Ollama" },
+  "signers": { "darwin": "3MU9H2V9Y9", "win32": "Ollama Inc." },
   "assets": {
     "darwin-arm64": {
       "file": "ollama-darwin.tgz",

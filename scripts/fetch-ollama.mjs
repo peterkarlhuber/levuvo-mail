@@ -10,7 +10,18 @@
 // pinned version. scripts/ollama/check-ollama-runtime.mjs looks for advisories and newer releases.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, cpSync } from 'node:fs';
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+  cpSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -87,22 +98,24 @@ export function verifySignature(binary, platform = process.platform, signers = L
     run('codesign', ['--verify', '--strict', '--verbose=2', binary]);
     const info = spawnSync('codesign', ['-dv', '--verbose=2', binary], { encoding: 'utf8' }).stderr;
     const team = /TeamIdentifier=(\S+)/.exec(info)?.[1];
-    if (team !== signers.darwin) throw new Error(`Ollama binary signed by team ${team || 'none'}, expected ${signers.darwin}`);
+    if (team !== signers.darwin)
+      throw new Error(`Ollama binary signed by team ${team || 'none'}, expected ${signers.darwin}`);
     return `Developer ID team ${team}`;
   }
   if (platform === 'win32') {
     const ps = `$s = Get-AuthenticodeSignature -LiteralPath '${binary.replace(/'/g, "''")}'; [Console]::Out.Write(($s.Status.ToString()) + '|' + $s.SignerCertificate.Subject)`;
     const encoded = Buffer.from(ps, 'utf16le').toString('base64');
     // A PSModulePath inherited from PowerShell 7 breaks module loading in Windows PowerShell 5.1.
-    const { PSModulePath: _drop, ...env } = process.env;
-    const shell = spawnSync('pwsh', ['-NoProfile', '-Command', '1'], { encoding: 'utf8' }).status === 0 ? 'pwsh' : 'powershell.exe';
+    const env = { ...process.env };
+    delete env.PSModulePath;
+    const shell =
+      spawnSync('pwsh', ['-NoProfile', '-Command', '1'], { encoding: 'utf8' }).status === 0 ? 'pwsh' : 'powershell.exe';
     const out = run(shell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
       env: shell === 'pwsh' ? process.env : env
     }).trim();
     const [status, subject = ''] = out.split('|');
     if (status !== 'Valid') throw new Error(`Authenticode signature not valid: ${out || '(no output)'}`);
-    if (!subject.includes(`O=${signers.win32}`) && !subject.includes(`CN=${signers.win32}`))
-      throw new Error(`unexpected signer ${subject}`);
+    if (!subject.split(/,\s*/).includes(`O=${signers.win32}`)) throw new Error(`unexpected signer ${subject}`);
     return subject;
   }
   return 'not checked on this platform (CI test builds only)';
@@ -161,7 +174,9 @@ async function main() {
       join(opt.out, 'ollama-runtime.json'),
       `${JSON.stringify({ version: LOCK.version, file: asset.file, sha256: asset.sha256, signer, size: du(opt.out) }, null, 2)}\n`
     );
-    console.log(`✓ Ollama ${LOCK.version} for ${process.platform}/${opt.arch} in ${opt.out} (${(du(opt.out) / 1e6).toFixed(0)} MB)`);
+    console.log(
+      `✓ Ollama ${LOCK.version} for ${process.platform}/${opt.arch} in ${opt.out} (${(du(opt.out) / 1e6).toFixed(0)} MB)`
+    );
   } finally {
     rmSync(work, { recursive: true, force: true });
   }

@@ -34,9 +34,19 @@ export async function evaluate(spec) {
   const [model, flag] = spec.split(',');
   const prefix = flag === 'noprefix' ? '' : QUERY_PREFIX;
   const t0 = Date.now();
-  const docs = (await embed(model, data.mails.map(m => `${m.subject}\n${m.from}\n${m.text}`))).map(norm);
+  const docs = (
+    await embed(
+      model,
+      data.mails.map(m => `${m.subject}\n${m.from}\n${m.text}`)
+    )
+  ).map(norm);
   const docMs = Date.now() - t0;
-  const qs = (await embed(model, data.queries.map(q => prefix + q.q))).map(norm);
+  const qs = (
+    await embed(
+      model,
+      data.queries.map(q => prefix + q.q)
+    )
+  ).map(norm);
   let r1 = 0;
   let r3 = 0;
   let mrr = 0;

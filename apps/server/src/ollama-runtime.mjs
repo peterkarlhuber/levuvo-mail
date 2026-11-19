@@ -16,14 +16,19 @@ const PROXY_ENV = ['HTTPS_PROXY', 'https_proxy', 'SSL_CERT_FILE'];
 const START_TIMEOUT = 30_000;
 
 /** The bundled binary, or the one named in LEVUVO_OLLAMA_BIN (development only, never from PATH). */
-export function resolveOllama({ resourcesPath = process.resourcesPath, env = process.env, platform = process.platform } = {}) {
+export function resolveOllama({
+  resourcesPath = process.resourcesPath,
+  env = process.env,
+  platform = process.platform
+} = {}) {
   const dir = resourcesPath ? path.join(resourcesPath, 'ollama') : '';
   const names = platform === 'win32' ? ['ollama.exe'] : ['ollama', path.join('bin', 'ollama')];
   for (const name of names) {
     const file = dir ? path.join(dir, name) : '';
     if (file && existsSync(file)) return { command: file, bundled: true };
   }
-  if (env.LEVUVO_OLLAMA_BIN && existsSync(env.LEVUVO_OLLAMA_BIN)) return { command: env.LEVUVO_OLLAMA_BIN, bundled: false };
+  if (env.LEVUVO_OLLAMA_BIN && existsSync(env.LEVUVO_OLLAMA_BIN))
+    return { command: env.LEVUVO_OLLAMA_BIN, bundled: false };
   return null;
 }
 

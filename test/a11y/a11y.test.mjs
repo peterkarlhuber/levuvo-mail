@@ -281,6 +281,60 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     await context.close();
   });
 
+  await t.test('own Ollama: model list, download progress and downloaded models', async () => {
+    const { MODEL_CATALOG, fitFor } = await import('../../apps/server/src/ai-model-catalog.mjs');
+    const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    const ram = 16 * 1024 ** 3;
+    for (const colorScheme of ['dark', 'light']) {
+      const { page, context, errors } = await open({
+        viewport: { width: 1440, height: 900 },
+        colorScheme,
+        setup: async context => {
+          const status = structuredClone(fixtures['GET /api/ai/status'].body);
+          Object.assign(status.settings, { enabled: true, localRuntime: 'bundled', embedModel: 'bge-m3' });
+          await context.route(
+            url => url.pathname === '/api/ai/status',
+            route => route.fulfill(json(status))
+          );
+          await context.route(
+            url => url.pathname === '/api/ai/local-models',
+            route =>
+              route.fulfill(
+                json({
+                  reachable: true,
+                  ram,
+                  recommendedTier: 'standard',
+                  freeBytes: 120e9,
+                  runtime: { version: '0.40.16', running: true },
+                  selected: { model: 'qwen3.5:9b', embedModel: 'bge-m3', provider: 'ollama' },
+                  index: [{ accountId: 'acc', messages: 1200, vectors: 300, running: true }],
+                  models: MODEL_CATALOG.map(m => ({
+                    ...m,
+                    default: Boolean(m.default),
+                    fit: fitFor(m, ram),
+                    installed: m.id === 'bge-m3' || m.id === 'ministral-3:3b',
+                    mismatch: false,
+                    job:
+                      m.id === 'qwen3.5:9b'
+                        ? { status: 'downloading', completed: 2.1e9, total: m.size, error: null }
+                        : m.id === 'gemma4:12b'
+                          ? { status: 'canceled', completed: 1e9, total: m.size, error: null }
+                          : null
+                  }))
+                })
+              )
+          );
+        }
+      });
+      await page.locator('.rail-item[aria-label="Einstellungen"]').click();
+      await page.locator('.settings-nav button', { hasText: 'KI & Agenten' }).first().click();
+      await page.locator('.local-model-status progress').first().waitFor();
+      await axe(page, `own Ollama settings (${colorScheme})`);
+      assert.deepEqual(errors, []);
+      await context.close();
+    }
+  });
+
   await t.test('sender screening: row and screener view', async () => {
     const { page, context, errors } = await open({
       viewport: { width: 1440, height: 900 },

@@ -37,6 +37,8 @@ export type AiSettings = {
   keys: Partial<Record<AiProvider, boolean>>;
   consentVersion: string;
   vaultAvailable: boolean;
+  /** 'bundled': Levuvo's own Ollama with the fixed model list; 'external': an address (development). */
+  localRuntime?: 'bundled' | 'external';
 };
 
 export type AiRuntime = {
@@ -61,10 +63,10 @@ export const LOCAL_MODELS = [
   { id: 'qwen3.5:27b', note: 'Groß, ab 32 GB RAM (Apache 2.0)' },
   { id: 'mistral-small3.2', note: 'Groß, ab 32 GB RAM (Apache 2.0)' }
 ];
-export const DEFAULT_EMBED_MODEL = 'qwen3-embedding:0.6b';
+export const DEFAULT_EMBED_MODEL = 'bge-m3';
 export const EMBED_MODELS = [
-  { id: 'qwen3-embedding:0.6b', note: 'Standard, klein und mehrsprachig (Apache 2.0)' },
-  { id: 'bge-m3', note: 'Alternative, mehrsprachig (MIT)' }
+  { id: 'bge-m3', note: 'Standard, mehrsprachig, am besten bei deutschen Mails (MIT)' },
+  { id: 'qwen3-embedding:0.6b', note: 'Klein und mehrsprachig (Apache 2.0)' }
 ];
 
 export const aiSettings = () => getJson<AiSettings>('/api/ai/settings');

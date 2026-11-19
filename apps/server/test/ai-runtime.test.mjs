@@ -27,6 +27,6 @@ test('AI runtime: every third-party wheel in the lock carries a hash', () => {
   const pkg = JSON.parse(readFileSync(new URL('package.json', root), 'utf8'));
   assert.deepEqual(
     pkg.build.extraResources.map(r => r.to),
-    ['ai-runtime']
+    ['ai-runtime', 'ollama']
   );
 });

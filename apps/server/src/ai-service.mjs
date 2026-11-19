@@ -234,8 +234,7 @@ export function createAiService({
     if (!managed || !models) return;
     const hit = ready.get(id);
     if (hit && Date.now() - hit < 60_000) return;
-    if (!(await models.isReady(id)))
-      throw Object.assign(new SidecarError('model_missing'), { statusCode: 409 });
+    if (!(await models.isReady(id))) throw Object.assign(new SidecarError('model_missing'), { statusCode: 409 });
     ready.set(id, Date.now());
   }
   const keyOf = provider => {
@@ -483,7 +482,7 @@ export function createAiService({
     },
     log,
     managed,
-    models,
+    localModels: models,
     localRuntime,
     get configuredFingerprint() {
       return configured;

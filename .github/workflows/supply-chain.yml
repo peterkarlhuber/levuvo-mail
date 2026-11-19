@@ -1,7 +1,7 @@
 name: Supply chain
 # Weekly scan of everything that ships in the installers, independent of code changes:
-# npm runtime dependencies, the hashed Python locks of the AI runtime, the bundled CPython and
-# the Electron support window. Failures show up as a red scheduled run.
+# npm runtime dependencies, the hashed Python locks of the AI runtime, the bundled CPython, the
+# Electron support window, the bundled Ollama and the pinned model catalog. Failures show up as a red scheduled run.
 on:
   schedule:
     - cron: '41 5 * * 1'
@@ -39,3 +39,9 @@ jobs:
           done
       - name: Bundled CPython is the newest patch release
         run: node scripts/check-python-runtime.mjs --strict
+      - name: Bundled Ollama has no published advisory (a newer release only warns)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ollama/check-ollama-runtime.mjs
+      - name: Model catalog pins still match the registry
+        run: node scripts/ollama/check-catalog.mjs
