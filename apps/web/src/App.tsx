@@ -47,6 +47,8 @@ export type SettingsTab =
   | 'accounts'
   | 'templates'
   | 'filters'
+  | 'automations'
+  | 'booking'
   | 'dav'
   | 'security'
   | 'search'
