@@ -1,0 +1,39 @@
+name: research-model-digest (temporary)
+on:
+  push:
+    branches: [claude/project-thread-2yspay]
+    paths: ['.github/workflows/research-model-digest.yml', 'scripts/research/**']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: '22' }
+      - run: node scripts/research/probe-registry.mjs
+  mac-pull:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: '22' }
+      - run: npm ci --no-fund --ignore-scripts
+      - run: node scripts/fetch-ollama.mjs --arch arm64 --out "$RUNNER_TEMP/ollama"
+      - name: Pull qwen3.5:9b with the bundled Ollama
+        run: |
+          set -x
+          BIN=$(find "$RUNNER_TEMP/ollama" -name ollama -type f -perm -u+x | head -1)
+          export OLLAMA_MODELS="$RUNNER_TEMP/models" OLLAMA_HOST=127.0.0.1:11555 OLLAMA_DEBUG=1 OLLAMA_NO_CLOUD=1 OLLAMA_NOPRUNE=1
+          "$BIN" serve > "$RUNNER_TEMP/serve.log" 2>&1 &
+          sleep 5
+          curl -s http://127.0.0.1:11555/api/version
+          curl -sN http://127.0.0.1:11555/api/pull -d '{"model":"qwen3.5:9b"}' | awk 'NR%400==1 || /success|error|manifest|verifying/'
+          curl -s http://127.0.0.1:11555/api/tags
+          find "$OLLAMA_MODELS/manifests" -type f -print -exec shasum -a 256 {} \; -exec cat {} \;
+          echo; grep -iE "manifest|registry|pull|digest|mlx|platform" "$RUNNER_TEMP/serve.log" | head -80
+          df -h .
