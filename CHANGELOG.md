@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Dictation
+- **Speak instead of type:** a microphone button in the composer records up to five minutes and inserts the recognised text at the cursor. Speech recognition is Whisper (base, small or large-v3-turbo, chosen under Settings → AI & agents → Dictation) running on this computer with the graphics card (WebGPU) or the processor; audio and text never leave the device and recordings are not stored.
+- **Checked download:** the model is downloaded once from Hugging Face at a pinned revision, every file is checked against size and SHA-256 shipped with the app, and a mismatch deletes it. Models are not part of backups and can be deleted in the settings.
+- **Microphone permission:** the app asks for audio only (no camera); macOS shows the microphone prompt with a reason.
+
 ### Replies in your own style
 - **Style per contact (opt-in):** Settings → AI & agents → Writing style → "Learn style per contact". Levuvo Mail reads your sent emails in the local search index and remembers per recipient the greeting, the closing and du or Sie, without any AI model. Reply suggestions and "bullet points to email" (to the first recipient typed) use these habits, put your emails to that person first as style samples, and show "In the style of your emails to …". A learned du/Sie for a contact wins over the general setting.
 - **Stays on the device:** the profile is encrypted with a keychain key (memory only without a keychain), not part of backups, relearned every six hours from the index, and can be deleted per contact (stays deleted until you write to them again) or as a whole; switching it off or "Delete all AI data" deletes it.

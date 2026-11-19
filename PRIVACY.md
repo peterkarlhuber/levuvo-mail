@@ -76,6 +76,11 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   keychain. For use in an organization, a data processing agreement (Art. 28 GDPR) with the provider is
   required.
 - **Semantic search** computes its vectors always locally with Ollama, also when a cloud model is chosen.
+- **Dictation** (off until you choose a speech model): the microphone records only after you click the
+  microphone button in the composer, until you stop it (at most five minutes). Speech is recognised on this computer with the Whisper
+  model you downloaded, also when a cloud model is chosen; neither audio nor text is sent anywhere and the
+  recording is discarded once the text is inserted. The AI log notes only the model, the length and
+  whether it worked. The app asks the system for microphone access only (no camera).
 - **What is stored:** the AI settings (app data folder, no key) and an **AI log** of what the AI and
   agents did (time, function or tool, provider, model, result) **without message content**, kept for 30
   days on this device. It is not used to monitor anyone's performance.
@@ -123,7 +128,7 @@ anywhere.
 ## Connections to the internet
 
 - **Mail servers** (IMAP, SMTP, ManageSieve for filters/vacation reply) – always encrypted, certificates are verified.
-- **AI:** the local model talks only to Levuvo's own Ollama on this computer (127.0.0.1). Downloading a model you chose contacts registry.ollama.ai (IP address and model name only). With a cloud model and your consent, the contents listed under "AI features" go to Anthropic (api.anthropic.com) or OpenAI (api.openai.com) over HTTPS.
+- **AI:** the local model talks only to Levuvo's own Ollama on this computer (127.0.0.1). Downloading a model you chose contacts registry.ollama.ai (IP address and model name only); downloading a speech model for dictation contacts huggingface.co (IP address and the files of that model only). With a cloud model and your consent, the contents listed under "AI features" go to Anthropic (api.anthropic.com) or OpenAI (api.openai.com) over HTTPS.
 - **Microsoft 365 calendar:** accepting an invitation in a Microsoft 365 calendar creates the event without attendees, so Microsoft does not send invitations on your behalf; your answer goes to the organizer as a reply mail.
 - **CalDAV/CardDAV servers** that you add yourself – HTTPS only.
 - **Task lists you connect yourself** (Tasks → Lists → "Connect a list": a CalDAV list, Microsoft To Do via Microsoft Graph, or Google Tasks): only the tasks in that list are sent to the server of that list (title, note, due date, reminder, priority, repetition, status); the link to the mail, the origin and the reminder state stay on this device. Nothing is sent before you connect a list. Google Tasks receives only title, note, due day and status (it cannot store the rest). CalDAV passwords are only sent to addresses of the account's own domain over HTTPS; Microsoft and Google receive the sign-in token of that account, which needs a one-time consent for tasks. The provider's privacy policy also applies. Disconnecting a list stops syncing and keeps the tasks on this device; nothing is deleted on the server.
