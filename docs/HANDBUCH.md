@@ -150,6 +150,11 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
 ManageSieve an (bei Microsoft- und Google-Anmeldung stattdessen im Webmail einrichten).
 
 - **Abwesenheitsnotiz:** aktivieren, optional Von/Bis-Datum, Betreff, Text, „höchstens alle … Tage“ je Absender.
+  Der Text lässt sich wie die Signatur formatieren (fett, Links, Bilder). **„Signatur des Kontos anhängen
+  (mit Logo)“** fügt die Signatur beim Speichern an – nach einer Änderung an der Signatur bitte erneut
+  speichern. Die Notiz wird mit einer Textversion gespeichert; Bilder reisen in der Antwort mit (nichts wird
+  aus dem Internet nachgeladen). Kann dein Mailserver nur Text-Antworten senden, speichert Levuvo Mail die
+  Textversion und weist darauf hin.
 - **Regeln:** „Wenn alle/eine der Bedingungen zutreffen“ (Von, An/CC, Betreff, Kopfzeilen – enthält,
   ist genau, enthält nicht) → Aktionen (in Ordner verschieben, als gelesen markieren, markieren,
   Papierkorb). Reihenfolge mit den Pfeilen, „danach keine weiteren Regeln anwenden“ möglich.
@@ -404,10 +409,15 @@ gespeichert.
 
 Ein **Raum** (Alt+4) sammelt alles zu einem Thema, Projekt oder Kunden: Notizen, die mehrere gleichzeitig
 bearbeiten, angeheftete Mails mit internen Kommentaren, Aufgaben und Termine mit Zuständigen, Dateien mit
-Versionen und eine Aktivitätsliste. Mitglieder lädst du per Mail-Adresse ein (Rollen Eigentümer,
+Versionen, einen Chat und eine Aktivitätsliste. Mitglieder lädst du per Mail-Adresse ein (Rollen Eigentümer,
 Bearbeiter, Leser) und vergleichst beim Beitritt den Sicherheitscode. Es gibt keinen Levuvo-Server: jedes
 Mitglied hat eine verschlüsselte Kopie, Änderungen gehen Ende-zu-Ende-verschlüsselt als Mails zwischen den
 Postfächern. Die Reiter lassen sich mit den Pfeiltasten wechseln, Dateien auch per Tastatur hochladen.
+Im Reiter **Chat** schreiben Eigentümer und Bearbeiter allen Mitgliedern (Enter sendet, Umschalt+Enter
+macht eine neue Zeile); Leser lesen mit. Nachrichten kommen meist in wenigen Sekunden an, weil Levuvo das
+Postfach per IMAP IDLE beobachtet. Antworten, Bearbeiten und Löschen gehen über die Knöpfe neben einer
+Nachricht; gelöscht wird für alle. Ungelesene Nachrichten zählt nur dein Gerät, es gibt keine
+Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-erstellt“ markiert.
 Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
 Erlaubnis. Details: `docs/SPACES.md`.
 

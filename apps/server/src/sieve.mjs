@@ -3,6 +3,15 @@
 // so they also work while Levuvo Mail is closed.
 import net from 'node:net';
 import tls from 'node:tls';
+import {
+  cleanVacationHtml,
+  composeVacation,
+  fromCidImages,
+  mimeImageParts,
+  textToHtml,
+  toCidImages,
+  vacationMime
+} from './vacation.mjs';
 
 export const SCRIPT_NAME = 'levuvo';
 const MAX_RULES = 50;
@@ -86,7 +95,7 @@ export class ManageSieveClient {
     const res = await this._response();
     if (res.status !== 'OK') {
       const message = /"([^"]*)"/.exec(res.text)?.[1] || res.text;
-      throw fail(message, 'sieve_rejected', 422);
+      throw Object.assign(fail(message, 'sieve_rejected', 422), { response: res.text });
     }
     return res;
   }
@@ -156,6 +165,16 @@ export class ManageSieveClient {
   async checkScript(content) {
     return this.command(`CHECKSCRIPT {${Buffer.byteLength(content, 'utf8')}+}\r\n${content}`);
   }
+  /** RFC 5804 HAVESPACE: false only when the server says the script is too big or over quota. */
+  async haveSpace(name, size) {
+    try {
+      await this.command(`HAVESPACE ${quote(name)} ${size}`);
+      return true;
+    } catch (err) {
+      if (/\(QUOTA/i.test(err.response || '')) return false;
+      return true; // servers without a working HAVESPACE: PUTSCRIPT reports it
+    }
+  }
   async setActive(name) {
     return this.command(`SETACTIVE ${quote(name)}`);
   }
@@ -212,10 +231,14 @@ export function validateSieveConfig(input, { folderExists = () => true } = {}) {
     };
   });
   const v = input.vacation || {};
+  // Formatted text (editor HTML); older clients send only plain `body`.
+  const bodyHtml =
+    typeof v.bodyHtml === 'string' ? cleanVacationHtml(v.bodyHtml) : textToHtml(str(v.body || '', 4000, 'Text'));
   const vacation = {
     enabled: v.enabled === true,
     subject: str(v.subject || '', 200, 'Betreff'),
-    body: str(v.body || '', 4000, 'Text'),
+    bodyHtml,
+    includeSignature: v.includeSignature === true,
     days: Math.min(30, Math.max(1, Number.isInteger(v.days) ? v.days : 1)),
     start: v.start
       ? DATE.test(v.start)
@@ -235,7 +258,7 @@ export function validateSieveConfig(input, { folderExists = () => true } = {}) {
       .slice(0, 10)
       .map(a => str(a, 254, 'Adresse').toLowerCase())
   };
-  if (vacation.enabled && !vacation.body.trim())
+  if (vacation.enabled && !vacation.bodyHtml)
     throw fail('Bitte einen Text für die Abwesenheitsnotiz eingeben.', 'sieve_invalid');
   if (vacation.start && vacation.end && vacation.end < vacation.start)
     throw fail('Das Enddatum liegt vor dem Startdatum.', 'sieve_invalid');
@@ -259,15 +282,34 @@ function condition(c) {
   }
 }
 
-/** Generates the Sieve script. The JSON model is embedded so it can be edited again. */
-export function buildSieveScript(config, { trashFolder = '' } = {}) {
+/**
+ * Generates the Sieve script. The JSON model is embedded so it can be edited again.
+ * `format: 'html'` sends the reply as MIME (`vacation :mime`) with text and HTML versions and
+ * the images inline; `'text'` is the fallback for servers without it. `signatureHtml` is the
+ * account signature, appended when the reply asks for it.
+ */
+export function buildSieveScript(config, { trashFolder = '', signatureHtml = '', format = 'html' } = {}) {
+  const v = config.vacation;
+  let model = config;
+  let reason = '';
+  let mime = false;
+  if (v.enabled) {
+    const content = composeVacation(v, signatureHtml);
+    if (format === 'html') {
+      // Body images travel once, in the MIME part; the model refers to them by Content-ID.
+      const body = toCidImages(v.bodyHtml, 'body');
+      const sig = toCidImages(content.tail, 'sig');
+      model = { ...config, vacation: { ...v, bodyHtml: body.html } };
+      reason = vacationMime({ html: body.html + sig.html, text: content.text, parts: [...body.parts, ...sig.parts] });
+      mime = true;
+    } else reason = content.text;
+  }
   const lines = [
     '# Levuvo Mail – automatisch erzeugt. Bitte in Levuvo Mail bearbeiten.',
-    `# levuvo-rules: ${Buffer.from(JSON.stringify(config)).toString('base64')}`,
+    `# levuvo-rules: ${Buffer.from(JSON.stringify(model)).toString('base64')}`,
     'require ["fileinto", "imap4flags", "vacation", "date", "relational"];',
     ''
   ];
-  const v = config.vacation;
   if (v.enabled) {
     const tests = [];
     if (v.start) tests.push(`currentdate :value "ge" "date" ${sieveString(v.start)}`);
@@ -275,7 +317,8 @@ export function buildSieveScript(config, { trashFolder = '' } = {}) {
     const args = [`:days ${v.days}`];
     if (v.subject.trim()) args.push(`:subject ${sieveString(v.subject.trim())}`);
     if (v.addresses.length) args.push(`:addresses [${v.addresses.map(sieveString).join(', ')}]`);
-    const action = `vacation ${args.join(' ')} ${sieveString(v.body)};`;
+    if (mime) args.push(':mime');
+    const action = `vacation ${args.join(' ')} ${sieveString(reason)};`;
     lines.push('# Abwesenheitsnotiz');
     lines.push(tests.length ? `if allof (${tests.join(', ')}) {\n  ${action}\n}` : action, '');
   }
@@ -303,11 +346,21 @@ export function buildSieveScript(config, { trashFolder = '' } = {}) {
 export function parseLevuvoScript(script) {
   const m = /# levuvo-rules: ([A-Za-z0-9+/=]+)/.exec(String(script || ''));
   if (!m) return null;
+  let config;
   try {
-    return JSON.parse(Buffer.from(m[1], 'base64').toString('utf8'));
+    config = JSON.parse(Buffer.from(m[1], 'base64').toString('utf8'));
   } catch {
     return null;
   }
+  const v = config?.vacation;
+  if (v && typeof v === 'object') {
+    // Scripts from before 2.6 hold plain text only.
+    if (typeof v.bodyHtml !== 'string') v.bodyHtml = textToHtml(v.body || '');
+    delete v.body;
+    v.includeSignature = v.includeSignature === true;
+    v.bodyHtml = fromCidImages(v.bodyHtml, mimeImageParts(script));
+  }
+  return config;
 }
 
 /** Reads rules, vacation and whether a foreign script is active. */
@@ -321,14 +374,27 @@ export async function loadSieve(client) {
     capabilities: (client.capabilities.SIEVE || '').split(/\s+/).filter(Boolean),
     config: config || {
       rules: [],
-      vacation: { enabled: false, subject: '', body: '', days: 1, start: '', end: '', addresses: [] }
+      vacation: {
+        enabled: false,
+        subject: '',
+        bodyHtml: '',
+        includeSignature: false,
+        days: 1,
+        start: '',
+        end: '',
+        addresses: []
+      }
     },
     foreignActive: active && active.name !== SCRIPT_NAME ? active.name : null,
     active: active?.name === SCRIPT_NAME
   };
 }
 
-export async function saveSieve(client, config, { trashFolder, replaceForeign = false }) {
+/**
+ * Stores and activates the script. The formatted reply needs `vacation :mime`; a server that
+ * rejects it gets the plain-text reply instead (`format: 'text'` in the result).
+ */
+export async function saveSieve(client, config, { trashFolder, replaceForeign = false, signatureHtml = '' }) {
   const scripts = await client.listScripts();
   const foreign = scripts.find(s => s.active && s.name !== SCRIPT_NAME);
   if (foreign && !replaceForeign) {
@@ -338,9 +404,23 @@ export async function saveSieve(client, config, { trashFolder, replaceForeign = 
       409
     );
   }
-  const script = buildSieveScript(config, { trashFolder });
-  await client.checkScript(script);
+  let format = config.vacation.enabled ? 'html' : 'none';
+  let script = buildSieveScript(config, { trashFolder, signatureHtml, format: 'html' });
+  try {
+    await client.checkScript(script);
+  } catch (err) {
+    if (format !== 'html') throw err;
+    format = 'text';
+    script = buildSieveScript(config, { trashFolder, signatureHtml, format: 'text' });
+    await client.checkScript(script);
+  }
+  if (!(await client.haveSpace(SCRIPT_NAME, Buffer.byteLength(script, 'utf8'))))
+    throw fail(
+      'Die Abwesenheitsnotiz ist für deinen Mailserver zu groß. Bitte ein kleineres Logo verwenden oder die Signatur weglassen.',
+      'sieve_too_large',
+      413
+    );
   await client.putScript(SCRIPT_NAME, script);
   await client.setActive(SCRIPT_NAME);
-  return { ok: true, active: true };
+  return { ok: true, active: true, format };
 }

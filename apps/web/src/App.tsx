@@ -25,6 +25,7 @@ import { useT } from './i18n';
 import { accountMarkerKey, detectArrivals, type NotificationCursor } from './notification-tracker';
 import { useDocumentPrefs, usePrefs } from './prefs';
 import { useTaskBadge } from './task-reminders';
+import { useSpacesChatBadge } from './spaces-badge';
 import { lazyModule, ModuleBoundary } from './ModuleBoundary';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
@@ -321,6 +322,7 @@ function Shell() {
     },
     [t, toast]
   );
+  const chatUnread = useSpacesChatBadge();
   const tasksDue = useTaskBadge({ browserReminders: Boolean(runtime && !runtime.desktop), onReminder: onTaskReminder });
 
   // Follow-ups in the browser (the desktop app notifies from the main process).
@@ -617,6 +619,11 @@ function Shell() {
                 {unseenTotal > 99 ? '99+' : unseenTotal}
               </span>
             )}
+            {item.id === 'spaces' && chatUnread > 0 && (
+              <span className="rail-badge" aria-hidden="true">
+                {chatUnread > 99 ? '99+' : chatUnread}
+              </span>
+            )}
             {item.id === 'tasks' && tasksDue > 0 && (
               <span className="rail-badge" aria-hidden="true">
                 {tasksDue > 99 ? '99+' : tasksDue}
@@ -625,6 +632,9 @@ function Shell() {
             <span className="rail-label">{item.label}</span>
             {item.id === 'mail' && unseenTotal > 0 && (
               <span className="sr-only">, {t('{n} ungelesen', { n: unseenTotal })}</span>
+            )}
+            {item.id === 'spaces' && chatUnread > 0 && (
+              <span className="sr-only">, {t('{n} ungelesene Chat-Nachrichten', { n: chatUnread })}</span>
             )}
             {item.id === 'tasks' && tasksDue > 0 && (
               <span className="sr-only">, {t('{n} heute fällig', { n: tasksDue })}</span>

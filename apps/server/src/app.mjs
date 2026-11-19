@@ -51,7 +51,7 @@ import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 import { createOllamaRuntime } from './ollama-runtime.mjs';
 import { createModelManager } from './ollama-models.mjs';
-import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
+import { registerSpaceRoutes, spacesDir, SPACES_TICK_MS } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
 
 const { ImapFlow } = imapflow;
@@ -775,9 +775,10 @@ export async function createMailServer({
       if (background) {
         jobs.start();
         timers.push(...ctx.startBackgroundJobs());
-        // Shared spaces: fetch and send sync mails.
+        // Shared spaces poll on their own schedule (see routes-spaces.mjs); the IMAP IDLE
+        // connection wakes them at once when a sync mail arrives.
         setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
-        timers.push(setInterval(() => void ctx.spaces.tick(), 60_000));
+        timers.push(setInterval(() => void ctx.spaces.tick(), SPACES_TICK_MS));
         if (taskSync) taskSchedule = scheduleTaskSync(taskSync);
       }
       await mcp.start();

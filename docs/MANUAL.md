@@ -136,6 +136,10 @@ work when Levuvo Mail is closed. Requirement: your provider offers ManageSieve (
 sign-in, set up rules in the provider's webmail instead).
 
 - **Vacation reply:** enable, optional from/until date, subject, text, “at most every … days” per sender.
+  The text is formatted like the signature (bold, links, images). **“Append the account's signature
+  (with logo)”** adds the signature when saving – save again after changing the signature. The reply is
+  stored with a plain-text version; images travel inside the reply (no loading from the internet).
+  If your mail server can only send plain-text replies, Levuvo Mail saves the text version and says so.
 - **Rules:** “If all/any of the conditions match” (From, To/CC, Subject, Headers – contains, is exactly,
   does not contain) → actions (move to folder, mark as read, star, trash). Order with the arrows;
   “do not apply further rules afterwards” is available.
@@ -371,11 +375,15 @@ nothing on the server. Tasks are stored encrypted on the device.
 
 A **space** (Alt+4) collects everything about a topic, project or customer: notes several people edit at
 the same time, pinned mails with internal comments, tasks and events with assignees, files with versions
-and an activity list. You invite members by email address (roles owner, editor, reader) and compare the
+a chat and an activity list. You invite members by email address (roles owner, editor, reader) and compare the
 safety code when they join. There is no Levuvo server: every member keeps an encrypted copy, and changes
 travel end-to-end encrypted as mails between the mailboxes. The tabs can be switched with the arrow keys,
-and files can be uploaded with the keyboard. The assistant and agents see a space only if its owner allows
-it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
+and files can be uploaded with the keyboard. In the **Chat** tab owners and editors write to all members
+(Enter sends, Shift+Enter starts a new line); readers follow along. Messages usually arrive within a few
+seconds because Levuvo watches the mailbox with IMAP IDLE. Reply, edit and delete with the buttons next
+to a message; deleting removes it for everyone. Only your device counts unread messages, and there are no
+read receipts. Messages written with the assistant are marked "AI-generated". The assistant and agents see
+a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving
 

@@ -2,7 +2,7 @@
 
 A space („Raum“) collects everything about one topic, project or customer: notes that several
 people edit at the same time (with checklists), pinned mails with internal comments, tasks and
-events with assignees, files with versions, and an activity list. Anyone can create any number of
+events with assignees, files with versions, a chat, and an activity list. Anyone can create any number of
 spaces and invite people by email address. There is **no Levuvo server**: every member keeps a
 complete encrypted copy, and changes travel as end-to-end encrypted mails between the members'
 existing mailboxes. This works across providers (for example Hetzner and Microsoft 365).
@@ -12,8 +12,8 @@ existing mailboxes. This works across providers (for example Hetzner and Microso
 | Role | Can |
 |---|---|
 | Owner | everything, including inviting, removing members, changing roles, handing over, dissolving, the space's assistant settings |
-| Editor | read and change content (notes, mails, comments, tasks, events, files) |
-| Reader | read only |
+| Editor | read and change content (notes, mails, comments, chat, tasks, events, files) |
+| Reader | read only (also the chat: readers follow along but do not write) |
 
 ## How it works
 
@@ -67,6 +67,41 @@ existing mailboxes. This works across providers (for example Hetzner and Microso
   limits (usually 20–25 MB) are no problem. Files up to 25 MB are sent to everyone right away;
   larger ones are fetched from the uploader when someone opens them. Maximum 250 MB per file.
 
+## Chat
+
+Every space has a chat for quick exchanges between its members. Messages are ordinary space
+operations (`chat.post`, `chat.edit`, `chat.delete`), so they are signed, end-to-end encrypted,
+permission-checked and delivered exactly like other content, and they work across providers.
+
+- **Speed:** chat operations skip the 20-second batch pause and are sent right away (one mail per
+  member; changes that were waiting for the same member travel along). On the receiving side the
+  IMAP IDLE connection Levuvo keeps for each inbox anyway reports the new mail; when it looks like
+  a sync mail (its subject, or a new message that another device already moved away) the spaces
+  receive for that account runs at once. Messages therefore usually arrive within 1 to 5 seconds.
+  Normal mail never causes an extra IMAP login.
+- **Fallback:** without a healthy IDLE connection (server without IDLE, connection lost) accounts
+  with spaces are polled every 30 seconds; with IDLE a safety poll runs every 2 minutes (junk
+  folder, missed pushes). Every 5 minutes all accounts are checked for new invitations.
+- **Roles:** owners and editors write; readers read. Only the author edits a message; the author
+  or the owner deletes it.
+- **Deleting** a message removes it for everyone: it triggers a checkpoint, after which the text is
+  gone from every member's copy and is never sent to people who join later. Replies show
+  „Nachricht gelöscht“.
+- **Unread** is kept per device in the local copy and is never sent: there are no read receipts
+  and no typing indicators (both would need real-time presence and would reveal working habits).
+  The rail and the list of spaces show the number of unread messages.
+- **Not in the activity list:** chat messages do not appear there, so the list stays readable.
+- **Assistant:** `read_room_chat` reads the chat (framed as untrusted data), `search_rooms` also
+  searches it, and `room_chat_post` writes a message after the user's approval. Such messages
+  carry `ai: true` and are shown to every member as „KI-erstellt“ (EU AI Act Art. 50).
+- **Compatibility:** members on versions without chat keep chat operations unchanged and pass them
+  on but do not show them. Spaces in which nobody has chatted fold (and digest) exactly as before.
+- **Later: a relay.** The service only hands envelopes to `transport.send` (with an `urgent` hint
+  for chat) and takes them back through `receiveEnvelope`; what wakes the receive (IDLE, polling)
+  is decided in `routes-spaces.mjs`. An optional, self-hosted relay for instant delivery would be
+  one more sender and one more wake-up source; the envelopes stay end-to-end encrypted and signed,
+  so the relay would see no content.
+
 ## Local storage
 
 ```
@@ -82,10 +117,10 @@ locked; existing files are never overwritten with a new key.
 
 The Levuvo Mail Assistant and external agents (MCP) see only spaces in which the user is an active
 member and for which the owner has not switched the assistant off. Reading (`list_rooms`,
-`read_room`, `room_changes`, `search_rooms`, `read_room_file`) is immediate; content from other
+`read_room`, `room_changes`, `search_rooms`, `read_room_file`, `read_room_chat`) is immediate; content from other
 members is framed as untrusted data. Every change (`room_create`, `room_create_note`,
 `room_append_note`, `room_add_task`, `room_update_task`, `room_add_event`, `room_comment`,
-`room_add_mail`) waits for the user's approval because other members see it. Inviting, removing
+`room_chat_post`, `room_add_mail`) waits for the user's approval because other members see it. Inviting, removing
 members and changing roles (`room_invite`, `room_remove_member`, `room_set_role`) additionally need
 the highest agent level. Dissolving a space, deleting the local copy, keys and the space's
 assistant settings are not available to the assistant at all. Cloud models and external agents only
@@ -94,7 +129,8 @@ local model always may.
 
 ## Limits
 
-- Changes arrive as fast as mail: usually seconds to a minute (sync runs every minute).
+- Changes arrive as fast as mail: chat messages usually within seconds (IDLE), other changes
+  after the 20-second batch pause; without IDLE within about 30 seconds.
 - Member list, sender, recipients, time and size of sync mails are visible to the mail providers
   involved; the space name is readable in the invitation mail.
 - A removed member keeps their copy of what existed before the removal.

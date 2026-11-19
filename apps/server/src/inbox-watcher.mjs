@@ -179,7 +179,28 @@ export function createWatcherPool({
   timers = globalThis
 } = {}) {
   const watchers = new Map();
+  // Other features (shared spaces) listen for new inbox snapshots, e.g. to fetch sync mails at once.
+  const subscribers = new Set();
+  const notify = (id, snapshot) => {
+    try {
+      onSnapshot?.(id, snapshot);
+    } catch {
+      /* a listener's failure never stops the watcher */
+    }
+    for (const fn of subscribers) {
+      try {
+        fn(id, snapshot);
+      } catch {
+        /* see above */
+      }
+    }
+  };
   return {
+    /** Calls `fn(accountId, snapshot)` after every inbox refresh. Returns an unsubscribe function. */
+    subscribe(fn) {
+      subscribers.add(fn);
+      return () => subscribers.delete(fn);
+    },
     sync(accounts) {
       const wanted = new Map(accounts.filter(a => a.imap?.configured).map(a => [a.id, a]));
       for (const [id, entry] of watchers) {
@@ -193,7 +214,14 @@ export function createWatcherPool({
         if (watchers.has(id)) continue;
         watchers.set(id, {
           fingerprint: accountFingerprint(account),
-          watcher: createWatcher(account, { clientFactory, prepare, previewCache, onSnapshot, logger, timers })
+          watcher: createWatcher(account, {
+            clientFactory,
+            prepare,
+            previewCache,
+            onSnapshot: notify,
+            logger,
+            timers
+          })
         });
       }
     },
