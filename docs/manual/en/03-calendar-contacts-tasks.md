@@ -30,6 +30,18 @@ At the top right you switch between **Day**, **Week**, **Month** and **Agenda** 
 
 Reminders appear as notifications from your computer, even when the window is closed.
 
+### Find a time and polls
+
+With **Find a time** in the calendar toolbar you look for a time when everyone can make it. Enter the people, the duration, the period and the hours and choose **Find free times**. Levuvo Mail checks your own calendars and, where possible, the free/busy of colleagues in Microsoft 365 or Google. It only reads start and end, never titles. Then you have three options:
+
+- **Enter event and invite:** Pick one time; the event is created and everyone gets an invitation.
+- **Let the team vote:** Pick up to 8 times. Everyone gets their own email with one link per time and answers with one click from their own mail program. Under **Polls** in the calendar sidebar you see who can when, and **Set** enters the event and invites everyone.
+- **Offer times to someone outside:** The first time someone picks is booked at once.
+
+### Booking links
+
+Under **Settings → Booking links** you create a link for your signature or website. Whoever clicks it writes you an email, and Levuvo Mail answers automatically with free times from your calendars. A click on a time books it, and both of you get an invitation. You choose the duration, weekdays, hours, notice and buffer. It works without a server of your own while Levuvo Mail is open. Levuvo Mail never answers automatic emails such as out-of-office replies.
+
 ## Contacts
 
 Open contacts with `Alt` + `3`.
