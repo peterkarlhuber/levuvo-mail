@@ -89,7 +89,7 @@ export const NOT_BACKED_UP = {
   'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
   'mcp-approvals.json': 'short-lived approvals that expire',
   'privacy-stats.json': 'daily counters of the privacy cockpit; they start again from zero',
-  // Levuvo's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
+  // Levuvo Mail's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
   // and the key pair the server creates for itself.
   'ollama/': 'models of the own Ollama; downloaded again from the fixed model list',
   '*.lvdb': 'search index; rebuilt from the mailbox',

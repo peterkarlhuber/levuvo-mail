@@ -320,7 +320,7 @@ export const AI_EN: Record<string, string> = {
   'Aufgabe für den Assistenten': 'Task for the assistant',
   'Verlauf des Assistenten': 'Assistant history',
   'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})',
-  // Levuvo's own Ollama and its model list
+  // Levuvo Mail's own Ollama and its model list
   'Das eigene Ollama von Levuvo Mail startet beim ersten Gebrauch.': "Levuvo Mail's own Ollama starts on first use.",
   'Modell zu groß für diesen Computer?': 'Model too large for this computer?',
   '{name} braucht mehr Arbeitsspeicher, als dieser Computer hat. Es kann sehr langsam laufen oder gar nicht starten.':

@@ -769,8 +769,15 @@ export const EN: Record<string, string> = {
     "OpenPGP: create or import a key (Settings → Security), send your public key to contacts, import theirs. S/MIME: import your certificate authority's certificate as a .p12 file. When composing, choose “Sign”/“Encrypt”.",
   'Ohne Verbindung zeigt Levuvo Mail die zuletzt geladenen Listen und Nachrichten sowie Treffer aus dem lokalen Suchindex. Änderungen (Verschieben, Senden) sind erst wieder online möglich.':
     'Without a connection, Levuvo Mail shows the most recently loaded lists and messages as well as results from the local search index. Changes (moving, sending) are only possible once you are back online.',
-  'Das ausführliche Handbuch liegt dem Release-Kit als HANDBUCH.md (Deutsch) und MANUAL.md (English) bei.':
-    'The detailed manual is included in the release kit as HANDBUCH.md (German) and MANUAL.md (English).',
+  Handbuch: 'Manual',
+  Kurzhilfe: 'Quick help',
+  'Kapitel des Handbuchs': 'Manual chapters',
+  'Im Handbuch suchen': 'Search the manual',
+  'Das Handbuch ist in dieser Version nicht enthalten.': 'The manual is not included in this version.',
+  'Schritt für Schritt erklärt: Einrichtung, E-Mail, Kalender, Kontakte, Aufgaben, Räume, Assistent und Einstellungen. Fragen dazu beantwortet auch der Assistent.':
+    'Explained step by step: setup, email, calendar, contacts, tasks, spaces, assistant and settings. The assistant also answers questions about it.',
+  'Bild nicht gefunden.': 'Image not found.',
+  '„{label}“': '“{label}”',
   'Tastenkürzel anzeigen': 'Show keyboard shortcuts',
   'Desktop-App': 'Desktop app',
   'Browser (Entwicklung)': 'Browser (development)',
@@ -1262,7 +1269,7 @@ export const EN: Record<string, string> = {
     '{accounts} still needs a one-time permission at the provider.',
   'Warte auf Freigabe …': 'Waiting for permission …',
   '{account} freigeben': 'Allow {account}',
-  Freigeben: 'Allow access',
+  'Zugriff freigeben': 'Allow access',
   Aktionen: 'Actions',
   'Neue E-Mail schreiben': 'Write new email',
   'E-Mails durchsuchen': 'Search emails',
@@ -1388,7 +1395,7 @@ export const EN: Record<string, string> = {
   'Zurückstellen & Nachfassen': 'Snooze & follow-up',
   'Zurückstellen (Taste B) nimmt eine Nachricht aus dem Posteingang und bringt sie zur gewählten Zeit ungelesen zurück. „Nachfassen“ beim Senden erinnert dich, wenn bis dahin keine Antwort kam – zu finden unter „Nachfassen“ in der Ordnerleiste.':
     'Snooze (key B) removes a message from the inbox and brings it back unread at the chosen time. “Follow-up” when sending reminds you if no reply has arrived by then – see “Follow-up” in the folder list.',
-  'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.':
+  'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Zugriff freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.':
     'Microsoft 365 and Google are included through the signed-in account (allow access once). Connect other providers via CalDAV/CardDAV (e.g. Nextcloud, mailbox.org, iCloud with app password, Fastmail). Answer invitations right in the email; move events by drag & drop.',
   'Einen anderen Kalender wählen, um den Termin dorthin zu verschieben.':
     'Choose another calendar to move the event there.',
@@ -1728,8 +1735,8 @@ export const EN: Record<string, string> = {
   Mitglieder: 'Members',
   Besitzer: 'Owner',
   '{n} Abgleich-Mails warten': '{n} sync mails waiting',
-  'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald seine App Levuvo Mail die Mail abruft.':
-    "Joining waits for the owner's confirmation. It happens automatically as soon as their Levuvo Mail app fetches the mail.",
+  'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald sein Levuvo Mail die Mail abruft.':
+    "Joining waits for the owner's confirmation. It happens automatically as soon as their Levuvo Mail fetches the mail.",
   'Du wurdest aus diesem Raum entfernt. Neue Inhalte erreichen dich nicht mehr.':
     'You were removed from this space. New content no longer reaches you.',
   'Dieser Raum wurde aufgelöst und kann nur noch gelesen werden.': 'This space was dissolved and can only be read.',

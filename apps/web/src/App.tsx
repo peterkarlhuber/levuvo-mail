@@ -497,6 +497,12 @@ function Shell() {
     setSettingsTab(tab);
     setModule('settings');
   }, []);
+  // A manual section linked from the assistant's answer opens the help page.
+  useEffect(() => {
+    const open = () => openSettings('help');
+    window.addEventListener('levuvo:manual', open);
+    return () => window.removeEventListener('levuvo:manual', open);
+  }, [openSettings]);
   const composeTo = useCallback(
     (to: string) => {
       restore(active.id, { mode: 'new', to, cc: '', bcc: '', subject: '' });
@@ -792,15 +798,16 @@ function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => v
         return;
       }
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      // e.code, not e.key: on a Mac, Option + 1 types "¡" and the key would never match.
       const map: Record<string, Module> = {
-        '1': 'mail',
-        '2': 'calendar',
-        '3': 'contacts',
-        '4': 'spaces',
-        '5': 'tasks',
-        ',': 'settings'
+        Digit1: 'mail',
+        Digit2: 'calendar',
+        Digit3: 'contacts',
+        Digit4: 'spaces',
+        Digit5: 'tasks',
+        Comma: 'settings'
       };
-      const target = map[e.key];
+      const target = map[e.code];
       if (target) {
         e.preventDefault();
         onModule(target);

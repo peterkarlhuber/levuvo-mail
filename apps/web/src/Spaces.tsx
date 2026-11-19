@@ -486,7 +486,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
       {detail.status === 'joining' && (
         <p className="banner info">
           {t(
-            'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald seine App Levuvo Mail die Mail abruft.'
+            'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald sein Levuvo Mail die Mail abruft.'
           )}
         </p>
       )}
@@ -617,7 +617,7 @@ function Overview({
           <li key={a.op}>
             <span className="muted">{dateLabel(a.at)}</span> <strong>{names[a.by] || t('Unbekannt')}</strong> {text(a)}
             {a.label && a.type !== 'member.add' && a.type !== 'member.remove' && a.type !== 'member.role' && (
-              <em> „{a.label}“</em>
+              <em> {t('„{label}“', { label: a.label })}</em>
             )}
           </li>
         ))}

@@ -1,4 +1,4 @@
-// Local models of Levuvo's own Ollama: a fixed list to choose from, downloaded on selection with a
+// Local models of Levuvo Mail's own Ollama: a fixed list to choose from, downloaded on selection with a
 // progress bar, cancel, resume and delete. The search model can be switched; its index is then
 // rebuilt in the background and its progress is shown here.
 import { useCallback, useEffect, useRef, useState } from 'react';
