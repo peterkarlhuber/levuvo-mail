@@ -36,12 +36,19 @@ function clientText(value, limit = MAX_CLIENT_TEXT) {
 /**
  * The sources of an answer for the UI: only mails that were really given to the model, each with
  * its metadata and a quote that literally occurs in it (or none). Mail text stays on the server.
+ * Manual sections ("m1" …) the model cited come from manualMap and link to the Help.
  */
-export function askSources(result, sourceMap) {
+export function askSources(result, sourceMap, manualMap = []) {
   const quotes = new Map((result.quotes || []).map(q => [String(q?.id), String(q?.quote || '')]));
   const out = [];
   for (const id of result.sources || []) {
-    const s = sourceMap[Number(String(id).slice(1)) - 1];
+    const n = Number(String(id).slice(1)) - 1;
+    if (String(id).startsWith('m')) {
+      const m = manualMap[n];
+      if (m && !out.includes(m)) out.push(m);
+      continue;
+    }
+    const s = sourceMap[n];
     if (!s || out.some(o => o.accountId === s.accountId && o.folder === s.folder && o.uid === s.uid)) continue;
     const quote = verifiedQuote(quotes.get(String(id)), s);
     const attachment = quote ? (s.attachments || []).find(a => verifiedQuote(quote, { text: a.text })) : null;
@@ -212,6 +219,14 @@ export function registerAiRoutes(ctx) {
           load: async h => messageForAi(await loadDetail(h.accountId, h)),
           attachments: async h => (await internalApi(ctx).attachmentText(h.accountId, h.folder, h.uid)).files
         });
+        // "How do I …" questions: the best matching sections of the user manual (no personal data).
+        const manualHits = ctx.manual ? await ctx.manual.search(question, { lang, limit: 3 }).catch(() => []) : [];
+        body.manualMap = manualHits.map(h => ({
+          manual: true,
+          chapterId: h.chapterId,
+          section: h.number,
+          title: h.title
+        }));
         body.sourceMap = read.map(h => ({
           accountId: h.accountId,
           folder: h.folder,
@@ -227,6 +242,12 @@ export function registerAiRoutes(ctx) {
           lang,
           question,
           history,
+          manual: manualHits.map((h, i) => ({
+            id: `m${i + 1}`,
+            title: [h.number, h.title].filter(Boolean).join(' '),
+            chapter: h.chapter,
+            text: h.text.slice(0, 2500)
+          })),
           sources: read.map((h, i) => ({
             id: `s${i + 1}`,
             from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
@@ -342,7 +363,7 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
+  // Levuvo Mail's own Ollama: the fixed model list, downloads with progress, cancel and delete.
   const localModels = ai.localModels;
   const noRuntime = reply =>
     reply.code(409).send({
@@ -398,13 +419,15 @@ export function registerAiRoutes(ctx) {
     try {
       const accountId = body.account ? String(body.account) : null;
       ai.ensureAllowed(null, accountId);
-      delete body.sourceMap; // set by prepare() only, never taken from the client
+      // set by prepare() only, never taken from the client
+      delete body.sourceMap;
+      delete body.manualMap;
       const input = await prepare(kind, body);
       // Every account whose mail text is in the input is checked again, right before the model call.
       const sources = Array.isArray(body.sourceMap) ? body.sourceMap.map(s => s.accountId) : [];
       const result = await ai.run(kind, input, { accountId, sources });
       if (kind === 'ask' && Array.isArray(body.sourceMap)) {
-        result.sources = askSources(result, body.sourceMap);
+        result.sources = askSources(result, body.sourceMap, body.manualMap);
         delete result.quotes;
       }
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };

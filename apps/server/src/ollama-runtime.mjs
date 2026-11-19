@@ -1,4 +1,4 @@
-// Levuvo's own Ollama: the pinned build shipped under resources/ollama (scripts/fetch-ollama.mjs),
+// Levuvo Mail's own Ollama: the pinned build shipped under resources/ollama (scripts/fetch-ollama.mjs),
 // started and stopped by the app, independent of any Ollama installed on the computer.
 //
 // Isolation: its own models folder and home under the app data folder (the server writes its key
