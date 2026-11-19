@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { aiEnabled, runAi } from './ai';
+import { aiEnabled, aiLocal, runAi } from './ai';
 import { bundleFromClassification } from './ai-utils';
 import { registerBundleSuggester, type BundleSuggestion } from './bundle-suggest';
 import { useT } from './i18n';
@@ -11,8 +11,8 @@ const MAX_CACHE = 5000;
 /**
  * Plugs the assistant's `classify` function into the inbox bundles; does nothing while the
  * assistant or its "Bündel & Screening" function is off (checked on every call).
- * Only messages not seen before are sent (subject, sender and preview; the server applies the
- * per-account "No cloud AI" block). Errors leave the local rules in place.
+ * Only messages not seen before are sent (subject, sender and preview), and only to a local model;
+ * with a cloud provider the local rules stay. Errors leave the local rules in place.
  */
 export function useBundleAssist() {
   const { t, lang } = useT();
@@ -21,7 +21,9 @@ export function useBundleAssist() {
     const running = new Set<string>();
     const reason = t('Vom Assistenten einsortiert');
     registerBundleSuggester(async (messages: Message[], accountId: string) => {
-      if (!(await aiEnabled('classify'))) return new Map();
+      // Background sorting sends sender, subject and preview of every new message: only with a
+      // local model (a cloud provider is used only for what the user starts).
+      if (!(await aiEnabled('classify')) || !(await aiLocal())) return new Map();
       const key = (uid: number) => `${accountId}:${uid}`;
       const fresh = messages.filter(m => !cache.has(key(m.uid))).slice(0, BATCH);
       if (fresh.length && !running.has(accountId)) {

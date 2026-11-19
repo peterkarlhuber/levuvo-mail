@@ -1,12 +1,13 @@
 import DOMPurify from 'dompurify';
-import { isTrackingImage, trackerHost } from './trackers';
+import { isRemoteSrc, isTrackingImage, stripRemoteCss, trackerHost } from './trackers';
 
 // HTML mails are rendered in an iframe with sandbox="allow-popups": no scripts, no
 // same-origin access, no navigation of the app. On top of that:
 //  - DOMPurify removes active content,
 //  - the frame's own CSP blocks every network request except (on request) https images,
 //  - links open via window.open, which the desktop app intercepts and confirms,
-//  - tracking pixels are removed, even when the user loads external images.
+//  - tracking pixels are removed, even when the user loads external images,
+//  - remote CSS images (background: url(...), image-set) are always removed.
 
 // Tracking pixels found by the current sanitize() call (DOMPurify hooks are global).
 let trackers: string[] | null = null;
@@ -41,6 +42,21 @@ function installHooks() {
       }
     }
     if (node.hasAttribute('target') && node.tagName !== 'A') node.removeAttribute('target');
+    if (!trackers) return;
+    // CSS background images would bypass the tracking pixel filter above: remote ones are removed.
+    const style = node.getAttribute('style');
+    if (style) {
+      const clean = stripRemoteCss(style);
+      if (clean === null || !clean.trim()) node.removeAttribute('style');
+      else if (clean !== style) node.setAttribute('style', clean);
+    }
+    if (isRemoteSrc(node.getAttribute('background'))) node.removeAttribute('background');
+  });
+  DOMPurify.addHook('afterSanitizeElements', node => {
+    if (!trackers || node.nodeName !== 'STYLE') return;
+    const clean = stripRemoteCss(node.textContent || '');
+    if (clean === null) node.parentNode?.removeChild(node);
+    else if (clean !== node.textContent) node.textContent = clean;
   });
 }
 

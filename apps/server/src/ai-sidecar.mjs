@@ -73,7 +73,6 @@ export function createSidecar({
   let child = null;
   let starting = null;
   let nextId = 1;
-  let buffer = '';
   let idleTimer = null;
   let crashes = [];
   const pending = new Map();
@@ -132,6 +131,8 @@ export function createSidecar({
         proc.once('spawn', resolveSpawn);
         proc.once('error', () => rejectSpawn(new SidecarError('runtime_missing')));
       });
+      // Each process has its own line buffer: output of an old process never mixes with the new one.
+      let buffer = '';
       proc.stdout.setEncoding('utf8');
       proc.stdout.on('data', chunk => {
         buffer += chunk;
@@ -155,9 +156,12 @@ export function createSidecar({
         }
       });
       proc.on('exit', code => {
-        if (child === proc) child = null;
         buffer = '';
         if (code !== 0 && code !== null) crashes.push(Date.now());
+        // An old process that ends late (after stop() or a restart) must not cancel the requests
+        // of the process that replaced it; its own requests were failed when it was replaced.
+        if (child !== proc) return;
+        child = null;
         failAll('stopped');
       });
       proc.stdin.on('error', () => {});

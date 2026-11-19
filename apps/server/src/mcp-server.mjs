@@ -673,7 +673,13 @@ export function createApprovals(file, { execute, log }) {
         item.summary = { ...item.summary };
         delete item.summary.text;
       }
-      await save(list);
+      // The action can take a while; approvals added meanwhile must not be lost, so the decided
+      // item is written into the current list instead of the copy taken before the action.
+      const current = items();
+      const at = current.findIndex(i => i.id === item.id);
+      if (at >= 0) current[at] = item;
+      else current.push(item);
+      await save(current);
       void log.add({
         type: 'approval',
         agent: item.agentName,
@@ -683,25 +689,71 @@ export function createApprovals(file, { execute, log }) {
       });
       return item;
     },
+    /** Open approvals of an agent that was removed or lost the permission for them. */
+    async withdraw(agentId, stillAllowed = () => false) {
+      const list = items();
+      let changed = false;
+      for (const i of list)
+        if (i.agentId === agentId && i.status === 'pending' && !stillAllowed(i)) {
+          i.status = 'rejected';
+          i.decidedAt = new Date().toISOString();
+          i.payload = null;
+          i.result = { error: 'Der Agent wurde entfernt oder hat diese Berechtigung nicht mehr.' };
+          changed = true;
+        }
+      if (changed) await save(list);
+    },
     async clear() {
       await save([]);
     }
   };
 }
 
+// The approval shows everything that will happen: all recipients, the sending account, the full
+// text, attendees, place and description. A shortened view would let an injected instruction hide
+// the part that matters (e.g. a CC address or text after the visible excerpt).
 function summarize(type, payload) {
   if (type === 'send')
-    return { to: payload.to, cc: payload.cc, subject: payload.subject, text: payload.text.slice(0, 2000) };
+    return {
+      account: payload.account,
+      to: payload.to,
+      cc: payload.cc || [],
+      subject: payload.subject,
+      text: payload.text
+    };
   if (type === 'event')
     return {
       summary: payload.event.summary,
       start: payload.event.start,
       end: payload.event.end,
-      attendees: payload.event.attendees.map(a => a.email)
+      allDay: payload.event.allDay === true,
+      location: payload.event.location || '',
+      description: payload.event.description || '',
+      attendees: payload.event.attendees.map(a => a.email),
+      calendar: payload.calendarUrl ? `${payload.accountId}` : payload.accountId || 'local'
     };
-  if (type === 'contact') return { name: payload.contact.name, emails: payload.contact.emails.map(e => e.value) };
-  if (type === 'trash') return { folder: payload.folder, uid: payload.uid };
+  if (type === 'contact')
+    return {
+      name: payload.contact.name,
+      emails: payload.contact.emails.map(e => e.value),
+      phones: (payload.contact.phones || []).map(p => p.value)
+    };
+  if (type === 'trash') return { account: payload.account, folder: payload.folder, uid: payload.uid };
   return {};
+}
+/** Adds what the user needs to recognise: the sender address and the message to be deleted. */
+async function describeApproval(ctx, type, payload, summary) {
+  const out = { ...summary };
+  const account = payload?.account ? ctx.accounts().find(a => a.id === payload.account) : null;
+  if (account) out.from = account.imap?.user || account.label || account.id;
+  if (type === 'trash') {
+    const meta = await ctx.localIndex?.text?.(payload.account, payload.folder, payload.uid).catch(() => null);
+    if (meta) {
+      out.subject = meta.subject || '';
+      out.sender = meta.fromEmail || meta.fromName || '';
+    }
+  }
+  return out;
 }
 function summarizeAny(registry, type, payload) {
   if (BUILTIN_APPROVALS.includes(type)) return summarize(type, payload);
@@ -809,7 +861,7 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
           agent,
           type: tool.approval,
           payload: result,
-          summary: summarizeAny(registry, tool.approval, result)
+          summary: await describeApproval(ctx, tool.approval, result, summarizeAny(registry, tool.approval, result))
         });
         void log.add({ type: 'tool', agent: agent.name, tool: name, ok: true, approval: item.id });
         return {

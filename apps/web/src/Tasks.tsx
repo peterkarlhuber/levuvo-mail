@@ -125,8 +125,12 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
       danger: true
     });
     if (!ok) return;
-    await postJson('/api/tasks/delete', { id: task.id }, 'mail-v1');
-    tasksChanged();
+    try {
+      await postJson('/api/tasks/delete', { id: task.id }, 'mail-v1');
+      tasksChanged();
+    } catch (e) {
+      toast({ text: (e as Error).message, kind: 'error' });
+    }
   }
   function dueLabel(task: Task) {
     if (!task.due) return '';
@@ -215,8 +219,9 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
               </span>
             )}
             {task.source === 'ai' && (
-              <span title={t('Von der KI vorgeschlagen')}>
-                <Sparkles size={11} />
+              <span className="ai-label" title={t('Von der KI vorgeschlagen')}>
+                <Sparkles size={11} aria-hidden="true" /> {t('KI')}
+                <span className="sr-only"> {t('Von der KI vorgeschlagen')}</span>
               </span>
             )}
             {task.list && activeList === 'all' && (

@@ -179,11 +179,12 @@ export function nextDue(due, repeat) {
     const dt = ['MONTHLY', 'YEARLY'].includes(repeat.freq) ? clamp(ny, nm, nd) : new Date(Date.UTC(ny, nm, nd));
     return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
   }
+  // A due time keeps its local clock time (the server runs on the user's device): stepping in UTC
+  // moved a 09:00 task to 08:00/10:00 across a daylight saving change and could tip the day.
   const t = new Date(due);
-  const [ny, nm, nd] = step(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
-  const base = ['MONTHLY', 'YEARLY'].includes(repeat.freq) ? clamp(ny, nm, nd) : new Date(Date.UTC(ny, nm, nd));
-  base.setUTCHours(t.getUTCHours(), t.getUTCMinutes(), t.getUTCSeconds(), 0);
-  return base.toISOString();
+  const [ny, nm, nd] = step(t.getFullYear(), t.getMonth(), t.getDate());
+  const day = ['MONTHLY', 'YEARLY'].includes(repeat.freq) ? Math.min(nd, new Date(ny, nm + 1, 0).getDate()) : nd;
+  return new Date(ny, nm, day, t.getHours(), t.getMinutes(), t.getSeconds(), 0).toISOString();
 }
 
 // ------------------------------------------------------------------ store
@@ -414,7 +415,10 @@ export async function openTaskFile({ filename, vault }) {
   if (exists) {
     try {
       const parsed = JSON.parse(decrypt(key, raw));
-      state = { tasks: Array.isArray(parsed?.tasks) ? parsed.tasks : [] };
+      // Keep every part of the saved state: `taskSync` holds the connected lists and the
+      // deletions still to send. Dropping it here silently disconnected every list on restart.
+      state = { ...(parsed && typeof parsed === 'object' ? parsed : {}) };
+      state.tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
     } catch {
       throw fail('Die Aufgaben lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.', 'task_locked', 423);
     }

@@ -195,3 +195,34 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Approval details: every recipient, attendee and the full text (audit 2026-11-19, AIS-LEV-001). */
+.ai-approval-fields {
+  display: grid;
+  gap: var(--space-0-5);
+  margin: var(--space-1-5) 0;
+}
+.ai-approval-fields > div {
+  display: grid;
+  grid-template-columns: minmax(80px, max-content) 1fr;
+  gap: var(--space-2);
+}
+.ai-approval-fields dt {
+  color: var(--muted);
+}
+.ai-approval-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ai-approval-text {
+  max-height: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.compose-ai-changed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+}

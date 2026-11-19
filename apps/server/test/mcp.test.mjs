@@ -304,7 +304,7 @@ test('task tools: list without hidden accounts, propose waits for approval, crea
   assert.equal(JSON.parse(text(proposed)).status, 'pending_approval');
   assert.equal(saved.length, 0, 'nothing saved before approval');
   const [item] = approvals.list();
-  assert.equal(item.summary.title, 'Aufgabe: Rückruf');
+  assert.equal(item.summary.title, 'Rückruf');
   assert.equal(item.type, 'task');
   assert.deepEqual(taskInput(item.payload).due, '2026-11-20');
   await mcpToolRegistry(ctx).approval('task').execute(item.payload);

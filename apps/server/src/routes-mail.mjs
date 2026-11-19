@@ -1233,7 +1233,14 @@ export function registerMailRoutes(ctx) {
               wasSent: messageId =>
                 withImap(c => foundInSent(c, messageId, account.sentFolder), account, { retryConnect: false }),
               submit: async (recipients, raw) => {
-                const smtp = await ctx.smtpConfigFor(account);
+                let smtp;
+                try {
+                  smtp = await ctx.smtpConfigFor(account);
+                } catch (err) {
+                  // No SMTP contact yet (e.g. the OAuth token could not be renewed): certainly not
+                  // sent, so the message is released and tried again instead of "unconfirmed".
+                  throw Object.assign(err, { beforeSmtp: true });
+                }
                 await submitEmail(smtp, { to: recipients, cc: [], bcc: [] }, raw, ctx.smtpFactory(smtp));
               },
               saveSent: raw =>

@@ -40,6 +40,28 @@ const TRACKER_PATH =
 export type ImageInfo = { src: string; width?: string | null; height?: string | null; style?: string | null };
 
 const isRemote = (src: string) => /^\s*(?:https?:)?\/\//i.test(src);
+/** True for an image address that would load from the network (http, https, //host). */
+export const isRemoteSrc = (src: string | null | undefined) => Boolean(src) && isRemote(src!);
+
+/**
+ * Removes every CSS declaration that could load an image from the network: url() with anything
+ * but a data: address, and image-set(). CSS escapes are decoded first so "u\72l(" cannot hide
+ * one. Background images bypass the tracking pixel filter for <img>, so once the user loads
+ * external images they would otherwise report the opening to the sender (SEC-LEV-007).
+ * Returns null when the decoded CSS could close its <style> element; the caller drops it then.
+ */
+export function stripRemoteCss(css: string): string | null {
+  const decoded = css
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex) => {
+      const code = parseInt(hex, 16);
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+    })
+    .replace(/\\(.)/g, '$1');
+  const stripped = decoded.replace(/[^;{}]*(?:url\(\s*['"]?\s*(?!data:)|image-set\()[^;{}]*;?/gi, '');
+  // Nothing to remove: keep the original text (decoding is only needed to find hidden urls).
+  if (stripped === decoded) return css;
+  return /</.test(stripped) ? null : stripped;
+}
 
 function pixels(value: string | null | undefined) {
   if (value == null) return null;
