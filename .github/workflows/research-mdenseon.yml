@@ -16,50 +16,32 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
-      - name: Hugging Face facts
+      - name: mDenseOn licence and ONNX/GGUF routes
         run: |
           set +e
-          for r in lightonai/mDenseOn BAAI/bge-m3; do
+          for r in lightonai/mDenseOn diegomo123/mDenseOn-ONNX algoprog/mDenseOn-ONNX; do
             echo "=== $r"
-            curl -sS "https://huggingface.co/api/models/$r?blobs=true" | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps({k:d.get(k) for k in ['id','sha','license','cardData','pipeline_tag','library_name','tags','safetensors','createdAt','lastModified','downloads']}, indent=1)[:4000]); [print(' file', s['rfilename'], s.get('size')) for s in d.get('siblings',[])]"
-            for f in README.md config.json config_sentence_transformers.json sentence_bert_config.json modules.json; do echo "--- $r/$f"; curl -sSL "https://huggingface.co/$r/resolve/main/$f" | head -c 6000; echo; done
+            curl -sS "https://huggingface.co/api/models/$r" | python3 -c "import json,sys; d=json.load(sys.stdin); print('LICENSE', d.get('sha'), (d.get('cardData') or {}).get('license'), [t for t in d.get('tags',[]) if t.startswith('license')], d.get('library_name')); [print(' file', s['rfilename']) for s in d.get('siblings',[])]"
           done
-          echo "=== search mdenseon / lightonai"
-          for q in mDenseOn mdenseon lightonai; do curl -sS "https://huggingface.co/api/models?search=$q&limit=60" | python3 -c "import json,sys; [print(m['id'], m.get('tags',[])[:8]) for m in json.load(sys.stdin)]"; done
-          echo "=== gguf search"
-          curl -sS "https://huggingface.co/api/models?search=mDenseOn&filter=gguf&limit=50" | python3 -c "import json,sys; [print(m['id']) for m in json.load(sys.stdin)]"
-          echo "=== ollama library"
-          for n in mdenseon lightonai/mdenseon; do curl -sS -o /dev/null -w "$n %{http_code}\n" "https://ollama.com/library/$n"; done
-          curl -sS "https://ollama.com/search?q=mdenseon" | grep -o 'href="/[^"]*mdense[^"]*"' | sort -u | head
-      - name: German retrieval test (sentence-transformers, CPU)
-        run: |
-          python -m pip install --quiet --index-url https://download.pytorch.org/whl/cpu torch
-          python -m pip install --quiet sentence-transformers transformers
-          python scripts/research/eval_st.py BAAI/bge-m3 lightonai/mDenseOn || true
-      - name: Whisper ONNX files (sizes, SHA-256, pinned revision)
+          curl -sSL "https://huggingface.co/lightonai/mDenseOn/resolve/main/README.md" | head -c 2500
+      - name: mDenseOn to GGUF with llama.cpp (feasibility)
         run: |
           set +e
-          for r in onnx-community/whisper-base onnx-community/whisper-small onnx-community/whisper-large-v3-turbo; do
-            sha=$(curl -sS "https://huggingface.co/api/models/$r" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('sha'), d.get('cardData',{}).get('license') if d.get('cardData') else d.get('license'))")
-            echo "=== $r $sha"
-            rev=${sha%% *}
-            curl -sS "https://huggingface.co/api/models/$r/tree/$rev?recursive=1" | python3 -c "
-          import json,sys
-          for f in json.load(sys.stdin):
-              if f.get('type')!='file': continue
-              print(' FILE', f['path'], f.get('size'), (f.get('lfs') or {}).get('oid',''))"
-            for f in config.json generation_config.json preprocessor_config.json tokenizer.json tokenizer_config.json; do
-              curl -sSL -o /tmp/f "https://huggingface.co/$r/resolve/$rev/$f" && echo " SMALL $f $(stat -c %s /tmp/f) $(sha256sum /tmp/f | cut -d' ' -f1)"
-            done
-          done
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp /tmp/llama.cpp
+          python -m pip install --quiet --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install --quiet "transformers>=4.48" sentencepiece gguf protobuf safetensors huggingface_hub numpy
+          python -c "from huggingface_hub import snapshot_download; print(snapshot_download('lightonai/mDenseOn', local_dir='/tmp/mdo'))"
+          python /tmp/llama.cpp/convert_hf_to_gguf.py /tmp/mdo --outtype f16 --outfile /tmp/mdo.gguf 2>&1 | tail -25
+          ls -la /tmp/mdo.gguf
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
       - name: Whisper in transformers.js (Node, CPU) with a German sample
         run: |
           set +e
-          sudo apt-get install -y -qq espeak-ng ffmpeg >/dev/null
+          sudo apt-get update -qq >/dev/null; sudo apt-get install -y -qq --no-install-recommends espeak-ng ffmpeg >/dev/null; which espeak-ng ffmpeg
           espeak-ng -v de -s 140 -w /tmp/de.wav "Hallo Anna, ich schicke dir das Angebot bis Freitag. Die Lieferung kommt in Kalenderwoche drei. Viele Grüße, Peter."
           ffmpeg -loglevel error -i /tmp/de.wav -ar 16000 -ac 1 -f f32le /tmp/de.f32
           mkdir -p /tmp/w && cp scripts/research/whisper.mjs /tmp/w/ && cd /tmp/w && npm init -y >/dev/null && npm install --no-fund --no-audit @huggingface/transformers@4.3.2 >/dev/null 2>&1
           node whisper.mjs
+          for r in whisper-base whisper-small whisper-large-v3-turbo; do for f in added_tokens.json special_tokens_map.json vocab.json merges.txt normalizer.json; do curl -sSL -o /tmp/f "https://huggingface.co/onnx-community/$r/resolve/main/$f" && echo " SMALL $r $f $(stat -c %s /tmp/f) $(sha256sum /tmp/f | cut -d' ' -f1)"; done; done
