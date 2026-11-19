@@ -1,4 +1,4 @@
-# Levuvo Mail 2.4.0 – acceptance per platform
+# Levuvo Mail 2.5.0 – acceptance per platform
 
 Tick off on **macOS arm64, Windows arm64 and Windows x64** each. Everything that can be tested without
 the native operating system has already been checked automatically (see `VALIDATION-REPORT.md`).
@@ -11,7 +11,7 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] Optionally with test servers: `npm run test:integration` and `npm run test:e2e`
 - [ ] Installer starts; no Gatekeeper/SmartScreen warning for signed builds
 - [ ] The installed app contains the AI runtime (`resources/ai-runtime/python`); Settings → AI & agents shows the AI component as available
-- [ ] Settings → About shows 2.4.0, legal notice (Impressum) filled in
+- [ ] Settings → About shows 2.5.0, legal notice (Impressum) filled in
 
 ## First setup (fresh user profile)
 - [ ] Welcome page in the system language (German or English), theme follows the system
@@ -89,5 +89,5 @@ UI labels are given in English with the German label in parentheses where useful
 
 ## Release
 - [ ] `release:manifest` and `release:verify` successful
-- [ ] Signed builds: update files uploaded, test update 2.4.0 → 2.4.1 run through once
+- [ ] Signed builds: update files uploaded, test update 2.5.0 → 2.5.1 run through once
 - [ ] Privacy notice reviewed legally, legal notice (Impressum) filled in

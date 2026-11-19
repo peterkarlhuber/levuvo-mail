@@ -18,6 +18,27 @@ export type SpaceSummary = {
   updatedAt: string;
   pendingMails: number;
   sendError: string | null;
+  unreadChat: number;
+};
+export type ChatMessage = {
+  id: string;
+  text: string;
+  at: string;
+  by: string;
+  mine: boolean;
+  replyTo: string | null;
+  ai: boolean;
+  editedAt: string | null;
+  unread: boolean;
+};
+export type ChatPage = {
+  messages: ChatMessage[];
+  quoted: Record<string, { by: string; text: string } | null>;
+  more: boolean;
+  unread: number;
+  rev: number;
+  canWrite: boolean;
+  pending: boolean;
 };
 export type Invitation = {
   id: string;
@@ -133,6 +154,11 @@ export const spaces = {
   detail: (id: string) => getJson<SpaceDetail>(`/api/spaces/${id}`),
   note: (id: string, note: string) => getJson<{ update: string; text: string }>(`/api/spaces/${id}/notes/${note}`),
   post: <T = { ok: boolean }>(path: string, body: unknown = {}) => postJson<T>(`/api/spaces${path}`, body, ACTION),
+  chat: (id: string, before = '') =>
+    getJson<ChatPage>(`/api/spaces/${id}/chat${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+  /** Resolves on the next change of the space (or after about 25 s). */
+  chatWait: (id: string, rev: number, signal?: AbortSignal) =>
+    getJson<{ changed: boolean }>(`/api/spaces/${id}/chat/wait?rev=${rev}`, undefined, signal),
   op: (id: string, type: string, data: unknown) =>
     postJson<{ ok: boolean }>(`/api/spaces/${id}/op`, { type, data }, ACTION),
   async upload(id: string, file: File, { folder = '', fileId = '' } = {}) {
