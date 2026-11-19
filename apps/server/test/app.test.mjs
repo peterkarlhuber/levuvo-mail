@@ -72,7 +72,8 @@ async function server(t, extra = {}) {
   s.setPortForTesting(PORT);
   t.after(async () => {
     await s.close();
-    rmSync(dir, { recursive: true, force: true });
+    // Windows may still hold a just-closed file handle for a moment (EBUSY): retry like rimraf does.
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
   return { s, state, dir };
 }
