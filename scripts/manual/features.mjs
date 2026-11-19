@@ -221,7 +221,7 @@ export function changelogProblems(root) {
   const start = text.indexOf('\n## Unreleased');
   if (start < 0) return [];
   const end = text.indexOf('\n## ', start + 5);
-  const lines = text.slice(start, end < 0 ? undefined : end).split('\n');
+  const lines = text.slice(start, end < 0 ? undefined : end).split(/\r?\n/);
   const headings = new Set(manualSections(root, 'en').map(s => s.heading));
   const problems = [];
   let section = '';
