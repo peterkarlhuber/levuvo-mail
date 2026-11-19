@@ -236,3 +236,83 @@ export function demoRoutes({ lang, ai, extra }) {
     ...extra
   };
 }
+
+// English edition: the demo mailbox (recorded in German for the a11y fixtures) in English.
+const ANNA_DE =
+  'Hallo Alex,\n\nanbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet:\n\n1. Neues Design-System mit Komponentenbibliothek\n2. Barrierefreiheit nach WCAG 2.2 AA\n3. Mehrsprachigkeit (DE/EN)\n\nKönntest du mir bis Freitag Bescheid geben, ob wir am Montag, 23.11. um 10:00 starten können?\n\nViele Grüße\nAnna\n';
+const ANNA_EN =
+  'Hi Alex,\n\nas discussed, here is our proposal for the relaunch. We have included the points from the workshop:\n\n1. New design system with a component library\n2. Accessibility to WCAG 2.2 AA\n3. Multiple languages (DE/EN)\n\nCould you let me know by Friday whether we can start on Monday, 23 Nov at 10:00?\n\nBest regards\nAnna\n';
+const EN_TEXT = new Map([
+  ['Angebot Website-Relaunch – Rückmeldung bis Freitag?', 'Website relaunch proposal – feedback by Friday?'],
+  [ANNA_DE, ANNA_EN],
+  [
+    'Hallo Alex, anbei wie besprochen unser Angebot für den Relaunch. Wir haben die Punkte aus dem Workshop eingearbeitet: 1. Neues Design-System mit Komponentenbibliothek 2. Barrieref',
+    'Hi Alex, as discussed, here is our proposal for the relaunch. We have included the points from the workshop: 1. New design system with a component library 2. Accessib'
+  ],
+  ['Design Weekly #212: Tokens, Raster und Dark Mode', 'Design Weekly #212: tokens, grids and dark mode'],
+  [
+    'Diese Woche: Warum Design-Tokens die Basis jedes Systems sind.',
+    'This week: why design tokens are the base of every system.'
+  ],
+  ['Erst Inhalte, dann Design.', 'Content first, then design.'],
+  ['Finanzamt Österreich', 'Tax Office'],
+  [
+    'Hallo Alex, hier das Moodboard. Freue mich auf Feedback!',
+    'Hi Alex, here is the mood board. Looking forward to your feedback!'
+  ],
+  ['Hallo Alex, wir planen die Migration für Samstag.', 'Hi Alex, we are planning the migration for Saturday.'],
+  ['Hallo zusammen, anbei das Protokoll vom Workshop.', 'Hi all, attached are the notes from the workshop.'],
+  [
+    'Hi Alex, die Migration ist durch, alle Postfächer laufen wieder. Bitte kurz prüfen, ob bei dir alles passt. LG Lukas',
+    'Hi Alex, the migration is done and all mailboxes are running again. Please check that everything works for you. Cheers, Lukas'
+  ],
+  ['Ihre Rechnung November 2026', 'Your invoice for November 2026'],
+  ['Ihre Rechnung ist verfügbar.', 'Your invoice is available.'],
+  [
+    'Ihre Sendung 1Z999 wird heute zwischen 10 und 14 Uhr zugestellt.',
+    'Your parcel 1Z999 will be delivered today between 10:00 and 14:00.'
+  ],
+  ['Ihre Sendung wird heute zugestellt', 'Your parcel arrives today'],
+  ['Logo freigeben', 'Approve the logo'],
+  ['Mittagessen nächste Woche?', 'Lunch next week?'],
+  ['Moodboard für das neue Logo', 'Mood board for the new logo'],
+  ['Neue Nachricht in FinanzOnline', 'New message in your tax account'],
+  ['Projekt Relaunch', 'Relaunch project'],
+  ['Protokoll Workshop 12.11.', 'Workshop notes 12 Nov'],
+  ['Re: Server-Migration am Wochenende', 'Re: Server migration this weekend'],
+  ['Server-Migration am Wochenende', 'Server migration this weekend'],
+  [
+    'Sehr geehrter Herr Muster, anbei der überarbeitete Vertragsentwurf. Änderungen sind markiert. Mit freundlichen Grüßen Maria Steiner',
+    'Dear Mr Muster, please find attached the revised contract draft. Changes are marked. Kind regards, Maria Steiner'
+  ],
+  ['Servus Alex, hast du Dienstag oder Mittwoch Zeit?', 'Hi Alex, are you free on Tuesday or Wednesday?'],
+  ['Sie haben eine neue Nachricht.', 'You have a new message.'],
+  ['Texte liefern', 'Deliver the copy'],
+  ['Vertragsentwurf v3 zur Durchsicht', 'Contract draft v3 for review'],
+  ['Website-Relaunch mit Hofer IT', 'Website relaunch with Hofer IT'],
+  ['[levuvo-mail] CI: alle Checks erfolgreich', '[levuvo-mail] CI: all checks passed'],
+  ['Österreichische Post', 'Austrian Post'],
+  ['Geschäftsführer', 'Managing director'],
+  ['Rechtsanwältin', 'Lawyer'],
+  ['Mariahilfer Straße 12, 1070 Wien', 'Mariahilfer Strasse 12, 1070 Vienna'],
+  ['Angebot_Relaunch_2026.pdf', 'Relaunch_proposal_2026.pdf'],
+  ['Abnahme', 'Sign-off']
+]);
+
+/** The subject the screenshots open, per language. */
+export const OPEN_SUBJECT = { de: 'Angebot Website-Relaunch', en: 'Website relaunch proposal' };
+export const SPACE_NAME = { de: 'Projekt Relaunch', en: 'Relaunch project' };
+
+/** A response body in the edition's language: German demo texts become English ones. */
+export function localize(body, lang) {
+  if (lang !== 'en') return body;
+  const walk = v =>
+    typeof v === 'string'
+      ? (EN_TEXT.get(v) ?? v)
+      : Array.isArray(v)
+        ? v.map(walk)
+        : v && typeof v === 'object'
+          ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]))
+          : v;
+  return walk(body);
+}

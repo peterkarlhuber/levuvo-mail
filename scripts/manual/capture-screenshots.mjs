@@ -10,7 +10,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createMailServer } from '../../apps/server/src/app.mjs';
-import { demoRoutes, NOW } from './demo-data.mjs';
+import { demoRoutes, NOW, localize, OPEN_SUBJECT, SPACE_NAME } from './demo-data.mjs';
 import { createManual } from '../../apps/server/src/manual.mjs';
 
 // Settings → Help shows the manual itself (the images from the last capture).
@@ -55,8 +55,8 @@ const settingsTab = async (page, lang, de, en) => {
     .click();
   await page.waitForTimeout(250);
 };
-const openMessage = async page => {
-  await page.locator('.message-row', { hasText: 'Angebot Website-Relaunch' }).locator('.message-item').click();
+const openMessage = async (page, lang = 'de') => {
+  await page.locator('.message-row', { hasText: OPEN_SUBJECT[lang] }).locator('.message-item').click();
   await page.locator('.reader-content h2').waitFor();
   await page.waitForTimeout(200);
 };
@@ -73,15 +73,15 @@ const SHOTS = [
   },
   {
     name: 'mail',
-    run: async page => {
-      await openMessage(page);
+    run: async (page, lang) => {
+      await openMessage(page, lang);
     }
   },
   {
     // The cover: the inbox from its first message on, nothing cut at the top of the list.
     name: 'cover',
-    run: async page => {
-      await openMessage(page);
+    run: async (page, lang) => {
+      await openMessage(page, lang);
       await page.evaluate(() => {
         for (const el of document.querySelectorAll('.message-list, .message-list-scroll, [data-list-scroll]'))
           el.scrollTop = 0;
@@ -93,7 +93,7 @@ const SHOTS = [
   {
     name: 'composer',
     run: async (page, lang) => {
-      await openMessage(page);
+      await openMessage(page, lang);
       await page
         .locator('.reader-toolbar button', { hasText: L(lang, 'Antworten', 'Reply') })
         .first()
@@ -116,7 +116,7 @@ const SHOTS = [
     // Only the middle of the window, so the palette stays readable on the page.
     clip: { x: 330, y: 80, width: 660, height: 196 },
     run: async (page, lang) => {
-      await openMessage(page);
+      await openMessage(page, lang);
       await page.keyboard.press('Control+k');
       await page.locator('.command-palette, [role="dialog"]').first().waitFor();
       await page.keyboard.type(L(lang, 'entw', 'dra'));
@@ -160,10 +160,10 @@ const SHOTS = [
   },
   {
     name: 'spaces',
-    run: async page => {
+    run: async (page, lang) => {
       await page.locator('.rail-item').nth(3).click();
       await page.locator('.spaces-module').waitFor();
-      await page.locator('.space-row', { hasText: 'Projekt Relaunch' }).click();
+      await page.locator('.space-row', { hasText: SPACE_NAME[lang] }).click();
       await page.locator('.space-tabs').waitFor();
       await page.waitForTimeout(300);
     }
@@ -180,8 +180,8 @@ const SHOTS = [
   {
     name: 'reader-assist',
     ai: true,
-    run: async page => {
-      await openMessage(page);
+    run: async (page, lang) => {
+      await openMessage(page, lang);
       await page.waitForTimeout(400);
     }
   },
@@ -297,10 +297,18 @@ try {
           });
         const own = typeof routes[key] === 'function' ? routes[key](req) : routes[key];
         if (own !== undefined)
-          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(own) });
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(localize(own, lang))
+          });
         const hit = fixtures[key];
         if (hit)
-          return route.fulfill({ status: hit.status, contentType: hit.contentType, body: JSON.stringify(hit.body) });
+          return route.fulfill({
+            status: hit.status,
+            contentType: hit.contentType,
+            body: JSON.stringify(localize(hit.body, lang))
+          });
         if (req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
         return route.fulfill({ status: 204, body: '' });
       });

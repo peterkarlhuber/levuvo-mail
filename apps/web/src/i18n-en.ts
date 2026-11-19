@@ -777,6 +777,7 @@ export const EN: Record<string, string> = {
   'Schritt für Schritt erklärt: Einrichtung, E-Mail, Kalender, Kontakte, Aufgaben, Räume, Assistent und Einstellungen. Fragen dazu beantwortet auch der Assistent.':
     'Explained step by step: setup, email, calendar, contacts, tasks, spaces, assistant and settings. The assistant also answers questions about it.',
   'Bild nicht gefunden.': 'Image not found.',
+  '„{label}“': '“{label}”',
   'Tastenkürzel anzeigen': 'Show keyboard shortcuts',
   'Desktop-App': 'Desktop app',
   'Browser (Entwicklung)': 'Browser (development)',
