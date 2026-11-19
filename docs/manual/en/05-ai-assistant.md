@@ -70,6 +70,17 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
 
+## Promise tracker
+
+The promise tracker finds promises in your emails, so nothing gets lost. It is off by default. Switch it on under **Settings → AI & agents → Features** with **Promise tracker**. It only runs with a local model, never with a cloud model.
+
+- **Your promises:** If you write "I'll send you the offer by Friday", Levuvo Mail suggests a task with a due date and a link to the email (**As a task**).
+- **Promises of others:** If someone writes "I'll get back to you next week", Levuvo Mail suggests a reminder (**Remind me if nothing arrives**). It fires the morning after the promised day and clears itself as soon as an answer arrives.
+
+The suggestions show in **My day** and above the task list under **Promises from your emails**. They are labelled as AI results. Nothing is created until you click. The cross discards a suggestion.
+
+Only new emails from the moment you switch it on are read (at most two days back), each only once, and only the part the sender wrote. The suggestions are stored encrypted on this computer for 60 days, are part of backups and are deleted with **Delete all AI data**.
+
 ## Connect external agents
 
 Advanced users can connect AI programs such as Claude Desktop to Levuvo Mail. For this, Levuvo Mail provides an interface called the MCP server. It can only be reached from this computer. Under **Settings → AI & agents → Agent interface (MCP)** you switch it on and use **New agent** to create an access with fixed rights: read only, create drafts, organize, or everything. Sending, events with attendees and deleting wait for your approval. Only if you tick **send without approval** at the level "Everything incl. sending" does the agent send directly. Passwords, keys and accounts are never reachable for agents.

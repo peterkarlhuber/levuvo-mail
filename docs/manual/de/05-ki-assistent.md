@@ -70,6 +70,17 @@ Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 - **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen.
 - **Freigaben:** alles, was der Assistent oder ein Agent vorbereitet hat und auf dein **Freigeben** oder **Ablehnen** wartet.
 
+## Versprechen-Tracker
+
+Der Versprechen-Tracker findet Zusagen in deinen Mails, damit nichts untergeht. Er ist standardmäßig aus. Du schaltest ihn unter **Einstellungen → KI & Agenten → Funktionen** mit **Versprechen-Tracker** ein. Er läuft nur mit einem lokalen Modell, nie mit einem Cloud-Modell.
+
+- **Deine Zusagen:** Schreibst du „Ich schicke Ihnen das Angebot bis Freitag“, schlägt Levuvo Mail eine Aufgabe mit Fälligkeit und Link zur Mail vor (**Als Aufgabe**).
+- **Zusagen anderer:** Schreibt dir jemand „Ich melde mich nächste Woche“, schlägt Levuvo Mail eine Erinnerung vor (**Erinnern, falls nichts kommt**). Sie meldet sich am Morgen nach dem versprochenen Tag und verschwindet von selbst, sobald eine Antwort kommt.
+
+Die Vorschläge erscheinen in **Mein Tag** und über der Aufgabenliste unter **Versprechen aus deinen Mails**. Sie sind als KI-Ergebnis gekennzeichnet. Erst dein Klick legt etwas an. Mit dem Kreuz verwirfst du einen Vorschlag.
+
+Gelesen werden nur neue Mails ab dem Einschalten (höchstens zwei Tage zurück), jede nur einmal, und nur der Teil, den die Absenderin oder der Absender selbst geschrieben hat. Die Vorschläge liegen 60 Tage verschlüsselt auf diesem Computer, gehören zur Datensicherung und werden mit **Alle KI-Daten löschen** gelöscht.
+
 ## Externe Agenten anbinden
 
 Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbinden. Dafür stellt Levuvo Mail eine Schnittstelle bereit, den sogenannten MCP-Server. Er ist nur von diesem Computer aus erreichbar. Unter **Einstellungen → KI & Agenten → Agenten-Schnittstelle (MCP)** schaltest du ihn ein und legst mit **Neuer Agent** einen Zugang mit festen Rechten an: nur lesen, Entwürfe anlegen, ordnen oder alles. Senden, Termine mit Teilnehmenden und Löschen warten auf deine Freigabe. Nur wenn du bei der Stufe „Alles inkl. Senden“ **ohne Freigabe senden** ankreuzt, sendet der Agent direkt. Passwörter, Schlüssel und Konten sind für Agenten nie erreichbar.
