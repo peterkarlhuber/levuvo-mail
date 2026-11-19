@@ -49,7 +49,7 @@ test('SEC-LEV-002: a PGP signature is bound to the From address; keys from mails
 });
 
 test('SEC-LEV-005: S/MIME chains need real CAs, path length and emailProtection', () => {
-  const pem = readFileSync(new URL('./fixtures/smime-chains.pem', import.meta.url), 'utf8');
+  const pem = readFileSync(new URL('./fixtures/smime-chains.crt', import.meta.url), 'utf8');
   const [root, inter, inter0, sub, noca, leafInter, leafNoca, leafSub, leafWeb] = pem
     .match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g)
     .map(b => Buffer.from(b.replace(/-----[^-]+-----|\s/g, ''), 'base64'));
