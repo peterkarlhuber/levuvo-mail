@@ -43,8 +43,15 @@ export function useMailSearch(o: Options) {
   };
   useEffect(() => () => stop(), []);
 
+  // `run` may be called from an older render (e.g. after a folder change, see the follow-up view's
+  // "show in Sent"): it reads folder, scope and hit count of the latest render, not of its own.
+  const latest = useRef({ o, state });
+  latest.current = { o, state };
+
   /** Sets the query and searches after a short typing pause. */
-  const run = (value: string, nextScope: SearchScope = state.scope) => {
+  const run = (value: string, scopeOverride?: SearchScope) => {
+    const { o, state } = latest.current;
+    const nextScope = scopeOverride ?? state.scope;
     o.dispatchList({ type: 'checkedSet', uids: [] });
     dispatch({ type: 'typed', query: value });
     ++o.requestSeq.current;

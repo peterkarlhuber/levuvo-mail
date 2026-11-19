@@ -462,6 +462,23 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
                 })
               );
             }
+            if (url.pathname === '/api/followups')
+              return route.fulfill(
+                json({
+                  items: [
+                    {
+                      id: 'f1',
+                      accountId,
+                      messageId: '<sent-1@levuvo.test>',
+                      subject: 'Angebot für den Relaunch',
+                      to: ['anna.berger@beispiel.at'],
+                      due: '2026-11-20T08:00:00.000Z',
+                      state: 'due',
+                      createdAt: '2026-11-12T08:00:00.000Z'
+                    }
+                  ]
+                })
+              );
             if (url.pathname === '/api/messages/batch-action')
               return route.fulfill(json({ destination: 'Trash', count: body.uids.length }));
             if (/^\/api\/messages\/\d+\/action$/.test(url.pathname)) return route.fulfill(json({ ok: true }));
@@ -601,6 +618,17 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     assert.equal(await page.locator('.searchbox input').inputValue(), '');
     assert.equal(await page.locator('.message-row.selected').count(), 0);
     assert.ok(requests.some(r => r.path === '/api/messages' && r.query.startsWith('?folder=Sent&')));
+
+    // Follow-ups: "show in Sent" opens the sent folder and searches the subject there.
+    await page.locator('.folder-item', { hasText: 'Nachfassen' }).first().click();
+    await page.locator('.followup-row').waitFor();
+    await page.locator('.followup-row button[aria-label="In „Gesendet“ zeigen"]').click();
+    await page.locator('.message-title-row h1', { hasText: 'Gesendet' }).waitFor();
+    await until(
+      () => requests.some(r => r.path === '/api/search' && r.query.startsWith('?folder=Sent&q=Angebot')),
+      'the subject is searched in the sent folder'
+    );
+    assert.equal(await page.locator('.searchbox input').inputValue(), 'Angebot für den Relaunch');
     assert.deepEqual(errors, []);
     await context.close();
   });
