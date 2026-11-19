@@ -27,3 +27,4 @@ __pycache__/
 .ruff_cache/
 build/ai-runtime/*
 !build/ai-runtime/README.md
+docs/manual/.build/

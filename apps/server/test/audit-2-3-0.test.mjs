@@ -30,7 +30,8 @@ import { sendDue, TAKEOVER_GRACE_MS } from '../src/scheduled.mjs';
 
 const tmp = t => {
   const dir = mkdtempSync(join(tmpdir(), 'lv-audit23-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  // Windows: a file write that finishes after the test can briefly keep the directory busy.
+  t.after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   return dir;
 };
 function vault() {

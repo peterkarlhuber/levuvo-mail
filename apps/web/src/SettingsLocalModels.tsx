@@ -1,4 +1,4 @@
-// Local models of Levuvo's own Ollama: a fixed list to choose from, downloaded on selection with a
+// Local models of Levuvo Mail's own Ollama: a fixed list to choose from, downloaded on selection with a
 // progress bar, cancel, resume and delete. The search model can be switched; its index is then
 // rebuilt in the background and its progress is shown here.
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -215,7 +215,7 @@ export function LocalModelSettings({
       <Row
         label={t('Lokale KI')}
         hint={t(
-          'Levuvo bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.',
+          'Levuvo Mail bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.',
           { version: state.runtime.version || '', ram: String(ramGb), tier: t(recommended) }
         )}
       >
