@@ -11,7 +11,8 @@ import { releaseVersionProblems } from '../../../scripts/check-release-version.m
 import { aiRuntimeProblems, builderArgs, publisherNames } from '../../../scripts/release-signed.mjs';
 
 const repo = new URL('../../../', import.meta.url);
-const read = path => readFileSync(new URL(path, repo), 'utf8');
+// Normalised to LF: Windows checkouts have CRLF line endings.
+const read = path => readFileSync(new URL(path, repo), 'utf8').replace(/\r\n/g, '\n');
 
 test('OPS-LEV-001: every install into the AI runtime is hash-locked or built against hashed backends', () => {
   const steps = installSteps('/rt/bin/python3');
