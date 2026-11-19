@@ -813,6 +813,7 @@
   font-weight: var(--weight-semibold);
   font-size: var(--text-xs);
 }
+.password-strength.short,
 .password-strength.weak {
   color: var(--danger);
 }

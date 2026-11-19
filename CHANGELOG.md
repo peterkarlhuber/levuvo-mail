@@ -44,6 +44,13 @@
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
 
+### Privacy cockpit
+- **Settings → Privacy shows what happened in the last 30 days:** how many tracking pixels were blocked (per day), how often the AI ran on this device and how often in the cloud (per function, and how much of it ran automatically), which external agents (MCP) accessed what, newsletter unsubscribes, external images you loaded and model downloads. "What left Levuvo Mail" lists every kind of data that went off the device.
+- **Data-minimised:** besides the existing AI log (no content) only daily counters are stored – no addresses, hosts, subjects or message IDs; 30 days, deletable, not in backups.
+
+### Protect with password
+- **Security review:** easily guessed passwords (few distinct characters, runs like "1234567890", common words with digits) are refused, because the encrypted file can be attacked offline without a limit; the suggested random password stays the default. A copied password is removed from the clipboard after one minute. The composer now says that automatically saved drafts stay unencrypted in the own Drafts folder until sending. Review notes in SECURITY.md.
+
 ### Fixes
 - **Tasks open again on macOS and Windows:** the builds for macOS and Windows (case-insensitive disks) loaded the task helpers (`tasks.ts`) instead of the Tasks view (`Tasks.tsx`), so opening Tasks failed and the whole window went black. The view is now `TasksModule.tsx`, and a test rejects source files that differ only in case.
 - **No more black window when an area fails:** an error while loading or showing one area now stays in that area, with "Try again", "Reload app" and technical details; the rail and the other areas keep working. A part of the app that is missing because Levuvo Mail was updated while its window was only hidden reloads the page once by itself. A crashed window process is reloaded instead of leaving an empty window. Unreadable due or reminder dates in tasks are shown as text instead of breaking the view.
