@@ -121,7 +121,8 @@ test('the real catalog pins every file, the app may run WebAssembly but no eval,
       assert.ok(f.size > 0);
       assert.doesNotMatch(f.path, /\.\.|^\//);
     }
-    assert.ok(speechFilePath('/x', m.id, m.files[0].path).startsWith('/x'));
+    const base = join(tmpdir(), 'x');
+    assert.ok(speechFilePath(base, m.id, m.files[0].path).startsWith(join(base, m.id)));
   }
   assert.match(APP_CSP, /script-src 'self' 'wasm-unsafe-eval'(;|$)/);
   assert.doesNotMatch(APP_CSP, /'unsafe-eval'/);
