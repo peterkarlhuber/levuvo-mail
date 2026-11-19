@@ -17,6 +17,7 @@ T = transparency obligation Art. 50, M = minimal). **Output** = what the user ge
 | Semantic search, questions to the mailbox | answer with sources | T | AI marker, source mails linked | read only | yes (answer), embeddings local |
 | Events, contacts, tasks from text | proposals | T | "AI-created" line in the item | saved only after a click | yes |
 | Filter in words (Sieve) | rule proposal | T | "Rule suggested (model). Please review and save." | saved only after a click | yes |
+| Automations in words | rule proposal (conditions, actions) | T | "AI proposal · model" marker in the editor and on the saved rule; the rule is shown in plain words built from the rule itself (not by the AI) | dry run on the newest mails; the rule is off until the user switches it on; actions limited to move, mark read, star, create task (never delete, forward, send or move to trash) | yes (only the user's description and folder names, no mail content) |
 | Assistant panel: tasks, routines, briefing, meeting preparation | drafts, proposals, summaries | T | panel named "Levuvo Mail Assistant", AI markers | approvals for sending, attendees, trash | yes |
 | External agents via MCP | actions depending on level | outside Levuvo (agent provider) | drafts carry `X-Levuvo-AI-Generated` with the agent's name | approval for sending, attendees, trash; levels; log | agent's own model |
 | Dictation (if enabled) | transcribed text | M (assistive) | marker in the composer while dictating | user edits | local |

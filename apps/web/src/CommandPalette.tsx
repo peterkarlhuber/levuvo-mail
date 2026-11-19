@@ -21,6 +21,8 @@ import {
   UserRound,
   Sparkles,
   Users,
+  Workflow,
+  CalendarClock,
   type LucideIcon
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
@@ -220,6 +222,8 @@ export default function CommandPalette({
       ['accounts', t('Konten'), UserRound, 'imap smtp signatur alias'],
       ['templates', t('Vorlagen'), FileStack, 'textbausteine'],
       ['filters', t('Filter & Abwesenheit'), Settings2, 'sieve regeln urlaub'],
+      ['automations', t('Automatisierungen'), Workflow, 'regeln automatisch aufgabe ordner rules automation'],
+      ['booking', t('Buchungslinks'), CalendarClock, 'termin buchen booking link calendly'],
       ['dav', t('Kalender & Kontakte'), CalendarDays, 'caldav carddav verbinden'],
       ['security', t('Sicherheit'), ShieldCheck, 'pgp smime verschlüsselung'],
       ['search', t('Suche & Offline'), Search, 'index'],
