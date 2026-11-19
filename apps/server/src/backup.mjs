@@ -93,6 +93,7 @@ export const NOT_BACKED_UP = {
   // Levuvo's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
   // and the key pair the server creates for itself.
   'ollama/': 'models of the own Ollama; downloaded again from the fixed model list',
+  'speech/': 'dictation models (Whisper); downloaded again from the fixed list',
   '*.lvdb': 'search index; rebuilt from the mailbox',
   '*.lvx': 'search index before 2.3; migrated and deleted'
 };

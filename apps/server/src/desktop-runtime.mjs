@@ -8,14 +8,16 @@ export const DESKTOP_COOKIE = 'levuvo_desktop_session';
 // as data: unless the user explicitly loads external images for one message).
 export const APP_CSP = [
   "default-src 'none'",
-  "script-src 'self'",
+  // WebAssembly for dictation (Whisper runs on this device); no JavaScript eval.
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
   "connect-src 'self'",
   "frame-src 'self' blob:",
   "child-src 'self'",
-  "worker-src 'none'",
+  // The dictation worker, loaded from the app itself.
+  "worker-src 'self'",
   "object-src 'none'",
   "manifest-src 'self'",
   "base-uri 'none'",
@@ -67,6 +69,8 @@ export function contentTypeForAsset(filename) {
       return 'font/woff';
     case '.woff2':
       return 'font/woff2';
+    case '.wasm':
+      return 'application/wasm';
     case '.webmanifest':
       return 'application/manifest+json; charset=utf-8';
     default:

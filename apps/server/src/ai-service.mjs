@@ -8,6 +8,7 @@ import { appendFile, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { SidecarError } from './ai-sidecar.mjs';
+import { SPEECH_CATALOG } from './speech-catalog.mjs';
 import {
   DEFAULT_CHAT_MODEL,
   DEFAULT_EMBED_MODEL,
@@ -39,7 +40,8 @@ export const AI_FEATURES = [
   'extract',
   'assess',
   'search',
-  'agents'
+  'agents',
+  'dictation'
 ];
 const TASK_FEATURE = {
   digest: 'digest',
@@ -71,6 +73,7 @@ export const DEFAULT_AI_SETTINGS = {
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
   noCloudAccounts: [],
+  speechModel: '',
   profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '', learnStyle: false }
 };
 export const AI_TONES = ['auto', 'friendly', 'formal', 'casual', 'brief'];
@@ -116,6 +119,11 @@ export function validateAiSettings(input, current, { managed = false } = {}) {
     if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) || url.username)
       throw invalid('Ollama muss auf diesem Computer laufen (127.0.0.1).');
     next.baseUrl = `http://${url.host}`;
+  }
+  if (input.speechModel !== undefined) {
+    const id = String(input.speechModel || '');
+    if (id && !SPEECH_CATALOG.some(m => m.id === id)) throw invalid('Dieses Modell steht nicht in der Liste.', 'ai_not_in_catalog');
+    next.speechModel = id;
   }
   if (input.features && typeof input.features === 'object') {
     for (const f of AI_FEATURES) if (input.features[f] !== undefined) next.features[f] = input.features[f] === true;

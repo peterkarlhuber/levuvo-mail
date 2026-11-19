@@ -23,6 +23,7 @@ import {
 import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api';
 import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
+import { DictateButton } from './DictateButton';
 import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
 import { complianceIssues } from './compliance-checks';
 import { useUi } from './ConfirmDialog';
@@ -573,6 +574,18 @@ export default function Composer({
     if (/\{[A-Za-zÄÖÜäöü]+\}/.test(htmlToPlain(body)))
       toast({ text: t('Bitte die markierten Platzhalter ergänzen.'), kind: 'info' });
   }
+  /** Dictated text at the cursor (plain text, never parsed as HTML). */
+  function insertDictation(spoken: string) {
+    if (format === 'text') {
+      const el = textArea.current;
+      const at = el ? el.selectionStart : text.length;
+      const piece = (at > 0 && !/\s$/.test(text.slice(0, at)) ? ' ' : '') + spoken;
+      setText(old => old.slice(0, at) + piece + old.slice(at));
+      requestAnimationFrame(() => el?.setSelectionRange(at + piece.length, at + piece.length));
+      return;
+    }
+    editor?.chain().focus().insertContent({ type: 'text', text: spoken }).run();
+  }
   expandShortcut.current = tpl => void insertTemplate(tpl);
   async function saveAsTemplate() {
     const name = await prompt({
@@ -790,6 +803,7 @@ export default function Composer({
                   )
                 }
               />
+              <DictateButton onText={insertDictation} />
               <Segmented
                 size="sm"
                 label={t('Format')}

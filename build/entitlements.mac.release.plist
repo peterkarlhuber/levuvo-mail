@@ -9,5 +9,8 @@
 <dict>
   <key>com.apple.security.cs.allow-jit</key>
   <true/>
+  <!-- Dictation: the microphone, only while the user records (Whisper runs on this device). -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
 </dict>
 </plist>

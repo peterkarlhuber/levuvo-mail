@@ -447,13 +447,23 @@ async function boot() {
     sameSite: 'strict',
     path: '/'
   });
+  const audioOnly = (permission, details) =>
+    permission === 'media' &&
+    Array.isArray(details?.mediaTypes) &&
+    details.mediaTypes.length > 0 &&
+    details.mediaTypes.every(t => t === 'audio');
   const isOwnPage = webContents =>
     webContents === windowRef?.webContents && webContents.getURL().startsWith(`${appOrigin}/`);
-  ses.setPermissionRequestHandler((webContents, permission, callback) =>
-    callback(permission === 'notifications' && isOwnPage(webContents))
+  // Notifications, and the microphone for dictation (audio only, never the camera or the screen),
+  // for the app's own page only. Everything else is refused.
+  ses.setPermissionRequestHandler((webContents, permission, callback, details) =>
+    callback(isOwnPage(webContents) && (permission === 'notifications' || audioOnly(permission, details)))
   );
   ses.setPermissionCheckHandler(
-    (webContents, permission) => permission === 'notifications' && Boolean(webContents) && isOwnPage(webContents)
+    (webContents, permission, _origin, details) =>
+      Boolean(webContents) &&
+      isOwnPage(webContents) &&
+      (permission === 'notifications' || (permission === 'media' && details?.mediaType !== 'video'))
   );
 
   windowRef = new BrowserWindow({
