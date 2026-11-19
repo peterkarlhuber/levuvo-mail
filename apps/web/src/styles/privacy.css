@@ -1,4 +1,4 @@
-/* Privacy cockpit (Settings → Privacy). */
+/* Privacy cockpit (Settings → Privacy) and newsletter hub. */
 .privacy-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -95,4 +95,29 @@
   .privacy-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Newsletter hub (newsletter bundle): all senders, weekly overview. */
+.bundle-more {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+.newsletter-digest {
+  margin-top: var(--space-2);
+}
+.newsletter-digest-items {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+}
+.newsletter-digest-items li {
+  display: grid;
+  gap: var(--space-0-5);
+}
+.newsletter-digest-items .text-button {
+  justify-self: start;
+  font-weight: var(--weight-semibold);
 }

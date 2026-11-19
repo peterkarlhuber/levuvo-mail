@@ -51,3 +51,28 @@ See the table in [PRIVACY.md](../../PRIVACY.md) § "Which data is processed wher
 developers: every new local file is listed there, in `BACKUP_FILES` or `NOT_BACKED_UP`
 (`apps/server/src/backup.mjs`), in the data export and in "Delete all data on this device".
 The tests in `apps/server/test/data-rights.test.mjs` fail when a file in the data folder is not covered.
+
+## 4. Guardrails against unlawful use
+
+Levuvo Mail helps users stay within the rules **at the moment they act**, and leaves the decision to
+them. Design rules, because a tool that watches its users would itself breach the GDPR and, in Austria,
+§ 96/96a ArbVG:
+
+- Warnings only, shown right before the action; the user can always continue.
+- Nothing is logged, counted, scored or reported – not on the device, not to the organisation, not to
+  Levuvo. The AI log records only that the AI pre-send check ran, never its findings.
+- Local rules first (no AI, no data leaves the device); the optional AI check adds hints marked as AI.
+- Conservative patterns: a warning that fires on every invoice teaches people to click it away. An
+  IBAN alone does not warn (it is in most business signatures).
+
+| Situation | Check | Legal basis of the hint |
+| --- | --- | --- |
+| 10+ external recipients from 3+ organisations openly in To/Cc | local, `apps/web/src/compliance-checks.ts` | Art. 5(1)(f), 32 (disclosure of addresses) |
+| Card number (Luhn), Austrian social security number (with label and check digit), password/PIN/TAN after a label, sent unencrypted to an external recipient | local | Art. 5(1)(f), 32 |
+| Health data terms (diagnosis, medical report, sick note …) sent unencrypted externally | local | Art. 9, 32 |
+| Discriminatory wording (age, gender, origin, religion, disability, pregnancy), sharing other people's sensitive data, threats | AI pre-send check (`legal` kind), optional | Art. 9; GlBG / AGG; StGB |
+| Request to rank applicants, profile people, collect data behind someone's back | assistant declines with reason and lawful alternative (`BASE_RULES`) | Art. 5, 22; AI Act Annex III no. 4 |
+| Switching off automatic updates or the AI marking | confirmation with explanation | CRA Annex I Part I (2)(c); AI Act Art. 50(2) |
+
+Encrypted sending (PGP, S/MIME, password-protected message) and internal mail (same domain as the
+sender) do not trigger the data warnings.
