@@ -7,6 +7,12 @@
 // (docs/ai/MODELS.md). A changed upload under the same name fails the download instead of being
 // used. scripts/ollama/check-catalog.mjs checks the pins against the registry in CI.
 //
+// Variants: a tag on the registry can offer a GGUF variant (runner "llamacpp", every platform) and
+// an MLX variant (runner "mlx", Macs with Apple silicon only), with different files and sizes.
+// digest/size pin the GGUF variant; mlx pins the MLX one where the registry offers it. Levuvo asks
+// Ollama for the variant explicitly (variantFor), so what is downloaded never depends on Ollama's
+// own preference, and checks it against that variant's pin.
+//
 // size: bytes of all layers (download size and disk space). minRamGb: memory the model needs to
 // run next to the operating system and Levuvo, from the model size plus context.
 
@@ -24,7 +30,7 @@ const QWEN_QUERY = 'Instruct: Given a search query, retrieve relevant emails tha
 /**
  * @type {ReadonlyArray<{id: string, name: string, vendor: string, origin: string, eu: boolean,
  *   kind: 'chat'|'embed', tier: Tier, license: string, licenseUrl: string, size: number,
- *   digest: string, default?: boolean, queryPrefix?: string}>}
+ *   digest: string, mlx?: {digest: string, size: number}, default?: boolean, queryPrefix?: string}>}
  */
 export const MODEL_CATALOG = Object.freeze([
   // Small, from 8 GB RAM
@@ -196,6 +202,22 @@ export const MODEL_CATALOG = Object.freeze([
     default: true
   }
 ]);
+
+/** The variants Levuvo pins and downloads, as Ollama's runner names. */
+export const RUNNERS = Object.freeze(['llamacpp', 'mlx']);
+
+/** True on a Mac with Apple silicon, where Ollama runs MLX models. */
+export const isAppleSilicon = (platform = process.platform, arch = process.arch) =>
+  platform === 'darwin' && arch === 'arm64';
+
+/**
+ * The variant of a catalog model downloaded on this computer: { runner, digest, size }. MLX on Apple
+ * silicon where the catalog pins one (faster there, Ollama's own choice), GGUF everywhere else.
+ */
+export function variantFor(entry, platform = process.platform, arch = process.arch) {
+  if (entry.mlx && isAppleSilicon(platform, arch)) return { runner: 'mlx', ...entry.mlx };
+  return { runner: 'llamacpp', digest: entry.digest, size: entry.size };
+}
 
 /** Ollama reports a model as "name:tag"; "bge-m3" is stored as "bge-m3:latest". */
 export const ollamaName = id => (String(id).includes(':') ? String(id) : `${id}:latest`);
