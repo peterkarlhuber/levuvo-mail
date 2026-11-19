@@ -13,7 +13,7 @@ function pe(machine) {
   b.writeUInt16LE(machine, 0x84);
   return b;
 }
-test('PE/Mach-O architecture detection distinguishes x64, arm64 and ia32', () => {
+test('PE/Mach-O/ELF architecture detection distinguishes x64, arm64 and ia32', () => {
   const dir = mkdtempSync(join(tmpdir(), 'arch-'));
   try {
     const f = (name, buf) => {
@@ -27,6 +27,16 @@ test('PE/Mach-O architecture detection distinguishes x64, arm64 and ia32', () =>
     m.writeUInt32LE(0xfeedfacf, 0);
     m.writeUInt32LE(0x0100000c, 4);
     assert.deepEqual(detectArchitectures(f('d', m)), ['arm64']);
+    const elf = machine => {
+      const b = Buffer.alloc(64);
+      b.writeUInt32BE(0x7f454c46, 0);
+      b[4] = 2;
+      b[5] = 1;
+      b.writeUInt16LE(machine, 18);
+      return b;
+    };
+    assert.deepEqual(detectArchitectures(f('g', elf(0x3e))), ['x64']);
+    assert.deepEqual(detectArchitectures(f('h', elf(0xb7))), ['arm64']);
     assert.deepEqual(detectArchitectures(f('e.txt', Buffer.from('hello world, no binary'))), []);
   } finally {
     rmSync(dir, { recursive: true, force: true });

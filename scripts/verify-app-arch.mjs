@@ -28,6 +28,9 @@ export function detectArchitectures(file) {
     if (pe.length === 6 && pe.toString('latin1', 0, 4) === 'PE\0\0') return [PE[pe.readUInt16LE(4)] || 'unknown'];
     return [];
   }
+  // ELF (Linux, only for the CI runtime check): e_machine at offset 18, little endian.
+  if (head.length >= 20 && head.readUInt32BE(0) === 0x7f454c46 && head[5] === 1)
+    return [{ 0x3e: 'x64', 0xb7: 'arm64' }[head.readUInt16LE(18)] || 'unknown'];
   if (head.length >= 8) {
     const beMagic = head.readUInt32BE(0);
     if (beMagic === 0xcafebabe) {
