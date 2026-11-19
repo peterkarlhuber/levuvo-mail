@@ -15,6 +15,7 @@ they must be built on the respective operating system (native keychain module).
 ```bash
 npm ci
 npm run release:check
+npm run ai:runtime -- --arch arm64       # AI runtime for the installer (x64 for Windows Intel/AMD)
 npm run desktop:mac                      # or desktop:win:arm64 / desktop:win:x64
 npm run release:manifest -- --arch arm64 # or x64
 ```
