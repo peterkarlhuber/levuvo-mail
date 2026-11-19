@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Ask your mailbox
+- **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
+- **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
+- **Sources with a quote:** every source email shows sender, date and a passage from it; a passage is shown only if it literally occurs in that email or attachment.
+- **Follow-up questions:** "and the price?" refers to the previous answer (the last two turns go along, framed as untrusted). The bin icon starts a new conversation.
+
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
 - **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).
