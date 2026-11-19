@@ -1,14 +1,15 @@
 // Models of Levuvo's own Ollama: what is installed, downloads with progress, cancel, resume and
-// delete. Only models of the fixed catalog (ai-model-catalog.mjs) are downloaded, and a download only
-// counts as finished when the model's manifest digest equals the pinned one; anything else is
-// deleted again (fail closed).
+// delete. Only models of the fixed catalog (ai-model-catalog.mjs) are downloaded, always the variant
+// pinned for this platform (GGUF, or MLX on Apple silicon; requested from Ollama explicitly), and a
+// download only counts as finished when the model's manifest digest equals that variant's pin;
+// anything else is deleted again (fail closed).
 //
 // Resume: Ollama keeps the parts of a cancelled download (the runtime runs with OLLAMA_NOPRUNE),
 // so choosing the model again continues where it stopped. "Discard" removes those parts.
 import { readdir, rm, stat, statfs as fsStatfs } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier } from './ai-model-catalog.mjs';
+import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier, variantFor } from './ai-model-catalog.mjs';
 
 // Room left on the disk after a download: the system and the mailbox need space too.
 export const DISK_RESERVE = 2 * 1024 ** 3;
@@ -71,8 +72,11 @@ export function createModelManager({
   totalmem = os.totalmem,
   log = null,
   logger = () => {},
-  catalog = MODEL_CATALOG
+  catalog = MODEL_CATALOG,
+  platform = process.platform,
+  arch = process.arch
 }) {
+  const variant = entry => variantFor(entry, platform, arch);
   const jobs = new Map(); // id -> job
   const readyListeners = new Set();
   const entryOf = id => {
@@ -95,7 +99,7 @@ export function createModelManager({
     for (const m of models) {
       const entry = catalog.find(e => ollamaName(e.id) === m.name);
       if (!entry) continue;
-      out.set(entry.id, { verified: stripDigest(m.digest) === stripDigest(entry.digest), size: m.size });
+      out.set(entry.id, { verified: stripDigest(m.digest) === stripDigest(variant(entry).digest), size: m.size });
     }
     return out;
   }
@@ -145,7 +149,8 @@ export function createModelManager({
         tier: e.tier,
         license: e.license,
         licenseUrl: e.licenseUrl,
-        size: e.size,
+        size: variant(e).size,
+        variant: variant(e).runner,
         default: Boolean(e.default),
         fit: fitFor(e, ram),
         installed: have.get(e.id)?.verified === true,
@@ -166,7 +171,8 @@ export function createModelManager({
   }
 
   async function runPull(entry, job) {
-    const tracker = progressTracker(entry.size);
+    const { runner, size } = variant(entry);
+    const tracker = progressTracker(size);
     let stall = null;
     const armStall = () => {
       clearTimeout(stall);
@@ -177,7 +183,7 @@ export function createModelManager({
       armStall();
       const res = await api('/api/pull', {
         method: 'POST',
-        body: JSON.stringify({ model: ollamaName(entry.id), stream: true }),
+        body: JSON.stringify({ model: ollamaName(entry.id), runner, stream: true }),
         signal: job.controller.signal
       });
       if (!res.ok || !res.body) throw new ModelError('download_failed', `Ollama ${res.status}`);
@@ -226,20 +232,22 @@ export function createModelManager({
       throw new ModelError('unreachable', 'Levuvos Ollama startet nicht.', { statusCode: 503 });
     });
     if (have.get(entry.id)?.verified) {
-      const done = { status: 'done', completed: entry.size, total: entry.size, startedAt: Date.now() };
+      const { size } = variant(entry);
+      const done = { status: 'done', completed: size, total: size, startedAt: Date.now() };
       jobs.set(entry.id, done);
       return publicJob(done);
     }
+    const { size } = variant(entry);
     const free = await freeBytes();
-    if (free !== null && free < entry.size + DISK_RESERVE)
+    if (free !== null && free < size + DISK_RESERVE)
       throw new ModelError('disk_full', 'Nicht genug Speicherplatz für dieses Modell.', {
-        needed: entry.size + DISK_RESERVE,
+        needed: size + DISK_RESERVE,
         free
       });
     const job = {
       status: 'downloading',
       completed: running?.completed || 0,
-      total: entry.size,
+      total: size,
       startedAt: Date.now(),
       parts: running?.parts || [],
       controller: new AbortController(),
