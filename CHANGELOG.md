@@ -6,6 +6,9 @@
 - **Video calls with Jitsi Meet:** "Add video call" in an event creates a link with a random room name (125 bits, cannot be guessed) and puts it in the location or, if that is taken, at the top of the description, so attendees get it with the invitation. Events with a Jitsi link show "Join video call" and "Copy link". The composer has a "Video call" button that inserts the link at the cursor, and "Start video call" in a space chat sends it to all members; links in chat messages can now be clicked. The default server is meet.ffmuc.net (Freifunk München, Germany); an own Jitsi server can be set under Settings → General → Video calls (https only). Levuvo Mail only builds the link and opens no connection itself; the call runs in the browser after the usual link confirmation.
 - **Contact history (mini CRM):** every contact has a "History" with emails (local search index, all accounts and folders), shared events, tasks and notes on one timeline, with filters. Notes can be added, edited and deleted; "Add task" creates a task linked to the person, and tasks made from one of their mails appear as well. The reader's contact card shows open tasks and the latest notes and can add both, also for people who are not in an address book. Notes are stored only on this device, encrypted with AES-256-GCM (key `contact-notes-key` in the keychain, fail closed), are part of the backup and are deleted with the last contact that has the address. No AI and no online lookup.
 
+### Window frame (macOS)
+- **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
+
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
 - **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
@@ -42,6 +45,10 @@
 
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
+
+### Privacy cockpit
+- **Settings → Privacy shows what happened in the last 30 days:** how many tracking pixels were blocked (per day), how often the AI ran on this device and how often in the cloud (per function, and how much of it ran automatically), which external agents (MCP) accessed what, newsletter unsubscribes, external images you loaded and model downloads. "What left Levuvo Mail" lists every kind of data that went off the device.
+- **Data-minimised:** besides the existing AI log (no content) only daily counters are stored – no addresses, hosts, subjects or message IDs; 30 days, deletable, not in backups.
 
 ### Protect with password
 - **Security review:** easily guessed passwords (few distinct characters, runs like "1234567890", common words with digits) are refused, because the encrypted file can be attacked offline without a limit; the suggested random password stays the default. A copied password is removed from the clipboard after one minute. The composer now says that automatically saved drafts stay unencrypted in the own Drafts folder until sending. Review notes in SECURITY.md.
