@@ -8,7 +8,8 @@ runs on your device; Levuvo never sees your messages or credentials.
 **Contents:** 1 Installation · 2 Adding an account · 3 The interface · 4 Reading · 5 Writing ·
 6 Staying organized · 7 Search & offline · 8 Filters & vacation reply · 9 Calendar · 10 Contacts ·
 11 Encryption · 12 Security & phishing · 13 Settings · 14 Keyboard shortcuts · 15 Troubleshooting ·
-16 Privacy · 17 Levuvo Mail Assistant (AI) · 18 Tasks · 19 Spaces · 20 Backup & moving · 21 New senders & bundles
+16 Privacy · 17 Levuvo Mail Assistant (AI) · 18 Tasks · 19 Spaces · 20 Backup & moving · 21 New senders & bundles ·
+22 Automations
 
 ---
 
@@ -179,6 +180,29 @@ is stored in the keychain.
   Replies to your own invitations are applied with “Apply to calendar” (participation status),
   cancellations with “Remove from calendar”.
 - On the left: show/hide calendars; colors and new calendars under “Manage calendars”.
+
+### Finding a time, polls and booking links
+
+- **Find a time** (calendar, top): enter people, choose duration, period and hours, **Find free
+  times**. Levuvo Mail checks your calendars and, for colleagues in Microsoft 365 or Google, their
+  "free/busy" (no titles). If someone shared their calendar with you (e.g. Nextcloud), assign it under
+  "Assign people's calendars". People whose calendar cannot be read are marked and vote by email. Times
+  when everyone is free come first; otherwise those when most people can.
+- **One time chosen:** "Enter event and invite" opens the event with everyone.
+- **Let the team vote:** choose up to 8 times, enter a title, **Send poll**. Everyone gets their own
+  email (nobody sees the other addresses) and clicks "Works" next to every time that suits them; this
+  opens a prepared reply in their own mail program. Replying with the numbers ("1 and 3") works too.
+  Under **Polls** (calendar, left) you see who can when, and **Fix** enters the event and invites everyone.
+- **Offer times to someone outside:** as above, but whoever clicks a time first gets it: Levuvo Mail
+  enters the event and sends the invitation as soon as the reply arrives. Anyone picking a time that is
+  already taken automatically gets the times still free.
+- **Booking links** (Settings → Booking links): a link for your signature or website. Whoever clicks it
+  writes you an email; Levuvo Mail answers automatically with free times (you set duration, weekdays,
+  hours, notice, buffer and period). A click on a time books it, and both get a calendar invitation.
+  Event titles of your calendar are never shown.
+- **No server of our own:** polls, offers and booking links work with ordinary emails. Replies are
+  recognised while Levuvo Mail is open, otherwise on the next start. Automatic answers never go to
+  out-of-office replies or mailing lists, and at most 5 per sender and day.
 
 ## 10 Contacts
 
@@ -430,3 +454,27 @@ you have never written to wait under "New senders" until you accept or block the
 newsletters, invoices, notifications and similar mails into one row each; with the local model switched on,
 the assistant helps sorting. The **attachment overview** shows all attachments of a folder, and the
 **phishing check** warns about suspicious mails (chapter 12).
+
+## 22 Automations
+
+**Settings → Automations.** Rules Levuvo Mail applies to **new** mail in the inbox, for example
+"invoices from example.com into the Accounting folder and create a task to pay".
+
+- **New automation:** name, account (or all accounts), conditions (sender, recipient, subject, text,
+  anywhere – contains, does not contain, is exactly, ends with – and "attachments present/none") and
+  actions: move to a folder, mark as read, mark with a star, **create task** (title with {subject} and
+  {from}, due in days; the task links to the mail).
+- **Describe in plain words** (with the assistant switched on): the local AI proposes a rule. It is
+  marked **AI proposal** with the model name and only fills the editor – you check and change it there.
+  Only your description and your folder names are sent, no mail.
+- **How the rule runs:** below the editor the rule is shown in plain words. This text is built from the
+  rule itself, not by the AI – what it says is what happens.
+- **Dry run:** shows which of the 50 newest mails the rule would handle and which task it would create.
+  Nothing is changed.
+- **Save (off)** or **Save and switch on.** A rule that is switched on applies only to mail arriving from
+  then on; older mail is left alone. The switch in the list turns it off and on, the arrows change the order.
+- **Limits:** automations never delete, reply, forward or send anything and never move mail to the trash.
+  They run while Levuvo Mail is open; mail that arrived in the meantime is handled on the next start. For
+  rules that also work while the app is closed, use the server filters (chapter 8).
+- **Log:** shows for 30 days which rule did what to which mail (subject), including errors (e.g. a deleted
+  target folder). Stored encrypted on this device, without mail text.
