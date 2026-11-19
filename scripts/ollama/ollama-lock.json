@@ -2,6 +2,7 @@
   "version": "0.40.16",
   "source": "https://github.com/ollama/ollama/releases/tag/v0.40.16",
   "license": "MIT",
+  "signers": { "darwin": "3MU9H2V9Y9", "win32": "Ollama" },
   "assets": {
     "darwin-arm64": {
       "file": "ollama-darwin.tgz",
@@ -19,7 +20,7 @@
       "file": "ollama-windows-amd64.zip",
       "size": 1618244995,
       "sha256": "50fcf5ad54277f2fa5d173ebfc93bcb017adbc0c9ef2314daabc96ca9e6aa64e",
-      "prune": []
+      "prune": ["lib/ollama/cuda_v12"]
     },
     "linux-x64": {
       "file": "ollama-linux-amd64.tar.zst",

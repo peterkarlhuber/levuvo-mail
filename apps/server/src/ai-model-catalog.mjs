@@ -38,7 +38,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'small',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 3_320_000_000,
+    size: 3_324_173_934,
     digest: 'sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04',
     default: true
   },
@@ -52,7 +52,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'small',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 4_590_000_000,
+    size: 4_587_156_505,
     digest: 'sha256:b37049369adfe3d2b653af0ab301a062ca5cbe96ace6aa0d3f2559ee9b563fc2'
   },
   {
@@ -65,7 +65,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'small',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 2_950_000_000,
+    size: 2_953_840_808,
     digest: 'sha256:f04aa1c738f64e13c625b82ae92504fc0260fa6723b509ed1ece0fa188179b1d'
   },
   // Standard, from 16 GB RAM
@@ -79,7 +79,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'standard',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 6_550_000_000,
+    size: 6_550_825_550,
     digest: 'sha256:56671c2ab9385f9cfcb404638e32cd62d88e3501d44822208363c010179a3c90',
     default: true
   },
@@ -93,7 +93,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'standard',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 8_020_000_000,
+    size: 8_021_618_941,
     digest: 'sha256:6114515d63c17436a7c0417d82820ac65ad643e2806c5a3c89cb62846436ed0b'
   },
   {
@@ -106,7 +106,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'standard',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 6_020_000_000,
+    size: 6_022_236_616,
     digest: 'sha256:1922accd5827ebe6829e536369195db25eaf664528dc66206d646ea3bb386b71'
   },
   // Large, from 32 GB RAM
@@ -120,7 +120,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'large',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 17_740_000_000,
+    size: 17_741_872_154,
     digest: 'sha256:aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813',
     default: true
   },
@@ -134,7 +134,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'large',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 15_180_000_000,
+    size: 15_177_384_862,
     digest: 'sha256:5a408ab55df5c1b5cf46533c368813b30bf9e4d8fc39263bf2a3338cfa3b895b'
   },
   {
@@ -147,7 +147,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'large',
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
-    size: 9_080_000_000,
+    size: 9_082_537_546,
     digest: 'sha256:4760c35aeb9d9e9c6174c2492562c0b999e80a222804fd96b1915ab72bbcdcf7'
   },
   // Search (embeddings); always local, also when a cloud model writes the answers
@@ -161,10 +161,9 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'search',
     license: 'Apache-2.0',
     licenseUrl: 'https://huggingface.co/Qwen/Qwen3-Embedding-0.6B',
-    size: 640_000_000,
+    size: 639_150_858,
     digest: 'sha256:ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d',
-    queryPrefix: QWEN_QUERY,
-    default: true
+    queryPrefix: QWEN_QUERY
   },
   {
     id: 'qwen3-embedding:4b',
@@ -176,7 +175,7 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'search',
     license: 'Apache-2.0',
     licenseUrl: 'https://huggingface.co/Qwen/Qwen3-Embedding-4B',
-    size: 2_500_000_000,
+    size: 2_496_704_041,
     digest: 'sha256:df5bd2e3c74cd8d069d21dc038f1b359fcdc9458fce1c99bd43c9eb1518ff907',
     queryPrefix: QWEN_QUERY
   },
@@ -190,9 +189,11 @@ export const MODEL_CATALOG = Object.freeze([
     tier: 'search',
     license: 'MIT',
     licenseUrl: 'https://huggingface.co/BAAI/bge-m3',
-    size: 1_160_000_000,
+    size: 1_157_672_605,
     digest: 'sha256:7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab',
-    queryPrefix: ''
+    // Best of the three on the German test mailbox (docs/ai/MODELS.md), without an instruction.
+    queryPrefix: '',
+    default: true
   }
 ]);
 

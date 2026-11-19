@@ -82,19 +82,22 @@ function extract(archive, dir) {
 }
 
 /** Verifies the code signature with the platform tools; returns the signer for the log. */
-export function verifySignature(binary, platform = process.platform) {
+export function verifySignature(binary, platform = process.platform, signers = LOCK.signers) {
   if (platform === 'darwin') {
     run('codesign', ['--verify', '--strict', '--verbose=2', binary]);
     const info = spawnSync('codesign', ['-dv', '--verbose=2', binary], { encoding: 'utf8' }).stderr;
     const team = /TeamIdentifier=(\S+)/.exec(info)?.[1];
-    if (!team || team === 'not set') throw new Error('Ollama binary is not signed with a Developer ID');
+    if (team !== signers.darwin) throw new Error(`Ollama binary signed by team ${team || 'none'}, expected ${signers.darwin}`);
     return `Developer ID team ${team}`;
   }
   if (platform === 'win32') {
-    const ps = `$s = Get-AuthenticodeSignature -LiteralPath '${binary.replace(/'/g, "''")}'; "$($s.Status)|$($s.SignerCertificate.Subject)"`;
-    const [status, subject] = run('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps]).trim().split('|');
-    if (status !== 'Valid') throw new Error(`Authenticode signature ${status}`);
-    if (!/Ollama/i.test(subject)) throw new Error(`unexpected signer ${subject}`);
+    const ps = `$s = Get-AuthenticodeSignature -LiteralPath '${binary.replace(/'/g, "''")}'; [Console]::Out.Write(($s.Status.ToString()) + '|' + $s.SignerCertificate.Subject)`;
+    const encoded = Buffer.from(ps, 'utf16le').toString('base64');
+    const out = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]).trim();
+    const [status, subject = ''] = out.split('|');
+    if (status !== 'Valid') throw new Error(`Authenticode signature not valid: ${out || '(no output)'}`);
+    if (!subject.includes(`O=${signers.win32}`) && !subject.includes(`CN=${signers.win32}`))
+      throw new Error(`unexpected signer ${subject}`);
     return subject;
   }
   return 'not checked on this platform (CI test builds only)';
