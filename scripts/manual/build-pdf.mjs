@@ -158,7 +158,7 @@ for (const lang of languages) {
     `  cover-shot: "${image('cover.png')}",`,
     `  cover-alt: "${t.coverAlt}",`,
     `  cover: "${process.env.MANUAL_COVER || 'night'}",`,
-    `  shot-style: "${process.env.MANUAL_SHOT || 'window'}",`,
+    `  shot-style: "${process.env.MANUAL_SHOT || 'fade'}",`,
     `  back: "${t.back}",`,
     ')',
     '',

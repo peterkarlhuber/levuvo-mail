@@ -113,7 +113,7 @@
   cover-shot: none,
   cover-alt: "",
   cover: "night",
-  shot-style: "window",
+  shot-style: "fade",
   back: "",
   body,
 ) = {
@@ -205,16 +205,16 @@
         let shot = image(cover-shot, width: 100%, alt: cover-alt)
         if shot-style == "fade" {
           // Wide window that fades into the page towards the bottom: no hard cut through text.
-          place(top + left, dx: 12mm, dy: 150mm, block(
-            width: 186mm,
+          place(top + left, dx: 22mm, dy: 140mm, block(
+            width: 166mm,
             radius: 10pt,
             clip: true,
             stroke: 0.7pt + rgb(255, 255, 255, 36),
             shot,
           ))
-          place(top + left, dx: 0mm, dy: 192mm, pdf.artifact(rect(
+          place(top + left, dx: 0mm, dy: 178mm, pdf.artifact(rect(
             width: 100%,
-            height: 105mm,
+            height: 119mm,
             fill: gradient.linear(rgb(11, 11, 11, 0), rgb(11, 11, 11, 235), night, night, angle: 90deg),
           )))
           place(bottom + left, dx: 22mm, dy: -20mm, text(size: 9pt, weight: "semibold", motto))
