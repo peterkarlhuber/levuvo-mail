@@ -41,6 +41,8 @@ npm run check:i18n     # every UI and server message has an English translation
 
 Requires two test mailboxes on a mail server with local delivery and ManageSieve, a CalDAV/CardDAV server with two users and optionally an OAuth test provider. **Use only with your own test accounts.**
 
+Local test servers with exactly that (Docker): `npm run test:servers`, then `source test/servers/.state/env` and `npm run test:integration` (stop with `docker compose -f test/servers/compose.yml down -v`). The same runs nightly in `integration.yml`.
+
 ```bash
 export LEVUVO_IT_ALLOW_WRITES=1 LEVUVO_IT_IMAP_HOST=mail.test.example LEVUVO_IT_SMTP_PORT=465
 export LEVUVO_IT_USER=peter@test.example LEVUVO_IT_PASSWORD=… LEVUVO_IT_USER2=anna@test.example LEVUVO_IT_PASSWORD2=…

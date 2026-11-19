@@ -598,6 +598,15 @@ test(
       await imap.connect();
       await imap.append('INBOX', built.message, []);
       await imap.logout();
+      // With "bundle the inbox" on (default) the newsletter sits in the collapsed "Newsletter" bundle.
+      const bundle = page.locator('.bundle-row', { hasText: 'Newsletter' }).first();
+      const direct = page.locator('.message-row', { hasText: `Rundbrief ${stamp}` }).first();
+      for (let i = 0; i < 20 && !(await bundle.isVisible()) && !(await direct.isVisible()); i++) {
+        await page.locator('[aria-label="Aktualisieren"]').first().click();
+        await page.waitForTimeout(800);
+      }
+      const bundled = await bundle.isVisible();
+      if (bundled) await bundle.click();
       await openMessage(`Rundbrief ${stamp}`);
       await page.locator('.unsubscribe-bar').waitFor();
       await page.locator('.unsubscribe-bar').getByRole('button', { name: 'Abmelden' }).click();
@@ -614,6 +623,7 @@ test(
         if (!mail) await new Promise(r => setTimeout(r, 500));
       }
       assert.ok(mail, 'unsubscribe email arrived at the sender');
+      if (bundled) await page.locator('.bundle-header .text-button').first().click();
     });
 
     await step('2.1.1: Calendar on this device, move an event via drag & drop', async () => {

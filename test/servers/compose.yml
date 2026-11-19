@@ -1,0 +1,42 @@
+# Test servers for the opt-in integration suites (npm run test:integration, test:e2e).
+# Started by test/servers/start.sh, which also creates the test CA, certificates and accounts.
+# Only for local test data: fixed test passwords, nothing listens beyond 127.0.0.1.
+name: levuvo-test-servers
+services:
+  mail:
+    image: docker.io/mailserver/docker-mailserver:15.1.0
+    hostname: mail.levuvo.test
+    environment:
+      SSL_TYPE: manual
+      SSL_CERT_PATH: /tmp/levuvo-certs/server.crt
+      SSL_KEY_PATH: /tmp/levuvo-certs/server.key
+      ENABLE_MANAGESIEVE: '1'
+      ENABLE_RSPAMD: '0'
+      ENABLE_OPENDKIM: '0'
+      ENABLE_OPENDMARC: '0'
+      ENABLE_POLICYD_SPF: '0'
+      ENABLE_AMAVIS: '0'
+      ENABLE_CLAMAV: '0'
+      ENABLE_FAIL2BAN: '0'
+      ENABLE_POSTGREY: '0'
+      SPOOF_PROTECTION: '0'
+      PERMIT_DOCKER: connected-networks
+      LOG_LEVEL: warn
+    volumes:
+      - ./.state/certs:/tmp/levuvo-certs:ro
+      - ./.state/mail-config:/tmp/docker-mailserver
+    ports:
+      - 127.0.0.1:993:993
+      - 127.0.0.1:465:465
+      - 127.0.0.1:4190:4190
+    healthcheck:
+      test: ['CMD-SHELL', 'ss -ltn | grep -q ":993 " && ss -ltn | grep -q ":465 "']
+      interval: 5s
+      retries: 60
+  dav:
+    image: docker.io/tomsquest/docker-radicale:3.5.4.0
+    volumes:
+      - ./radicale.conf:/config/config:ro
+      - ./.state/radicale-users:/config/users:ro
+    ports:
+      - 127.0.0.1:5232:5232

@@ -7,14 +7,16 @@
 // Supply chain: the interpreter comes from python-build-standalone via `uv python install`
 // (uv checks its SHA-256). Third-party packages come only as wheels with the hashes from
 // apps/ai/requirements-lock.txt (--require-hashes). Tabrion and Orkexa are installed from exact
-// git commits without dependencies, and the sidecar itself from apps/ai.
+// git commits without dependencies, and the sidecar itself from apps/ai. These three are built from
+// source without build isolation, against the hashed build backends in apps/ai/requirements-backends.txt
+// (never a backend freshly resolved from PyPI); the backends are removed from the runtime afterwards.
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { detectArchitectures } from './verify-app-arch.mjs';
 
-export const PYTHON_VERSION = '3.13.14';
+export const PYTHON_VERSION = '3.13.18';
 const root = resolve(import.meta.dirname, '..');
 
 function parseArgs(argv) {
@@ -55,6 +57,33 @@ export function gitRequirements(text) {
     if (!/ @ git\+https:\/\/github\.com\/[\w.-]+\/[\w.-]+\.git@[0-9a-f]{40}$/.test(r))
       throw new Error(`requirement not pinned to a commit: ${r}`);
   return reqs;
+}
+
+const requirementNames = text =>
+  text
+    .split('\n')
+    .map(l => /^([A-Za-z0-9][A-Za-z0-9._-]*)==/.exec(l.trim())?.[1]?.toLowerCase().replace(/[._]+/g, '-'))
+    .filter(Boolean);
+
+/**
+ * The uv commands that fill the runtime, in order. Every install either takes only hashed wheels
+ * (--require-hashes --only-binary) or builds from source without isolation against those wheels.
+ */
+export function installSteps(python, dir = root, read = file => readFileSync(file, 'utf8')) {
+  const ai = join(dir, 'apps', 'ai');
+  const pip = ['pip', 'install', '--python', python, '--no-cache', '--compile-bytecode'];
+  const hashed = file => [...pip, '--require-hashes', '--only-binary', ':all:', '-r', join(ai, file)];
+  const gits = gitRequirements(read(join(ai, 'requirements.txt'))).map(r => r.replace(/\[[^\]]*\]/, ''));
+  const runtime = new Set(requirementNames(read(join(ai, 'requirements-lock.txt'))));
+  const backends = requirementNames(read(join(ai, 'requirements-backends.txt'))).filter(n => !runtime.has(n));
+  return [
+    hashed('requirements-lock.txt'),
+    hashed('requirements-backends.txt'),
+    [...pip, '--no-deps', '--no-build-isolation', ...gits, ai],
+    ['pip', 'uninstall', '--python', python, ...backends],
+    // The full set must be consistent: every dependency of Orkexa and Tabrion comes from the lock.
+    ['pip', 'check', '--python', python]
+  ];
 }
 
 /** Standard library folders the sidecar never needs (tests, IDLE, Tk). Packages are left alone. */
@@ -133,20 +162,7 @@ async function main() {
       rmSync(join(lib, 'EXTERNALLY-MANAGED'), { force: true });
 
     const python = pythonExe(target);
-    const pip = ['pip', 'install', '--python', python, '--no-cache', '--compile-bytecode'];
-    run(
-      'uv',
-      [...pip, '--require-hashes', '--only-binary', ':all:', '-r', join(root, 'apps/ai/requirements-lock.txt')],
-      {
-        env
-      }
-    );
-    const gits = gitRequirements(readFileSync(join(root, 'apps/ai/requirements.txt'), 'utf8')).map(r =>
-      r.replace(/\[[^\]]*\]/, '')
-    );
-    run('uv', [...pip, '--no-deps', ...gits, join(root, 'apps/ai')], { env });
-    // The full set must be consistent: every dependency of Orkexa and Tabrion comes from the lock.
-    run('uv', ['pip', 'check', '--python', python], { env });
+    for (const args of installSteps(python)) run('uv', args, { env });
 
     prune(target);
     pruneWindows(target, arch);

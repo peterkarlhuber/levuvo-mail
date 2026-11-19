@@ -1,0 +1,2 @@
+# Security scan of the hashed Python locks (CI job "ai" and the weekly supply-chain run).
+pip-audit==2.10.0
