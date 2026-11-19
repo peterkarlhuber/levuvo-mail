@@ -16,6 +16,7 @@ test('Static files only from allowed directories and types', () => {
   assert.equal(safeStaticFile(root, '/assets/index-abc123.js'), path.join(root, 'assets/index-abc123.js'));
   assert.equal(safeStaticFile(root, '/favicon.png'), path.join(root, 'favicon.png'));
   assert.equal(safeStaticFile(root, '/levuvo-header-logo.png'), path.join(root, 'levuvo-header-logo.png'));
+  assert.equal(safeStaticFile(root, '/levuvo-wordmark.png'), path.join(root, 'levuvo-wordmark.png'));
   // Install / home-screen metadata (PWA)
   assert.equal(safeStaticFile(root, '/manifest.webmanifest'), path.join(root, 'manifest.webmanifest'));
   assert.equal(safeStaticFile(root, '/icon-512.png'), path.join(root, 'icon-512.png'));

@@ -60,3 +60,7 @@ import { Button, IconButton, Field, Segmented, Dialog, Toolbar, useFocusTrap } f
    screens to `test/a11y/a11y.test.mjs`.
 8. In settings, free-text fields use `<Row wide>`: the field sits below the label at full width.
 9. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.
+10. Desktop window frame (`styles/window-frame.css`): the desktop app has no system title bar. The
+    top `--titlebar-h` strip moves the window; controls in it are no-drag automatically. On Windows
+    the top right `--window-controls-w` belongs to the window buttons: a header that reaches the
+    right edge at the top of a view must keep that width free (see the existing rules there).

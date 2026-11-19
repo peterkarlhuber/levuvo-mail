@@ -19,6 +19,7 @@
 @import './spaces.css';
 @import './assistant.css';
 @import './tasks.css';
+@import './window-frame.css';
 @import './local-models.css';
 @import './ui-primitives.css';
 @import './mobile.css';
