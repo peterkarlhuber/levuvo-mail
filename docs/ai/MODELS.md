@@ -99,6 +99,16 @@ for large computers. The search instruction is set per model (`queryPrefix`); bg
 
 Switching the search model asks first and then rebuilds the index in the background with progress.
 
+**mDenseOn (LightOn, FR, EU), checked 19 November 2026 and not offered yet.** Apache-2.0, 307M parameters,
+768 dimensions, 8,192 tokens context. With sentence-transformers on a CI processor and its prompts
+("query: " / "document: ") it ranked the right mail first in **30 of 30** queries (Recall@1 1.000, MRR
+1.000, about 120 ms per mail; without prompts 0.967), against 29 of 30 for bge-m3 in the same run. It
+cannot be offered through Levuvo's Ollama yet: there is no GGUF on registry.ollama.ai or Hugging Face, and
+a GGUF converted with llama.cpp (`convert_hf_to_gguf.py`, 614 MB, F16) does not load in the pinned Ollama
+0.40.16 ("metaspace prepend_scheme 'always' is not supported for BPE vocab"). Once Ollama loads it and a
+GGUF is published under a reviewable name, it goes into the list with the EU flag; bge-m3 stays the
+default.
+
 ## 3. Updating
 
 - **Ollama:** set `version`, `size` and `sha256` of every asset in `ollama-lock.json` from the release,
