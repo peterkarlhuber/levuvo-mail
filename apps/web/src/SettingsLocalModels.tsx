@@ -1,7 +1,9 @@
-// Local models of Levuvo's own Ollama: a fixed list to choose from, downloaded on selection with a
-// progress bar, cancel, resume and delete. The search model can be switched; its index is then
+// Local models of Levuvo's own Ollama: a fixed list to choose from. Choosing a model that is on this
+// computer switches to it; choosing one that is not shows its size and a download button, and it
+// becomes active once it is downloaded and verified. Downloads have a progress bar, cancel, resume
+// and delete. The search model can be switched; its index is then
 // rebuilt in the background and its progress is shown here.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, Download, Pause, Play, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiErrorText } from './ai-errors';
@@ -54,6 +56,9 @@ const TIERS: { tier: Tier; label: string }[] = [
 ];
 const TIER_NAMES: Record<Tier, string> = { small: 'Klein', standard: 'Standard', large: 'Groß', search: 'Suche' };
 
+// Kept free next to a download (DISK_RESERVE in apps/server/src/ollama-models.mjs).
+const DISK_RESERVE = 2 * 1024 ** 3;
+
 const busy = (j: Job | null) => j?.status === 'downloading' || j?.status === 'verifying';
 
 /** "6.6 GB" in the UI language. */
@@ -81,6 +86,8 @@ export function LocalModelSettings({
   const { confirm, toast } = useUi();
   const [state, setState] = useState<LocalModelsState | null>(null);
   const [failed, setFailed] = useState('');
+  // Chosen in the list but not downloaded yet: the active model stays until this one is ready.
+  const [pending, setPending] = useState<{ chat?: string; embed?: string }>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
@@ -141,11 +148,28 @@ export function LocalModelSettings({
       });
       if (!ok) return;
     }
-    await save(kind === 'embed' ? { embedModel: id } : { model: id });
-    // Selected but not on this computer yet: the download starts right away.
-    if (!entry.installed && !busy(entry.job)) await act('download', id);
-    else void load();
+    if (entry.installed) {
+      setPending(p => ({ ...p, [kind]: undefined }));
+      await save(kind === 'embed' ? { embedModel: id } : { model: id });
+    } else {
+      // Not on this computer yet: nothing is downloaded until the button below is pressed.
+      const active = kind === 'embed' ? state.selected.embedModel : state.selected.model;
+      setPending(p => ({ ...p, [kind]: id === active ? undefined : id }));
+    }
+    void load();
   }
+
+  // A chosen model becomes active once its download is verified.
+  useEffect(() => {
+    if (!state) return;
+    for (const kind of ['chat', 'embed'] as const) {
+      const id = pending[kind];
+      if (id && state.models.find(m => m.id === id)?.installed) {
+        setPending(p => ({ ...p, [kind]: undefined }));
+        void save(kind === 'embed' ? { embedModel: id } : { model: id }).then(() => load());
+      }
+    }
+  }, [state, pending, save, load]);
 
   async function remove(m: LocalModel) {
     const inUse = m.id === state?.selected.model || m.id === state?.selected.embedModel;
@@ -164,9 +188,9 @@ export function LocalModelSettings({
     if (ok) await act('delete', m.id);
   }
 
-  async function discardPartial() {
+  async function discardPartial(model: string) {
     try {
-      await postJson('/api/ai/local-models/discard-partial', {}, 'ai-v1');
+      await postJson('/api/ai/local-models/discard-partial', { model }, 'ai-v1');
     } catch (err) {
       toast({ text: aiErrorText((err as ApiError).code, t), kind: 'error' });
     }
@@ -185,8 +209,10 @@ export function LocalModelSettings({
 
   const chat = state.models.filter(m => m.kind === 'chat');
   const embed = state.models.filter(m => m.kind === 'embed');
-  const selectedChat = state.models.find(m => m.id === state.selected.model);
-  const selectedEmbed = state.models.find(m => m.id === state.selected.embedModel);
+  const activeChat = state.models.find(m => m.id === state.selected.model);
+  const activeEmbed = state.models.find(m => m.id === state.selected.embedModel);
+  const selectedChat = state.models.find(m => m.id === pending.chat) || activeChat;
+  const selectedEmbed = state.models.find(m => m.id === pending.embed) || activeEmbed;
   const recommended = TIER_NAMES[state.recommendedTier];
   const ramGb = Math.round(state.ram / 1024 ** 3);
   const optionText = (m: LocalModel) =>
@@ -201,6 +227,14 @@ export function LocalModelSettings({
       .join(' · ');
   const installed = state.models.filter(m => m.installed);
   const paused = state.models.filter(m => m.job?.status === 'canceled');
+  const downloading = state.models.some(m => busy(m.job));
+  const statusProps = { act, remove, freeBytes: state.freeBytes };
+  const switchBack = (kind: 'chat' | 'embed', to: LocalModel | undefined) =>
+    to ? (
+      <Button size="sm" variant="ghost" onClick={() => setPending(p => ({ ...p, [kind]: undefined }))}>
+        {t('Bei {name} bleiben', { name: to.name })}
+      </Button>
+    ) : null;
   const index = state.index.reduce(
     (a, i) => ({
       messages: a.messages + (i.messages || 0),
@@ -247,7 +281,13 @@ export function LocalModelSettings({
           </select>
         </Row>
       )}
-      {!cloud && selectedChat && <ModelStatus model={selectedChat} act={act} remove={remove} />}
+      {!cloud && selectedChat && (
+        <ModelStatus
+          model={selectedChat}
+          {...statusProps}
+          extra={selectedChat !== activeChat ? switchBack('chat', activeChat) : null}
+        />
+      )}
       <Row
         label={t('Modell für die Suche')}
         hint={
@@ -266,7 +306,13 @@ export function LocalModelSettings({
           ))}
         </select>
       </Row>
-      {selectedEmbed && <ModelStatus model={selectedEmbed} act={act} remove={remove} />}
+      {selectedEmbed && (
+        <ModelStatus
+          model={selectedEmbed}
+          {...statusProps}
+          extra={selectedEmbed !== activeEmbed ? switchBack('embed', activeEmbed) : null}
+        />
+      )}
       {selectedEmbed?.installed && index.messages > 0 && index.vectors < index.messages && (
         <div className="local-model-status" role="status">
           <span>
@@ -279,7 +325,7 @@ export function LocalModelSettings({
           <progress max={index.messages} value={index.vectors} aria-label={t('Fortschritt des Suchindex')} />
         </div>
       )}
-      {(installed.length > 0 || paused.length > 0) && (
+      {installed.length > 0 && (
         <Row
           label={t('Heruntergeladene Modelle')}
           hint={
@@ -305,16 +351,47 @@ export function LocalModelSettings({
                 </Button>
               </li>
             ))}
-            {paused.length > 0 && (
-              <li>
-                <span>{t('Unterbrochene Downloads: {names}', { names: paused.map(m => m.name).join(', ') })}</span>
-                <Button size="sm" variant="ghost" icon={<X size={14} />} onClick={() => void discardPartial()}>
-                  {t('Verwerfen')}
-                </Button>
-              </li>
-            )}
           </ul>
         </Row>
+      )}
+      {paused.length > 0 && (
+        <section className="local-model-paused" aria-labelledby="local-model-paused-title">
+          <strong id="local-model-paused-title">{t('Unterbrochene Downloads')}</strong>
+          <p className="local-model-paused-hint">
+            {t('Bereits geladene Teile bleiben erhalten. Fortsetzen lädt nur den Rest.')}
+          </p>
+          <ul>
+            {paused.map(m => (
+              <li key={m.id} className="local-model-status">
+                <span>
+                  {t('{name}: pausiert bei {pct} % ({done} von {total})', {
+                    name: m.name,
+                    pct: String(percent(m.job)),
+                    done: formatSize(m.job!.completed, locale),
+                    total: formatSize(m.job!.total, locale)
+                  })}
+                </span>
+                <span className="local-model-actions">
+                  <Button size="sm" icon={<Play size={14} />} onClick={() => void act('download', m.id)}>
+                    {t('Fortsetzen')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={<X size={14} />}
+                    aria-label={t('Teile von {name} verwerfen', { name: m.name })}
+                    title={
+                      downloading ? t('Teile, die der laufende Download gerade schreibt, bleiben erhalten.') : undefined
+                    }
+                    onClick={() => void discardPartial(m.id)}
+                  >
+                    {t('Verwerfen')}
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </>
   );
@@ -343,11 +420,16 @@ function modelHint(m: LocalModel, t: ReturnType<typeof useT>['t'], locale: strin
 function ModelStatus({
   model,
   act,
-  remove
+  remove,
+  freeBytes,
+  extra
 }: {
   model: LocalModel;
   act: (action: 'download' | 'cancel' | 'delete', id: string) => Promise<void>;
   remove: (m: LocalModel) => Promise<void>;
+  freeBytes: number | null;
+  /** Shown next to the download button, e.g. "stay with the current model". */
+  extra?: ReactNode;
 }) {
   const { t, locale } = useT();
   const job = model.job;
@@ -381,6 +463,18 @@ function ModelStatus({
         </Button>
       </div>
     );
+  const size = formatSize(model.size, locale);
+  // The server keeps DISK_RESERVE (2 GiB) free next to the model.
+  const tooLittleSpace = freeBytes !== null && freeBytes < model.size + DISK_RESERVE;
+  const space =
+    freeBytes === null
+      ? ''
+      : tooLittleSpace
+        ? t('Nicht genug Speicherplatz: {free} frei, gebraucht werden {need}.', {
+            free: formatSize(freeBytes, locale),
+            need: formatSize(model.size + DISK_RESERVE, locale)
+          })
+        : t('Noch {free} frei.', { free: formatSize(freeBytes, locale) });
   const message =
     job?.status === 'canceled'
       ? t('Download pausiert bei {pct} %. Bereits geladene Teile bleiben erhalten.', { pct: String(pct) })
@@ -388,24 +482,28 @@ function ModelStatus({
         ? aiErrorText(`ai_${job.error}`, t)
         : model.mismatch
           ? aiErrorText('ai_checksum', t)
-          : t('{name} ist noch nicht auf diesem Computer ({size}).', {
-              name: model.name,
-              size: formatSize(model.size, locale)
-            });
+          : t('{name} ist noch nicht auf diesem Computer. Download {size}.', { name: model.name, size });
   return (
     <div className={`local-model-status${job?.status === 'error' ? ' error' : ''}`} role="status">
-      <span>{message}</span>
-      <Button
-        size="sm"
-        icon={job?.status === 'canceled' ? <Play size={14} /> : <Download size={14} />}
-        onClick={() => void act('download', model.id)}
-      >
-        {job?.status === 'canceled'
-          ? t('Fortsetzen')
-          : job?.status === 'error'
-            ? t('Erneut versuchen')
-            : t('Herunterladen')}
-      </Button>
+      <span>
+        {message} {space}
+      </span>
+      <span className="local-model-actions">
+        {extra}
+        <Button
+          size="sm"
+          variant={job?.status ? 'default' : 'primary'}
+          disabled={tooLittleSpace}
+          icon={job?.status === 'canceled' ? <Play size={14} /> : <Download size={14} />}
+          onClick={() => void act('download', model.id)}
+        >
+          {job?.status === 'canceled'
+            ? t('Fortsetzen')
+            : job?.status === 'error'
+              ? t('Erneut versuchen')
+              : t('Herunterladen ({size})', { size })}
+        </Button>
+      </span>
     </div>
   );
 }

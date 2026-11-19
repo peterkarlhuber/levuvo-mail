@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-set -x
-R=https://registry.ollama.ai/v2/library/qwen3.5
-curl -s -D - -o /tmp/b.json "$R/blobs/sha256:d63f830f28d515fefea546f213fca7a75e9dd5176ef51a6deabc952d1c99a911" | head -20
-head -c 1500 /tmp/b.json; echo; sha256sum /tmp/b.json
-for t in 9b-mlx 9b-mlx-nvfp4 9b-nvfp4 9b-safetensors; do curl -s -o /dev/null -w "$t %{http_code}\n" -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' "$R/manifests/$t"; done
-curl -s -D - -o /tmp/m.json -H 'Accept: application/vnd.oci.image.index.v1+json' "$R/manifests/9b" | head -20
-git clone -q --depth 1 --branch v0.40.16 https://github.com/ollama/ollama /tmp/ollama || git clone -q --depth 1 https://github.com/ollama/ollama /tmp/ollama
-cd /tmp/ollama && git log -1 --format=%H%n%s
-grep -rn --include=*.go -iE "darwin|mlx|platform|runtime.GOOS|runtime.GOARCH" server/images.go server/download.go server/pull*.go server/internal/registry 2>/dev/null | grep -v _test | head -60
-grep -rln --include=*.go -iE "manifests/" server types x 2>/dev/null | grep -v _test | head -20
+git clone -q --depth 1 --branch v0.40.16 https://github.com/ollama/ollama /tmp/ollama 2>/dev/null
+cd /tmp/ollama
+echo "=== images.go 80-140"; sed -n 80,140p server/images.go
+echo "=== pull"; grep -n "func PullModel\|func pullModelManifest\|func pullWithTransfer\|runnerSelection\|RunnerPreference\|Preference\|Accept\|User-Agent\|X-Ollama\|Vary" server/images.go | head -60
+L=$(grep -n "func PullModel" server/images.go | cut -d: -f1); sed -n "$L,$((L+140))p" server/images.go
+L=$(grep -n "func pullModelManifest" server/images.go | cut -d: -f1); sed -n "$L,$((L+60))p" server/images.go
+echo "=== env"; grep -rn "OLLAMA_[A-Z_]*" envconfig/config.go | grep -iE "runner|mlx|format|engine|prefer" 
+echo "=== preference"; grep -rn --include=*.go -iE "runner ?pref|preferredRunner|RunnerPreference|runnerSelection" . | grep -v _test | head -40
+echo "=== api pull request"; grep -n "type PullRequest" -A 25 api/types.go

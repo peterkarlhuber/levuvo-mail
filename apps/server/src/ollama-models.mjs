@@ -5,7 +5,7 @@
 //
 // Resume: Ollama keeps the parts of a cancelled download (the runtime runs with OLLAMA_NOPRUNE),
 // so choosing the model again continues where it stopped. "Discard" removes those parts.
-import { readdir, rm, statfs as fsStatfs } from 'node:fs/promises';
+import { readdir, rm, stat, statfs as fsStatfs } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier } from './ai-model-catalog.mjs';
@@ -13,6 +13,9 @@ import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier } from
 // Room left on the disk after a download: the system and the mailbox need space too.
 export const DISK_RESERVE = 2 * 1024 ** 3;
 const PULL_STALL_MS = 120_000;
+// A part changed this recently may still be written by a running download.
+const ACTIVE_PART_MS = 30_000;
+const PARTIAL = /^sha256-[0-9a-f]{64}-partial/;
 
 const stripDigest = d => String(d || '').replace(/^sha256:/, '');
 
@@ -203,8 +206,10 @@ export function createModelManager({
       logger(`ollama: ${entry.id} downloaded and verified`);
     } catch (err) {
       const reason = job.controller.signal.reason;
-      if (job.canceled) job.status = 'canceled';
-      else {
+      if (job.canceled) {
+        job.status = 'canceled';
+        job.parts = [...new Set([...(job.parts || []), ...(await partsSince(job.startedAt).catch(() => []))])];
+      } else {
         job.status = 'error';
         job.error = (reason instanceof ModelError ? reason : err).kind || 'download_failed';
         void log?.add({ type: 'model_download', model: entry.id, ok: false, error: job.error });
@@ -237,6 +242,7 @@ export function createModelManager({
       completed: running?.completed || 0,
       total: entry.size,
       startedAt: Date.now(),
+      parts: running?.parts || [],
       controller: new AbortController(),
       canceled: false
     };
@@ -255,18 +261,56 @@ export function createModelManager({
     return publicJob(job);
   }
 
-  /** Removes the parts of cancelled downloads (only while nothing downloads). */
-  async function discardPartial() {
-    if ([...jobs.values()].some(j => ['downloading', 'verifying'].includes(j.status)))
-      throw new ModelError('busy', 'Während eines Downloads nicht möglich.');
+  // Parts of a paused download, so that one model's parts can be discarded while another model
+  // downloads. Taken when the download stops: the partial blobs written since it started.
+  async function partsSince(since) {
     const dir = path.join(runtime.paths.models, 'blobs');
-    let removed = 0;
+    const out = [];
     for (const name of await readdir(dir).catch(() => []))
-      if (/^sha256-[0-9a-f]{64}-partial/.test(name)) {
-        await rm(path.join(dir, name), { force: true });
-        removed += 1;
+      if (PARTIAL.test(name)) {
+        const file = path.join(dir, name);
+        const st = await stat(file).catch(() => null);
+        if (st && st.mtimeMs >= since - 1000) out.push(file);
       }
-    for (const [id, j] of jobs) if (j.status === 'canceled') jobs.delete(id);
+    return out;
+  }
+
+  /**
+   * Removes the parts of cancelled downloads: of one model (id), or of all paused ones. While
+   * another model downloads, files it is still writing are left alone (recently changed), and on
+   * Windows an open file cannot be removed anyway.
+   */
+  async function discardPartial(id) {
+    const running = [...jobs.values()].some(j => ['downloading', 'verifying'].includes(j.status));
+    let targets;
+    if (id) {
+      const entry = entryOf(id);
+      const job = jobs.get(entry.id);
+      if (!job || job.status !== 'canceled') return { removed: 0 };
+      targets = [entry.id];
+    } else {
+      if (running) throw new ModelError('busy', 'Während eines Downloads nicht möglich.');
+      targets = [...jobs].filter(([, j]) => j.status === 'canceled').map(([k]) => k);
+    }
+    const dir = path.join(runtime.paths.models, 'blobs');
+    const files = id
+      ? jobs.get(targets[0]).parts || []
+      : (await readdir(dir).catch(() => [])).filter(n => PARTIAL.test(n)).map(n => path.join(dir, n));
+    let removed = 0;
+    const now = Date.now();
+    for (const file of files) {
+      if (running) {
+        const st = await stat(file).catch(() => null);
+        if (!st || now - st.mtimeMs < ACTIVE_PART_MS) continue;
+      }
+      try {
+        await rm(file);
+        removed += 1;
+      } catch {
+        // gone already, or still open by Ollama
+      }
+    }
+    for (const k of targets) jobs.delete(k);
     return { removed };
   }
 
