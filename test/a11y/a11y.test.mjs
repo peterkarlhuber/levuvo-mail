@@ -174,7 +174,7 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.space-row', { hasText: 'Projekt Relaunch' }).click();
       await page.locator('.space-tabs').waitFor();
       await axe(page, 'space overview');
-      for (const tab of ['Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder']) {
+      for (const tab of ['Chat', 'Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder']) {
         await page.getByRole('tab', { name: tab }).click();
         await page.waitForTimeout(150);
         await axe(page, `space › ${tab}`);
