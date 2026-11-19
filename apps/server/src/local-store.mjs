@@ -8,10 +8,15 @@ import path from 'node:path';
 /** Keychain account that holds the keys of the local files. */
 export const LOCAL_KEY_ACCOUNT = 'local';
 
-/** Encrypts text as `{"v":1,"iv","tag","data"}` (AES-256-GCM, random 96-bit IV). */
-export function seal(key, text) {
+/**
+ * Encrypts text as `{"v":1,"iv","tag","data"}` (AES-256-GCM, random 96-bit IV, base64).
+ * `aad` (optional) binds the content to a context, e.g. the file it belongs to: it is not stored,
+ * and unseal() must be given the same value, so a file copied over another one does not open.
+ */
+export function seal(key, text, aad = '') {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
+  if (aad) cipher.setAAD(Buffer.from(aad, 'utf8'));
   const data = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
   return JSON.stringify({
     v: 1,
@@ -21,12 +26,16 @@ export function seal(key, text) {
   });
 }
 
-/** Decrypts what seal() wrote. Throws on another format, a wrong key or a changed file. */
-export function unseal(key, raw) {
+/**
+ * Decrypts what seal() wrote (with the same `aad`). Throws on another format, a wrong key, another
+ * context or a changed file.
+ */
+export function unseal(key, raw, aad = '') {
   const box = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (box?.v !== 1 || typeof box.iv !== 'string' || typeof box.tag !== 'string' || typeof box.data !== 'string')
     throw new TypeError('format');
   const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
+  if (aad) decipher.setAAD(Buffer.from(aad, 'utf8'));
   decipher.setAuthTag(Buffer.from(box.tag, 'base64'));
   return Buffer.concat([decipher.update(Buffer.from(box.data, 'base64')), decipher.final()]).toString('utf8');
 }
