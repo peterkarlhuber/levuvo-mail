@@ -57,6 +57,7 @@ import { registerTaskRoutes } from './routes-tasks.mjs';
 import { registerBriefingRoutes } from './routes-briefing.mjs';
 import { createCommitmentStore } from './commitments.mjs';
 import { registerCommitmentRoutes } from './routes-commitments.mjs';
+import { registerMeetingPrepRoutes } from './routes-meeting-prep.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -483,7 +484,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy|briefing|commitments)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy|briefing|commitments|meeting-prep)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -735,6 +736,7 @@ export async function createMailServer({
   registerTaskRoutes(ctx);
   registerBriefingRoutes(ctx);
   registerCommitmentRoutes(ctx);
+  registerMeetingPrepRoutes(ctx);
 
   if (desktop) {
     api.get('/', async (_request, reply) => {

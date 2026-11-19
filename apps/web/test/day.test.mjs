@@ -55,3 +55,21 @@ test('Versprechen: reminder the morning after the promised day, never in the pas
   assert.equal(reminderFor('2026-11-10', now).getTime(), new Date(2026, 10, 20, 9, 0).getTime());
   assert.equal(reminderFor('kein Datum', now).getTime(), new Date(2026, 10, 22, 9, 0).getTime());
 });
+
+test('Termin-Vorbereitung: the AI summary reads the account with the most mails, oldest first', async () => {
+  const { prepKey, refsForDigest } = await import('../src/day-utils.ts');
+  assert.equal(prepKey({ uid: 'e1', start: '2026-11-20T09:00:00Z' }), 'e1|2026-11-20T09:00:00Z');
+  assert.equal(refsForDigest([]), null);
+  const r = refsForDigest([
+    { accountId: 'a', folder: 'INBOX', uid: 3, date: '2026-11-19' },
+    { accountId: 'b', folder: 'INBOX', uid: 1, date: '2026-11-18' },
+    { accountId: 'a', folder: 'Sent', uid: 2, date: '2026-11-17' }
+  ]);
+  assert.deepEqual(r, {
+    account: 'a',
+    refs: [
+      { folder: 'Sent', uid: 2 },
+      { folder: 'INBOX', uid: 3 }
+    ]
+  });
+});

@@ -215,6 +215,22 @@ function General() {
           />
         </Row>
         <Row
+          label={t('Termin-Vorbereitung')}
+          hint={t('Kurz vor einem Termin mit anderen: Teilnehmende, letzte Mails, Dateien und offene Punkte.')}
+        >
+          <Segmented
+            label={t('Termin-Vorbereitung')}
+            value={prefs.meetingPrep}
+            onChange={v => setPrefs({ meetingPrep: v })}
+            options={[
+              { value: 0, label: t('Aus') },
+              { value: 5, label: t('5 Min.') },
+              { value: 10, label: t('10 Min.') },
+              { value: 15, label: t('15 Min.') }
+            ]}
+          />
+        </Row>
+        <Row
           label={t('Konversationen gruppieren')}
           hint={t('Nachrichten mit gleichem Betreff werden zusammengefasst.')}
         >

@@ -364,6 +364,38 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await context.close();
     });
 
+  for (const colorScheme of ['dark', 'light'])
+    await t.test(`meeting preparation card, ${colorScheme}`, async () => {
+      const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      const { page, context, errors } = await open({
+        viewport: { width: 1440, height: 900 },
+        colorScheme,
+        setup: async context => {
+          await context.route(
+            url => url.pathname === '/api/meeting-prep/upcoming',
+            route => route.fulfill(json(fixtures.meetingPrep.upcoming))
+          );
+          await context.route(
+            url => url.pathname === '/api/meeting-prep',
+            route => route.fulfill(json(fixtures.meetingPrep.prep))
+          );
+        }
+      });
+      await page.locator('.meeting-prep').waitFor({ timeout: 10_000 });
+      await axe(page, `meeting prep collapsed ${colorScheme}`);
+      await page.locator('.meeting-prep-peek').click();
+      await page.locator('.meeting-person').first().waitFor();
+      await axe(page, `meeting prep ${colorScheme}`);
+      await page.locator('.meeting-prep .briefing-item', { hasText: 'Angebot Website-Relaunch' }).first().click();
+      await page.locator('.reader-content h2').waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('.meeting-prep').focus();
+      await page.locator('.meeting-prep').press('Escape');
+      await page.locator('.meeting-prep').waitFor({ state: 'detached' });
+      assert.deepEqual(errors, []);
+      await context.close();
+    });
+
   await t.test('sender screening: row and screener view', async () => {
     const { page, context, errors } = await open({
       viewport: { width: 1440, height: 900 },

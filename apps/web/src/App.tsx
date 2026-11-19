@@ -21,6 +21,7 @@ import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
 import { Briefing, lastBriefingDay, markBriefingShown, type BriefingTarget } from './Briefing';
 import { sendMailCommand } from './command-bus';
 import { localDay, shouldAutoOpen } from './day-utils';
+import { MeetingPrep } from './MeetingPrep';
 import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
@@ -812,6 +813,12 @@ function Shell() {
       {briefingOpen && (
         <Briefing key={briefingOpen} auto={briefingOpen === 'auto'} onClose={closeBriefing} onOpen={openFromBriefing} />
       )}
+      <MeetingPrep
+        onOpenMail={m => {
+          setActive({ id: m.accountId, openUid: m.uid, openFolder: m.folder });
+          setModule('mail');
+        }}
+      />
       <ModuleShortcuts onModule={setModule} onAssistant={() => setAssistantOpen(o => !o)} />
       <CommandPalette
         accounts={accounts}

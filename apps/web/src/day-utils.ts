@@ -82,3 +82,23 @@ export function reminderFor(due: string | null, now: Date = new Date()) {
     at = morning(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
   return at;
 }
+
+/** One meeting occurrence (a repeating event has one per start). */
+export const prepKey = (m: { uid: string; start: string }) => `${m.uid}|${m.start}`;
+
+/**
+ * The mails the AI summary of a meeting reads: the AI function works on one account, so the account
+ * with the most related mails is taken, at most 8 of its mails, oldest first (as a thread).
+ */
+export function refsForDigest(mails: { accountId: string; folder: string; uid: number; date?: string }[]) {
+  if (!mails.length) return null;
+  const count = new Map<string, number>();
+  for (const m of mails) count.set(m.accountId, (count.get(m.accountId) || 0) + 1);
+  const account = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const refs = mails
+    .filter(m => m.accountId === account)
+    .slice(0, 8)
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+    .map(m => ({ folder: m.folder, uid: m.uid }));
+  return { account, refs };
+}
