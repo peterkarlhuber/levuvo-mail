@@ -144,8 +144,24 @@ export function validateSendPayload(input) {
     references: readReference(input.references),
     from: readFromAddress(input.from),
     security: readSecurity(input.security),
-    attachments: parseAttachments(input.attachments)
+    attachments: parseAttachments(input.attachments),
+    ...(readAiAssisted(input.aiAssisted) ? { aiAssisted: readAiAssisted(input.aiAssisted) } : {})
   };
+}
+
+/** Machine-readable marking of mails whose text the assistant or an agent wrote (AI Act Art. 50(2)). */
+export const AI_ASSISTED_HEADER = 'X-Levuvo-AI-Assisted';
+export function readAiAssisted(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    value.length > 160 ||
+    /[\r\n\0]/.test(value) ||
+    /[^\x20-\x7e]/.test(value)
+  )
+    invalid('Ungültige KI-Kennzeichnung.');
+  return value.trim();
 }
 
 /** Optional end-to-end protection requested in the composer. */

@@ -39,6 +39,8 @@ import { AiSettingsPanel } from './SettingsAi';
 import { SemanticIndexStatus } from './SemanticIndexStatus';
 import { formatBytes } from './format';
 import { StorageLocations } from './StorageLocations';
+import { PrivacyDataSettings } from './SettingsPrivacyData';
+import { AboutCompliance } from './AboutCompliance';
 import { PrivacyCockpit } from './PrivacyCockpit';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
@@ -597,6 +599,7 @@ function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
           </button>
         </Row>
       </Section>
+      <PrivacyDataSettings />
       <Section
         title={t('Gespeicherte Daten auf diesem Gerät')}
         description={t('Wo Levuvo Mail Daten auf diesem Computer speichert. Der Speicherort lässt sich nicht ändern.')}
@@ -732,13 +735,7 @@ function About({ runtime }: { runtime: Runtime }) {
           [Firmenbuchnummer · Firmenbuchgericht · UID]
         </address>
       </Section>
-      <Section title={t('Lizenzen')}>
-        <p className="settings-description">
-          {t(
-            'Levuvo Mail verwendet Open-Source-Komponenten, u. a. Electron, React, Fastify, ImapFlow, Nodemailer, OpenPGP.js, PKI.js, ical.js, tsdav, TipTap und Lucide. Die vollständigen Lizenztexte liegen der Installation bei (THIRD-PARTY-NOTICES).'
-          )}
-        </p>
-      </Section>
+      <AboutCompliance />
     </>
   );
 }

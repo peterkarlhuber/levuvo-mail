@@ -26,7 +26,7 @@ export function settingsPath(env = process.env, home = os.homedir(), platform = 
 
 export async function openSystemVault(importer = () => import('@napi-rs/keyring')) {
   try {
-    const { Entry } = await importer();
+    const { Entry, findCredentials } = await importer();
     // Fail closed if the module is unavailable; never write secrets to JSON.
     return {
       available: true,
@@ -39,6 +39,14 @@ export async function openSystemVault(importer = () => import('@napi-rs/keyring'
         }
       },
       set: (id, kind, value) => new Entry(SERVICE, `${id}:${kind}`).setPassword(value),
+      // All entries of Levuvo Mail ("Delete all data on this device"); the account name is "id:kind".
+      list: () => {
+        if (typeof findCredentials !== 'function') throw new TypeError('keychain listing unavailable');
+        return findCredentials(SERVICE)
+          .map(c => /^([^:]+):(.+)$/.exec(String(c.account || '')))
+          .filter(Boolean)
+          .map(m => ({ id: m[1], kind: m[2] }));
+      },
       delete: (id, kind) => {
         try {
           return new Entry(SERVICE, `${id}:${kind}`).deletePassword();
