@@ -104,7 +104,7 @@ export function createOllamaRuntime({
   async function waitReady(url, proc) {
     const until = Date.now() + START_TIMEOUT;
     while (Date.now() < until) {
-      if (proc.exitCode !== null) throw new OllamaRuntimeError('ollama_unavailable', 'Ollama ended during start');
+      if (proc.exitCode !== null) throw new OllamaRuntimeError('unreachable', 'Ollama ended during start');
       try {
         const res = await fetchImpl(`${url}/api/version`, { signal: AbortSignal.timeout(2000) });
         if (res.ok) return (await res.json()).version || '';
@@ -113,7 +113,7 @@ export function createOllamaRuntime({
       }
       await new Promise(r => setTimeout(r, 250));
     }
-    throw new OllamaRuntimeError('ollama_unavailable', 'Ollama did not start in time');
+    throw new OllamaRuntimeError('unreachable', 'Ollama did not start in time');
   }
 
   async function start() {

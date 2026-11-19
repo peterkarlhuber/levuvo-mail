@@ -73,9 +73,10 @@ export function createModelManager({
   catalog = MODEL_CATALOG
 }) {
   const jobs = new Map(); // id -> job
+  const readyListeners = new Set();
   const entryOf = id => {
     const entry = catalog.find(m => m.id === id) || (catalog === MODEL_CATALOG ? catalogEntry(id) : null);
-    if (!entry) throw new ModelError('model_not_in_catalog', 'Dieses Modell steht nicht in der Liste.', { statusCode: 400 });
+    if (!entry) throw new ModelError('not_in_catalog', 'Dieses Modell steht nicht in der Liste.', { statusCode: 400 });
     return entry;
   };
 
@@ -87,7 +88,7 @@ export function createModelManager({
   /** Installed catalog models with their verification state, keyed by catalog id. */
   async function installed() {
     const res = await api('/api/tags', { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new ModelError('ollama_unavailable');
+    if (!res.ok) throw new ModelError('unreachable');
     const { models = [] } = await res.json();
     const out = new Map();
     for (const m of models) {
@@ -164,7 +165,7 @@ export function createModelManager({
     let stall = null;
     const armStall = () => {
       clearTimeout(stall);
-      stall = setTimeout(() => job.controller.abort(new ModelError('stalled')), PULL_STALL_MS);
+      stall = setTimeout(() => job.controller.abort(new ModelError('network')), PULL_STALL_MS);
       stall.unref?.();
     };
     try {
@@ -190,6 +191,7 @@ export function createModelManager({
       await verify(entry);
       job.status = 'done';
       job.completed = job.total;
+      for (const fn of readyListeners) Promise.resolve().then(() => fn(entry.id)).catch(() => {});
       void log?.add({ type: 'model_download', model: entry.id, ok: true });
       logger(`ollama: ${entry.id} downloaded and verified`);
     } catch (err) {
@@ -210,7 +212,7 @@ export function createModelManager({
     const running = jobs.get(entry.id);
     if (running && ['downloading', 'verifying'].includes(running.status)) return publicJob(running);
     const have = await installed().catch(() => {
-      throw new ModelError('ollama_unavailable', 'Levuvos Ollama startet nicht.', { statusCode: 503 });
+      throw new ModelError('unreachable', 'Levuvos Ollama startet nicht.', { statusCode: 503 });
     });
     if (have.get(entry.id)?.verified) {
       const done = { status: 'done', completed: entry.size, total: entry.size, startedAt: Date.now() };
@@ -219,7 +221,7 @@ export function createModelManager({
     }
     const free = await freeBytes();
     if (free !== null && free < entry.size + DISK_RESERVE)
-      throw new ModelError('disk_space', 'Nicht genug Speicherplatz für dieses Modell.', {
+      throw new ModelError('disk_full', 'Nicht genug Speicherplatz für dieses Modell.', {
         needed: entry.size + DISK_RESERVE,
         free
       });
@@ -265,7 +267,7 @@ export function createModelManager({
     const entry = entryOf(id);
     cancel(entry.id);
     const res = await api('/api/delete', { method: 'DELETE', body: JSON.stringify({ model: ollamaName(entry.id) }) });
-    if (!res.ok && res.status !== 404) throw new ModelError('delete_failed', `Ollama ${res.status}`);
+    if (!res.ok && res.status !== 404) throw new ModelError('ollama', `Ollama ${res.status}`);
     jobs.delete(entry.id);
     void log?.add({ type: 'model_delete', model: entry.id });
     return { removed: true };
@@ -278,5 +280,11 @@ export function createModelManager({
     return (await installed().catch(() => new Map())).get(entry.id)?.verified === true;
   }
 
-  return { list, download, cancel, remove, discardPartial, isReady, jobs };
+  /** Called with the catalog id after a model was downloaded and verified. */
+  const onReady = fn => {
+    readyListeners.add(fn);
+    return () => readyListeners.delete(fn);
+  };
+
+  return { list, download, cancel, remove, discardPartial, isReady, onReady, jobs };
 }

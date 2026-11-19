@@ -203,7 +203,11 @@ export function registerAiRoutes(ctx) {
   api.post('/api/ai/settings', { bodyLimit: 8 * 1024 }, async (request, reply) => {
     if (!requireAction(request, reply, ACTION)) return;
     try {
-      return await ai.save(request.body || {});
+      const before = ai.get().embedModel;
+      const saved = await ai.save(request.body || {});
+      // Another search model: its vectors are built in the background (the old ones are dropped).
+      if (saved.embedModel !== before) setTimeout(() => void syncAll(), 0).unref?.();
+      return saved;
     } catch (err) {
       return aiError(reply, err);
     }
@@ -223,6 +227,10 @@ export function registerAiRoutes(ctx) {
     for (const a of ctx.accounts()) await semantic.sync(a.id).catch(() => null);
   };
   ctx.jobs?.register('semantic-index', syncAll, { every: 10 * 60_000, firstDelay: 60_000 });
+  // A newly downloaded search model starts its index right away instead of at the next run.
+  ai.models?.onReady(id => {
+    if (id === ai.get().embedModel) void syncAll();
+  });
   // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
   api.get('/api/ai/search', async (request, reply) => {
     const { q: query, account, folder } = request.query || {};
@@ -255,6 +263,44 @@ export function registerAiRoutes(ctx) {
   api.get('/api/ai/models', async (_request, reply) => {
     try {
       return await ai.models();
+    } catch (err) {
+      return aiError(reply, err);
+    }
+  });
+  // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
+  const localModels = ai.models;
+  const noRuntime = reply =>
+    reply.code(409).send({ error: 'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.', code: 'ai_runtime_missing' });
+  api.get('/api/ai/local-models', async (_request, reply) => {
+    if (!localModels) return noRuntime(reply);
+    try {
+      const list = await localModels.list();
+      const s = ai.get();
+      const index = s.enabled ? await semantic.progress(ctx.accounts().map(a => a.id)).catch(() => []) : [];
+      return { ...list, selected: { model: s.model, embedModel: s.embedModel, provider: s.provider }, index };
+    } catch (err) {
+      return aiError(reply, err);
+    }
+  });
+  for (const action of ['download', 'cancel', 'delete']) {
+    api.post(`/api/ai/local-models/${action}`, { bodyLimit: 1024 }, async (request, reply) => {
+      if (!requireAction(request, reply, ACTION)) return;
+      if (!localModels) return noRuntime(reply);
+      const model = String(request.body?.model || '');
+      try {
+        if (action === 'download') return { job: await localModels.download(model) };
+        if (action === 'cancel') return { job: localModels.cancel(model) };
+        return await localModels.remove(model);
+      } catch (err) {
+        return aiError(reply, err);
+      }
+    });
+  }
+  api.post('/api/ai/local-models/discard-partial', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    if (!localModels) return noRuntime(reply);
+    try {
+      return await localModels.discardPartial();
     } catch (err) {
       return aiError(reply, err);
     }

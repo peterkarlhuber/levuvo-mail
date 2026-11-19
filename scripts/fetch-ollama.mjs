@@ -93,7 +93,12 @@ export function verifySignature(binary, platform = process.platform, signers = L
   if (platform === 'win32') {
     const ps = `$s = Get-AuthenticodeSignature -LiteralPath '${binary.replace(/'/g, "''")}'; [Console]::Out.Write(($s.Status.ToString()) + '|' + $s.SignerCertificate.Subject)`;
     const encoded = Buffer.from(ps, 'utf16le').toString('base64');
-    const out = run('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]).trim();
+    // A PSModulePath inherited from PowerShell 7 breaks module loading in Windows PowerShell 5.1.
+    const { PSModulePath: _drop, ...env } = process.env;
+    const shell = spawnSync('pwsh', ['-NoProfile', '-Command', '1'], { encoding: 'utf8' }).status === 0 ? 'pwsh' : 'powershell.exe';
+    const out = run(shell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], {
+      env: shell === 'pwsh' ? process.env : env
+    }).trim();
     const [status, subject = ''] = out.split('|');
     if (status !== 'Valid') throw new Error(`Authenticode signature not valid: ${out || '(no output)'}`);
     if (!subject.includes(`O=${signers.win32}`) && !subject.includes(`CN=${signers.win32}`))
