@@ -133,6 +133,40 @@ test('Thread seed ignores an unsolicited flags entry that arrives first', async 
   assert.deepEqual(thread.messages.map(m => m.uid).sort(), [10, 11]);
 });
 
+test('PERF-LEV-008: the second conversation round only searches for newly found ids', async () => {
+  const searches = [];
+  const client = fakeClient(
+    function* (range, query) {
+      if (query.headers && !query.bodyStructure) {
+        yield {
+          uid: 10,
+          envelope: { messageId: '<seed@x>', subject: 'Seed' },
+          headers: Buffer.from('Message-ID: <seed@x>\r\n\r\n')
+        };
+        return;
+      }
+      for (const uid of String(range).split(',').map(Number))
+        yield {
+          uid,
+          envelope: { messageId: uid === 10 ? '<seed@x>' : `<m${uid}@x>`, subject: `S${uid}` },
+          flags: new Set(),
+          internalDate: new Date('2026-01-01T00:00:00Z'),
+          bodyStructure: { type: 'text/plain', part: '1' }
+        };
+    },
+    {
+      list: async () => [{ path: 'INBOX', flags: new Set() }],
+      search: async q => {
+        const ids = (q.or || [q]).map(x => Object.values(x.header)[0]);
+        searches.push([...new Set(ids)]);
+        return [10, 11];
+      }
+    }
+  );
+  await loadThread(client, 'INBOX', 10);
+  assert.deepEqual(searches, [['<seed@x>'], ['<m11@x>']]);
+});
+
 test('Message actions count only requested UIDs, once each', async () => {
   const flagged = [];
   const client = fakeClient(

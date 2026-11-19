@@ -27,6 +27,7 @@ import {
 } from './protected-message.mjs';
 import { findDraftFolder, saveDraft, validateReplaceDraft, retireDraft } from './drafts.mjs';
 import { listMessages, searchFolder, monitorInbox } from './mailbox.mjs';
+import { createLru } from './memory-cache.mjs';
 import { publicImapFailure } from './imap-diagnostics.mjs';
 import { fetchUidOne } from './imap-fetch.mjs';
 import { collectContacts, filterContacts } from './contacts.mjs';
@@ -41,10 +42,11 @@ import {
   stripHeaders
 } from './scheduled.mjs';
 import { ManageSieveClient, loadSieve, saveSieve, validateSieveConfig } from './sieve.mjs';
-import { indexableFolders } from './local-index.mjs';
+import { createIndexRunner } from './index-runner.mjs';
 import { hasReply, locateSnoozed, messageIdOf, snoozeMessages, validateWhen, wakeMessage } from './followups.mjs';
 
 const CONTACTS_TTL_MS = 15 * 60 * 1000;
+const THREAD_TTL_MS = 2 * 60 * 1000;
 const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;
 
 export function registerMailRoutes(ctx) {
@@ -64,6 +66,13 @@ export function registerMailRoutes(ctx) {
     diagnostics
   } = ctx;
   const contactsCache = new Map();
+  // Conversations, briefly (THREAD_TTL_MS); dropped together with the folder lists of the account.
+  const threadCache = createLru(40);
+  ctx.onAccountChange?.(id => threadCache.deleteWhere(k => k.startsWith(`${id}|`)));
+  const forgetCached = match => {
+    listCache.deleteWhere(match);
+    threadCache.deleteWhere(match);
+  };
   const sentRequests = new Map();
   const scheduleRequests = new Map();
   ctx.onAccountChange?.(id => contactsCache.delete(id));
@@ -145,7 +154,7 @@ export function registerMailRoutes(ctx) {
     const security = input.security || {};
     if (security.method === 'password') {
       // The real message travels encrypted inside an HTML file; the visible mail only explains it.
-      const { file } = buildProtectedFile(
+      const { file } = await buildProtectedFile(
         { from, subject: input.subject, html: input.html, text: input.text, attachments: input.attachments },
         security
       );
@@ -496,11 +505,18 @@ export function registerMailRoutes(ctx) {
     if (!validFolder(folder) || !validUid(String(request.query?.uid || '')))
       return reply.code(400).send({ error: 'Ungültige Anfrage.' });
     try {
-      return await withImap(
+      // Browsing through a conversation opens its messages one after another: the answer is kept
+      // for a short time instead of searching every folder again for each of them.
+      const key = `${request.mailAccount.id}|${folder}|${request.query.uid}`;
+      const hit = threadCache.get(key);
+      if (hit && Date.now() - hit.at < THREAD_TTL_MS) return hit.data;
+      const data = await withImap(
         client =>
           loadThread(client, folder, Number(request.query.uid), { previewCache, accountKey: request.mailAccount.id }),
         request.mailAccount
       );
+      threadCache.set(key, { data, at: Date.now() });
+      return data;
     } catch (err) {
       return errorResponse(reply, err);
     }
@@ -704,7 +720,8 @@ export function registerMailRoutes(ctx) {
               retryConnect: false
             }).catch(() => ({ removed: false }))
           : { removed: false };
-        if (replaceDraft) listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
+        if (replaceDraft) forgetCached(k => k.startsWith(`${account.id}|`));
+
         const messageId = messageIdOf(raw);
         if (followUp && messageId)
           await followups
@@ -826,7 +843,8 @@ export function registerMailRoutes(ctx) {
           retryConnect: false
         }).catch(() => ({ removed: false }))
       : { removed: false };
-    listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
+    forgetCached(k => k.startsWith(`${account.id}|`));
+
     const messageId = messageIdOf(raw);
     if (followUp && messageId && !stored.existing)
       await followups.addFollowup({
@@ -1039,7 +1057,8 @@ export function registerMailRoutes(ctx) {
         throw err;
       }
       await followups.finishSnoozed(pending, result).catch(() => diagnostics.record('snooze', 'journal_pending'));
-      listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
+      forgetCached(k => k.startsWith(`${account.id}|`));
+
       if (ctx.watch) void watchers.refresh(account.id);
       return { snoozed: result.items.length, until, folder: result.folder, ids: pending.map(a => a.id) };
     } catch (err) {
@@ -1058,7 +1077,8 @@ export function registerMailRoutes(ctx) {
       // Asked for by the user: the entry goes either way, but a message that was not found is
       // reported instead of being acknowledged as returned.
       await followups.removeSnoozed(entry.id);
-      listCache.deleteWhere(k => k.startsWith(`${request.mailAccount.id}|`));
+      forgetCached(k => k.startsWith(`${request.mailAccount.id}|`));
+
       if (!result.woke)
         return reply.code(404).send({
           error: 'Die Nachricht wurde im Ordner „Zurückgestellt“ nicht gefunden. Die Erinnerung wurde entfernt.',
@@ -1140,7 +1160,8 @@ export function registerMailRoutes(ctx) {
           // lookup must never make a reminder disappear.
           else await followups.updateSnoozed(entry.id, { missingAt: new Date(now).toISOString() });
           diagnostics.record('snooze', result.woke ? 'woke' : result.reason);
-          listCache.deleteWhere(k => k.startsWith(`${account.id}|`));
+          forgetCached(k => k.startsWith(`${account.id}|`));
+
           if (ctx.watch) void watchers.refresh(account.id);
         } catch {
           diagnostics.record('snooze', 'wake_failed');
@@ -1219,7 +1240,6 @@ export function registerMailRoutes(ctx) {
   // ------------------------------------------------------------ background jobs
   let nextSchedulerRun = 0;
   let scheduling = false;
-  let indexing = false;
   const scheduleClaims = new Map(); // account id → claims seen on the server (lease tracking)
   async function runScheduler() {
     // One run at a time: a slow SMTP server must not let the 30 s interval start a second run.
@@ -1272,28 +1292,17 @@ export function registerMailRoutes(ctx) {
     }
     nextSchedulerRun = next;
   }
-  async function runIndexer(force = false) {
-    if (indexing || ctx.settings.get().localIndex === false) return;
-    indexing = true;
-    try {
-      for (const account of ctx.accounts().filter(a => a.imap.configured)) {
-        try {
-          await withImap(
-            async client =>
-              localIndex.sync(client, account.id, indexableFolders(await client.list()), {
-                budget: force ? 5000 : 1500
-              }),
-            account
-          );
-        } catch {
-          diagnostics.record('index', 'sync_failed');
-        }
-      }
-    } finally {
-      indexing = false;
-    }
-  }
+  const indexer = createIndexRunner({
+    accounts: () => ctx.accounts(),
+    enabled: () => ctx.settings.get().localIndex !== false,
+    withImap,
+    localIndex,
+    diagnostics
+  });
+  const runIndexer = force => indexer.run(force);
+  ctx.stopBackgroundJobs = () => indexer.stop();
   ctx.startBackgroundJobs = () => {
+    indexer.start();
     setTimeout(() => void runIndexer(), 60_000).unref?.();
     setTimeout(() => void runScheduler(), 15_000).unref?.();
     setTimeout(() => void runFollowups(), 10_000).unref?.();

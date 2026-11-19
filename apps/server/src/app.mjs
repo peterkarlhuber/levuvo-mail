@@ -497,7 +497,11 @@ export async function createMailServer({
     }
     throw new Error('IMAP-Verbindung nicht möglich.');
   }
-  function errorResponse(reply, err) {
+  /**
+   * Maps an error to a response. `domain` names routes that are not about a mailbox (tasks,
+   * spaces): their own failures must not be reported as IMAP failures.
+   */
+  function errorResponse(reply, err, { domain = '' } = {}) {
     if (err.statusCode >= 400 && err.statusCode < 500) {
       return reply.code(err.statusCode).send({
         error: err.message,
@@ -509,6 +513,12 @@ export async function createMailServer({
     if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
+    }
+    if (domain && !err.imapPhase) {
+      diagnostics.record(domain, `${domain}_failed`);
+      return reply
+        .code(500)
+        .send({ error: 'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.', code: `${domain}_failed` });
     }
     return reply.code(502).send(publicImapFailure(err, { connected: err.imapPhase === 'command' }));
   }
@@ -728,6 +738,7 @@ export async function createMailServer({
     },
     async close() {
       for (const t of timers) clearInterval(t);
+      ctx.stopBackgroundJobs?.();
       taskSchedule?.stop();
       watchers.stopAll();
       await sidecar.stop().catch(() => {});

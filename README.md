@@ -86,6 +86,20 @@ The test operates the app like a human (composing with formatting, undo, replyin
 | `apps/desktop/main.mjs` | Electron main process, tray, notifications, reminders, updates |
 | `apps/web/src/` | React UI (`App`, `MailInstance`, `Reader`, `Composer`, `Calendar`, `Contacts`, `Settings`, `CommandPalette` …) |
 | `apps/web/src/i18n-en.ts` | English texts (key = German source text) |
+| `apps/server/src/index-runner.mjs` | background indexing (first build in short batches) |
+
+### Processes and interfaces
+
+| Process | Talks to | How |
+|---|---|---|
+| Electron main (`apps/desktop/main.mjs`) | the local server, the UI window | starts the Fastify server in the same process; the window loads it from `127.0.0.1` with a session cookie |
+| Local server (`apps/server`) | IMAP/SMTP, CalDAV/CardDAV, Microsoft Graph, Google APIs | outgoing TLS connections only; listens on `127.0.0.1` |
+| MCP listener (`mcp-server.mjs`) | external agents on the same computer | separate `127.0.0.1` port, one token per agent, permission levels and approvals |
+| AI sidecar (`apps/ai`, Python) | the local server | child process over stdin/stdout (JSON lines); stopped together with the server |
+| Ollama (optional) | the AI sidecar | `127.0.0.1:11434`; cloud providers only after consent |
+| Shared spaces (`spaces/`) | other members | end-to-end encrypted sync mails through the user's own mailbox |
+
+Details: [docs/ai/SECURITY-CONCEPT.md](./docs/ai/SECURITY-CONCEPT.md) (AI and agents) and [docs/SPACES.md](./docs/SPACES.md) (spaces).
 
 ### AI sidecar (Python)
 

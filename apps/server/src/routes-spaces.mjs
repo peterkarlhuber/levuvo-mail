@@ -53,7 +53,8 @@ export async function openSpaces(ctx, dir) {
 }
 
 export function registerSpaceRoutes(ctx, { dir }) {
-  const { api, requireAction, errorResponse } = ctx;
+  const { api, requireAction } = ctx;
+  const errorResponse = (reply, err) => ctx.errorResponse(reply, err, { domain: 'spaces' });
   let spaces = null;
   let spacesError = null;
   let opening = null;

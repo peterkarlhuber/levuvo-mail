@@ -16,7 +16,8 @@ const zoneOf = value => {
 };
 
 export function registerTaskRoutes(ctx) {
-  const { api, requireAction, errorResponse } = ctx;
+  const { api, requireAction } = ctx;
+  const errorResponse = (reply, err) => ctx.errorResponse(reply, err, { domain: 'task' });
   // Sync internals (etag, last agreed state) stay on the server; the UI sees the list only.
   const withLabels = task => {
     if (!task) return task;

@@ -161,3 +161,71 @@ test('REL-LEV-012: an account added during the login test of another account is 
     false
   );
 });
+
+test('PERF-LEV-003: the first index build continues in short batches instead of every 15 minutes', async () => {
+  const { createIndexRunner } = await import('../src/index-runner.mjs');
+  const pending = [];
+  const timers = {
+    setTimeout: (fn, ms) => {
+      const h = { fn, ms };
+      pending.push(h);
+      return h;
+    },
+    clearTimeout: h => pending.splice(pending.indexOf(h), 1)
+  };
+  let left = 3;
+  const budgets = [];
+  const runner = createIndexRunner({
+    accounts: () => [{ id: 'a', imap: { configured: true } }],
+    enabled: () => true,
+    withImap: fn => fn({ list: async () => [] }),
+    localIndex: {
+      sync: async (_c, _id, _f, { budget }) => {
+        budgets.push(budget);
+        left--;
+        return { enabled: true, complete: left <= 0 };
+      }
+    },
+    diagnostics: { record() {} },
+    timers
+  });
+  // Not started: a manual run does not schedule catch-up batches.
+  assert.deepEqual(await runner.run(), { ran: true, incomplete: true });
+  assert.equal(pending.length, 0);
+  left = 3;
+  runner.start();
+  await runner.run();
+  assert.equal(pending.length, 1);
+  assert.ok(pending[0].ms <= 60_000, 'catch-up follows within a minute');
+  pending.shift().fn();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 1, 'still incomplete: another batch is scheduled');
+  pending.shift().fn();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 0, 'complete: no more catch-up');
+  // stop() cancels a pending catch-up.
+  left = 5;
+  await runner.run();
+  assert.equal(pending.length, 1);
+  runner.stop();
+  assert.equal(pending.length, 0);
+  assert.deepEqual([...new Set(budgets)], [1500]);
+});
+
+test('QA-LEV-004 (SEC-03): a PGP message that unpacks to more than 16 MiB is refused, a normal one opens', async () => {
+  const openpgp = await import('openpgp');
+  const anna = createPgp(memory());
+  const own = await anna.generate({ name: 'Anna', email: 'anna@example.org', passphrase: 'geheim-1234' });
+  await anna.unlock(own.fingerprint, 'geheim-1234');
+  const encryptionKeys = await openpgp.readKey({ armoredKey: anna.exportPublic(own.fingerprint) });
+  const config = { preferredCompressionAlgorithm: openpgp.enums.compression.zlib };
+  const seal = async text =>
+    openpgp.encrypt({ message: await openpgp.createMessage({ text }), encryptionKeys, config });
+  const bomb = await seal('A'.repeat(17 * 1024 * 1024));
+  assert.ok(bomb.length < 1024 * 1024, 'the message itself is small');
+  const refused = await anna.openInline(bomb);
+  assert.equal(refused.text, undefined);
+  assert.match(refused.error, /nicht entschlüsselt/);
+  const fine = await anna.openInline(await seal('Hallo Anna'));
+  assert.equal(fine.text, 'Hallo Anna');
+});

@@ -21,7 +21,7 @@
 | Professional law | Trade Regulation Act (Gewerbeordnung), www.ris.bka.gv.at |
 | Basic orientation (§ 25 MedienG) | Information about Levuvo Mail and Levuvo products |
 
-**Consumer dispute resolution:** [Reference to the EU ODR platform and whether there is willingness to participate in dispute resolution proceedings – have this reviewed legally.]
+**Consumer dispute resolution:** Levuvo Mail is used internally only and not sold to consumers, so no information on consumer dispute resolution is needed. The EU ODR platform was discontinued on 20 July 2025 (Regulation (EU) 2024/3228); do not link to it. If Levuvo is ever offered to consumers, add the information required by the Austrian Alternative Dispute Resolution Act (AStG) and have it reviewed legally.
 
 **Liability for links:** Links in emails come from the respective senders; Levuvo Mail asks for confirmation before opening them.
 

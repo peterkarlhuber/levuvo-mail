@@ -198,6 +198,43 @@ test('Restore: current data is kept aside, and passwords of a replaced mailbox a
   assert.equal(sameKeys.get('primary', 'imap'), 'anna-password');
 });
 
+test('QA-LEV-007: an interrupted restore continues on the next start and ends in the same state', async t => {
+  const source = await device(t);
+  const backup = await decryptBackup(
+    await encryptBackup(await collectBackupContent({ dir: source.dir, vault: source.keys }), PASSWORD, { kdf: FAST }),
+    PASSWORD
+  );
+  const dir = tmp(t);
+  const keys = vault();
+  write(dir, 'accounts.json', { version: 1, accounts: [account('primary', 'other@example.net', 'imap.example.net')] });
+  write(dir, 'templates.json', { templates: [] });
+  keys.set('primary', 'imap', 'password-of-other-mailbox');
+  await stageRestore({ dir, vault: keys, backup });
+  // The first run stops while the private keys are moved into the keychain (after all files).
+  const realSet = keys.set;
+  let failOnce = true;
+  keys.set = (i, k, v) => {
+    if (i === 'crypto' && failOnce) {
+      failOnce = false;
+      throw new Error('keychain gone');
+    }
+    return realSet(i, k, v);
+  };
+  await assert.rejects(applyPendingRestore({ dir, vault: keys, now: new Date('2026-11-19T10:00:00Z') }), /keychain/);
+  assert.ok(await pendingRestore(dir), 'still pending after the interruption');
+  const applied = await applyPendingRestore({ dir, vault: keys, now: new Date('2026-11-19T10:05:00Z') });
+  assert.ok(applied);
+  assert.equal(await pendingRestore(dir), null);
+  assert.equal(keys.get('crypto', 'pgp:ABCDEF0123456789'), 'armored-test-key-material');
+  assert.equal(keys.get('local', 'restore-pending-crypto-pgp:ABCDEF0123456789'), '', 'no staged key left');
+  assert.equal(keys.get('primary', 'imap'), '', 'password of the replaced mailbox is dropped after the resume');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'templates.json'), 'utf8')).templates[0].name, 'Danke');
+  const copies = readdirSync(join(dir, 'before-restore'));
+  assert.equal(copies.length, 1, 'exactly one safety copy');
+  assert.match(readFileSync(join(dir, 'before-restore', copies[0], 'accounts.json'), 'utf8'), /other@example\.net/);
+  assert.ok(existsSync(join(dir, 'before-restore', copies[0], 'templates.json')));
+});
+
 test('Restore routes: backup, staged restore freezes changes until the restart', async t => {
   const dir = tmp(t);
   const keys = vault();

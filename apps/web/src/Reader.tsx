@@ -678,16 +678,21 @@ function ThreadPanel({
     let active = true;
     setItems([]);
     setOpen(null);
-    getJson<{ messages: ThreadItem[] }>(
-      `/api/thread?folder=${encodeURIComponent(detail.folder)}&uid=${detail.uid}`,
-      accountId
-    )
-      .then(d => {
-        if (active) setItems(d.messages);
-      })
-      .catch(() => {});
+    // Arrowing through the list opens many messages briefly: the conversation search (several
+    // IMAP searches across folders) only starts once a message stays open for a moment.
+    const timer = window.setTimeout(() => {
+      getJson<{ messages: ThreadItem[] }>(
+        `/api/thread?folder=${encodeURIComponent(detail.folder)}&uid=${detail.uid}`,
+        accountId
+      )
+        .then(d => {
+          if (active) setItems(d.messages);
+        })
+        .catch(() => {});
+    }, 400);
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [accountId, detail.folder, detail.uid]);
   if (items.length < 2) return null;

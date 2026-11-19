@@ -34,6 +34,7 @@ export const MAX_BACKUP_BYTES = 160 * 1024 * 1024; // the encrypted file
 const MAX_CONTENT_BYTES = 200 * 1024 * 1024; // all files together, decrypted
 const PENDING_DIR = 'restore-pending';
 const SAFETY_DIR = 'before-restore';
+const SAFETY_STAMP = 'safety-copy.txt';
 const KEEP_SAFETY_COPIES = 3;
 const SAFETY_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
 const LOCAL = 'local';
@@ -661,13 +662,21 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
   const manifest = await pendingRestore(dir);
   if (!manifest) return null;
   const pending = path.join(dir, PENDING_DIR);
-  const stamp = now.toISOString().replace(/[:.]/g, '-');
+  // A run that was interrupted continues in the same safety copy: one complete set of the data
+  // from before the restore, and the "before" state of the accounts is read from there.
+  const stampFile = path.join(pending, SAFETY_STAMP);
+  const stamp = String((await readIfExists(stampFile)) || '').trim() || now.toISOString().replace(/[:.]/g, '-');
+  if (!/^[0-9TZ-]{10,40}$/.test(stamp))
+    throw Object.assign(new Error('Die Sicherung ist beschädigt.'), { code: 'backup_invalid' });
+  await writeFile(stampFile, stamp, { mode: 0o600 });
   const safety = path.join(dir, SAFETY_DIR, stamp);
   await mkdir(safety, { recursive: true, mode: 0o700 });
   const staged = new Set(manifest.files.filter(name => Object.hasOwn(BACKUP_FILES, name)));
   const spacesStaged = manifest.files.includes(SPACES_DIR);
-  const beforeAccounts = (await readIfExists(fileLocation(dir, 'accounts.json', accountsPath))) || '';
-  const beforeDav = (await readIfExists(path.join(dir, 'dav.json'))) || '';
+  const before = async (name, location) =>
+    (await readIfExists(path.join(safety, name))) || (await readIfExists(location)) || '';
+  const beforeAccounts = await before('accounts.json', fileLocation(dir, 'accounts.json', accountsPath));
+  const beforeDav = await before('dav.json', path.join(dir, 'dav.json'));
   for (const name of Object.keys(BACKUP_FILES)) {
     const target = fileLocation(dir, name, accountsPath);
     const source = path.join(pending, name);

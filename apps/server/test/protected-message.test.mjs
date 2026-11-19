@@ -31,14 +31,14 @@ test('Protect with password: inputs are validated', () => {
 });
 
 test('Protect with password: encrypt, open, wrong password, size limit', async () => {
-  const box = sealPayload({ hello: 'Grüße €' }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
+  const box = await sealPayload({ hello: 'Grüße €' }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
   assert.deepEqual(await openPayload(box, 'Ein langes Passwort'), { hello: 'Grüße €' });
   await assert.rejects(
     openPayload(box, 'falsch falsch'),
     err => err.code === 'protected_wrong_password' && err.statusCode === 403
   );
   await assert.rejects(openPayload({ ...box, iter: 99_000_000 }, 'x'), /Unbekanntes Format/);
-  assert.throws(
+  await assert.rejects(
     () =>
       buildProtectedFile(
         {
@@ -54,7 +54,7 @@ test('Protect with password: encrypt, open, wrong password, size limit', async (
 });
 
 test('Protect with password: file is self-contained, decryptable in the browser (WebCrypto) and is detected', async () => {
-  const { file, box } = buildProtectedFile(
+  const { file, box } = await buildProtectedFile(
     {
       from: { name: 'Peter Karlhuber', address: 'peter@levuvo.test' },
       subject: 'Zugangsdaten Server',
@@ -106,7 +106,7 @@ test('Protect with password: file is self-contained, decryptable in the browser 
 });
 
 test('Protect with password: hostile boxes are refused early and never block the event loop (AUD-012)', async () => {
-  const good = sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
+  const good = await sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: MIN_OPEN_ITERATIONS });
   for (const bad of [
     { ...good, iter: MAX_OPEN_ITERATIONS + 1 },
     { ...good, iter: 10 },
@@ -119,10 +119,16 @@ test('Protect with password: hostile boxes are refused early and never block the
   ])
     await assert.rejects(openPayload(bad, 'Ein langes Passwort'), { code: 'protected_invalid' });
   // The derivation runs off the main thread: timers keep firing while a box is opened.
-  const slow = sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: 600_000 });
+  const slow = await sealPayload({ a: 1 }, 'Ein langes Passwort', { iterations: 600_000 });
   let ticks = 0;
   const timer = setInterval(() => ticks++, 5);
   await openPayload(slow, 'Ein langes Passwort');
   clearInterval(timer);
   assert.ok(ticks > 0, 'event loop stayed responsive');
+  // PERF-LEV-012: sealing with the full 600,000 iterations does not block the loop either.
+  let sealTicks = 0;
+  const sealTimer = setInterval(() => sealTicks++, 5);
+  await sealPayload({ a: 1 }, 'Ein langes Passwort');
+  clearInterval(sealTimer);
+  assert.ok(sealTicks > 0, 'event loop stayed responsive while sealing');
 });

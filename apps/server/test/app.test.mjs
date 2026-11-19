@@ -494,6 +494,21 @@ test('Tasks API: save, list, done and delete without a mail account', async t =>
   assert.deepEqual((await s.api.inject({ method: 'GET', url: '/api/tasks', headers: GET })).json().tasks, []);
 });
 
+test('API-LEV-005: a local task failure is not reported as an IMAP failure', async t => {
+  const { s, dir } = await server(t);
+  const post = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'mail-v1' }, payload });
+  assert.equal((await post('/api/tasks/save', { task: { title: 'vorher' } })).statusCode, 200);
+  // The task file can no longer be replaced: a directory with content sits where it belongs.
+  const file = join(dir, 'tasks-local.json');
+  rmSync(file, { force: true });
+  mkdirSync(join(file, 'blocked'), { recursive: true });
+  const r = await post('/api/tasks/save', { task: { title: 'nachher' } });
+  assert.equal(r.statusCode, 500);
+  assert.equal(r.json().code, 'task_failed');
+  assert.doesNotMatch(JSON.stringify(r.json()), /imap/i);
+});
+
 test('Tasks API: connect a CalDAV list, sync, move a task, disconnect', async t => {
   const dav = fakeCaldav();
   const { s } = await server(t, { fetchImpl: dav.fetchImpl });
