@@ -4,7 +4,7 @@
 |---|---|---|
 | `ci.yml` | PR, push to `master` | Quality (lockfile consistency, workflow policy, syntax, lint, format, all unit tests of server, UI and desktop configuration, i18n, typecheck, build, large-mailbox benchmark, accessibility test with axe-core in Chromium, license notices), security (audit, secret scan), AI sidecar (Python: ruff, pytest, bundled runtime build with hashed lock), unsigned desktop builds, aggregate status `CI passed` |
 | `build-desktop.yml` | called by CI/release, manual | Matrix macOS ARM64 (`macos-15`), Windows ARM64 (`windows-11-arm`), Windows x64 (`windows-2022`): tests on the target platform, installer, architecture check, app startup test, Credential Manager test (Windows), checksums, upload |
-| `release.yml` | tag `vX.Y.Z`, manual | version/tag check, quality, builds, assembly, draft release |
+| `release.yml` | tag `vX.Y.Z`, manual | version/tag check, commit must be on `master` (also for manual and signed runs), **gate: the `CI` and `CodeQL` runs of exactly this SHA (push to `master`) must have succeeded** (`scripts/release-gate.mjs`, waits up to 90 min), quality, builds, assembly, draft release |
 | `codeql.yml` | PR, push, weekly | CodeQL JavaScript/TypeScript |
 
 Helper scripts in `scripts/`: `verify-app-arch.mjs` (PE/Mach-O architecture), `smoke-packaged.mjs` (startup test), `assemble-release.mjs` (assembly, SHA-256, manifest, notes), `secret-scan.mjs`, `check-workflows.mjs`.
