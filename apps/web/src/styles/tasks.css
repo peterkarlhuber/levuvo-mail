@@ -359,3 +359,26 @@
     padding: var(--space-3) var(--space-4);
   }
 }
+
+/* Space tasks in the main area: the dialog's fields sit in a fieldset (disabled for readers). */
+.task-dialog-fields {
+  display: contents;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.task-dialog-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--text-2);
+}
+.task-space {
+  color: var(--text-2);
+  font-weight: var(--weight-semibold);
+}
+.task-check:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
