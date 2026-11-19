@@ -105,10 +105,14 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     });
     // "Mein Tag" opens by itself on the first start of a day; only its own test wants it.
     await context.addInitScript(show => {
-      const key = 'levuvo-mail-prefs-v2';
-      const prefs = JSON.parse(globalThis.localStorage.getItem(key) || '{}');
-      globalThis.localStorage.setItem(key, JSON.stringify({ ...prefs, briefingOnStart: show }));
-      if (!show) globalThis.localStorage.removeItem('levuvo-mail-briefing-day');
+      try {
+        const key = 'levuvo-mail-prefs-v2';
+        const prefs = JSON.parse(globalThis.localStorage.getItem(key) || '{}');
+        globalThis.localStorage.setItem(key, JSON.stringify({ ...prefs, briefingOnStart: show }));
+        if (!show) globalThis.localStorage.removeItem('levuvo-mail-briefing-day');
+      } catch {
+        /* documents without storage (about:blank) */
+      }
     }, briefing);
     if (setup) await setup(context);
     const page = await context.newPage();
