@@ -1,5 +1,6 @@
 // AI routes: settings, status, models and the AI functions. Message content is loaded here on the
 // server (the UI sends references), so the model gets the same text the reader shows and nothing else.
+import { internalApi } from './internal-api.mjs';
 import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 import { contactPayload, eventPayload, messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 // Re-exported for existing callers; the mappers live in ai-payloads.mjs.
@@ -52,10 +53,7 @@ export function registerAiRoutes(ctx) {
     const uid = Number(ref?.uid);
     if (!Number.isSafeInteger(uid) || uid < 1 || folder.length > 500)
       throw Object.assign(new Error('Ungültige Nachrichten-ID.'), { statusCode: 400, code: 'ai_invalid' });
-    return ctx.internalRequest(
-      'GET',
-      `/api/messages/${uid}?folder=${encodeURIComponent(folder)}&account=${encodeURIComponent(accountId)}`
-    );
+    return internalApi(ctx).message(accountId, folder, uid);
   }
   async function loadThread(accountId, refs) {
     // Mail content always belongs to one named account: the cloud check depends on it.
@@ -73,10 +71,7 @@ export function registerAiRoutes(ctx) {
     const samples = [];
     try {
       const folder = account.sentFolder || 'Sent';
-      const listed = await ctx.internalRequest(
-        'GET',
-        `/api/messages?folder=${encodeURIComponent(folder)}&limit=8&account=${encodeURIComponent(account.id)}`
-      );
+      const listed = await internalApi(ctx).messages(account.id, { folder, limit: 8 });
       const loaded = await mapLimit((listed.messages || []).slice(0, 5), LOAD_PARALLEL, m =>
         loadDetail(account.id, { folder, uid: m.uid }).catch(() => null)
       );
@@ -304,11 +299,11 @@ export function registerAiRoutes(ctx) {
         const payload = eventPayload({ ...d, attendees: [] });
         if (!payload.event.summary || !payload.event.start) throw invalidApply('Titel und Beginn fehlen.');
         if (!payload.event.end) payload.event.end = payload.event.start;
-        await ctx.internalRequest('POST', '/api/calendar/events/save', payload, 'calendar-v1');
+        await internalApi(ctx).saveEvent(payload);
       } else if (type === 'contact') {
         const payload = contactPayload(d);
         if (!payload.contact.name && !payload.contact.emails.length) throw invalidApply('Name oder Adresse fehlt.');
-        await ctx.internalRequest('POST', '/api/contacts/save', payload, 'contacts-v1');
+        await internalApi(ctx).saveContact(payload);
       } else if (type === 'task') {
         if (!ctx.tasks?.save)
           throw Object.assign(new Error('Aufgaben sind noch nicht verfügbar.'), { statusCode: 409 });
