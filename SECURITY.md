@@ -17,9 +17,7 @@ Only the latest published version is supported.
 
 ## Known open items
 
-State 2.3.0 (internal use only):
+State 2.4.0 (internal use only):
 
 - **Unsigned internal test builds:** deliberately without code signing and without auto-update; Gatekeeper/SmartScreen warn. Signed releases need the certificates from `RELEASING.md`.
-- **Electron hardening of release builds** (fuses such as `RunAsNode` off, ASAR integrity): planned as separate work.
-- **Shared spaces:** removed content stays in the members' encrypted operation history (no redaction yet); planned as separate work.
 - **Build tool dependencies** of `electron-builder` with known advisories, relevant only at build time; see the audit summary of the respective CI run.
