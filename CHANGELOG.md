@@ -2,8 +2,18 @@
 
 ## Unreleased
 
-### Levuvo Mail Assistant
-- **Adjustable width:** drag the handle on the left edge of the assistant panel to make it wider or narrower (340–960 px, part of the app always stays visible). Keyboard: the handle is an ARIA separator; Left/Right arrow (Shift for bigger steps), Home and End. A double click resets it to 420 px. The width is saved in the view preferences and therefore in the backup. Hidden on phones, where the panel fills the screen. (Manual: The assistant window)
+### Find a time and booking links
+- **Find a time** (calendar toolbar): enter the people, duration, period and hours; Levuvo Mail finds times when everyone is free across your own calendars, the free/busy of colleagues in Microsoft 365 or Google (start and end only, no titles) and calendars shared with you (e.g. Nextcloud, assigned per person). People whose calendar cannot be read are marked and vote by e-mail. Times for everyone come first, otherwise those when most people can. One time can be entered directly with invitations.
+- **Polls by e-mail, no server of our own:** send up to 8 times; everyone gets their own mail (no addresses of others) with a mailto: link per time that opens a prepared reply in their own mail program; replying with the numbers ("1 and 3") works too. Replies are recognised by a token in the subject, also from people using any other mail program. "Polls" in the calendar shows who can when; "Fix" enters the event and invites everyone.
+- **Offers to people outside:** the first time picked is booked at once with an invitation; a later pick of a taken time is answered with the times still free.
+- **Booking links** (Settings → Booking links): a mailto: link for your signature or website. Levuvo Mail answers with free times from your calendars (duration, weekdays, hours, notice, buffer, period; never titles), books the time picked and sends the invitation. Never answers automatic mails (RFC 3834: out-of-office, mailing lists) or your own addresses, at most 5 answers per sender and 60 per day. Works while Levuvo Mail is open; replies that arrived in the meantime are handled on the next start.
+- Stored encrypted on this device (scheduling.json, in backups); a poll is deleted 30 days after its last time.
+
+### Automations
+- **Automations** (Settings → Automations): rules Levuvo Mail runs on new inbox mail – conditions on sender, recipient, subject, text or attachments (contains, does not contain, is exactly, ends with), actions move to a folder, mark as read, star and **create a task** linked to the mail (title with {subject}/{from}, due in n days). Unlike server filters they can create tasks; they never delete, reply, forward or send and never move to the trash.
+- **Described in plain words:** with the assistant on, the local AI turns a description into a rule (new AI function `automation_rule`, only the description and folder names, no mail content). The proposal is marked "AI proposal" with the model and only fills the editor.
+- **Checked before it runs:** the rule is shown in plain words built from the rule itself (not by the AI), a dry run lists which of the 50 newest mails it would handle and which task it would create without changing anything, and a rule only runs once switched on – and then only on mail arriving afterwards.
+- **Log** of what the rules did (30 days, subject only, encrypted; automations.json, in backups).
 
 ### Replies in your own style
 - **Style per contact (opt-in):** Settings → AI & agents → Writing style → "Learn style per contact". Levuvo Mail reads your sent emails in the local search index and remembers per recipient the greeting, the closing and du or Sie, without any AI model. Reply suggestions and "bullet points to email" (to the first recipient typed) use these habits, put your emails to that person first as style samples, and show "In the style of your emails to …". A learned du/Sie for a contact wins over the general setting.
@@ -22,6 +32,9 @@
 
 ### Window frame (macOS)
 - **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
+
+### Levuvo Mail Assistant
+- **Adjustable width:** drag the handle on the left edge of the assistant panel to make it wider or narrower (340–960 px, part of the app always stays visible). Keyboard: the handle is an ARIA separator; Left/Right arrow (Shift for bigger steps), Home and End. A double click resets it to 420 px. The width is saved in the view preferences and therefore in the backup. Hidden on phones, where the panel fills the screen. (Manual: The assistant window)
 
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
