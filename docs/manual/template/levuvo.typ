@@ -90,15 +90,15 @@
 
 #let chapter-title(it) = {
   pagebreak(weak: true)
-  v(14mm)
+  v(8mm)
   if it.numbering != none {
-    text(size: 64pt, weight: 800, tracking: -2pt, fill: border-strong, counter(heading).display("01"))
-    v(1mm)
+    text(size: 56pt, weight: 800, tracking: -2pt, fill: border-strong, counter(heading).display("01"))
+    v(0mm)
   }
   line(length: 16mm, stroke: 1.6pt + ink)
-  v(5mm)
+  v(4mm)
   block(text(size: 30pt, weight: "bold", tracking: -0.6pt, hyphenate: false, it.body + "."))
-  v(9mm)
+  v(7mm)
 }
 
 #let manual(
@@ -304,7 +304,7 @@
 
   // ---- Back cover ----
   let dark = cover != "minimal"
-  pagebreak(to: "even", weak: true)
+  pagebreak(weak: true)
   page(margin: 0pt, fill: if dark { night } else { white }, header: none, footer: none, {
     set text(fill: if dark { white } else { ink })
     place(center + horizon, dy: -14mm, block(width: 120mm, align(center, {
