@@ -1,6 +1,6 @@
 # Levuvo Mail 2.3.0 – validation report
 
-Created on 19 November 2026 on `master` after the fixes of the external audits of 2.3.0 (PR #48) and the
+Created on 19 November 2026 on `master` after the fixes of the external audits of 2.3.0 (PR #48), the internal audit (PR #49) and the
 virtualized message list / release gate (this change). Linux build environment, Node.js 22.23, Electron 45.3.1.
 The previous report (2.2.0, 13 November 2026) follows below unchanged for reference.
 
@@ -10,7 +10,7 @@ The previous report (2.2.0, 13 November 2026) follows below unchanged for refere
 |---|---|
 | `npm run release:check` (runtime audit, syntax, lint, format, tests, typecheck, build, license notices) | passed |
 | `npm audit --omit=dev` (everything that runs in the app) | **0 vulnerabilities** |
-| `npm test` | **424 of 424 passed** (server, UI logic, desktop configuration, translation completeness). New since 2.2.0, among others: shared spaces (E2E sync per mail, roles, key rotation), task sync with CalDAV, Microsoft To Do and Google Tasks (incomplete lists never delete, If-Match), MCP server and approvals (single execution, encrypted storage, trash only with approval), AI provider policy (“No cloud AI” across accounts, fail-closed provider switch), send-later lock between devices, search index checkpoints, restore staging of keys, settings files that are never overwritten when unreadable, OIDC ID-token checks, decryption limits (`apps/server/test/audit-2-3-0.test.mjs`), release gate, message list windowing with 50,000 rows |
+| `npm test` | **455 of 455 passed** (server, UI logic, desktop configuration, translation completeness). New since 2.2.0, among others: shared spaces (E2E sync per mail, roles, key rotation), task sync with CalDAV, Microsoft To Do and Google Tasks (incomplete lists never delete, If-Match), MCP server and approvals (single execution, encrypted storage, trash only with approval), AI provider policy (“No cloud AI” across accounts, fail-closed provider switch), send-later lock between devices, search index checkpoints, restore staging of keys, settings files that are never overwritten when unreadable, OIDC ID-token checks, decryption limits (`apps/server/test/audit-2-3-0.test.mjs`), release gate, message list windowing with 50,000 rows |
 | **Accessibility** (`npm run test:a11y`, Chromium, axe-core WCAG 2.0/2.1/2.2 A + AA and best practices) | every main view dark/light, desktop and phone, no horizontal scrolling at 320px, focus trap and return in dialogs, arrow keys in segmented controls and the folder menu; new: **message list with 20,000 messages** – fewer than 80 rows in the DOM, still under 100 after scrolling to the middle, End/Home/arrow/Page keys reach every row with the focus kept, `aria-posinset`/`aria-setsize` for screen readers, `j` keeps the selected row visible |
 | **Large mailbox benchmark** (`npm run bench:mailbox`, 100,000 synthetic messages, fake IMAP without network latency) | first page 8 ms, next page 6 ms (51 UIDs searched), encrypted local index of 100,000 messages in 19 s, idle sync 0.1 ms, heap 21 MB; all upper bounds kept |
 | **AI sidecar** (Python lint and tests, bundled runtime smoke test) | runs in CI (job “AI sidecar”); locally not repeated (needs the pinned Orkexa install) |
