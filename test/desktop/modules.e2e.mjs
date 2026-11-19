@@ -101,6 +101,10 @@ test(
     step('window');
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
+    const consoleLines = [];
+    page.on('console', m => consoleLines.push(`${m.type()}: ${m.text()}`.slice(0, 300)));
+    page.on('requestfailed', r => consoleLines.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
+    page.on('response', r => r.status() >= 400 && consoleLines.push(`http ${r.status()}: ${r.url()}`));
     // The first load happened before the routes applied: load again with the fixtures.
     await page.waitForLoadState('load').catch(() => {});
     await page.waitForTimeout(2000);
@@ -142,7 +146,21 @@ test(
       ];
       for (const [name, selector] of modules) {
         await railItem(name).click();
-        await page.locator(selector).first().waitFor({ timeout: 20_000 });
+        await page
+          .locator(selector)
+          .first()
+          .waitFor({ timeout: 20_000 })
+          .catch(async e => {
+            const text = await page
+              .locator('body')
+              .innerText()
+              .catch(() => '');
+            const console = consoleLines.slice(-20).join('\n');
+            throw new Error(
+              `${name}: ${e.message}\nPage: ${text.slice(0, 800)}\nErrors: ${errors.join(' | ')}\nConsole:\n${console}\nMain:\n${log.join('').slice(-2000)}`,
+              { cause: e }
+            );
+          });
         await assertShellAlive(name);
       }
       assert.deepEqual(errors, [], 'no uncaught errors in the renderer');
