@@ -1246,7 +1246,11 @@ export function createSpaceService({
     void flush().catch(() => {});
     return id;
   }
-  async function readFile(spaceId, fileId, versionNumber) {
+  /**
+   * Whether a file version can be read right now, without decrypting it. Missing parts are
+   * requested, and the answer is spaces_file_pending meanwhile.
+   */
+  async function availableVersion(spaceId, fileId, versionNumber) {
     const r = record(spaceId);
     const state = stateOf(r);
     const f = state.files[fileId];
@@ -1268,6 +1272,15 @@ export function createSpaceService({
         409
       );
     }
+    return { f, version };
+  }
+  /** Whether a file version can be downloaded now, without decrypting it (for the download button). */
+  async function checkFile(spaceId, fileId, versionNumber) {
+    await availableVersion(spaceId, fileId, versionNumber);
+    return { ok: true };
+  }
+  async function readFile(spaceId, fileId, versionNumber) {
+    const { f, version } = await availableVersion(spaceId, fileId, versionNumber);
     const key = unb64u(version.key);
     const parts = [];
     for (let n = 0; n < version.chunks; n++) {
@@ -1311,6 +1324,7 @@ export function createSpaceService({
     appendToNote,
     addFile,
     readFile,
+    checkFile,
     resync,
     receiveEnvelope,
     flush,

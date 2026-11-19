@@ -193,6 +193,16 @@ test('Spaces tools: reads are framed, changes wait for approval, cloud agents se
   // The approval shows the content that will be written, not only its title (audit 2026-11-19, UX-LEV-003).
   const noted = await tools.get('room_add_task').run({ room: space.id, title: 'T', notes: 'Inhalt der Notiz' }, local);
   assert.equal(approvals.get('room_change').summary(noted).content.notes, 'Inhalt der Notiz');
+  // API-LEV-006: arguments are checked before an approval is created, with a hint for the agent.
+  await assert.rejects(
+    tools.get('room_add_task').run({ room: space.id, title: 'T', due: '12.12.2026' }, local),
+    /Invalid due: due must be YYYY-MM-DD/
+  );
+  await assert.rejects(
+    tools.get('room_add_event').run({ room: space.id, title: 'T', start: 'nächsten Freitag' }, local),
+    /Invalid start/
+  );
+  assert.equal(tools.get('room_add_task').inputSchema.properties.due.pattern.length > 0, true);
 
   // Audit 2026-11-19, AIS-LEV-004: a mail of an account hidden from the agent ("No cloud AI")
   // cannot be shared into a space.

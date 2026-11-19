@@ -6,7 +6,16 @@ import { join } from 'node:path';
 import * as Y from 'yjs';
 import { openSpaceStore } from '../src/spaces/store.mjs';
 import { createSpaceService } from '../src/spaces/service.mjs';
-import { createIdentity, identityKeys, open, seal, signed, signatureValid, wrapKey } from '../src/spaces/crypto.mjs';
+import {
+  createIdentity,
+  identityKeys,
+  newSymmetricKey,
+  open,
+  seal,
+  signed,
+  signatureValid,
+  wrapKey
+} from '../src/spaces/crypto.mjs';
 import { fold, noteText } from '../src/spaces/model.mjs';
 
 const vault = () => {
@@ -222,10 +231,106 @@ test('Spaces: forged and tampered envelopes are rejected', async t => {
   const mallory = identityKeys(createIdentity());
   const forged = signed(mallory, { ...mail.envelope, from: mallory.id });
   assert.equal(await anna.service.receiveEnvelope(anna.accountId, forged), 'unknown_sender');
-  // A join request without a valid invitation adds nobody.
-  const owner = anna.service.detail(space.id).members.find(m => m.role === 'owner');
-  assert.ok(owner);
-  assert.equal(anna.service.detail(space.id).members.length, 2);
+});
+
+// QA-LEV-003 (audit 2026-11-19): join requests are really checked by the owner.
+test('Spaces: join requests with an unknown, used or expired token or another address add nobody', async t => {
+  const { office, anna, ben, cara, all } = await threePeople(t);
+  const space = await anna.service.create({ name: 'Projekt', accountId: anna.accountId });
+  await joinSpace(office, anna, ben, space.id, 'editor', all);
+  const annaCard = anna.service.detail(space.id).members.find(m => m.me);
+  const owner = { id: annaCard.id, boxPub: anna.store.get(space.id) && identityKeys(anna.store.identity).boxPub };
+  const joinFrom = (who, keysOf, token, email = who.email) => {
+    const card = { id: keysOf.id, email, name: who.name, signPub: keysOf.signPub, boxPub: keysOf.boxPub };
+    const k = newSymmetricKey();
+    return signed(keysOf, {
+      v: 1,
+      t: 'boxed',
+      space: space.id,
+      from: keysOf.id,
+      to: owner.id,
+      wrap: wrapKey(k, owner.boxPub, space.id),
+      box: seal(k, JSON.stringify({ t: 'join', token, card }), `boxed.${space.id}.${owner.id}`),
+      card
+    });
+  };
+  const members = () => anna.service.detail(space.id).members.filter(m => !m.removed).length;
+  const caraKeys = identityKeys(cara.store.identity);
+  // Unknown token.
+  await anna.service.receiveEnvelope(anna.accountId, joinFrom(cara, caraKeys, 'a'.repeat(32)));
+  // Ben's token was used already.
+  const usedToken = Object.keys(anna.store.get(space.id).invites).find(k => anna.store.get(space.id).invites[k].used);
+  await anna.service.receiveEnvelope(anna.accountId, joinFrom(cara, caraKeys, usedToken, ben.email));
+  // A real invitation for Cara, but answered with another address, and by someone else's key.
+  await anna.service.invite(space.id, { email: cara.email });
+  const token = Object.entries(anna.store.get(space.id).invites).find(([, i]) => i.email === cara.email)[0];
+  await anna.service.receiveEnvelope(anna.accountId, joinFrom(cara, caraKeys, token, 'other@posteo.example'));
+  const mallory = identityKeys(createIdentity());
+  const stolen = joinFrom(cara, caraKeys, token);
+  const replayed = signed(mallory, { ...stolen, from: mallory.id, card: { ...stolen.card, id: mallory.id } });
+  await anna.service.receiveEnvelope(anna.accountId, replayed);
+  assert.equal(members(), 2);
+  // Expired.
+  anna.store.get(space.id).invites[token].expires = new Date(Date.now() - 1000).toISOString();
+  await anna.service.receiveEnvelope(anna.accountId, joinFrom(cara, caraKeys, token));
+  assert.equal(members(), 2);
+  // And the valid one works.
+  anna.store.get(space.id).invites[token].expires = new Date(Date.now() + 86400_000).toISOString();
+  await anna.service.receiveEnvelope(anna.accountId, joinFrom(cara, caraKeys, token));
+  assert.equal(members(), 3);
+});
+
+// QA-LEV-003: the permission check that matters is the one every receiver does while folding.
+test('Spaces: correctly signed ops from readers, removed members or editors doing owner things are ignored', () => {
+  const owner = identityKeys(createIdentity());
+  const editor = identityKeys(createIdentity());
+  const reader = identityKeys(createIdentity());
+  const spaceId = 'c'.repeat(32);
+  const card = (k, email) => ({ id: k.id, email, name: '', signPub: k.signPub, boxPub: k.boxPub });
+  let lc = 0;
+  const seqs = new Map();
+  const op = (k, type, data) => {
+    const seq = (seqs.get(k.id) || 0) + 1;
+    seqs.set(k.id, seq);
+    return signed(k, {
+      v: 1,
+      space: spaceId,
+      author: k.id,
+      seq,
+      lc: ++lc,
+      at: new Date(Date.UTC(2026, 10, 19, 0, lc)).toISOString(),
+      type,
+      data,
+      id: `${k.id}:${seq}`
+    });
+  };
+  const task = 'd'.repeat(32);
+  const ops = [
+    op(owner, 'space.create', { name: 'X', description: '', owner: card(owner, 'o@x.example') }),
+    op(owner, 'member.add', { member: card(editor, 'e@x.example'), role: 'editor' }),
+    op(owner, 'member.add', { member: card(reader, 'r@x.example'), role: 'reader' }),
+    op(owner, 'task.upsert', { id: task, title: 'Original' }),
+    // A reader writes, an editor does what only the owner may.
+    op(reader, 'task.upsert', { id: task, title: 'Vom Leser' }),
+    op(editor, 'member.role', { member: reader.id, role: 'editor' }),
+    op(editor, 'ai.settings', { cloudAllowed: true }),
+    op(editor, 'space.dissolve', {})
+  ];
+  const before = fold(spaceId, ops).state;
+  assert.equal(before.tasks[task].title, 'Original');
+  assert.equal(before.members[reader.id].role, 'reader');
+  assert.equal(before.ai.cloudAllowed, false);
+  assert.equal(before.dissolved, false);
+  assert.equal(before.ignored, 4);
+  // After removal (cut off at what the owner had), the editor's later ops are ignored too.
+  const removed = [
+    ...ops,
+    op(owner, 'member.remove', { member: editor.id, upTo: 3 }),
+    op(editor, 'task.upsert', { id: task, title: 'Nach dem Entfernen' })
+  ];
+  const after = fold(spaceId, removed).state;
+  assert.equal(after.tasks[task].title, 'Original');
+  assert.ok(after.members[editor.id].removed);
 });
 
 test('Spaces: files are chunked, encrypted and versioned', async t => {

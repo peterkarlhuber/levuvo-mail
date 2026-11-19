@@ -7,12 +7,26 @@
 // the space's assistant settings are not available as tools at all.
 // Content written by other members is framed as untrusted data (prompt-injection protection).
 
+import { validateOpData } from './model.mjs';
+
 const LIMIT_TEXT = 12_000;
 const ID = /^[a-f0-9]{16,64}$/;
 const bad = message => new Error(message);
 const toolError = message => Object.assign(new Error(message), { toolError: true });
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const ROOM = { type: 'string', description: 'Space ID (from list_rooms) or its exact name.' };
+const DATE_PATTERN = '^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,3})?)?(Z|[+-]\\d{2}:\\d{2})?)?$';
+const DAY = { type: 'string', pattern: DATE_PATTERN, description: 'Date as YYYY-MM-DD (or ISO 8601 with time).' };
+const WHEN = {
+  type: 'string',
+  pattern: DATE_PATTERN,
+  description: 'ISO 8601, e.g. 2026-12-01T09:30:00+01:00, or YYYY-MM-DD for all-day events.'
+};
+const FIELD_HINTS = {
+  due: 'due must be YYYY-MM-DD or ISO 8601 with time.',
+  start: 'start must be ISO 8601 (e.g. 2026-12-01T09:30:00+01:00) or YYYY-MM-DD.',
+  end: 'end must be ISO 8601 (e.g. 2026-12-01T10:30:00+01:00) or YYYY-MM-DD.'
+};
 const short = (text, max = LIMIT_TEXT) => {
   const s = String(text || '');
   return s.length > max ? `${s.slice(0, max)} …[gekürzt]` : s;
@@ -220,7 +234,26 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
       }
     });
     // `kind` and `subject` let the interface show the approval in the user's language.
-    const change = (detail, action, [kind, subject = ''], data, preview = {}) => ({
+    const change = (detail, action, [kind, subject = ''], data, preview = {}) => {
+      // An approval must be executable: arguments are checked now, not after the user said yes.
+      if (action === 'op') {
+        try {
+          validateOpData(data.type, data.data);
+        } catch {
+          const field = Object.keys(FIELD_HINTS).find(k => {
+            try {
+              validateOpData(data.type, { ...data.data, [k]: undefined });
+              return data.data[k] !== undefined;
+            } catch {
+              return false;
+            }
+          });
+          throw toolError(field ? `Invalid ${field}: ${FIELD_HINTS[field]}` : 'Invalid arguments for this change.');
+        }
+      }
+      return proposal(detail, action, [kind, subject], data, preview);
+    };
+    const proposal = (detail, action, [kind, subject = ''], data, preview = {}) => ({
       room: detail?.id || null,
       roomName: detail?.name || data.name,
       action,
@@ -455,7 +488,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
             room: ROOM,
             title: { type: 'string', maxLength: 500 },
             notes: { type: 'string', maxLength: 20_000 },
-            due: { type: 'string' },
+            due: DAY,
             assignee: { type: 'string' },
             priority: { enum: ['low', 'normal', 'high'] }
           },
@@ -492,7 +525,7 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
             task: { type: 'string' },
             status: { enum: ['open', 'doing', 'done'] },
             assignee: { type: 'string' },
-            due: { type: 'string' },
+            due: DAY,
             title: { type: 'string', maxLength: 500 },
             priority: { enum: ['low', 'normal', 'high'] }
           },
@@ -530,8 +563,8 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
           {
             room: ROOM,
             title: { type: 'string', maxLength: 500 },
-            start: { type: 'string' },
-            end: { type: 'string' },
+            start: WHEN,
+            end: WHEN,
             allDay: { type: 'boolean' },
             location: { type: 'string', maxLength: 500 },
             notes: { type: 'string', maxLength: 20_000 },
