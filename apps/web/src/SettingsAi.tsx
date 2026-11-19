@@ -170,7 +170,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
       ? runtime.ollama?.running
         ? t('Ollama {version} läuft auf diesem Computer.', { version: runtime.ollama.version || '' })
         : bundled
-          ? t('Levuvos eigenes Ollama startet beim ersten Gebrauch.')
+          ? t('Das eigene Ollama von Levuvo Mail startet beim ersten Gebrauch.')
           : t('Ollama läuft nicht. Bitte Ollama installieren und starten (ollama.com).')
       : t('Cloud-Modell von {provider}.', { provider: PROVIDER_NAMES[settings.provider] });
 
@@ -370,7 +370,11 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             <option value="sie">{t('Sie')}</option>
           </select>
         </Row>
-        <Row wide label={t('Grußformel')} hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.')}>
+        <Row
+          wide
+          label={t('Grußformel')}
+          hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo Mail selbst an.')}
+        >
           <input
             maxLength={200}
             defaultValue={profile.signoff}
