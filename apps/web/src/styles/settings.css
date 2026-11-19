@@ -456,6 +456,44 @@
 .oauth-buttons p {
   flex-basis: 100%;
 }
+
+/* Writing style learned per contact (Settings → AI & agents → Writing style). */
+.style-profile {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+.style-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.style-profile-filter {
+  min-width: 12rem;
+  flex: 1 1 12rem;
+}
+.style-profile-account h3 {
+  font-size: var(--text-md);
+  margin: var(--space-1) 0;
+}
+.style-profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.style-profile-table th,
+.style-profile-table td {
+  text-align: left;
+  padding: var(--space-1) var(--space-2) var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.style-profile-table th {
+  color: var(--muted);
+  font-weight: var(--weight-semibold);
+}
+
 .license-text {
   max-height: 60vh;
   overflow: auto;

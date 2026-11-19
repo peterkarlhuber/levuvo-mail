@@ -56,11 +56,14 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   function needs is sent to that provider and processed under its terms, possibly outside the EU:
   - the messages you apply the function to;
   - for reply suggestions and "Bullet points to email" also up to five of your most recently sent
-    emails as a style sample (only the text you wrote, at most 1,500 characters each);
+    emails as a style sample (only the text you wrote, at most 1,500 characters each); with "Learn style
+    per contact" on, these are your emails to that recipient first, plus your usual greeting, closing
+    and form of address with them;
   - for the weekly newsletter overview the newsletters of the last seven days (at most 20, each shortened
     to 2,500 characters), only when you start it;
   - for questions to the mailbox the emails the search found, across all accounts that are not marked
-    "No cloud AI";
+    "No cloud AI", with the text of their PDF and text attachments, and the last two questions and
+    answers of the conversation;
   - for tasks and routines of the built-in assistant the emails, events, contacts and tasks it reads
     to do them, and the content of shared spaces whose owner allowed cloud AI.
 

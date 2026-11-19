@@ -361,6 +361,13 @@ Assistent bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ bis zu 
 Mails als Stilprobe (nur dein eigener Text, kein Training); bei einem Cloud-Modell gehen sie mit an den
 Anbieter. Eine Umformulierung bleibt mit „Vom Assistenten geändert · Rückgängig“ markiert.
 
+**Stil pro Kontakt lernen** (aus, zum Einschalten unter Schreibstil): Levuvo Mail liest deine gesendeten
+Mails im lokalen Suchindex und merkt sich je Kontakt Anrede („Hallo Anna,“), Gruß („LG“) und Du oder Sie.
+Dafür läuft kein KI-Modell; gespeichert wird verschlüsselt nur auf diesem Gerät, nicht im Backup. Ein
+Antwortvorschlag an Anna übernimmt dann ihre Anrede und eure Du/Sie-Form (vor der allgemeinen Einstellung)
+und nimmt deine Mails an sie als Stilprobe; der Entwurf zeigt „Im Stil deiner Mails an …“. Die Tabelle zeigt,
+was gelernt wurde; einzelne Kontakte oder alles lassen sich löschen, Ausschalten löscht ebenfalls alles.
+
 **Filter in Worten:** unter Einstellungen → Filter z. B. „Rechnungen von Lieferanten in den Ordner
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 
