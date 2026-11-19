@@ -4,6 +4,9 @@
 
 > **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.
 
+### Release and supply chain
+- **Electron fuses:** installers switch off running Levuvo Mail as a plain Node runtime (ELECTRON_RUN_AS_NODE), NODE_OPTIONS and the --inspect debugger, load the app only from its archive and check the archive's integrity. Another program on the computer can no longer start the Levuvo binary with its own code and so read Levuvo's keychain entries. Every desktop build checks the fuses of the packaged binary.
+
 ### Security and reliability (external audits of 2.3.0)
 - **Cloud AI block holds for questions across all accounts:** accounts marked "No cloud AI" are left out of the search before a cloud model answers, and every account whose text is in the model input is checked again right before the call.
 - **AI provider switch fails closed:** a task only runs once the AI component confirmed the current provider; if switching fails, tasks stop with a clear message instead of running on the previous provider. Installed apps only use the bundled AI runtime, never a Python found on the computer.

@@ -63,6 +63,7 @@
     "yjs": "13.6.33"
   },
   "devDependencies": {
+    "@electron/fuses": "1.8.0",
     "@eslint/js": "10.0.1",
     "@tiptap/extension-collaboration": "3.33.1",
     "@tiptap/extension-image": "3.33.1",
@@ -104,6 +105,14 @@
     },
     "asar": true,
     "afterPack": "build/after-pack.cjs",
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "npmRebuild": false,
     "asarUnpack": [
       "**/*.node"

@@ -117,6 +117,8 @@ jobs:
           LEVUVO_WIN_PUBLISHER: ${{ secrets.LEVUVO_WIN_PUBLISHER }}
       - name: Verify target architecture of the binaries (PE/Mach-O)
         run: node scripts/verify-app-arch.mjs ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Verify Electron fuses (no RUN_AS_NODE, NODE_OPTIONS, --inspect; asar integrity)
+        run: node scripts/verify-fuses.mjs ${{ matrix.os }} ${{ matrix.arch }}
       - name: Startup test of the unpacked application
         run: node scripts/smoke-packaged.mjs ${{ matrix.os }} ${{ matrix.arch }} 20
       - name: Windows Credential Manager (test entry only, deleted afterwards)
