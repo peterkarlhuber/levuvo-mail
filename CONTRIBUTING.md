@@ -7,6 +7,7 @@
 - Tests must never be disabled to get CI green. External services are mocked; integration/E2E tests (`test:integration`, `test:e2e`) need their own test servers and do not run in PR CI. **Never use real mailboxes.**
 - Do not commit credentials, `.env`, certificates or mail data (`.gitignore`, secret scan).
 - Pin new GitHub Actions only by commit SHA (`uses: owner/repo@<sha> # vX.Y.Z`); `scripts/check-workflows.mjs` enforces this.
+- **Compliance rule:** a change that processes personal data, uses AI, opens a network connection, stores a new local file or adds a bundled component updates the matching document in the same PR: `PRIVACY.md`, `docs/compliance/` (AI inventory, record of processing, risk assessment, licensing), `BACKUP_FILES`/`NOT_BACKED_UP` and the data-rights coverage list in `apps/server/src/data-rights.mjs`. New dependencies must pass `npm run check:licenses`.
 - Record changes in `CHANGELOG.md` under `## [Unreleased]`.
 - The repository (code, comments, docs) is in English. The app's user interface stays bilingual: German (default, source texts in `apps/web/src`) and English (`apps/web/src/i18n-en.ts`, `apps/desktop/i18n.mjs`).
 

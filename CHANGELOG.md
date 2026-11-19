@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Compliance: gap analyses and templates for the Cyber Resilience Act, the AI Act, the GDPR, accessibility and other rules in `docs/compliance/` (vulnerability handling, 24 h/72 h reporting, support period, risk assessment, technical documentation, EU declaration of conformity template, record of processing, DPIA template, options for DOC-LEV-009, AI system inventory, licensing policy, user information); coordinated vulnerability disclosure policy in `SECURITY.md`; compliance section in the release checklist. Not legal advice.
+
 ## 2.5.0 – 19 November 2026
 
 > **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
