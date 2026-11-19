@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync, readdirSync, readFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { createLocalIndex as openIndex, encrypt, entryKey } from '../src/local-index.mjs';
 import { syntheticMailbox } from './helpers/synthetic-mailbox.mjs';
 
@@ -201,4 +202,28 @@ test('Vectors are gone after the index is cleared or the mailbox changes', async
   index.unload('acc');
   assert.notEqual((await index.status('acc')).generation, generation);
   assert.deepEqual(await index.searchVectors('acc', 'bge-m3', [1, 0, 0]), []);
+});
+
+test('QA-LEV-004 (DATA-02): a locked index file is kept, the index is off until the lock is gone', async t => {
+  const dir = tempDir(t);
+  const key = randomBytes(32);
+  const first = createLocalIndex({ dir, getKey: async () => key });
+  await first.sync(mailbox([{ uid: 1, subject: 'Mietvertrag', text: 'Bitte unterschreiben' }]), 'acc', INBOX);
+  first.close();
+  // Another process holds an exclusive lock on the database (SQLITE_BUSY on open).
+  const Database = createRequire(import.meta.url)('better-sqlite3-multiple-ciphers');
+  const holder = new Database(join(dir, 'acc.lvdb'), { timeout: 0 });
+  holder.pragma(`cipher = 'sqlcipher'`);
+  holder.pragma('legacy = 4');
+  holder.pragma(`key = "x'${key.toString('hex')}'"`);
+  holder.pragma('locking_mode = EXCLUSIVE');
+  holder.exec('BEGIN EXCLUSIVE');
+  const busy = createLocalIndex({ dir, getKey: async () => key });
+  assert.deepEqual(await busy.search(['acc'], 'mietvertrag'), [], 'no index while locked');
+  assert.ok(existsSync(join(dir, 'acc.lvdb')), 'the file is not deleted on a transient error');
+  holder.exec('COMMIT');
+  holder.close();
+  busy.unload('acc');
+  const again = createLocalIndex({ dir, getKey: async () => key });
+  assert.equal((await again.search(['acc'], 'mietvertrag')).length, 1, 'the old index is used again');
 });

@@ -106,7 +106,23 @@ test('H-01/AI-01: a question across all accounts never sends text of a "No cloud
   assert.doesNotMatch(JSON.stringify(task.params), /TEXT-secret/);
   assert.equal(out.result.sources[0].accountId, 'open');
   // A client cannot smuggle in its own source list.
-  await handlers['POST /api/ai/run']({ body: { kind: 'ask', input: { question: 'x' }, sourceMap: [null] } }, reply);
+  calls.length = 0;
+  const smuggled = await handlers['POST /api/ai/run'](
+    {
+      body: {
+        kind: 'ask',
+        input: { question: 'x', sources: [{ accountId: 'secret', folder: 'INBOX', uid: 1, text: 'TEXT-secret' }] },
+        sourceMap: [{ accountId: 'secret', folder: 'INBOX', uid: 1 }]
+      }
+    },
+    reply
+  );
+  assert.deepEqual(
+    smuggled.result.sources.map(s => s.accountId),
+    ['open'],
+    'only sources the server found itself are returned'
+  );
+  assert.doesNotMatch(JSON.stringify(calls.find(c => c.method === 'task')?.params), /TEXT-secret|"secret"/);
   // Content of a blocked account in the input is refused right before the model call.
   await assert.rejects(ai.run('ask', {}, { sources: ['open', 'secret'] }), err => err.kind === 'cloud_blocked');
   // Functions on loaded mails need the account they come from.

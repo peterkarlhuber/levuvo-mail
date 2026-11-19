@@ -63,7 +63,7 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
     if (crypto) {
       const from = parsed.from?.address || '';
       const opened =
-        (await crypto.pgp?.open(source).catch(() => null)) ||
+        (await crypto.pgp?.open(source, from).catch(() => null)) ||
         (await crypto.smime?.open(source, from).catch(() => null));
       if (opened) {
         cryptoInfo = {
@@ -80,7 +80,7 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
           parsed = await parse(source);
         }
       } else if (crypto.pgp && /-----BEGIN PGP (MESSAGE|SIGNED MESSAGE)-----/.test(parsed.text || '')) {
-        const inline = await crypto.pgp.openInline(parsed.text).catch(() => null);
+        const inline = await crypto.pgp.openInline(parsed.text, from).catch(() => null);
         if (inline) {
           cryptoInfo = {
             method: 'pgp',

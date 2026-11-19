@@ -9,9 +9,9 @@
 // Optional sync (task-sync.mjs): a task can belong to a connected list (CalDAV, Microsoft To Do,
 // Google Tasks). It then carries `sync` = { link, remoteId, etag, base }; without it, it stays
 // on this device. The links and the deletions still to send live in the same file (`taskSync`).
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { atomicWrite, createWriteQueue, keychainKey, seal, unseal } from './local-store.mjs';
 
 const MAX_TASKS = 5000;
 const KEY_ACCOUNT = 'local';
@@ -363,23 +363,6 @@ export function lockedTaskStore(error) {
 }
 
 // ------------------------------------------------------------------ encrypted file
-function encrypt(key, value) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const body = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
-  return JSON.stringify({
-    v: 1,
-    iv: iv.toString('base64'),
-    tag: cipher.getAuthTag().toString('base64'),
-    data: body.toString('base64')
-  });
-}
-function decrypt(key, raw) {
-  const box = JSON.parse(raw);
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
-  decipher.setAuthTag(Buffer.from(box.tag, 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(box.data, 'base64')), decipher.final()]).toString('utf8');
-}
 
 /** tasks-local.json, encrypted; throws (code task_locked, 423) when it cannot be opened. */
 export async function openTaskFile({ filename, vault }) {
@@ -390,21 +373,9 @@ export async function openTaskFile({ filename, vault }) {
     if (err.code !== 'ENOENT') throw err;
   }
   const exists = raw !== null && raw.trim() !== '';
-  let key = null;
-  if (vault?.available) {
-    try {
-      let hex = vault.get(KEY_ACCOUNT, KEY_NAME);
-      // A new key only while no file exists: a fresh key for an existing file would make it
-      // unreadable and the next save would overwrite every task.
-      if (!hex && !exists) {
-        hex = randomBytes(32).toString('hex');
-        vault.set(KEY_ACCOUNT, KEY_NAME, hex);
-      }
-      key = /^[0-9a-f]{64}$/i.test(hex || '') ? Buffer.from(hex, 'hex') : null;
-    } catch {
-      key = null;
-    }
-  }
+  // A new key only while no file exists: a fresh key for an existing file would make it
+  // unreadable and the next save would overwrite every task.
+  const key = keychainKey(vault, KEY_NAME, { create: !exists, account: KEY_ACCOUNT });
   if (!key)
     throw fail(
       'Die Aufgaben brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.',
@@ -414,7 +385,7 @@ export async function openTaskFile({ filename, vault }) {
   let state = { tasks: [] };
   if (exists) {
     try {
-      const parsed = JSON.parse(decrypt(key, raw));
+      const parsed = JSON.parse(unseal(key, raw));
       // Keep every part of the saved state: `taskSync` holds the connected lists and the
       // deletions still to send. Dropping it here silently disconnected every list on restart.
       state = { ...(parsed && typeof parsed === 'object' ? parsed : {}) };
@@ -423,29 +394,14 @@ export async function openTaskFile({ filename, vault }) {
       throw fail('Die Aufgaben lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.', 'task_locked', 423);
     }
   }
-  let writing = Promise.resolve();
+  const writes = createWriteQueue();
   return {
     get: () => state,
     save(next) {
       state = next;
-      const snapshot = JSON.stringify(next);
-      // A failed write reports its own error but does not block every later one.
-      const run = writing
-        .catch(() => {})
-        .then(async () => {
-          await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-          const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-          try {
-            await writeFile(tmp, encrypt(key, snapshot), { mode: 0o600 });
-            await rename(tmp, filename);
-          } catch (err) {
-            await unlink(tmp).catch(() => {});
-            throw err;
-          }
-        });
-      writing = run;
-      return run;
+      const snapshot = seal(key, JSON.stringify(next));
+      return writes.push(() => atomicWrite(filename, snapshot));
     },
-    flush: () => writing
+    flush: () => writes.flush()
   };
 }

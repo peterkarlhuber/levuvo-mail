@@ -5,7 +5,7 @@
 // Crypto: PBKDF2-HMAC-SHA256 (600 000 iterations, OWASP 2023) → AES-256-GCM. Both run in every
 // current browser through WebCrypto, so no server, no account and no installation is needed.
 // Nothing is stored by Levuvo; the password never leaves the sender's device in readable form.
-import { createCipheriv, createDecipheriv, pbkdf2, pbkdf2Sync, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, pbkdf2, randomBytes } from 'node:crypto';
 import { promisify } from 'node:util';
 
 const pbkdf2Async = promisify(pbkdf2);
@@ -35,10 +35,11 @@ export function readPasswordProtection(value) {
   return { password, hint };
 }
 
-export function sealPayload(payload, password, { iterations = PBKDF2_ITERATIONS } = {}) {
+/** Encrypts the payload; the key derivation runs in the thread pool, not on the event loop. */
+export async function sealPayload(payload, password, { iterations = PBKDF2_ITERATIONS } = {}) {
   const salt = randomBytes(16);
   const iv = randomBytes(12);
-  const key = pbkdf2Sync(password.normalize('NFC'), salt, iterations, 32, 'sha256');
+  const key = await pbkdf2Async(password.normalize('NFC'), salt, iterations, 32, 'sha256');
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const ct = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final(), cipher.getAuthTag()]);
   return {
@@ -102,7 +103,10 @@ const esc = s =>
   );
 
 /** Builds the payload and the HTML file the recipient opens. */
-export function buildProtectedFile({ from, subject, html, text, attachments = [], date = new Date() }, protection) {
+export async function buildProtectedFile(
+  { from, subject, html, text, attachments = [], date = new Date() },
+  protection
+) {
   let size = 0;
   const files = attachments.map(a => {
     const content = Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content || '');
@@ -120,7 +124,7 @@ export function buildProtectedFile({ from, subject, html, text, attachments = []
     text: text || '',
     attachments: files
   };
-  const box = sealPayload(payload, protection.password);
+  const box = await sealPayload(payload, protection.password);
   return { box, file: viewerHtml(box, { sender: from?.name || from?.address || '', hint: protection.hint }) };
 }
 

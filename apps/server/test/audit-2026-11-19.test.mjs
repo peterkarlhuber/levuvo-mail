@@ -533,3 +533,20 @@ test('DB-LEV-008: follow-ups and screening lists are encrypted on disk and still
   const content = await collectBackupContent({ dir, vault });
   assert.match(content.files['followups.json'], /Angebot Müller/);
 });
+
+test('REL-LEV-005: the IMAP connection is kept alive while a slow SMTP submission runs', async () => {
+  const client = scheduledClient({ 5: scheduledSource() });
+  let noops = 0;
+  client.noop = async () => void noops++;
+  const result = await sendDue(client, {
+    now: Date.parse('2026-11-19T10:00:00Z'),
+    keepAliveMs: 5,
+    submit: () => new Promise(r => setTimeout(r, 40)),
+    saveSent: async () => {}
+  });
+  assert.equal(result.results[0].sent, true);
+  assert.ok(noops >= 3, `NOOPs during SMTP: ${noops}`);
+  const after = noops;
+  await new Promise(r => setTimeout(r, 30));
+  assert.equal(noops, after, 'keep-alive stops after sending');
+});

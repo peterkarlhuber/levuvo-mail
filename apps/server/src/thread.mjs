@@ -67,9 +67,13 @@ export async function loadThread(client, folder, uid, { previewCache, accountKey
 
   const results = new Map(); // `${folder}|${uid}` → info
   const targets = threadFolders(folders, folder);
-  // Two rounds: the second picks up replies to replies that do not reference the seed.
+  // Two rounds: the second picks up replies to replies that do not reference the seed. It only
+  // asks for the ids found in the first round: the others were already searched in every folder.
+  const searched = new Set();
   for (let round = 0; round < 2; round++) {
-    const query = [...ids].slice(-MAX_IDS);
+    const query = [...ids].filter(id => !searched.has(id)).slice(-MAX_IDS);
+    if (!query.length) break;
+    for (const id of query) searched.add(id);
     let grew = false;
     for (const target of targets) {
       lock = await client.getMailboxLock(target.path, { readOnly: true });

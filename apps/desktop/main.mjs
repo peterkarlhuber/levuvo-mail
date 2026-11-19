@@ -62,17 +62,26 @@ app.setAboutPanelOptions?.({
   website: 'https://levuvo.at'
 });
 
-async function shutdown() {
+// One shutdown for every way of quitting (menu, Dock, logout, system shutdown, updater, restore):
+// the server stops its schedulers, syncs and the AI sidecar before the process ends (REL-LEV-011).
+let shutdownPromise = null;
+let shutdownDone = false;
+function shutdown() {
   quitting = true;
-  backgroundMonitor?.stop();
-  reminderMonitor?.stop();
-  if (followupTimer) clearInterval(followupTimer);
-  if (taskTimer) clearInterval(taskTimer);
-  try {
-    await mailServer?.close();
-  } catch {
-    /* already closed */
-  }
+  shutdownPromise ??= (async () => {
+    backgroundMonitor?.stop();
+    reminderMonitor?.stop();
+    if (followupTimer) clearInterval(followupTimer);
+    if (taskTimer) clearInterval(taskTimer);
+    try {
+      await mailServer?.close();
+    } catch {
+      /* already closed */
+    }
+  })().finally(() => {
+    shutdownDone = true;
+  });
+  return shutdownPromise;
 }
 
 async function quitWithConfirmation() {
@@ -358,22 +367,15 @@ async function boot() {
   });
   const { address } = await mailServer.listen();
   appOrigin = new URL(address).origin;
-  const hostHeader = new URL(address).host;
 
   // Background notifications read the inbox state that the IDLE watchers keep
   // up to date. This uses Fastify inject (no socket) and never opens extra logins.
-  const localGet = async url => {
-    const response = await mailServer.api.inject({
-      method: 'GET',
-      url,
-      headers: { host: hostHeader, cookie: `levuvo_desktop_session=${secret}` }
-    });
-    if (response.statusCode !== 200) throw new Error('Protected request failed.');
-    return response.json();
-  };
+  // Background notifications read the inbox state that the IDLE watchers keep up to date. The
+  // shell uses the server's internal entry point (no socket, no copied session cookie).
+  const localGet = url => mailServer.internalRequest('GET', url);
   backgroundMonitor = createDesktopInboxMonitor({
     listAccounts: async () => (await localGet('/api/accounts')).accounts,
-    readInbox: async accountId => localGet(`/api/inbox/monitor?account=${encodeURIComponent(accountId)}`),
+    readInbox: async accountId => localGet(`/api/inbox/monitor?account=${encodeURIComponent(accountId)}&cachedOnly=1`),
     notify: ({ label, count, id }) => nativeNotify({ label, count, accountId: id }),
     intervalMs: 20000,
     logger: msg => console.warn('[Levuvo Mail]', msg)
@@ -412,20 +414,8 @@ async function boot() {
   // Task reminders: the server hands out each due reminder once (also to the browser UI).
   taskTimer = setInterval(async () => {
     try {
-      const response = await mailServer.api.inject({
-        method: 'POST',
-        url: '/api/tasks/reminders/claim',
-        headers: {
-          host: hostHeader,
-          origin: appOrigin,
-          cookie: `levuvo_desktop_session=${secret}`,
-          'content-type': 'application/json',
-          'x-levuvo-action': 'mail-v1'
-        },
-        payload: {}
-      });
-      if (response.statusCode !== 200) return;
-      for (const task of response.json().tasks || [])
+      const claimed = await mailServer.internalRequest('POST', '/api/tasks/reminders/claim', {}, 'mail-v1');
+      for (const task of claimed?.tasks || [])
         nativeNotify({
           title: `${t('taskReminder')}: ${task.title}`,
           body: task.notes?.slice(0, 120) || '',
@@ -531,8 +521,16 @@ app.on('activate', showWindow);
 app.on('window-all-closed', () => {
   /* stays in the tray; mail is still watched */
 });
-app.on('before-quit', () => {
+app.on('before-quit', event => {
   quitting = true;
+  if (shutdownDone) return;
+  // Quit only after a clean shutdown, at most 8 seconds (the OS may be shutting down).
+  event.preventDefault();
+  const limit = new Promise(resolve => setTimeout(resolve, 8000));
+  void Promise.race([shutdown(), limit]).finally(() => {
+    shutdownDone = true;
+    app.quit();
+  });
 });
 app
   .whenReady()

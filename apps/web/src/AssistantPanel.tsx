@@ -1,6 +1,7 @@
 // The collapsible panel of the Levuvo Mail Assistant (Ctrl/⌘+J): ask the mailbox, give the assistant a
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from './ui/focus';
 import { CircleCheck, LoaderCircle, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
@@ -60,6 +61,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
   const [entries, setEntries] = useState<Entry[]>([]);
   const seq = useRef(0);
   const input = useRef<HTMLTextAreaElement>(null);
+  const trap = useFocusTrap<HTMLDivElement>(open);
 
   useEffect(() => {
     if (!open) return;
@@ -145,158 +147,188 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
   if (!open) return null;
   const off = enabled && !enabled.search && !enabled.agents;
   return (
-    <aside className="assistant-panel" aria-label={t('Levuvo Mail Assistant')}>
-      <header className="assistant-head">
-        <Sparkles size={16} aria-hidden="true" />
-        <h2 className="assistant-title">{t('Levuvo Mail Assistant')}</h2>
-        <span className="ai-label">{t('KI')}</span>
-        <IconButton label={t('Schließen')} icon={<X size={16} />} onClick={onClose} />
-      </header>
-      {off ? (
-        <div className="assistant-body">
-          <p>
-            {t(
-              'Der Assistent ist ausgeschaltet. Er arbeitet standardmäßig mit einem lokalen Modell auf diesem Computer.'
-            )}
-          </p>
-          <Button variant="primary" onClick={onOpenSettings}>
-            {t('KI-Einstellungen öffnen')}
-          </Button>
-          <ApprovalSection onPending={onPending} />
-        </div>
-      ) : (
-        <>
+    <>
+      {/* A drawer over the app (WCAG 2.4.3/2.4.11): modal, Escape closes it, focus returns to the opener. */}
+      <div className="assistant-scrim" role="presentation" onMouseDown={onClose} />
+      <div
+        ref={trap}
+        className="assistant-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assistant-title"
+        tabIndex={-1}
+        onKeyDown={e => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        <header className="assistant-head">
+          <Sparkles size={16} aria-hidden="true" />
+          <h2 id="assistant-title" className="assistant-title">
+            {t('Levuvo Mail Assistant')}
+          </h2>
+          <span className="ai-label">{t('KI')}</span>
+          <IconButton label={t('Schließen')} icon={<X size={16} />} onClick={onClose} />
+        </header>
+        {off ? (
           <div className="assistant-body">
-            {enabled?.agents && skills.length > 0 && (
-              <div className="assistant-skills" role="list" aria-label={t('Routinen')}>
-                {skills.map(s => (
-                  <button
-                    key={s.id}
-                    role="listitem"
-                    className="chip"
-                    title={s.builtin ? t(s.hint) : s.hint}
-                    onClick={() => void runSkill(s)}
-                  >
-                    <Play size={12} /> {s.builtin ? t(s.name) : s.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {entries.length === 0 && (
-              <p className="ai-hint">
-                {t(
-                  'Frag zum Beispiel „Wann kommt die Lieferung von Müller?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesendet wird nichts ohne deine Freigabe.'
-                )}
-              </p>
-            )}
-            {/* Answers, progress and errors are announced to screen readers as they arrive (WCAG 4.1.3). */}
-            <div role="log" aria-live="polite" aria-relevant="additions text" aria-label={t('Verlauf des Assistenten')}>
-              {entries.map(e => (
-                <div key={e.id} className="assistant-entry">
-                  <div className="assistant-prompt">{e.prompt}</div>
-                  {e.busy && (
-                    <div className="ai-hint">
-                      <LoaderCircle className="spin" size={14} />{' '}
-                      {e.kind === 'ask' ? t('Sucht im Postfach…') : t('Arbeitet…')}
-                    </div>
-                  )}
-                  {e.error && (
-                    <div className="reader-security warning" role="alert">
-                      {e.error}
-                    </div>
-                  )}
-                  {e.kind === 'ask' && e.answer && (
-                    <div className="assistant-answer">
-                      <p>{e.answer}</p>
-                      {e.sources && e.sources.length > 0 && (
-                        <ul className="assistant-sources">
-                          {e.sources.map(s => (
-                            <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
-                              <button className="text-button" onClick={() => onOpenMessage(s)}>
-                                {s.subject || t('(ohne Betreff)')}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <span className="ai-label">
-                        <Sparkles size={11} /> {t('KI-generiert')} · {e.model}
-                      </span>
-                    </div>
-                  )}
-                  {e.kind === 'task' && e.report && (
-                    <div className="assistant-answer">
-                      <p className="assistant-report">{e.report}</p>
-                      {Boolean(e.newApprovals) && (
-                        <p className="ai-hint">
-                          <CircleCheck size={13} />{' '}
-                          {t('{count} Freigaben warten unten auf dich.', { count: e.newApprovals || 0 })}
-                        </p>
-                      )}
-                      <span className="ai-label">
-                        <Sparkles size={11} /> {t('KI-generiert')} · {e.model} ·{' '}
-                        {t('{count} Schritte', { count: e.steps || 0 })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <p>
+              {t(
+                'Der Assistent ist ausgeschaltet. Er arbeitet standardmäßig mit einem lokalen Modell auf diesem Computer.'
+              )}
+            </p>
+            <Button variant="primary" onClick={onOpenSettings}>
+              {t('KI-Einstellungen öffnen')}
+            </Button>
             <ApprovalSection onPending={onPending} />
           </div>
-          <form
-            className="assistant-input"
-            onSubmit={ev => {
-              ev.preventDefault();
-              submit();
-            }}
-          >
-            <Segmented
-              size="sm"
-              label={t('Art')}
-              value={mode}
-              onChange={setMode}
-              options={[
-                ...(enabled?.search !== false ? [{ value: 'ask' as const, label: t('Frage') }] : []),
-                ...(enabled?.agents !== false ? [{ value: 'task' as const, label: t('Aufgabe') }] : [])
-              ]}
-            />
-            <Field hideLabel label={mode === 'ask' ? t('Frage an das Postfach') : t('Aufgabe für den Assistenten')}>
-              <textarea
-                ref={input}
-                rows={2}
-                maxLength={2000}
-                value={text}
-                placeholder={mode === 'ask' ? t('Frag dein Postfach…') : t('Was soll der Assistent erledigen?')}
-                onChange={ev => setText(ev.target.value)}
-                onKeyDown={ev => {
-                  if (ev.key === 'Enter' && !ev.shiftKey) {
-                    ev.preventDefault();
-                    submit();
-                  }
-                }}
-              />
-            </Field>
-            <IconButton
-              type="submit"
-              className="primary"
-              size="sm"
-              label={t('Senden')}
-              icon={<Send size={14} />}
-              disabled={!text.trim()}
-            />
-            {entries.length > 0 && (
-              <IconButton
+        ) : (
+          <>
+            <div className="assistant-body">
+              {enabled?.agents && skills.length > 0 && (
+                <div className="assistant-skills" role="list" aria-label={t('Routinen')}>
+                  {skills.map(s => (
+                    <button
+                      key={s.id}
+                      role="listitem"
+                      className="chip"
+                      title={s.builtin ? t(s.hint) : s.hint}
+                      onClick={() => void runSkill(s)}
+                    >
+                      <Play size={12} /> {s.builtin ? t(s.name) : s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {entries.length === 0 && (
+                <p className="ai-hint">
+                  {t(
+                    'Frag zum Beispiel „Wann kommt die Lieferung von Müller?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesendet wird nichts ohne deine Freigabe.'
+                  )}
+                </p>
+              )}
+              {/* Answers, progress and errors are announced to screen readers as they arrive (WCAG 4.1.3). */}
+              <div
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-label={t('Verlauf des Assistenten')}
+              >
+                {entries.map(e => (
+                  <div key={e.id} className="assistant-entry">
+                    <div className="assistant-prompt">{e.prompt}</div>
+                    {e.busy && (
+                      <div className="ai-hint">
+                        <LoaderCircle className="spin" size={14} />{' '}
+                        {e.kind === 'ask' ? t('Sucht im Postfach…') : t('Arbeitet…')}
+                      </div>
+                    )}
+                    {e.error && (
+                      <div className="reader-security warning" role="alert">
+                        {e.error}
+                      </div>
+                    )}
+                    {e.kind === 'ask' && e.answer && (
+                      <div className="assistant-answer">
+                        <p>{e.answer}</p>
+                        {e.sources && e.sources.length > 0 && (
+                          <ul className="assistant-sources">
+                            {e.sources.map(s => (
+                              <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
+                                <button
+                                  className="text-button"
+                                  onClick={() => {
+                                    onClose();
+                                    onOpenMessage(s);
+                                  }}
+                                >
+                                  {s.subject || t('(ohne Betreff)')}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <span className="ai-label">
+                          <Sparkles size={11} /> {t('KI-generiert')} · {e.model}
+                        </span>
+                      </div>
+                    )}
+                    {e.kind === 'task' && e.report && (
+                      <div className="assistant-answer">
+                        <p className="assistant-report">{e.report}</p>
+                        {Boolean(e.newApprovals) && (
+                          <p className="ai-hint">
+                            <CircleCheck size={13} />{' '}
+                            {t('{count} Freigaben warten unten auf dich.', { count: e.newApprovals || 0 })}
+                          </p>
+                        )}
+                        <span className="ai-label">
+                          <Sparkles size={11} /> {t('KI-generiert')} · {e.model} ·{' '}
+                          {t('{count} Schritte', { count: e.steps || 0 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <ApprovalSection onPending={onPending} />
+            </div>
+            <form
+              className="assistant-input"
+              onSubmit={ev => {
+                ev.preventDefault();
+                submit();
+              }}
+            >
+              <Segmented
                 size="sm"
-                label={t('Verlauf leeren')}
-                icon={<Trash2 size={14} />}
-                onClick={() => setEntries([])}
+                label={t('Art')}
+                value={mode}
+                onChange={setMode}
+                options={[
+                  ...(enabled?.search !== false ? [{ value: 'ask' as const, label: t('Frage') }] : []),
+                  ...(enabled?.agents !== false ? [{ value: 'task' as const, label: t('Aufgabe') }] : [])
+                ]}
               />
-            )}
-          </form>
-        </>
-      )}
-    </aside>
+              <Field hideLabel label={mode === 'ask' ? t('Frage an das Postfach') : t('Aufgabe für den Assistenten')}>
+                <textarea
+                  ref={input}
+                  rows={2}
+                  maxLength={2000}
+                  value={text}
+                  placeholder={mode === 'ask' ? t('Frag dein Postfach…') : t('Was soll der Assistent erledigen?')}
+                  onChange={ev => setText(ev.target.value)}
+                  onKeyDown={ev => {
+                    if (ev.key === 'Enter' && !ev.shiftKey) {
+                      ev.preventDefault();
+                      submit();
+                    }
+                  }}
+                />
+              </Field>
+              <IconButton
+                type="submit"
+                className="primary"
+                size="sm"
+                label={t('Senden')}
+                icon={<Send size={14} />}
+                disabled={!text.trim()}
+              />
+              {entries.length > 0 && (
+                <IconButton
+                  size="sm"
+                  label={t('Verlauf leeren')}
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setEntries([])}
+                />
+              )}
+            </form>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

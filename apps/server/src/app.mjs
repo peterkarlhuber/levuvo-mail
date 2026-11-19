@@ -1,5 +1,6 @@
 // Levuvo Mail local API. Created by the Electron main process (desktop mode) or by
 // server.mjs for browser-based development. Binds to 127.0.0.1 only.
+import { atomicWrite } from './local-store.mjs';
 import { createScreeningStore } from './screening.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
@@ -8,11 +9,11 @@ import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
-import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
+import { readFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import imapflow from 'imapflow';
 import { validDesktopCookie, safeStaticFile, contentTypeForAsset, APP_CSP } from './desktop-runtime.mjs';
@@ -152,14 +153,10 @@ export async function createJsonFile(filename, fallback) {
         );
       value = next;
       const write = queue.then(async () => {
-        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
         try {
-          await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-          await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
-          await rename(tmp, filename);
+          await atomicWrite(filename, `${JSON.stringify(next, null, 2)}\n`);
           persisted = next;
         } catch (err) {
-          await unlink(tmp).catch(() => {});
           if (value === next) value = persisted;
           throw err;
         }
@@ -416,12 +413,24 @@ export async function createMailServer({
   // OAuth redirect from the system browser carries no session cookie; it is protected
   // by the single-use, unguessable `state` value instead.
   const COOKIE_FREE = new Set(['/oauth/callback']);
+  // Requests from inside the process (AI, MCP tools, approvals, desktop shell) carry this secret
+  // instead of imitating the browser session (ARC-LEV-002). It never leaves the process memory;
+  // inject() requests do not touch a socket.
+  const internalSecret = randomBytes(32).toString('hex');
+  const isInternal = request => {
+    const given = Buffer.from(String(request.headers['x-levuvo-internal'] || ''));
+    const expected = Buffer.from(internalSecret);
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  };
   api.addHook('onRequest', async (request, reply) => {
+    const internal = isInternal(request);
     const host = String(request.headers.host || '').toLowerCase();
     const origin = request.headers.origin;
     const fetchSite = request.headers['sec-fetch-site'];
     const pathname = new URL(request.url, 'http://127.0.0.1').pathname;
-    if (desktop) {
+    if (internal) {
+      // Same account resolution and action checks as the app, without the browser checks.
+    } else if (desktop) {
       const expectedOrigin = `http://127.0.0.1:${activePort}`;
       if (
         host !== `127.0.0.1:${activePort}` ||
@@ -498,7 +507,11 @@ export async function createMailServer({
     }
     throw new Error('IMAP-Verbindung nicht möglich.');
   }
-  function errorResponse(reply, err) {
+  /**
+   * Maps an error to a response. `domain` names routes that are not about a mailbox (tasks,
+   * spaces): their own failures must not be reported as IMAP failures.
+   */
+  function errorResponse(reply, err, { domain = '' } = {}) {
     if (err.statusCode >= 400 && err.statusCode < 500) {
       return reply.code(err.statusCode).send({
         error: err.message,
@@ -510,6 +523,12 @@ export async function createMailServer({
     if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
+    }
+    if (domain && !err.imapPhase) {
+      diagnostics.record(domain, `${domain}_failed`);
+      return reply
+        .code(500)
+        .send({ error: 'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.', code: `${domain}_failed` });
     }
     return reply.code(502).send(publicImapFailure(err, { connected: err.imapPhase === 'command' }));
   }
@@ -555,13 +574,14 @@ export async function createMailServer({
     [a.imap.user, ...(a.identities || []).map(i => i.email)].filter(Boolean).map(e => e.toLowerCase());
   const ownAddresses = () => accounts.flatMap(accountAddresses);
 
-  /** A request to this API from inside the server (same checks as a request from the app). */
+  /**
+   * A request to this API from inside the process: the AI routes, MCP tools, approvals and the
+   * desktop shell all use this one way in. It runs the same handlers, account resolution and
+   * action checks as a request from the app.
+   */
   async function internalRequest(method, url, body, action) {
-    const host = `127.0.0.1:${desktop ? activePort : browserPort}`;
-    const headers = { host };
-    if (desktop) headers.cookie = `levuvo_desktop_session=${sessionSecret}`;
+    const headers = { host: '127.0.0.1', 'x-levuvo-internal': internalSecret };
     if (method !== 'GET') {
-      headers.origin = desktop ? `http://${host}` : 'http://127.0.0.1:5173';
       headers['content-type'] = 'application/json';
       if (action) headers['x-levuvo-action'] = action;
     }
@@ -702,6 +722,8 @@ export async function createMailServer({
   const timers = [];
   return {
     api,
+    /** The one way into the API from inside the process (desktop shell, tests). */
+    internalRequest,
     accountManager,
     watchers,
     settings,
@@ -733,6 +755,7 @@ export async function createMailServer({
     },
     async close() {
       for (const t of timers) clearInterval(t);
+      ctx.stopBackgroundJobs?.();
       jobs.stop();
       taskSchedule?.stop();
       watchers.stopAll();

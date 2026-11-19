@@ -73,7 +73,13 @@
   color: var(--warning, var(--danger));
 }
 
-/* Levuvo Mail Assistant panel */
+/* Levuvo Mail Assistant panel: a modal drawer */
+.assistant-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--scrim);
+}
 .assistant-panel {
   position: fixed;
   top: 0;

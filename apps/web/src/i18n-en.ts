@@ -1842,5 +1842,9 @@ export const EN: Record<string, string> = {
     'The agent was removed or no longer has this permission.',
   'In den Schlüsselbund verschieben': 'Move to keychain',
   '„{title}“ erledigt': '“{title}” done',
-  'Aufgabe anlegen: „{title}“': 'Create task: “{title}”'
+  'Aufgabe anlegen: „{title}“': 'Create task: “{title}”',
+  'Dieser Schlüssel gehört nicht zum Absender der E-Mail.': 'This key does not belong to the sender of the email.',
+  'Dieses Konto wurde inzwischen entfernt.': 'This account has been removed in the meantime.',
+  'Das Postfach wird gerade nicht überwacht.': 'The mailbox is not being monitored right now.',
+  'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.': 'The operation failed. Please try again.'
 };

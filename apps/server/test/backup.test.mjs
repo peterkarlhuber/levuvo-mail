@@ -198,6 +198,43 @@ test('Restore: current data is kept aside, and passwords of a replaced mailbox a
   assert.equal(sameKeys.get('primary', 'imap'), 'anna-password');
 });
 
+test('QA-LEV-007: an interrupted restore continues on the next start and ends in the same state', async t => {
+  const source = await device(t);
+  const backup = await decryptBackup(
+    await encryptBackup(await collectBackupContent({ dir: source.dir, vault: source.keys }), PASSWORD, { kdf: FAST }),
+    PASSWORD
+  );
+  const dir = tmp(t);
+  const keys = vault();
+  write(dir, 'accounts.json', { version: 1, accounts: [account('primary', 'other@example.net', 'imap.example.net')] });
+  write(dir, 'templates.json', { templates: [] });
+  keys.set('primary', 'imap', 'password-of-other-mailbox');
+  await stageRestore({ dir, vault: keys, backup });
+  // The first run stops while the private keys are moved into the keychain (after all files).
+  const realSet = keys.set;
+  let failOnce = true;
+  keys.set = (i, k, v) => {
+    if (i === 'crypto' && failOnce) {
+      failOnce = false;
+      throw new Error('keychain gone');
+    }
+    return realSet(i, k, v);
+  };
+  await assert.rejects(applyPendingRestore({ dir, vault: keys, now: new Date('2026-11-19T10:00:00Z') }), /keychain/);
+  assert.ok(await pendingRestore(dir), 'still pending after the interruption');
+  const applied = await applyPendingRestore({ dir, vault: keys, now: new Date('2026-11-19T10:05:00Z') });
+  assert.ok(applied);
+  assert.equal(await pendingRestore(dir), null);
+  assert.equal(keys.get('crypto', 'pgp:ABCDEF0123456789'), 'armored-test-key-material');
+  assert.equal(keys.get('local', 'restore-pending-crypto-pgp:ABCDEF0123456789'), '', 'no staged key left');
+  assert.equal(keys.get('primary', 'imap'), '', 'password of the replaced mailbox is dropped after the resume');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'templates.json'), 'utf8')).templates[0].name, 'Danke');
+  const copies = readdirSync(join(dir, 'before-restore'));
+  assert.equal(copies.length, 1, 'exactly one safety copy');
+  assert.match(readFileSync(join(dir, 'before-restore', copies[0], 'accounts.json'), 'utf8'), /other@example\.net/);
+  assert.ok(existsSync(join(dir, 'before-restore', copies[0], 'templates.json')));
+});
+
 test('Restore routes: backup, staged restore freezes changes until the restart', async t => {
   const dir = tmp(t);
   const keys = vault();
@@ -206,6 +243,9 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
   const GET = { host: HOST, cookie: `levuvo_desktop_session=${SECRET}` };
   const POST = { ...GET, origin: `http://${HOST}`, 'content-type': 'application/json', 'x-levuvo-action': 'backup-v1' };
   let restarts = 0;
+  // Waits for the restart event itself instead of a fixed time (QA-LEV-011: slow CI timers).
+  let restarted;
+  const restartRequested = new Promise(resolve => (restarted = resolve));
   const s = await createMailServer({
     desktop: true,
     sessionSecret: SECRET,
@@ -214,7 +254,10 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
     accountsFile: join(dir, 'accounts.json'),
     watch: false,
     background: false,
-    onRestartRequested: () => restarts++
+    onRestartRequested: () => {
+      restarts++;
+      restarted();
+    }
   });
   s.setPortForTesting(4790);
   t.after(() => s.close());
@@ -282,7 +325,10 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
   });
   const restart = await s.api.inject({ method: 'POST', url: '/api/backup/restart', headers: POST, payload: {} });
   assert.equal(restart.statusCode, 200);
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // The server's restart timer is unref'd; a ref'd one keeps the test process alive meanwhile.
+  const alive = setInterval(() => {}, 1000);
+  await restartRequested;
+  clearInterval(alive);
   assert.equal(restarts, 1);
 });
 
@@ -374,4 +420,48 @@ test('Backup: shared spaces travel as encrypted files together with both keychai
     { kdf: FAST }
   );
   await assert.rejects(decryptBackup(crafted, PASSWORD), e => e.code === 'backup_invalid');
+});
+
+test('DB-LEV-005: backups from a newer app or with a newer store format are refused before restoring', async () => {
+  const { newerApp } = await import('../src/backup.mjs');
+  assert.equal(newerApp('2.4.0', '2.3.0'), true);
+  assert.equal(newerApp('2.3.0', '2.3.0'), false);
+  assert.equal(newerApp('2.2.9', '2.3.0'), false);
+  assert.equal(newerApp('10.0.0', '9.9.9'), true);
+  const accounts = JSON.stringify({ version: 1, accounts: [] });
+  const newer = await encryptBackup({ files: { 'accounts.json': accounts } }, PASSWORD, { app: '2.4.0', kdf: FAST });
+  await assert.rejects(decryptBackup(newer, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_version');
+  assert.ok(await decryptBackup(newer, PASSWORD, { ownApp: '2.4.0' }));
+  const format2 = await encryptBackup(
+    { files: { 'accounts.json': JSON.stringify({ version: 2, accounts: [] }) } },
+    PASSWORD,
+    { app: '2.3.0', kdf: FAST }
+  );
+  await assert.rejects(decryptBackup(format2, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_version');
+  const broken = await encryptBackup({ files: { 'dav.json': JSON.stringify({ accounts: 'x' }) } }, PASSWORD, {
+    app: '2.3.0',
+    kdf: FAST
+  });
+  await assert.rejects(decryptBackup(broken, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_invalid');
+});
+
+test('ARC-LEV-003: every local data file is in the backup or excluded on purpose', async () => {
+  const { BACKUP_FILES, NOT_BACKED_UP } = await import('../src/backup.mjs');
+  const { readdirSync: list } = await import('node:fs');
+  const src = new URL('../src/', import.meta.url);
+  const names = new Set();
+  const files = [
+    ...list(src)
+      .filter(f => f.endsWith('.mjs'))
+      .map(f => new URL(f, src)),
+    ...list(new URL('spaces/', src))
+      .filter(f => f.endsWith('.mjs'))
+      .map(f => new URL(`spaces/${f}`, src))
+  ];
+  for (const file of files)
+    for (const m of readFileSync(file, 'utf8').matchAll(/path\.join\(\s*dir\s*,\s*'([a-z0-9._-]+\.jsonl?)'/g))
+      names.add(m[1]);
+  assert.ok(names.size >= 15, `found ${names.size} files`);
+  const missing = [...names].filter(n => !Object.hasOwn(BACKUP_FILES, n) && !Object.hasOwn(NOT_BACKED_UP, n));
+  assert.deepEqual(missing, [], 'add new local files to BACKUP_FILES or NOT_BACKED_UP');
 });

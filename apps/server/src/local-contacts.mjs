@@ -2,9 +2,9 @@
 // Contacts are kept as vCards (same model as CardDAV, so import/export and moving to a connected
 // address book later behave identically), encrypted with AES-256-GCM. The key lives in the OS
 // keychain; without it the address book is unavailable instead of silently unencrypted.
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { atomicWrite, createWriteQueue, keychainKey, seal, unseal } from './local-store.mjs';
 import { buildVCard, parseVCard } from './vcard.mjs';
 
 export const LOCAL_CONTACTS_ACCOUNT = 'local';
@@ -15,24 +15,6 @@ const MAX_CONTACTS = 20_000;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 
 export const isLocalContact = url => String(url || '').startsWith(LOCAL_BOOK_URL);
-
-function encrypt(key, text) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const body = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
-  return JSON.stringify({
-    v: 1,
-    iv: iv.toString('base64'),
-    tag: cipher.getAuthTag().toString('base64'),
-    data: body.toString('base64')
-  });
-}
-function decrypt(key, raw) {
-  const box = JSON.parse(raw);
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
-  decipher.setAuthTag(Buffer.from(box.tag, 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(box.data, 'base64')), decipher.final()]).toString('utf8');
-}
 
 /**
  * @param {object} o
@@ -47,21 +29,9 @@ export async function createLocalContacts({ filename, vault }) {
     if (err.code !== 'ENOENT') throw err;
   }
   const exists = raw !== null && raw.trim() !== '';
-  let key = null;
-  if (vault?.available) {
-    try {
-      let hex = vault.get(LOCAL_CONTACTS_ACCOUNT, KEY_NAME);
-      // A new key only while no address book file exists: a fresh key for an existing file would
-      // make it unreadable and the next save would overwrite every contact.
-      if (!hex && !exists) {
-        hex = randomBytes(32).toString('hex');
-        vault.set(LOCAL_CONTACTS_ACCOUNT, KEY_NAME, hex);
-      }
-      key = /^[0-9a-f]{64}$/i.test(hex || '') ? Buffer.from(hex, 'hex') : null;
-    } catch {
-      key = null;
-    }
-  }
+  // A new key only while no address book file exists: a fresh key for an existing file would
+  // make it unreadable and the next save would overwrite every contact.
+  const key = keychainKey(vault, KEY_NAME, { create: !exists, account: LOCAL_CONTACTS_ACCOUNT });
   // Fail closed: contacts are never written in plain text, and an existing file stays untouched
   // until the key is available again.
   if (!key)
@@ -74,7 +44,7 @@ export async function createLocalContacts({ filename, vault }) {
   if (exists) {
     let text;
     try {
-      text = decrypt(key, raw);
+      text = unseal(key, raw);
     } catch {
       throw fail(
         'Die Kontakte auf diesem Gerät lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.',
@@ -86,25 +56,10 @@ export async function createLocalContacts({ filename, vault }) {
     state = { contacts: Array.isArray(parsed?.contacts) ? parsed.contacts : [] };
   }
 
-  let writing = Promise.resolve();
+  const writes = createWriteQueue();
   function persist() {
-    const snapshot = JSON.stringify(state);
-    // A failed write reports its own error but does not block every later one.
-    const run = writing
-      .catch(() => {})
-      .then(async () => {
-        await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-        try {
-          await writeFile(tmp, encrypt(key, snapshot), { mode: 0o600 });
-          await rename(tmp, filename);
-        } catch (err) {
-          await unlink(tmp).catch(() => {});
-          throw err;
-        }
-      });
-    writing = run;
-    return run;
+    const snapshot = seal(key, JSON.stringify(state));
+    return writes.push(() => atomicWrite(filename, snapshot));
   }
 
   const etag = () => `"${randomBytes(6).toString('hex')}"`;
@@ -174,6 +129,6 @@ export async function createLocalContacts({ filename, vault }) {
       await persist();
       return { imported: contacts.length };
     },
-    flush: () => writing
+    flush: () => writes.flush()
   };
 }

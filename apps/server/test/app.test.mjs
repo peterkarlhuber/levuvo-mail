@@ -494,6 +494,21 @@ test('Tasks API: save, list, done and delete without a mail account', async t =>
   assert.deepEqual((await s.api.inject({ method: 'GET', url: '/api/tasks', headers: GET })).json().tasks, []);
 });
 
+test('API-LEV-005: a local task failure is not reported as an IMAP failure', async t => {
+  const { s, dir } = await server(t);
+  const post = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'mail-v1' }, payload });
+  assert.equal((await post('/api/tasks/save', { task: { title: 'vorher' } })).statusCode, 200);
+  // The task file can no longer be replaced: a directory with content sits where it belongs.
+  const file = join(dir, 'tasks-local.json');
+  rmSync(file, { force: true });
+  mkdirSync(join(file, 'blocked'), { recursive: true });
+  const r = await post('/api/tasks/save', { task: { title: 'nachher' } });
+  assert.equal(r.statusCode, 500);
+  assert.equal(r.json().code, 'task_failed');
+  assert.doesNotMatch(JSON.stringify(r.json()), /imap/i);
+});
+
 test('Tasks API: connect a CalDAV list, sync, move a task, disconnect', async t => {
   const dav = fakeCaldav();
   const { s } = await server(t, { fetchImpl: dav.fetchImpl });
@@ -557,4 +572,58 @@ test('Tasks API: connect a CalDAV list, sync, move a task, disconnect', async t 
     ['Wird übernommen', null],
     ['Zweite', null]
   ]);
+});
+
+test('REL-LEV-007: the background monitor never opens a login while the IDLE watcher is down', async t => {
+  let logins = 0;
+  const imap = fakeImapFactory({ offline: false });
+  const { s } = await server(t, {
+    watch: true,
+    imapFactory: config => {
+      logins++;
+      return imap(config);
+    },
+    watcherFactory: () => ({
+      on() {},
+      once() {},
+      async connect() {
+        throw Object.assign(new Error('down'), { code: 'ECONNREFUSED' });
+      },
+      close() {}
+    })
+  });
+  const id = await addAccount(s);
+  const before = logins;
+  const r = await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}&cachedOnly=1`, headers: GET });
+  assert.equal(r.statusCode, 409);
+  assert.equal(r.json().code, 'inbox_watcher_down');
+  assert.equal(logins, before, 'no extra login');
+  // The app itself (without cachedOnly) still reads the inbox live.
+  const live = await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}`, headers: GET });
+  assert.equal(live.statusCode, 200);
+});
+
+test('ARC-LEV-002: internal requests use their own secret, not a copied browser session', async t => {
+  const { s } = await server(t);
+  // The internal entry point works without cookie or origin …
+  const accounts = await s.internalRequest('GET', '/api/accounts');
+  assert.ok(Array.isArray(accounts.accounts));
+  // … still enforces the action header on changes …
+  await assert.rejects(
+    s.internalRequest('POST', '/api/tasks/save', { task: { title: 'x' } }),
+    e => e.statusCode === 403
+  );
+  assert.equal(
+    (await s.internalRequest('POST', '/api/tasks/save', { task: { title: 'x' } }, 'mail-v1')).task.title,
+    'x'
+  );
+  // … and a guessed internal header gets no access.
+  for (const value of ['', 'x', 'a'.repeat(64)]) {
+    const r = await s.api.inject({
+      method: 'GET',
+      url: '/api/accounts',
+      headers: { host: '127.0.0.1', 'x-levuvo-internal': value }
+    });
+    assert.ok([401, 403].includes(r.statusCode), `status ${r.statusCode} for "${value}"`);
+  }
 });

@@ -628,6 +628,53 @@ test('SEC-LEV-006/007: remote CSS images are removed, data: images and other CSS
   assert.equal(isRemoteSrc(null), false);
 });
 
+test('QA-LEV-004 (A11Y-01): menu keyboard: arrows wrap, Home/End, Escape refocuses, Tab closes', async () => {
+  const { menuKeyDown } = await import('../src/ui/menu-keys.ts');
+  const doc = { activeElement: null };
+  const items = ['a', 'b', 'c'].map(name => ({
+    name,
+    focus() {
+      doc.activeElement = this;
+    }
+  }));
+  const menu = { querySelectorAll: () => items };
+  const saved = globalThis.document;
+  globalThis.document = doc;
+  try {
+    const closed = [];
+    const press = key => {
+      const e = {
+        key,
+        currentTarget: menu,
+        prevented: false,
+        preventDefault() {
+          this.prevented = true;
+        },
+        stopPropagation() {}
+      };
+      menuKeyDown(e, refocus => closed.push(refocus));
+      return e;
+    };
+    items[0].focus();
+    press('ArrowDown');
+    assert.equal(doc.activeElement.name, 'b');
+    press('ArrowUp');
+    press('ArrowUp');
+    assert.equal(doc.activeElement.name, 'c', 'wraps to the end');
+    press('ArrowDown');
+    assert.equal(doc.activeElement.name, 'a', 'wraps to the start');
+    press('End');
+    assert.equal(doc.activeElement.name, 'c');
+    press('Home');
+    assert.equal(doc.activeElement.name, 'a');
+    assert.equal(press('Escape').prevented, true);
+    assert.equal(press('Tab').prevented, false, 'Tab moves on normally');
+    assert.deepEqual(closed, [true, false]);
+  } finally {
+    globalThis.document = saved;
+  }
+});
+
 test('API-LEV-003: every AI error kind of the sidecar and server has its own text', async () => {
   const { readFileSync } = await import('node:fs');
   const { AI_ERROR_CODES, aiErrorText } = await import('../src/ai-errors.ts');

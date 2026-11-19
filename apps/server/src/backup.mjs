@@ -13,8 +13,9 @@
 // Restoring never edits live data: the content is checked, re-encrypted with this device's keys
 // and staged in `restore-pending/`. On the next start, before any store opens, the staged files
 // replace the current ones; the current ones are kept in `before-restore/<time>/` first.
+import { atomicWrite } from './local-store.mjs';
 import { createCipheriv, createDecipheriv, randomBytes, scrypt as scryptCb } from 'node:crypto';
-import { mkdir, readFile, readdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { gunzip as gunzipCb, gzip as gzipCb } from 'node:zlib';
@@ -34,6 +35,7 @@ export const MAX_BACKUP_BYTES = 160 * 1024 * 1024; // the encrypted file
 const MAX_CONTENT_BYTES = 200 * 1024 * 1024; // all files together, decrypted
 const PENDING_DIR = 'restore-pending';
 const SAFETY_DIR = 'before-restore';
+const SAFETY_STAMP = 'safety-copy.txt';
 const KEEP_SAFETY_COPIES = 3;
 const SAFETY_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
 const LOCAL = 'local';
@@ -75,6 +77,19 @@ export const BACKUP_FILES = {
   'ai-skills.json': { kind: 'json' },
   // MCP settings and agents (token hashes only). mcp-approvals.json is short-lived and stays out.
   'mcp.json': { kind: 'json' }
+};
+
+/**
+ * Local files that are deliberately not part of a backup, with the reason. Every data file the
+ * app writes is either in BACKUP_FILES or here; a test checks this, so a new store cannot be
+ * forgotten silently.
+ */
+export const NOT_BACKED_UP = {
+  'instance.json': 'installation ID of this device',
+  'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
+  'mcp-approvals.json': 'short-lived approvals that expire',
+  '*.lvdb': 'search index; rebuilt from the mailbox',
+  '*.lvx': 'search index before 2.3; migrated and deleted'
 };
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -144,6 +159,24 @@ function ownKeyNames(cryptoJson) {
   for (const c of cryptoJson?.smime?.own || [])
     if (/^[A-Za-z0-9_-]{1,128}$/.test(String(c?.id || ''))) names.push(`smime:${c.id}`);
   return names;
+}
+
+// Stores whose file carries a format version: a backup from a newer Levuvo with a newer format
+// would otherwise be restored and then fail (or be reset) at the next start (DB-LEV-005).
+const FORMAT_CHECKS = {
+  'accounts.json': v => v.version === 1 && Array.isArray(v.accounts),
+  'dav.json': v => v.version === 1 && Array.isArray(v.accounts)
+};
+const versionParts = v =>
+  String(v || '')
+    .split(/[.-]/)
+    .slice(0, 3)
+    .map(x => Number.parseInt(x, 10) || 0);
+/** True when `backupApp` is a newer Levuvo version than `ownApp` (major, minor, patch). */
+export function newerApp(backupApp, ownApp) {
+  const [a, b] = [versionParts(backupApp), versionParts(ownApp)];
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return false;
 }
 
 function parseJsonFile(name, text) {
@@ -344,7 +377,7 @@ export function readBackupHeader(text) {
 }
 
 /** Decrypts and checks a backup file. Wrong password and tampering give the same answer. */
-export async function decryptBackup(text, password) {
+export async function decryptBackup(text, password, { ownApp = '' } = {}) {
   checkPassword(password);
   const { doc, kdf } = readBackupHeader(text);
   let plain;
@@ -364,6 +397,11 @@ export async function decryptBackup(text, password) {
   } catch {
     throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
   }
+  if (ownApp && newerApp(doc.app, ownApp))
+    throw fail(
+      'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.',
+      'backup_version'
+    );
   return validateContent(content, doc);
 }
 
@@ -375,11 +413,19 @@ function validateContent(content, doc) {
     // Unknown names are ignored (a newer version may add files); never used as a path.
     if (!Object.hasOwn(BACKUP_FILES, name)) continue;
     if (typeof text !== 'string') throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
+    let value;
     try {
-      parseJsonFile(name, text);
+      value = parseJsonFile(name, text);
     } catch {
       throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
     }
+    if (FORMAT_CHECKS[name] && !FORMAT_CHECKS[name](value))
+      throw fail(
+        typeof value.version === 'number' && value.version > 1
+          ? 'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.'
+          : 'Die Sicherung ist beschädigt.',
+        typeof value.version === 'number' && value.version > 1 ? 'backup_version' : 'backup_invalid'
+      );
     files[name] = text;
   }
   const allowed = new Set(files['crypto.json'] ? ownKeyNames(JSON.parse(files['crypto.json'])) : []);
@@ -419,17 +465,7 @@ function validateContent(content, doc) {
   };
 }
 
-async function writePrivate(filename, text) {
-  await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-  const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-  try {
-    await writeFile(tmp, text, { mode: 0o600 });
-    await rename(tmp, filename);
-  } catch (err) {
-    await unlink(tmp).catch(() => {});
-    throw err;
-  }
-}
+const writePrivate = (filename, text) => atomicWrite(filename, text);
 
 /** This device's key for a local store; created only where no encrypted file exists yet. */
 async function deviceKey(vault, name, currentFile) {
@@ -630,13 +666,21 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
   const manifest = await pendingRestore(dir);
   if (!manifest) return null;
   const pending = path.join(dir, PENDING_DIR);
-  const stamp = now.toISOString().replace(/[:.]/g, '-');
+  // A run that was interrupted continues in the same safety copy: one complete set of the data
+  // from before the restore, and the "before" state of the accounts is read from there.
+  const stampFile = path.join(pending, SAFETY_STAMP);
+  const stamp = String((await readIfExists(stampFile)) || '').trim() || now.toISOString().replace(/[:.]/g, '-');
+  if (!/^[0-9TZ-]{10,40}$/.test(stamp))
+    throw Object.assign(new Error('Die Sicherung ist beschädigt.'), { code: 'backup_invalid' });
+  await writeFile(stampFile, stamp, { mode: 0o600 });
   const safety = path.join(dir, SAFETY_DIR, stamp);
   await mkdir(safety, { recursive: true, mode: 0o700 });
   const staged = new Set(manifest.files.filter(name => Object.hasOwn(BACKUP_FILES, name)));
   const spacesStaged = manifest.files.includes(SPACES_DIR);
-  const beforeAccounts = (await readIfExists(fileLocation(dir, 'accounts.json', accountsPath))) || '';
-  const beforeDav = (await readIfExists(path.join(dir, 'dav.json'))) || '';
+  const before = async (name, location) =>
+    (await readIfExists(path.join(safety, name))) || (await readIfExists(location)) || '';
+  const beforeAccounts = await before('accounts.json', fileLocation(dir, 'accounts.json', accountsPath));
+  const beforeDav = await before('dav.json', path.join(dir, 'dav.json'));
   for (const name of Object.keys(BACKUP_FILES)) {
     const target = fileLocation(dir, name, accountsPath);
     const source = path.join(pending, name);

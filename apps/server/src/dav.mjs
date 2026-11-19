@@ -1,7 +1,7 @@
 // Calendar (CalDAV) and contacts (CardDAV) accounts, e.g. Nextcloud, iCloud (app
 // password), mailbox.org, Radicale. Metadata in dav.json, passwords in the OS keychain.
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
-import path from 'node:path';
+import { atomicWrite } from './local-store.mjs';
+import { readFile } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { DAVClient } from 'tsdav';
 import { expandObject } from './calendar-model.mjs';
@@ -63,10 +63,7 @@ export async function createDavStore({ filename, vault }) {
     if (err.code !== 'ENOENT') throw err;
   }
   async function persist() {
-    await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-    const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-    await writeFile(tmp, `${JSON.stringify({ version: 1, accounts }, null, 2)}\n`, { mode: 0o600 });
-    await rename(tmp, filename);
+    await atomicWrite(filename, `${JSON.stringify({ version: 1, accounts }, null, 2)}\n`);
   }
   const secret = id => {
     try {

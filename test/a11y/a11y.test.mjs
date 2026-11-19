@@ -222,8 +222,11 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.rail-item[aria-label="Assistent"]').click();
       await page.locator('.assistant-panel').waitFor();
       await axe(page, 'assistant');
-      await page.locator('.rail-item[aria-label="Assistent"]').click();
+      // UX-LEV-011: the drawer keeps the focus, Escape closes it and focus returns to the rail button.
+      assert.ok(await page.evaluate(() => !!document.activeElement?.closest('.assistant-panel')));
+      await page.keyboard.press('Escape');
       await page.locator('.assistant-panel').waitFor({ state: 'detached' });
+      assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Assistent');
       await page.locator('.rail-item[aria-label="Einstellungen"]').click();
       for (const tab of settingsTabs) {
         await page.locator('.settings-nav button', { hasText: tab }).first().click();
@@ -260,6 +263,9 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       [6, 'phone settings']
     ]) {
       await page.locator('.rail-item:visible').nth(index).click();
+      // Modules load lazily: check the view itself, not the loading placeholder in between.
+      await page.locator('main:visible').first().waitFor();
+      await page.locator('main:visible h1, h1:visible').first().waitFor({ state: 'attached' });
       await page.waitForTimeout(300);
       await axe(page, name);
     }
