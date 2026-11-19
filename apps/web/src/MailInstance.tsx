@@ -8,11 +8,8 @@ import {
   type CSSProperties,
   type DragEvent
 } from 'react';
-import DOMPurify from 'dompurify';
-import { isRemoteSrc } from './trackers';
 import { CloudOff, Keyboard, Menu, PenSquare, RefreshCcw, X } from 'lucide-react';
 import Composer, { type ComposeInitial, type OutgoingPayload } from './Composer';
-import { plainToHtml, SIGNATURE_SEPARATOR } from './editor';
 import MessageList, { DRAG_TYPE } from './MessageList';
 import MailSidebar from './mail/MailSidebar';
 import { useBundleSuggestions, useScreening } from './mail/useInboxOrder';
@@ -20,8 +17,8 @@ import { useFollowupsDue, useSnoozedEntries } from './mail/useFollowups';
 import Reader, { printMessage, type ReaderAction } from './Reader';
 import { ShortcutsDialog } from './Panels';
 import { useUi } from './ConfirmDialog';
-import { accountPath, getJson, postAction } from './api';
-import { bodyText, fullDateLabel, replyAllRecipients, replyRecipient } from './format';
+import { getJson, postAction } from './api';
+import { fullDateLabel } from './format';
 import { useT } from './i18n';
 import { publishFolders, type MailCommand } from './command-bus';
 import { isInbox, isSnoozeFolder, orderFolders, special } from './folder-utils';
@@ -32,17 +29,7 @@ import { BundleHeader, BundleRows } from './Bundles';
 import { ScreenerRow, ScreenerView } from './Screening';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
-import type {
-  AccountItem,
-  ApiStatus,
-  Bundle,
-  Detail,
-  Folder,
-  Identity,
-  InboxSnapshot,
-  Message,
-  MessagePage
-} from './types';
+import type { AccountItem, ApiStatus, Bundle, Folder, Identity, InboxSnapshot, Message, MessagePage } from './types';
 
 import { ATTACHMENTS, FOLLOWUPS, UNIFIED } from './mail/views';
 import {
@@ -56,34 +43,20 @@ import {
 import ListToolbar from './mail/ListToolbar';
 import ColumnResizer from './mail/ColumnResizer';
 import SearchBar from './mail/SearchBar';
+import { useMarkReadOnOpen, useReader } from './mail/useMessageDetail';
+import { stepSelection } from './mail/reader-state';
+import {
+  defaultIdentity,
+  draftEdit,
+  fetchAttachments,
+  forwardOf,
+  newMessage,
+  replyTo,
+  signatureFor
+} from './mail/compose-from-message';
 import { useMailSearch } from './mail/useMailSearch';
 import { searchPath } from './mail/search-state';
 export { ATTACHMENTS, FOLLOWUPS, UNIFIED };
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-function quotedHtml(d: Detail) {
-  if (d.html) {
-    const doc = DOMPurify.sanitize(d.html, {
-      FORBID_TAGS: ['style', 'script', 'form', 'input', 'button', 'iframe', 'svg', 'math', 'picture', 'source'],
-      FORBID_ATTR: ['style', 'class', 'id', 'srcset', 'background'],
-      RETURN_DOM_FRAGMENT: true
-    });
-    // The editor would load remote images of the quoted mail right away (tracking pixels, the
-    // sender learns the reply is being written) although the reader blocks them: they become a
-    // short text placeholder instead (SEC-LEV-006).
-    for (const img of Array.from(doc.querySelectorAll('img'))) {
-      if (!isRemoteSrc(img.getAttribute('src'))) continue;
-      const alt = (img.getAttribute('alt') || '').trim();
-      img.replaceWith(alt ? document.createTextNode(`[${alt.slice(0, 200)}]`) : document.createTextNode(''));
-    }
-    const box = document.createElement('div');
-    box.append(doc);
-    const clean = box.innerHTML;
-    return clean.length > 200_000 ? plainToHtml(bodyText(d).slice(0, 50_000)) : clean;
-  }
-  return plainToHtml(d.text.slice(0, 50_000));
-}
-
 type Props = {
   accountId: string;
   accounts: AccountItem[];
@@ -127,19 +100,12 @@ export default function MailInstance({
   const [folder, setFolder] = useState(initialOpen?.folder || 'INBOX');
   const [list, dispatchList] = useReducer(listReducer, initialListState);
   const { messages, hasMore, nextBeforeUid, loadingMore, stale, busy, error, checkedUids, filter } = list;
-  const [selectedUid, setSelectedUid] = useState<number | null>(null);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const requestSeq = useRef(0);
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
   const [composer, setComposer] = useState<ComposeInitial | null>(null);
   const [composerKey, setComposerKey] = useState(0);
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [detailBusy, setDetailBusy] = useState(false);
-  const [detailError, setDetailError] = useState('');
-  const [reloadDetail, setReloadDetail] = useState(0);
-  const [readerOpen, setReaderOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
@@ -169,6 +135,9 @@ export default function MailInstance({
   const { query, scope, everywhere, searching } = search;
   const searchTotal = search.total;
   const searchBusy = search.busy;
+  const [reader, dispatchReader] = useReader({ accountId, folder, accountReady, crossAccount: unified || everywhere });
+  const { selectedUid, selectedKey, detail } = reader;
+  const detailBusy = reader.busy;
   const writeEnabled = Boolean(status?.configured && status?.writeEnabled) && !unified && !everywhere;
   const currentFolder = folders.find(f => f.path === folder);
   const archiveExists = folders.some(
@@ -269,12 +238,8 @@ export default function MailInstance({
   );
 
   const selectUid = useCallback(
-    (uid: number | null, open = true) => {
-      setSelectedUid(uid);
-      setSelectedKey(uid === null ? null : `${accountId}:${uid}`);
-      if (uid !== null && open) setReaderOpen(true);
-    },
-    [accountId]
+    (uid: number | null, open = true) => dispatchReader({ type: 'selected', uid, accountId, open }),
+    [accountId, dispatchReader]
   );
 
   const loadMessages = useCallback(
@@ -454,75 +419,38 @@ export default function MailInstance({
     // A plain "new message" request (menu, contacts) gets the default sender and signature.
     if (initial.mode === 'new' && initial.html === undefined && initial.text === undefined && !initial.draftUid) {
       const id = identities[0];
-      setComposer({
-        ...initial,
-        from: id?.email,
-        html: `<p></p>${id?.signatureHtml ? `${SIGNATURE_SEPARATOR}${id.signatureHtml}` : ''}`
-      });
+      setComposer({ ...initial, from: id?.email, html: `<p></p>${signatureFor(id)}` });
     } else setComposer(initial);
     setComposerKey(k => k + 1);
     onPendingComposeTaken();
   }, [pendingCompose, status, onPendingComposeTaken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Message detail (never marks as read by itself; see markReadOnOpen below).
-  const detailKey = unified || everywhere ? null : selectedUid;
-  useEffect(() => {
-    setDetail(null);
-    setDetailError('');
-    if (!accountReady || detailKey === null) {
-      setDetailBusy(false);
-      return;
-    }
-    const controller = new AbortController();
-    setDetailBusy(true);
-    void getJson<Detail>(
-      `/api/messages/${detailKey}?folder=${encodeURIComponent(folder)}`,
-      accountId,
-      controller.signal
-    )
-      .then(message => {
-        if (!controller.signal.aborted) setDetail(message);
-      })
-      .catch((e: Error) => {
-        if (!controller.signal.aborted) setDetailError(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setDetailBusy(false);
-      });
-    return () => controller.abort();
-  }, [folder, detailKey, accountReady, reloadDetail, accountId]);
-
-  useEffect(() => {
-    // Not while another action runs: a message being deleted must not get a late "mark read".
-    if (!detail || !prefs.markReadOnOpen || !writeEnabled || isDraftFolder || detail.stale || actionBusy) return;
-    const item = messages.find(m => m.uid === detail.uid);
-    if (!item?.unread) return;
-    const timer = window.setTimeout(() => {
-      localChangeAt.current = Date.now();
-      postAction(`/api/messages/${detail.uid}/action`, { folder, action: 'markRead' }, accountId)
-        .then(() => {
-          onLocalChangeRef.current?.();
-          dispatchList({ type: 'patched', uids: [detail.uid], patch: { unread: false } });
-          setFolders(old =>
-            old.map(f =>
-              f.path === folder && typeof f.unseen === 'number' ? { ...f, unseen: Math.max(0, f.unseen - 1) } : f
-            )
-          );
-        })
-        .catch(e => {
-          // Gone on the server (stale row): no error, a fresh snapshot removes the row.
-          if (isMissingMessage(e)) onLocalChangeRef.current?.();
-          /* otherwise it stays unread */
-        });
-    }, 600);
-    return () => window.clearTimeout(timer);
-  }, [detail, prefs.markReadOnOpen, writeEnabled, isDraftFolder, folder, accountId, messages, actionBusy]);
+  // Not while another action runs: a message being deleted must not get a late "mark read".
+  useMarkReadOnOpen({
+    detail,
+    enabled: prefs.markReadOnOpen && writeEnabled && !isDraftFolder && !actionBusy,
+    folder,
+    accountId,
+    messages,
+    localChangeAt,
+    onMarked: uid => {
+      onLocalChangeRef.current?.();
+      dispatchList({ type: 'patched', uids: [uid], patch: { unread: false } });
+      setFolders(old =>
+        old.map(f =>
+          f.path === folder && typeof f.unseen === 'number' ? { ...f, unseen: Math.max(0, f.unseen - 1) } : f
+        )
+      );
+    },
+    // Gone on the server (stale row): no error, a fresh snapshot removes the row.
+    onMissing: () => onLocalChangeRef.current?.()
+  });
 
   const chooseFolder = (path: string) => {
     search.reset();
     ++requestSeq.current;
     dispatchList({ type: 'checkedSet', uids: [] });
-    setReaderOpen(false);
+    dispatchReader({ type: 'closed' });
     selectUid(null, false);
     setFolder(path);
     setBundle(null);
@@ -647,7 +575,8 @@ export default function MailInstance({
             }
           });
         }
-        if (detail && uids.includes(detail.uid) && 'flagged' in patch) setDetail({ ...detail, flagged: patch.flagged });
+        if (detail && uids.includes(detail.uid) && 'flagged' in patch)
+          dispatchReader({ type: 'detailPatched', patch: { flagged: patch.flagged } });
         if (changedUnread)
           setFolders(old =>
             old.map(f =>
@@ -841,89 +770,25 @@ export default function MailInstance({
   }
 
   // ------------------------------------------------------------------ composer entry points
-  const defaultIdentity = (d?: Detail | null) => {
-    if (d) {
-      const addresses = [...d.to, ...d.cc, ...(d.bcc || [])].map(a => a.email.toLowerCase());
-      const match = identities.find(i => addresses.includes(i.email.toLowerCase()));
-      if (match) return match;
-    }
-    return identities[0];
-  };
-  const signatureFor = (identity?: Identity) =>
-    identity?.signatureHtml ? `${SIGNATURE_SEPARATOR}${identity.signatureHtml}` : '';
   const open = (initial: ComposeInitial) => {
     setComposer(initial);
     setComposerKey(k => k + 1);
     setMobileSidebar(false);
   };
-  const beginNewMessage = () => {
-    const id = defaultIdentity();
-    open({ mode: 'new', to: '', cc: '', bcc: '', subject: '', html: `<p></p>${signatureFor(id)}`, from: id?.email });
-  };
-  const attribution = (d: Detail) =>
-    t('Am {date} schrieb {name}:', { date: fullDateLabel(d.date), name: d.from[0]?.name || d.from[0]?.email || '' });
+  const beginNewMessage = () => open(newMessage(defaultIdentity(identities)));
   const beginReply = (all = false) => {
     if (!detail) return;
-    const id = defaultIdentity(detail);
-    const own = id?.email || status?.sender || null;
-    const recipients = all ? replyAllRecipients(detail, own) : { to: [replyRecipient(detail, own)], cc: [] };
-    open({
-      mode: all ? 'replyAll' : 'reply',
-      from: id?.email,
-      to: recipients.to.join(', '),
-      cc: recipients.cc.join(', '),
-      bcc: '',
-      subject: /^(re|aw):/i.test(detail.subject) ? detail.subject : `Re: ${detail.subject}`,
-      html: `<p></p>${signatureFor(id)}<p>${escapeHtml(attribution(detail))}</p><blockquote>${quotedHtml(detail)}</blockquote>`,
-      inReplyTo: detail.messageId || undefined,
-      references: detail.messageId || undefined,
-      source: { folder: detail.folder, uid: detail.uid },
-      security: detail.crypto?.encrypted ? { method: detail.crypto.method, sign: true, encrypt: true } : undefined
-    });
+    const identity = defaultIdentity(identities, detail);
+    open(replyTo(t, detail, { identity, own: identity?.email || status?.sender || null, all }));
   };
-
-  async function fetchAttachments(d: Detail, onlyFiles: boolean) {
-    const list = d.attachments.filter(a => !onlyFiles || !a.embedded);
-    if (list.length > 8 || list.reduce((n, a) => n + a.size, 0) > 8 * 1024 * 1024) return null;
-    const files: File[] = [];
-    for (const att of list) {
-      const response = await fetch(
-        accountPath(`/api/messages/${d.uid}/attachments/${att.index}?folder=${encodeURIComponent(folder)}`, accountId),
-        { cache: 'no-store' }
-      );
-      if (!response.ok) throw new Error(t('Anhang {name} konnte nicht geladen werden.', { name: att.filename }));
-      const blob = await response.blob();
-      if (blob.size !== att.size) throw new Error(t('Anhang {name} ist unvollständig.', { name: att.filename }));
-      files.push(new File([blob], att.filename, { type: att.mimeType || 'application/octet-stream' }));
-    }
-    return files;
-  }
 
   const beginForward = async () => {
     if (!detail || composeBusy) return;
     setComposeBusy(true);
     dispatchList({ type: 'error', error: '' });
     try {
-      const files = await fetchAttachments(detail, true);
-      const id = defaultIdentity(detail);
-      const from = detail.from[0]?.name
-        ? `${detail.from[0].name} <${detail.from[0].email}>`
-        : detail.from[0]?.email || '';
-      const head = `<p>---------- ${escapeHtml(t('Weitergeleitete Nachricht'))} ----------<br>${escapeHtml(t('Von'))}: ${escapeHtml(from)}<br>${escapeHtml(t('Datum'))}: ${escapeHtml(fullDateLabel(detail.date))}<br>${escapeHtml(t('Betreff'))}: ${escapeHtml(detail.subject)}<br>${escapeHtml(t('An'))}: ${escapeHtml(detail.to.map(a => a.email).join(', '))}</p>`;
-      open({
-        mode: 'forward',
-        from: id?.email,
-        to: '',
-        cc: '',
-        bcc: '',
-        subject: /^(fwd|wg):/i.test(detail.subject) ? detail.subject : `Fwd: ${detail.subject}`,
-        html: `<p></p>${signatureFor(id)}${head}${quotedHtml(detail)}`,
-        attachments: files || [],
-        notice:
-          files === null
-            ? t('Die Anhänge sind zusammen größer als 8 MiB bzw. mehr als acht und wurden nicht übernommen.')
-            : undefined
-      });
+      const files = await fetchAttachments(t, detail, { folder, accountId, onlyFiles: true });
+      open(forwardOf(t, detail, { identity: defaultIdentity(identities, detail), files }));
     } catch (err) {
       dispatchList({ type: 'error', error: (err as Error).message });
     } finally {
@@ -936,29 +801,12 @@ export default function MailInstance({
     setComposeBusy(true);
     dispatchList({ type: 'error', error: '' });
     try {
-      const files = await fetchAttachments(detail, false);
+      const files = await fetchAttachments(t, detail, { folder, accountId, onlyFiles: false });
       if (files === null)
         throw new Error(
           t('Der Entwurf enthält mehr als acht Anhänge oder über 8 MiB und kann hier nicht bearbeitet werden.')
         );
-      const fromAddress = detail.from[0]?.email?.toLowerCase();
-      open({
-        mode: 'new',
-        from: identities.find(i => i.email.toLowerCase() === fromAddress)?.email,
-        to: detail.to.map(a => a.email).join(', '),
-        cc: detail.cc.map(a => a.email).join(', '),
-        bcc: (detail.bcc || []).map(a => a.email).join(', '),
-        subject: detail.subject === '(Ohne Betreff)' ? '' : detail.subject,
-        ...(detail.html
-          ? { html: DOMPurify.sanitize(detail.html), format: 'html' as const }
-          : { text: detail.text, format: 'text' as const }),
-        draftId: detail.draftId,
-        ...(detail.aiGenerated ? { aiGenerated: detail.aiGenerated } : {}),
-        draftUid: selectedUid,
-        draftUidValidity: detail.uidValidity,
-        attachments: files.filter(f => !detail.attachments.find(a => a.filename === f.name)?.embedded),
-        scheduledFor: detail.scheduledFor
-      });
+      open(draftEdit(detail, { identities, uid: selectedUid, files }));
     } catch (err) {
       dispatchList({ type: 'error', error: (err as Error).message });
     } finally {
@@ -1001,7 +849,7 @@ export default function MailInstance({
     if (key === 'Escape')
       return run(() => {
         dispatchList({ type: 'checkedSet', uids: [] });
-        setReaderOpen(false);
+        dispatchReader({ type: 'closed' });
       });
     if (key === 'n' || key === 'c') return run(beginNewMessage);
     if (key === '/') return run(() => document.querySelector<HTMLInputElement>('.searchbox input')?.focus());
@@ -1009,13 +857,9 @@ export default function MailInstance({
       if (!visibleMessages.length) return;
       return run(() => {
         const keyed = unified || everywhere;
-        const index = visibleMessages.findIndex(m =>
-          keyed ? `${m.accountId}:${m.uid}` === selectedKey : m.uid === selectedUid
-        );
-        const next =
-          key === 'j' ? Math.min(visibleMessages.length - 1, index + 1) : Math.max(0, index < 0 ? 0 : index - 1);
-        const m = visibleMessages[next];
-        if (keyed) setSelectedKey(`${m.accountId}:${m.uid}`);
+        const m = stepSelection(visibleMessages, key === 'j' ? 'down' : 'up', { keyed, selectedKey, selectedUid });
+        if (!m) return;
+        if (keyed) dispatchReader({ type: 'keySelected', key: `${m.accountId}:${m.uid}` });
         else selectUid(m.uid);
         // MessageList scrolls the selected row into view (it is virtualized).
       });
@@ -1345,7 +1189,7 @@ export default function MailInstance({
           message={unified || everywhere ? null : selected}
           detail={unified || everywhere ? null : detail}
           detailBusy={detailBusy || composeBusy}
-          detailError={detailError}
+          detailError={reader.error}
           folders={folders}
           folder={folder}
           writeEnabled={writeEnabled}
@@ -1355,9 +1199,9 @@ export default function MailInstance({
           isTrash={isTrash}
           isJunk={isJunk}
           isDraftFolder={isDraftFolder}
-          open={readerOpen}
-          onClose={() => setReaderOpen(false)}
-          onRetry={() => setReloadDetail(n => n + 1)}
+          open={reader.open}
+          onClose={() => dispatchReader({ type: 'closed' })}
+          onRetry={() => dispatchReader({ type: 'retried' })}
           onReply={() => beginReply(false)}
           onReplyAll={() => beginReply(true)}
           onForward={() => void beginForward()}
