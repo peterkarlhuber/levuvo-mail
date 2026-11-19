@@ -24,11 +24,18 @@ export const TASKS_EN: Record<string, string> = {
   Aufgabenlisten: 'Task lists',
   'Abgeglichen werden Titel, Notiz, Fälligkeit, Erinnerung, Priorität, Wiederholung und der Status. Der Link zur E-Mail bleibt auf diesem Gerät.':
     'Title, note, due date, reminder, priority, repetition and status are synced. The link to the email stays on this device.',
-  'Keine Aufgabenlisten gefunden. Ein CalDAV-Konto (z. B. Nextcloud) wird unter Einstellungen › Kalender & Kontakte hinzugefügt.':
-    'No task lists found. A CalDAV account (e.g. Nextcloud) is added under Settings › Calendar & contacts.',
+  'Keine Aufgabenlisten gefunden. Aufgabenlisten kommen von CalDAV-Konten (z. B. Nextcloud, unter Einstellungen › Kalender & Kontakte) und von Microsoft-365- oder Google-Konten, die mit dem Anbieter angemeldet sind.':
+    'No task lists found. Task lists come from CalDAV accounts (e.g. Nextcloud, under Settings › Calendar & contacts) and from Microsoft 365 or Google accounts signed in with the provider.',
   'Offene Aufgaben dieses Geräts in die verbundene Liste übernehmen':
     'Move the open tasks on this device into the connected list',
   // Server messages
+  'Für die Aufgaben dieses Kontos ist eine einmalige Freigabe beim Anbieter nötig.':
+    'The tasks of this account need a one-time consent at the provider.',
+  'Der Anbieter verweist auf eine fremde Adresse.': 'The provider points to a foreign address.',
+  'Der Aufgabendienst des Anbieters ist nicht erreichbar.': 'The provider’s task service cannot be reached.',
+  'Die Aufgabe oder Liste gibt es beim Anbieter nicht mehr.': 'The task or list no longer exists at the provider.',
+  'Die Aufgabe wurde beim Anbieter geändert.': 'The task was changed at the provider.',
+  'Das Konto gibt es nicht mehr.': 'The account no longer exists.',
   'Ohne Titel': 'Untitled',
   'Diese Liste gibt es auf dem Server nicht.': 'This list does not exist on the server.',
   'Die Aufgabe auf dem Server lässt sich nicht lesen.': 'The task on the server cannot be read.',

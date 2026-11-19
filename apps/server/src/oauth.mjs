@@ -15,12 +15,15 @@ export const PROVIDERS = {
       'https://outlook.office.com/IMAP.AccessAsUser.All',
       'https://outlook.office.com/SMTP.Send',
       'https://graph.microsoft.com/Calendars.ReadWrite',
-      'https://graph.microsoft.com/Contacts.ReadWrite'
+      'https://graph.microsoft.com/Contacts.ReadWrite',
+      'https://graph.microsoft.com/Tasks.ReadWrite'
     ],
     // Microsoft issues one access token per resource: mail (Outlook) and calendar/contacts (Graph).
     mailScope: 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
     cloudScope:
       'offline_access https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Contacts.ReadWrite',
+    // Microsoft To Do: its own token, so accounts without this consent keep calendar and contacts.
+    tasksScope: 'offline_access https://graph.microsoft.com/Tasks.ReadWrite',
     imapHost: 'outlook.office365.com',
     smtpHost: 'smtp.office365.com',
     smtpPort: 587,
@@ -35,7 +38,8 @@ export const PROVIDERS = {
       'email',
       'https://mail.google.com/',
       'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/contacts'
+      'https://www.googleapis.com/auth/contacts',
+      'https://www.googleapis.com/auth/tasks'
     ],
     imapHost: 'imap.gmail.com',
     smtpHost: 'smtp.gmail.com',
@@ -187,12 +191,18 @@ export function createOAuthManager({
 
     /**
      * Valid access token; refreshes if needed. `rotate` stores a new refresh token if the provider
-     * rotates it. `resource: 'cloud'` asks for the calendar/contacts token (Microsoft Graph).
+     * rotates it. `resource: 'cloud'` asks for the calendar/contacts token (Microsoft Graph),
+     * `resource: 'tasks'` for the Microsoft To Do token.
      */
     async accessToken(accountId, provider, refreshToken, rotate, { resource = 'mail' } = {}) {
       const p = providers[provider] || {};
-      const scope = resource === 'cloud' ? p.cloudScope : p.mailScope;
-      const key = resource === 'cloud' && p.cloudScope ? `${accountId}|cloud` : accountId;
+      const scope = resource === 'tasks' ? p.tasksScope : resource === 'cloud' ? p.cloudScope : p.mailScope;
+      const key =
+        resource === 'tasks' && p.tasksScope
+          ? `${accountId}|tasks`
+          : resource === 'cloud' && p.cloudScope
+            ? `${accountId}|cloud`
+            : accountId;
       const cached = tokens.get(key);
       if (cached && cached.expires > now()) return cached.accessToken;
       if (!refreshToken) throw fail('Bitte das Konto neu anmelden.', 'oauth_reauth_required', 401);
@@ -211,6 +221,7 @@ export function createOAuthManager({
     forget(accountId) {
       tokens.delete(accountId);
       tokens.delete(`${accountId}|cloud`);
+      tokens.delete(`${accountId}|tasks`);
     }
   };
 }

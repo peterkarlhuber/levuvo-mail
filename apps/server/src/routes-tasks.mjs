@@ -66,7 +66,10 @@ export function registerTaskRoutes(ctx) {
     return ctx.taskSync;
   };
   /** Accounts that can hold task lists. */
-  const syncAccounts = () => ctx.davStore.list().map(a => ({ id: a.id, label: a.label, provider: 'caldav' }));
+  const syncAccounts = () => [
+    ...ctx.davStore.list().map(a => ({ id: a.id, label: a.label, provider: 'caldav' })),
+    ...(ctx.cloud?.accounts?.() || []).map(a => ({ id: a.id, label: a.label, provider: a.provider }))
+  ];
   api.get('/api/tasks/sync', async (_request, reply) => {
     try {
       const sync = syncOrFail();

@@ -30,9 +30,11 @@ contained in every installed app. Security comes from PKCE and the local redirec
    (Microsoft ignores the port for loopback addresses).
 4. **API permissions** (delegated): `offline_access`, `openid`, `email`, under
    “Office 365 Exchange Online” `IMAP.AccessAsUser.All` and `SMTP.Send`, and **from 2.1** under
-   “Microsoft Graph” `Calendars.ReadWrite` and `Contacts.ReadWrite` (calendar & contacts).
-   Levuvo Mail fetches separate access tokens for mail (Outlook resource) and calendar/contacts (Graph)
-   with the same refresh token.
+   “Microsoft Graph” `Calendars.ReadWrite` and `Contacts.ReadWrite` (calendar & contacts), and for
+   synced task lists (Microsoft To Do) `Tasks.ReadWrite`.
+   Levuvo Mail fetches separate access tokens for mail (Outlook resource), calendar/contacts (Graph)
+   and tasks (Graph) with the same refresh token, so an account without the tasks consent keeps
+   calendar and contacts; the tasks consent is asked for once when a To Do list is connected.
 5. Enter the **Application (client) ID** in `package.json`. No client secret is needed.
 
 Notes for customers with Microsoft 365:
@@ -43,8 +45,10 @@ Notes for customers with Microsoft 365:
 
 1. <https://console.cloud.google.com> → create a project → **APIs & Services** → **OAuth consent screen** (user type “External”), app name, support address, privacy policy (link to the privacy notice).
 2. Scopes: `openid`, `email`, `https://mail.google.com/` and **from 2.1**
-   `https://www.googleapis.com/auth/calendar` and `https://www.googleapis.com/auth/contacts`.
-   Under **APIs & Services → Library**, enable the **Google Calendar API** and the **People API**.
+   `https://www.googleapis.com/auth/calendar` and `https://www.googleapis.com/auth/contacts`, and for
+   synced task lists `https://www.googleapis.com/auth/tasks`.
+   Under **APIs & Services → Library**, enable the **Google Calendar API**, the **People API** and the
+   **Google Tasks API**.
 3. **Credentials** → **OAuth client ID** → application type **Desktop app**. Enter the client ID and client secret.
 
 Important – please plan for this before publication:

@@ -6,6 +6,7 @@ import { createTemplateStore } from './templates.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
+import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -208,14 +209,33 @@ export async function createMailServer({
     return null;
   });
   // Like the device calendar: a locked keychain must not stop the app, tasks are then unavailable.
-  // Sync with connected lists (CalDAV …) is optional; without connected lists nothing leaves the device.
+  // Sync with connected lists (CalDAV, Microsoft To Do, Google Tasks) is optional; without
+  // connected lists nothing leaves the device.
+  const cloudTasks = {
+    accounts: () => cloud.accounts(),
+    fetchImpl,
+    endpoints: { ...TASK_ENDPOINTS, ...(cloudEndpoints || {}) },
+    // Called only during a sync, after `cloud` and `accounts` below exist.
+    token: account =>
+      oauth.accessToken(
+        account.id,
+        account.provider,
+        accountManager.getSecret(account.id, 'oauth'),
+        token => accountManager.setSecret(account.id, 'oauth', token),
+        { resource: account.provider === 'microsoft' ? 'tasks' : 'cloud' }
+      )
+  };
   let taskSync = null;
   let taskSchedule = null;
   const tasks = await openTaskFile({ filename: path.join(dir, 'tasks-local.json'), vault: store })
     .then(file => {
       taskSync = createTaskSync({
         file,
-        adapters: { caldav: createCaldavTasks({ store: davStore, fetchImpl }) },
+        adapters: {
+          caldav: createCaldavTasks({ store: davStore, fetchImpl }),
+          microsoft: createGraphTasks(cloudTasks),
+          google: createGoogleTasks(cloudTasks)
+        },
         logger: line => logger(line)
       });
       return createTaskStore(file, { onChange: () => taskSchedule?.soon() });
@@ -297,7 +317,8 @@ export async function createMailServer({
 
   let accounts = [];
   let identities = new Map(); // account id → mailboxIdentity
-  const accountChangeHooks = [];
+  // A removed mail account (or a new mailbox behind it) disconnects its task lists; tasks stay.
+  const accountChangeHooks = [id => void taskSync?.forgetAccount(id).catch(() => {})];
   /** Drops every cached piece of an account's mailbox (removed account or new identity). */
   function forgetAccountData(id, { identityChanged = false } = {}) {
     listCache.deleteWhere(key => key.startsWith(`${id}|`));
