@@ -16,7 +16,9 @@ audit (2026-11-19, finding DOC-LEV-009) therefore asks for a legal basis that fi
 - Cloud AI is off by default and used only after consent per provider; accounts can be blocked
   ("No cloud AI"); background sorting never uses the cloud.
 - Only what a function needs is sent (the selected mail, up to five own sent mails as style
-  sample, search hits for questions, items a routine reads).
+  sample, with "Learn style per contact" on the user's mails to that recipient and the learned
+  greeting, closing and du/Sie; search hits for questions with the text of their PDF and text
+  attachments and the last two questions and answers; items a routine reads).
 - Providers act as processors under their API terms (no training on API data by default; retention
   typically up to 30 days for abuse monitoring; zero-data-retention available on request).
 - Transfers to the USA: both providers are certified under the EU–US Data Privacy Framework

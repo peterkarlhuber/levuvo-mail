@@ -9,7 +9,7 @@ Email, calendar and contacts for **macOS (Apple Silicon)** and **Windows (ARM64,
 - **Password-protected messages** for any recipient (AES-256, opened in the browser) · **Security:** passwords, tokens and private keys only in the keychain · phishing warnings (SPF/DKIM/DMARC, links, attachments) · OpenPGP and S/MIME · protected HTML view
 - **Server filters and vacation reply** (Sieve) · **Sign-in with Microsoft 365 and Google** (OAuth 2.0)
 - **Encrypted local search index** – search across all folders and accounts, even offline
-- **Tasks** from mails with due times, reminders and repetition, synced with CalDAV lists, Microsoft To Do or Google Tasks
+- **Tasks** from mails with due times, reminders and repetition, synced with CalDAV lists, Microsoft To Do or Google Tasks; tasks assigned to you in a space show up too, and a task can be put into a space
 - **Shared spaces** for working together on a topic: notes, pinned mails, tasks, events and files, end-to-end encrypted between the members' own mailboxes, without a Levuvo server
 - **Inbox order:** sender screening, bundles, attachment overview, phishing check
 - **Levuvo Mail Assistant** (optional, off by default): summaries, replies, rewriting, questions to the mailbox and routines with a **local model (Ollama)** or, after consent, a cloud model; an **MCP server** for your own AI agents with approvals

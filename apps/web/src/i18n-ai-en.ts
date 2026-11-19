@@ -3,8 +3,8 @@
 export const AI_EN: Record<string, string> = {
   'KI & Agenten': 'AI & agents',
   'Cloud-KI von {provider} verwenden?': 'Use cloud AI from {provider}?',
-  'Für jede KI-Funktion, die du aufrufst, werden die dafür nötigen Inhalte an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU: die betroffenen Nachrichten; bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ zusätzlich bis zu fünf deiner zuletzt gesendeten Mails als Stilprobe; bei Fragen an das Postfach die gefundenen Mails aller nicht gesperrten Konten; bei Aufgaben und Routinen des Assistenten die Mails, Termine, Kontakte und Aufgaben, die er dafür liest, und Inhalte von Räumen, die Cloud-KI erlauben. Für Konten, die du unten sperrst, wird nichts übertragen. Das Einsortieren im Hintergrund läuft nur mit einem lokalen Modell. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.':
-    'For every AI function you use, the content it needs is sent to {provider} and processed there, possibly outside the EU: the messages concerned; for reply suggestions and “Bullet points to email” also up to five of your most recently sent emails as a style sample; for questions to the mailbox the emails found in all accounts that are not blocked; for tasks and routines of the assistant the emails, events, contacts and tasks it reads for them, and the content of spaces that allow cloud AI. Nothing is sent for accounts you block below. Sorting in the background only runs with a local model. Without this consent everything stays local. You can withdraw it at any time.',
+  'Für jede KI-Funktion, die du aufrufst, werden die dafür nötigen Inhalte an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU: die betroffenen Nachrichten; bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ zusätzlich bis zu fünf deiner gesendeten Mails als Stilprobe und, wenn „Stil pro Kontakt lernen“ an ist, deine Anrede- und Grußgewohnheiten mit diesem Empfänger; bei Fragen an das Postfach die gefundenen Mails aller nicht gesperrten Konten samt Text ihrer PDF- und Textanhänge und die letzten zwei Fragen und Antworten; bei Aufgaben und Routinen des Assistenten die Mails, Termine, Kontakte und Aufgaben, die er dafür liest, und Inhalte von Räumen, die Cloud-KI erlauben. Für Konten, die du unten sperrst, wird nichts übertragen. Das Einsortieren im Hintergrund läuft nur mit einem lokalen Modell. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.':
+    'For every AI function you use, the content it needs is sent to {provider} and processed there, possibly outside the EU: the messages concerned; for reply suggestions and “Bullet points to email” also up to five of your sent emails as a style sample and, if “Learn style per contact” is on, your greeting and closing habits with that recipient; for questions to the mailbox the emails found in all accounts that are not blocked, with the text of their PDF and text attachments, and the last two questions and answers; for tasks and routines of the assistant the emails, events, contacts and tasks it reads for them, and the content of spaces that allow cloud AI. Nothing is sent for accounts you block below. Sorting in the background only runs with a local model. Without this consent everything stays local. You can withdraw it at any time.',
   Einwilligen: 'I consent',
   '{model} wird heruntergeladen. Das kann einige Minuten dauern.': 'Downloading {model}. This can take a few minutes.',
   '{model} ist bereit.': '{model} is ready.',
@@ -380,6 +380,34 @@ export const AI_EN: Record<string, string> = {
     'A download is running. Please wait until it is finished.',
   'Das lokale Modell ist nicht erreichbar. Bitte Levuvo Mail neu starten.':
     'The local model cannot be reached. Please restart Levuvo Mail.',
+  'Stil lernen ausschalten?': 'Turn off style learning?',
+  'Der gelernte Stil aller Kontakte wird gelöscht. Antwortvorschläge nutzen dann nur noch deine Einstellungen und die letzten gesendeten Mails.':
+    'The learned style of all contacts is deleted. Reply suggestions then only use your settings and your most recent sent emails.',
+  'Ausschalten und löschen': 'Turn off and delete',
+  'Stil pro Kontakt lernen': 'Learn style per contact',
+  'Levuvo Mail liest deine gesendeten Mails im lokalen Suchindex und merkt sich je Kontakt Anrede, Gruß und Du oder Sie. Ohne KI-Modell, nur auf diesem Gerät, verschlüsselt, nicht im Backup. Mit einem Cloud-Modell gehen bei Antwortvorschlägen die Gewohnheiten und bis zu fünf deiner Mails an diesen Kontakt mit.':
+    'Levuvo Mail reads your sent emails in the local search index and remembers the greeting, closing and form of address (du or Sie) for each contact. No AI model, only on this device, encrypted, not in backups. With a cloud model, reply suggestions include these habits and up to five of your emails to that contact.',
+  'Ohne Schlüsselbund wird der gelernte Stil nur bis zum Beenden der App gehalten.':
+    'Without a keychain the learned style is only kept until the app quits.',
+  'Jetzt neu lernen': 'Learn again now',
+  'Gelernten Stil löschen?': 'Delete the learned style?',
+  'Der gelernte Stil aller Kontakte wird gelöscht. Beim nächsten Lernen entsteht er neu.':
+    'The learned style of all contacts is deleted. It is created again the next time it learns.',
+  'Gelernten Stil löschen': 'Delete learned style',
+  'Kontakt suchen…': 'Search contact…',
+  'Gelernt aus {mails} gesendeten Mails an {contacts} Kontakte, zuletzt {when}.':
+    'Learned from {mails} sent emails to {contacts} contacts, last on {when}.',
+  'Noch nichts gelernt. Der Suchindex muss eingeschaltet sein und gesendete Mails enthalten.':
+    'Nothing learned yet. The search index must be switched on and contain sent emails.',
+  'Meist: „{greeting}“ … „{closing}“.': 'Usually: “{greeting}” … “{closing}”.',
+  Kontakt: 'Contact',
+  Gruß: 'Closing',
+  'Du/Sie': 'Du/Sie',
+  Mails: 'Emails',
+  'Stil für {email} löschen': 'Delete style for {email}',
+  'Weitere {count} Kontakte, über die Suche zu finden.': '{count} more contacts, find them with the search.',
+  'Im Stil deiner Mails an {email}': 'In the style of your emails to {email}',
+  'Stil lernen ist ausgeschaltet.': 'Style learning is switched off.',
   // Width of the assistant panel
   'Breite des Assistenten ändern': 'Change width of the assistant',
   '{n} Pixel breit': '{n} pixels wide'
