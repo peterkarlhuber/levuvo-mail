@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Mail
+- **Follow-ups:** "Show in Sent" searches the subject in the sent folder again; it used to ask the server to search the follow-up view itself and found nothing.
+
 ### Mail view split into modules (internal audit of 19 November 2026, ARC-LEV-005)
 - **No visible change.** The message list (loaded messages, paging, checkboxes, filter chip) is one reducer in `mail/list-state.ts`; toolbar and column resizer are their own components. The search (query, scope, hit count, index cursor) is a reducer in `mail/search-state.ts` with the debounced requests in `useMailSearch` and the field in `SearchBar`. The reader (selection, open state, detail) is a reducer in `mail/reader-state.ts`; `useReader`/`useMarkReadOnOpen` load and mark the message, `compose-from-message.ts` builds reply, forward and draft contents. `MailInstance.tsx` shrinks from 1690 to about 1250 lines. A Playwright regression test pins list, filters, search, reader and bulk actions.
 
