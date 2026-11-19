@@ -142,7 +142,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install (exact lockfile, with the Electron binary)
-        # Install scripts are off (.npmrc); the Electron package fetches and checks its binary here.
+        # npm ci on the runner does not leave the Electron binary in place; its own installer fetches and checks it.
         run: |
           npm ci --no-fund
           node node_modules/electron/install.js
