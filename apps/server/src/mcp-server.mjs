@@ -13,7 +13,9 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createServer } from 'node:http';
-import { messageForAi } from './routes-ai.mjs';
+import { agentOrigin, contactPayload, eventPayload, freeSlots, messageForAi } from './ai-payloads.mjs';
+// Re-exported for existing callers; the mappers live in ai-payloads.mjs.
+export { contactPayload, eventPayload, freeSlots } from './ai-payloads.mjs';
 
 export const MCP_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 export const LEVELS = ['read', 'draft', 'organize', 'full'];
@@ -53,6 +55,24 @@ const q = s => encodeURIComponent(String(s));
 const ACCOUNT = { type: 'string', description: 'Account id from list_accounts (default: first account)' };
 const FOLDER = { type: 'string', description: 'Folder path, e.g. INBOX' };
 const UID = { type: 'integer', description: 'Message UID within the folder' };
+const MAX_RANGE_DAYS = 62;
+const ISO_DATE = { type: 'string', description: 'ISO date YYYY-MM-DD or date-time YYYY-MM-DDTHH:MM' };
+/**
+ * from/to of a calendar tool, checked before anything is read: an invalid or too long range is an
+ * error the agent sees, never an empty result it could take for "no free time" (API-LEV-008).
+ */
+export function calendarRange(a) {
+  const from = str(a?.from, 40);
+  const to = str(a?.to, 40);
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  if (!Number.isFinite(start) || !Number.isFinite(end))
+    throw toolError('from and to must be ISO dates (YYYY-MM-DD or YYYY-MM-DDTHH:MM).');
+  if (end <= start) throw toolError('to must be after from.');
+  if (end - start > MAX_RANGE_DAYS * 86400_000)
+    throw toolError(`from and to must be at most ${MAX_RANGE_DAYS} days apart; split the range.`);
+  return { from, to };
+}
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
 /**
@@ -199,10 +219,11 @@ export function buildTools(ctx) {
       name: 'list_events',
       level: 'read',
       readOnly: true,
-      description: 'Calendar events between two ISO dates (at most 62 days).',
-      inputSchema: obj({ from: { type: 'string' }, to: { type: 'string' } }, ['from', 'to']),
+      description: `Calendar events between two ISO dates (YYYY-MM-DD or YYYY-MM-DDTHH:MM), at most ${MAX_RANGE_DAYS} days apart.`,
+      inputSchema: obj({ from: ISO_DATE, to: ISO_DATE }, ['from', 'to']),
       run: async a => {
-        const r = await call('GET', `/api/calendar/events?from=${q(str(a.from, 40))}&to=${q(str(a.to, 40))}`);
+        const { from, to } = calendarRange(a);
+        const r = await call('GET', `/api/calendar/events?from=${q(from)}&to=${q(to)}`);
         const events = visible(r.events || [])
           .slice(0, 200)
           .map(e => ({
@@ -220,11 +241,11 @@ export function buildTools(ctx) {
       name: 'find_free_time',
       level: 'read',
       readOnly: true,
-      description: 'Free slots of a given length between two ISO dates, within working hours (default 8–18).',
+      description: `Free slots of a given length between two ISO dates (at most ${MAX_RANGE_DAYS} days apart), within working hours (default 8–18). An empty list means the calendar is full in that range.`,
       inputSchema: obj(
         {
-          from: { type: 'string' },
-          to: { type: 'string' },
+          from: ISO_DATE,
+          to: ISO_DATE,
           minutes: { type: 'integer', minimum: 15, maximum: 480 },
           dayStart: { type: 'integer', minimum: 0, maximum: 23 },
           dayEnd: { type: 'integer', minimum: 1, maximum: 24 }
@@ -232,11 +253,12 @@ export function buildTools(ctx) {
         ['from', 'to']
       ),
       run: async a => {
-        const r = await call('GET', `/api/calendar/events?from=${q(str(a.from, 40))}&to=${q(str(a.to, 40))}`);
+        const { from, to } = calendarRange(a);
+        const r = await call('GET', `/api/calendar/events?from=${q(from)}&to=${q(to)}`);
         return JSON.stringify(
           freeSlots(visible(r.events || []), {
-            from: Date.parse(str(a.from, 40)),
-            to: Date.parse(str(a.to, 40)),
+            from: Date.parse(from),
+            to: Date.parse(to),
             minutes: int(a.minutes, 15, 480, 30),
             dayStart: int(a.dayStart, 0, 23, 8),
             dayEnd: int(a.dayEnd, 1, 24, 18)
@@ -297,7 +319,7 @@ export function buildTools(ctx) {
         },
         ['subject', 'body']
       ),
-      run: async a => {
+      run: async (a, agent) => {
         const id = accountId(a.account);
         const r = await call(
           'POST',
@@ -310,7 +332,9 @@ export function buildTools(ctx) {
             subject: str(a.subject, 300).replace(/[\r\n]/g, ' '),
             text: str(a.body, 50000),
             inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined,
-            previousUid: null
+            previousUid: null,
+            // Machine-readable label in the draft; the composer shows it until the user sends.
+            aiGenerated: agentOrigin(agent)
           },
           'draft-v1'
         );
@@ -323,7 +347,7 @@ export function buildTools(ctx) {
       approval: 'event',
       description: 'Propose a calendar event; it is created after the user approves it.',
       inputSchema: eventSchema(),
-      run: async a => eventPayload(a)
+      run: async (a, agent) => eventPayload(a, { origin: agentOrigin(agent) })
     },
     {
       name: 'propose_contact',
@@ -331,7 +355,7 @@ export function buildTools(ctx) {
       approval: 'contact',
       description: 'Propose a new contact (e.g. from an e-mail signature); it is saved after the user approves it.',
       inputSchema: contactSchema(),
-      run: async a => contactPayload(a)
+      run: async (a, agent) => contactPayload(a, { origin: agentOrigin(agent) })
     },
     {
       name: 'send_email',
@@ -427,8 +451,8 @@ export function buildTools(ctx) {
       description:
         "Create an event without attendees in one of the user's calendars (list_calendars). Events with attendees send invitations and go through propose_event.",
       inputSchema: eventSchema(true),
-      run: async a => {
-        const payload = eventPayload(a);
+      run: async (a, agent) => {
+        const payload = eventPayload(a, { origin: agentOrigin(agent) });
         if (payload.event.attendees.length) throw toolError('Events with attendees need propose_event.');
         await call('POST', '/api/calendar/events/save', payload, 'calendar-v1');
         return JSON.stringify({ created: true });
@@ -439,8 +463,8 @@ export function buildTools(ctx) {
       level: 'organize',
       description: 'Save a new contact in the address book on this device.',
       inputSchema: contactSchema(),
-      run: async a => {
-        await call('POST', '/api/contacts/save', contactPayload(a), 'contacts-v1');
+      run: async (a, agent) => {
+        await call('POST', '/api/contacts/save', contactPayload(a, { origin: agentOrigin(agent) }), 'contacts-v1');
         return JSON.stringify({ created: true });
       }
     },
@@ -477,25 +501,6 @@ function eventSchema(withCalendar = false) {
     ['summary', 'start', 'end']
   );
 }
-export function eventPayload(a) {
-  const allDay = a.allDay === true;
-  const cut = v => str(v, 40).slice(0, allDay ? 10 : 16);
-  return {
-    accountId: str(a.calendarAccountId, 100) || 'local',
-    calendarUrl: str(a.calendarUrl, 1000) || null,
-    event: {
-      summary: str(a.summary, 300),
-      start: cut(a.start),
-      end: cut(a.end),
-      allDay,
-      tzid: allDay ? undefined : str(a.timeZone, 64) || 'Europe/Vienna',
-      location: str(a.location, 300),
-      description: str(a.description, 4000),
-      attendees: emails(a.attendees).map(email => ({ email })),
-      alarms: [15]
-    }
-  };
-}
 function contactSchema() {
   return obj(
     {
@@ -510,44 +515,6 @@ function contactSchema() {
     ['name']
   );
 }
-export function contactPayload(a) {
-  return {
-    addressBookUrl: 'local-contacts:',
-    contact: {
-      name: str(a.name, 250),
-      emails: emails(a.emails).map(value => ({ value, type: 'work' })),
-      phones: (Array.isArray(a.phones) ? a.phones : []).slice(0, 5).map(v => ({ value: str(v, 40), type: 'work' })),
-      organization: str(a.organization, 200),
-      title: str(a.title, 120),
-      address: str(a.address, 400),
-      note: str(a.note, 2000)
-    }
-  };
-}
-
-/** Free slots within working hours, not overlapping any (non all-day) event. */
-export function freeSlots(events, { from, to, minutes, dayStart = 8, dayEnd = 18, max = 20 }) {
-  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from || to - from > 62 * 86400_000) return [];
-  const busy = events
-    .filter(e => !e.allDay)
-    .map(e => [Date.parse(e.start), Date.parse(e.end)])
-    .filter(([s, e]) => Number.isFinite(s) && Number.isFinite(e))
-    .sort((x, y) => x[0] - y[0]);
-  const out = [];
-  const step = 15 * 60_000;
-  const len = minutes * 60_000;
-  for (let t = Math.ceil(from / step) * step; t + len <= to && out.length < max; t += step) {
-    const d = new Date(t);
-    const h = d.getHours() + d.getMinutes() / 60;
-    const day = d.getDay();
-    if (day === 0 || day === 6 || h < dayStart || h + minutes / 60 > dayEnd) continue;
-    if (busy.some(([s, e]) => s < t + len && e > t)) continue;
-    out.push({ start: new Date(t).toISOString(), end: new Date(t + len).toISOString() });
-    t += len - step;
-  }
-  return out;
-}
-
 // ------------------------------------------------------------------ agents and approvals
 
 const publicAgent = a => ({
@@ -712,35 +679,64 @@ export function createApprovals(file, { execute, log }) {
 // The approval shows everything that will happen: all recipients, the sending account, the full
 // text, attendees, place and description. A shortened view would let an injected instruction hide
 // the part that matters (e.g. a CC address or text after the visible excerpt).
-function summarize(type, payload) {
-  if (type === 'send')
-    return {
-      account: payload.account,
-      to: payload.to,
-      cc: payload.cc || [],
-      subject: payload.subject,
-      text: payload.text
-    };
-  if (type === 'event')
-    return {
-      summary: payload.event.summary,
-      start: payload.event.start,
-      end: payload.event.end,
-      allDay: payload.event.allDay === true,
-      location: payload.event.location || '',
-      description: payload.event.description || '',
-      attendees: payload.event.attendees.map(a => a.email),
-      calendar: payload.calendarUrl ? `${payload.accountId}` : payload.accountId || 'local'
-    };
-  if (type === 'contact')
-    return {
-      name: payload.contact.name,
-      emails: payload.contact.emails.map(e => e.value),
-      phones: (payload.contact.phones || []).map(p => p.value)
-    };
-  if (type === 'trash') return { account: payload.account, folder: payload.folder, uid: payload.uid };
-  return {};
-}
+/**
+ * The approval types of the MCP server itself (ARC-LEV-008): registered in the shared registry like
+ * the ones of other modules, so one table says what the user sees (summary) and what happens after
+ * the approval (execute). `call` is the app's internal API (ctx.internalRequest).
+ */
+const BUILTIN_APPROVALS = {
+  send: {
+    summary: p => ({ account: p.account, to: p.to, cc: p.cc || [], subject: p.subject, text: p.text }),
+    execute: (call, p) =>
+      call(
+        'POST',
+        `/api/messages/send?account=${q(p.account)}`,
+        {
+          requestId: randomUUID(),
+          confirm: 'SEND',
+          to: p.to,
+          cc: p.cc || [],
+          bcc: [],
+          subject: p.subject,
+          text: p.text,
+          inReplyTo: p.inReplyTo,
+          references: p.inReplyTo
+        },
+        'send-v1'
+      )
+  },
+  event: {
+    summary: p => ({
+      summary: p.event.summary,
+      start: p.event.start,
+      end: p.event.end,
+      allDay: p.event.allDay === true,
+      location: p.event.location || '',
+      description: p.event.description || '',
+      attendees: p.event.attendees.map(a => a.email),
+      calendar: p.calendarUrl ? `${p.accountId}` : p.accountId || 'local'
+    }),
+    execute: (call, p) => call('POST', '/api/calendar/events/save', p, 'calendar-v1')
+  },
+  contact: {
+    summary: p => ({
+      name: p.contact.name,
+      emails: p.contact.emails.map(e => e.value),
+      phones: (p.contact.phones || []).map(x => x.value)
+    }),
+    execute: (call, p) => call('POST', '/api/contacts/save', p, 'contacts-v1')
+  },
+  trash: {
+    summary: p => ({ account: p.account, folder: p.folder, uid: p.uid }),
+    execute: (call, p) =>
+      call(
+        'POST',
+        `/api/messages/${Number(p.uid)}/action?account=${q(p.account)}`,
+        { folder: p.folder, action: 'trash' },
+        'mail-v1'
+      )
+  }
+};
 /** Adds what the user needs to recognise: the sender address and the message to be deleted. */
 async function describeApproval(ctx, type, payload, summary) {
   const out = { ...summary };
@@ -756,7 +752,6 @@ async function describeApproval(ctx, type, payload, summary) {
   return out;
 }
 function summarizeAny(registry, type, payload) {
-  if (BUILTIN_APPROVALS.includes(type)) return summarize(type, payload);
   try {
     return registry?.approval(type)?.summary(payload) || {};
   } catch {
@@ -766,7 +761,6 @@ function summarizeAny(registry, type, payload) {
 
 // ------------------------------------------------------------------ registry
 
-const BUILTIN_APPROVALS = ['send', 'event', 'contact', 'trash'];
 const TOOL_NAME = /^[a-z][a-z0-9_]{2,48}$/;
 
 /**
@@ -783,9 +777,17 @@ const TOOL_NAME = /^[a-z][a-z0-9_]{2,48}$/;
  * the type must be built in (send, event, contact, trash) or registered with
  * `registerApproval(type, { summary: payload => object, execute: async payload => result })`.
  */
-export function createToolRegistry() {
+export function createToolRegistry({ call = null } = {}) {
   const tools = new Map();
   const approvalTypes = new Map();
+  for (const [type, def] of Object.entries(BUILTIN_APPROVALS))
+    approvalTypes.set(type, {
+      summary: def.summary,
+      execute: p => {
+        if (!call) throw new Error('Unbekannte Freigabe.');
+        return def.execute(call, p);
+      }
+    });
   return {
     register(defs) {
       for (const d of Array.isArray(defs) ? defs : [defs]) {
@@ -794,14 +796,13 @@ export function createToolRegistry() {
         if (!LEVELS.includes(d.level)) throw new TypeError(`tool ${d.name}: unknown level ${d.level}`);
         if (typeof d.run !== 'function' || typeof d.description !== 'string' || d.inputSchema?.type !== 'object')
           throw new TypeError(`tool ${d.name}: description, inputSchema and run are required`);
-        if (d.approval && !BUILTIN_APPROVALS.includes(d.approval) && !approvalTypes.has(d.approval))
+        if (d.approval && !approvalTypes.has(d.approval))
           throw new TypeError(`tool ${d.name}: unknown approval ${d.approval}`);
         tools.set(d.name, { ...d, readOnly: Boolean(d.readOnly) && !d.approval });
       }
     },
     registerApproval(type, { summary, execute }) {
-      if (!TOOL_NAME.test(type) || BUILTIN_APPROVALS.includes(type) || approvalTypes.has(type))
-        throw new TypeError(`invalid approval type ${type}`);
+      if (!TOOL_NAME.test(type) || approvalTypes.has(type)) throw new TypeError(`invalid approval type ${type}`);
       if (typeof summary !== 'function' || typeof execute !== 'function')
         throw new TypeError(`approval ${type}: summary and execute are required`);
       approvalTypes.set(type, { summary, execute });
@@ -812,7 +813,7 @@ export function createToolRegistry() {
 }
 /** The registry shared by all modules of one app instance. */
 export function mcpToolRegistry(ctx) {
-  ctx.mcpTools ||= createToolRegistry();
+  ctx.mcpTools ||= createToolRegistry({ call: (...args) => ctx.internalRequest(...args) });
   return ctx.mcpTools;
 }
 

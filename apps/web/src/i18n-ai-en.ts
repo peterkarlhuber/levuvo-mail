@@ -97,6 +97,37 @@ export const AI_EN: Record<string, string> = {
   'Das Modell hat zu lange gebraucht.': 'The model took too long.',
   'Diese KI-Funktion ist ausgeschaltet.': 'This AI feature is switched off.',
   'KI-Funktion fehlgeschlagen.': 'AI feature failed.',
+  'Dieser Entwurf wurde von einem KI-Agenten erstellt ({label}). Bitte vor dem Senden prüfen.':
+    'This draft was written by an AI agent ({label}). Please review it before sending.',
+  'Die KI-Komponente ist mehrmals abgestürzt und pausiert für einige Minuten. Danach erneut versuchen.':
+    'The AI component crashed several times and pauses for a few minutes. Please try again afterwards.',
+  'Die KI-Komponente wurde neu gestartet. Bitte erneut versuchen.': 'The AI component was restarted. Please try again.',
+  'Der KI-Anbieter ist gerade überlastet oder gestört. Später erneut versuchen.':
+    'The AI provider is overloaded or having problems. Please try again later.',
+  'Das gewählte Suchmodell kann keine Suchvektoren berechnen. Bitte ein Embedding-Modell wählen.':
+    'The selected search model cannot compute search vectors. Please choose an embedding model.',
+  'Der KI-Anbieter begrenzt gerade die Anfragen. Bitte etwas warten und erneut versuchen.':
+    'The AI provider is limiting requests right now. Please wait a moment and try again.',
+  'Zu wenig Speicherplatz für den Modell-Download. Bitte Platz schaffen und erneut versuchen.':
+    'Not enough disk space for the model download. Please free up space and try again.',
+  'Der Modell-Download hat keine Internetverbindung. Bitte Verbindung oder Proxy prüfen.':
+    'The model download has no internet connection. Please check the connection or proxy.',
+  'Ollama hat die Anfrage abgelehnt. Bitte Ollama neu starten oder aktualisieren.':
+    'Ollama refused the request. Please restart or update Ollama.',
+  'Das gewählte Modell kann diese Funktion nicht (z. B. keine Werkzeuge für Routinen). Bitte ein anderes Modell wählen.':
+    'The selected model cannot do this (e.g. no tools for routines). Please choose another model.',
+  'Die Aufgabe brauchte zu viele Schritte und wurde abgebrochen. Bitte kleiner formulieren.':
+    'The task needed too many steps and was stopped. Please make it smaller.',
+  'Die Werkzeuge für Agenten sind nicht erreichbar. Ist der MCP-Server eingeschaltet?':
+    'The agent tools cannot be reached. Is the MCP server switched on?',
+  'Das Modell hat keine verwertbare Antwort geliefert. Erneut versuchen oder ein größeres Modell wählen.':
+    'The model gave no usable answer. Try again or choose a larger model.',
+  'Die Antwort des Modells wurde abgeschnitten. Bitte mit weniger Text erneut versuchen.':
+    "The model's answer was cut off. Please try again with less text.",
+  'Der Text ist für das Modell zu lang. Bitte weniger Nachrichten oder kürzeren Text wählen.':
+    'The text is too long for the model. Please choose fewer messages or shorter text.',
+  'Das Modell hat die Anfrage abgelehnt.': 'The model refused the request.',
+  'Die Anfrage an die KI war ungültig.': 'The request to the AI was invalid.',
   'Unbekannter KI-Anbieter.': 'Unknown AI provider.',
   'Ungültiger Modellname.': 'Invalid model name.',
   'Ollama-Adresse ungültig.': 'Invalid Ollama address.',

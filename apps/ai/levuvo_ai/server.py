@@ -13,6 +13,7 @@ import sys
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import IO, Any
 
 MAX_LINE = 8 * 1024 * 1024
@@ -28,35 +29,84 @@ class RpcError(Exception):
         self.kind = kind
 
 
+# Ollama codes passed on unchanged; the rest of OllamaError's codes collapse into these kinds.
+_OLLAMA_CODES = {
+    "model_missing": "model_missing",
+    "model_not_found": "model_missing",
+    "not_found": "model_missing",
+    "unreachable": "unreachable",
+    "timeout": "timeout",
+    "disk_full": "disk_full",
+    "network": "network",
+    "input_too_long": "input_too_long",
+    "not_embedding_model": "not_embedding_model",
+    "empty_input": "invalid_input",
+    "invalid_response": "invalid_output",
+    "too_large": "invalid_output",
+    "too_many_inputs": "invalid_input",
+}
+
+
+def _orkexa_kinds() -> list[tuple[type[BaseException], str]]:
+    """Orkexa's error classes in matching order: subclasses before their base classes."""
+    try:
+        from orkexa import errors as e
+        from orkexa.local import OllamaError
+        from orkexa.mcp import MCPError
+    except ImportError:  # pragma: no cover - broken installation
+        return []
+    return [
+        (OllamaError, "ollama"),  # mapped by its code below (EmbeddingError is a subclass)
+        (e.MissingCredentialsError, "auth"),
+        (e.AuthenticationError, "auth"),
+        (e.RateLimitError, "rate_limit"),
+        (e.ProviderConnectionError, "unreachable"),
+        (e.ProviderServerError, "unavailable"),
+        (e.InvalidRequestError, "invalid_input"),
+        (e.ProviderError, "unavailable"),
+        (e.StructuredOutputError, "invalid_output"),
+        (e.UnexpectedResponseError, "invalid_output"),
+        (e.IncompleteResponseError, "too_long"),
+        (e.RefusalError, "refused"),
+        (e.UnsupportedCapabilityError, "unsupported"),  # includes UnknownCapabilityError
+        (e.MaxToolRoundsError, "too_many_steps"),  # includes MaxToolCallsError
+        (MCPError, "agent_tools"),
+    ]
+
+
+_KINDS: list[tuple[type[BaseException], str]] | None = None
+
+
 def classify(exc: BaseException) -> RpcError:
-    """Maps library errors to stable kinds without leaking prompts, keys or mail content."""
+    """Maps library errors to stable kinds without leaking prompts, keys or mail content.
+
+    Matched by type (``isinstance``), so subclasses Orkexa adds later land in the kind of their family
+    instead of ``internal``. Every kind is listed in ``error_kinds.json``; the UI has a text for each.
+    """
+    global _KINDS
     if isinstance(exc, RpcError):
         return exc
-    name = type(exc).__name__
-    kinds = {
-        "ProviderConnectionError": "unreachable",
-        "AuthenticationError": "auth",
-        "MissingCredentialsError": "auth",
-        "RateLimitError": "rate_limit",
-        "StructuredOutputError": "invalid_output",
-        "IncompleteResponseError": "too_long",
-        "RefusalError": "refused",
-        "UnsupportedCapabilityError": "unsupported",
-        "UnknownCapabilityError": "unsupported",
-        "MaxToolRoundsError": "too_many_steps",
-        "MaxToolCallsError": "too_many_steps",
-        "MCPError": "agent_tools",
-        "TimeoutError": "timeout",
-        "ValidationError": "invalid_input",
-    }
-    if name in kinds:
-        return RpcError(kinds[name])
-    if name == "OllamaError":
-        code = str(getattr(exc, "code", "") or "ollama")
-        return RpcError("model_missing" if code in ("model_not_found", "not_found") else code)
+    if _KINDS is None:
+        _KINDS = _orkexa_kinds()
+    for cls, kind in _KINDS:
+        if isinstance(exc, cls):
+            if kind == "ollama":
+                return RpcError(_OLLAMA_CODES.get(str(getattr(exc, "code", "") or ""), "ollama"))
+            return RpcError(kind)
+    if isinstance(exc, TimeoutError):
+        return RpcError("timeout")
+    # pydantic.ValidationError is a ValueError: invalid input from the Node side.
     if isinstance(exc, ValueError):
-        return RpcError("invalid_input", str(exc)[:200])
+        return RpcError("invalid_input")  # no message: it may quote mail content
     return RpcError("internal")
+
+
+ERROR_KINDS_FILE = Path(__file__).with_name("error_kinds.json")
+
+
+# Quick requests with their own short timeouts. They run apart from model calls, so a pool full of
+# slow or hanging model calls never makes "status" or "configure" time out.
+CONTROL_METHODS = frozenset({"status", "configure", "models"})
 
 
 class Server:
@@ -67,6 +117,7 @@ class Server:
         self.output = output
         self.lock = threading.Lock()
         self.pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="levuvo-ai")
+        self.control = ThreadPoolExecutor(max_workers=2, thread_name_prefix="levuvo-ai-control")
 
     def send(self, message: dict[str, Any]) -> None:
         data = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
@@ -122,5 +173,7 @@ class Server:
                 if message.get("id") is not None:
                     self.send({"jsonrpc": "2.0", "id": message["id"], "result": {"ok": True}})
                 break
-            self.pool.submit(self.handle, message)
+            pool = self.control if message.get("method") in CONTROL_METHODS else self.pool
+            pool.submit(self.handle, message)
         self.pool.shutdown(wait=False, cancel_futures=True)
+        self.control.shutdown(wait=False, cancel_futures=True)

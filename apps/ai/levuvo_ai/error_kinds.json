@@ -1,0 +1,36 @@
+{
+  "$comment": "Stable error kinds of the AI sidecar and its Node client. The UI shows 'ai_<kind>' with its own text (apps/web/src/ai.ts aiErrorText); tests on both sides check this list.",
+  "sidecar": [
+    "agent_tools",
+    "auth",
+    "disk_full",
+    "input_too_long",
+    "internal",
+    "invalid_input",
+    "invalid_output",
+    "model_missing",
+    "network",
+    "not_embedding_model",
+    "ollama",
+    "rate_limit",
+    "refused",
+    "timeout",
+    "too_long",
+    "too_many_steps",
+    "unavailable",
+    "unreachable",
+    "unsupported"
+  ],
+  "server": [
+    "auth",
+    "cloud_blocked",
+    "consent_missing",
+    "crashed",
+    "disabled",
+    "feature_disabled",
+    "not_configured",
+    "runtime_missing",
+    "stopped",
+    "timeout"
+  ]
+}

@@ -1,8 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### AI core and search index (internal audit of 19 November 2026)
+- **Semantic search on large mailboxes:** the first embedding run continues where it stopped after a restart, sleep or an Ollama outage instead of starting over; it reads texts batch by batch instead of all at once. New messages written during a long index sync are never skipped. The vector set in memory follows changes instead of being reloaded after every batch and is released after ten idle minutes.
+- **Search index format:** the stored schema version is read; older files are migrated, files of a newer version (after rolling back an update) are rebuilt.
+- **Ollama cloud models** with tags like `gpt-oss:120b-cloud` are refused as local models (settings, download, model list), like `:cloud` before: content would otherwise leave the device.
+- **Clear AI error messages:** every error kind of the AI component (rate limit, provider overloaded, model without tools, disk full, too many steps, …) has its own text. A short Ollama outage no longer makes agent runs fail until the next restart.
+- **AI component stays responsive:** status and settings no longer wait behind slow model calls; when timed-out calls would block every worker, the component restarts. Messages for an AI function load three at a time.
+- **AI labels that last:** drafts, events and contacts created by agents keep a label (draft header shown in reader and composer, closing line in events and contacts).
+- **Agent calendar tools** report an invalid or too long range (more than 62 days) as an error instead of "no free time".
+- **Inbox bundles by AI:** messages the model skipped are not sent again on every list update; after errors the next try waits (30 s, doubling up to 30 min).
+- **Maintenance:** no more import cycle between the AI routes and the MCP server (`ai-payloads.mjs`); built-in approval types use the same registry as added ones; AI background timers start only with the app's background jobs and stop on close. The AI sidecar is tested against the pinned Orkexa API and installed in CI from the hashed locks.
+
 ## 2.3.0 – 19 November 2026
 
 > **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.
+
+### Release and supply chain
+- **Electron fuses:** installers switch off running Levuvo Mail as a plain Node runtime (ELECTRON_RUN_AS_NODE), NODE_OPTIONS and the --inspect debugger, load the app only from its archive and check the archive's integrity. Another program on the computer can no longer start the Levuvo binary with its own code and so read Levuvo's keychain entries. Every desktop build checks the fuses of the packaged binary.
 
 ### Security and reliability (external audits of 2.3.0)
 - **Cloud AI block holds for questions across all accounts:** accounts marked "No cloud AI" are left out of the search before a cloud model answers, and every account whose text is in the model input is checked again right before the call.
@@ -32,6 +48,7 @@
 - **Reliability:** network calls to Microsoft, Google, CalDAV and the sign-in have timeouts; the AI component restarts cleanly after a crash; space changes are only removed from the outbox once they were sent; leftover search indexes of removed accounts are deleted after a restore; snooze/follow-up data and sender screening decisions are stored encrypted.
 - **Privacy:** replying to or forwarding a mail no longer loads its external images; CSS background images can no longer report the opening once external images are loaded. The consent text for cloud AI now lists every kind of content that is sent (style samples, search hits, what routines read); the consent has to be given again.
 - **Accessibility (WCAG 2.2 AA):** tasks keep their views and "Neue Aufgabe" on tablets and phones; file uploads in spaces work with the keyboard; space tabs use arrow keys; a visible focus ring on all fields; status colours with enough contrast in both themes; larger targets for folder actions and closing notices; a confirmation that deletes starts on "Cancel"; task and event dialogs ask before discarding typed input; the assistant's answers are announced to screen readers; a text rewritten by the assistant stays marked with "Undo"; dates in approvals and spaces are shown in the app language.
+- **Shared spaces sync:** the inbox is no longer scanned and downloaded again every minute; mails with the space header that are no usable sync mail are read once, sync mails that could not be saved are retried with growing pauses. Sync mails another device of the same person moves at the same time are no longer skipped. A sync run no longer brings back an invitation that was accepted or declined meanwhile. Sync mails from a newer Levuvo version are kept until an update instead of being dropped, and the spaces view says an update is needed; changes this version cannot apply no longer cause an endless exchange of sync mails.
 
 ### New
 - **Shared spaces:** a space collects everything about one topic, project or customer: notes several people edit at the same time (with checklists), pinned mails with internal comments, tasks and events with assignees, files with versions and an activity list. Members are invited by e-mail address and have the role owner, editor or reader. There is no Levuvo server: every member keeps an encrypted copy, and changes travel end-to-end encrypted (Ed25519/X25519, AES-256-GCM) as mails between the members' existing mailboxes, across providers. Removing a member rotates the space key. The assistant and agents see a space only if its owner allows it, and every change they propose waits for approval. Spaces are part of the encrypted backup. See `docs/SPACES.md`.

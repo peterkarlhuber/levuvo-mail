@@ -1,5 +1,5 @@
 // Management of the MCP server (agents, tokens, approvals) for the settings and the assistant panel.
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import {
   DEFAULT_MCP_PORT,
@@ -19,7 +19,6 @@ import { createSkills, skillInstruction } from './ai-skills.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
 
 const ACTION = 'ai-v1';
-const q = s => encodeURIComponent(String(s));
 
 /**
  * External agents (Claude Desktop, other MCP clients) run on models Levuvo does not control: they
@@ -55,43 +54,11 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
     touch: id => persistent.touch(id)
   };
 
+  // Every approval type, built in or added by another module, comes from the one registry.
   async function executeApproved(type, p) {
-    const call = ctx.internalRequest;
-    switch (type) {
-      case 'send':
-        return call(
-          'POST',
-          `/api/messages/send?account=${q(p.account)}`,
-          {
-            requestId: randomUUID(),
-            confirm: 'SEND',
-            to: p.to,
-            cc: p.cc || [],
-            bcc: [],
-            subject: p.subject,
-            text: p.text,
-            inReplyTo: p.inReplyTo,
-            references: p.inReplyTo
-          },
-          'send-v1'
-        );
-      case 'event':
-        return call('POST', '/api/calendar/events/save', p, 'calendar-v1');
-      case 'contact':
-        return call('POST', '/api/contacts/save', p, 'contacts-v1');
-      case 'trash':
-        return call(
-          'POST',
-          `/api/messages/${Number(p.uid)}/action?account=${q(p.account)}`,
-          { folder: p.folder, action: 'trash' },
-          'mail-v1'
-        );
-      default: {
-        const custom = mcpToolRegistry(ctx).approval(type);
-        if (!custom) throw new Error('Unbekannte Freigabe.');
-        return custom.execute(p);
-      }
-    }
+    const approval = mcpToolRegistry(ctx).approval(type);
+    if (!approval) throw new Error('Unbekannte Freigabe.');
+    return approval.execute(p);
   }
   ctx.executeApproved = executeApproved;
   const approvals = createApprovals(approvalsFile, { execute: executeApproved, log: ctx.ai.log });

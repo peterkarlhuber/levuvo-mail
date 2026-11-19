@@ -1006,6 +1006,7 @@ export const EN: Record<string, string> = {
   'Kontakt konnte nicht gespeichert werden.': 'Contact could not be saved.',
   'Kontakt konnte nicht gelöscht werden.': 'Contact could not be deleted.',
   'Ungültiger Entwurf.': 'Invalid draft.',
+  'Ungültige KI-Kennzeichnung.': 'Invalid AI label.',
   'Ungültige Entwurfskennung.': 'Invalid draft ID.',
   'Maximal 30 Empfänger.': 'A maximum of 30 recipients.',
   'Ungültiger Betreff.': 'Invalid subject.',
@@ -1611,6 +1612,8 @@ export const EN: Record<string, string> = {
   'Die Datei wird gerade von einem anderen Mitglied geholt. Bitte gleich noch einmal versuchen.':
     'The file is being fetched from another member. Please try again in a moment.',
   'Die Datei ist beschädigt.': 'The file is damaged.',
+  'Ein Mitglied nutzt eine neuere Levuvo-Version. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.':
+    'A member uses a newer version of Levuvo. Some sync mails can only be read after an update; they are kept until then.',
   'Räume brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
     'Spaces need the system keychain. It is not available right now.',
   'Die Räume lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':

@@ -1119,6 +1119,13 @@ export default function Reader(props: Props) {
           </div>
 
           <h2>{header.subject}</h2>
+          {isDraftFolder && detail?.aiGenerated && (
+            <p className="compose-hint" role="note">
+              {t('Dieser Entwurf wurde von einem KI-Agenten erstellt ({label}). Bitte vor dem Senden prüfen.', {
+                label: detail.aiGenerated
+              })}
+            </p>
+          )}
           <div className="reader-meta">
             <button
               type="button"

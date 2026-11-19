@@ -1,6 +1,6 @@
 import PostalMime from 'postal-mime';
 import { MAX_MESSAGE_BYTES, publicMessage, attachmentBytes } from './message-utils.mjs';
-import { parseDraftId } from './drafts.mjs';
+import { parseAiGenerated, parseDraftId } from './drafts.mjs';
 import { analyzeMessage } from './security-analysis.mjs';
 import { parseItip } from './calendar-model.mjs';
 import { extractEventSuggestions } from './event-extract.mjs';
@@ -154,6 +154,8 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
     }
     if (meta.flags?.has('\\Draft')) {
       detail.draftId = parseDraftId(msg.source);
+      const aiGenerated = parseAiGenerated(msg.source);
+      if (aiGenerated) detail.aiGenerated = aiGenerated;
       detail.uidValidity = String(client.mailbox?.uidValidity || '');
       const sendAt = /^x-levuvo-send-at:\s*(.+)$/im.exec(msg.source.subarray(0, 16000).toString('latin1'))?.[1]?.trim();
       if (sendAt && !Number.isNaN(Date.parse(sendAt))) {

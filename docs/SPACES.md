@@ -40,7 +40,18 @@ existing mailboxes. This works across providers (for example Hetzner and Microso
   junk folder) Levuvo processes them and moves them into the folder „Levuvo Spaces“, which other
   devices of the same person read as well. Transport mails are deleted there after 30 days; the
   content lives in each member's local copy. Lost mails are recovered automatically: every message
-  carries a version vector, and members ask each other for what they lack.
+  carries a version vector, and members ask each other for what they lack (at most one open
+  request per member, and the same request not again within an hour). In the inbox and junk folder
+  only mails newer than the last one looked at are searched; a mail with the header that is no
+  usable sync mail is downloaded once and then left alone, one whose content could not be saved is
+  tried again with growing pauses. Mails larger than 42 MB are never downloaded.
+- **Compatibility:** the header carries the format version (`X-Levuvo-Space: v1; sync`) and so does
+  every envelope (`v`) and operation (`v`). A version only processes formats up to its own. Sync
+  mails in a newer format are moved out of the inbox but kept in „Levuvo Spaces“ (not deleted after
+  30 days) and read again after an update; the spaces view shows that an update is needed.
+  Correctly signed operations of a newer format, an unknown type or with data this version
+  considers invalid are stored unchanged and passed on to others, but never applied, so version
+  vectors stay in step between members on different versions.
 - **Files** are encrypted with a fresh key per version and sent in parts of 5 MB, so mail size
   limits (usually 20–25 MB) are no problem. Files up to 25 MB are sent to everyone right away;
   larger ones are fetched from the uploader when someone opens them. Maximum 250 MB per file.

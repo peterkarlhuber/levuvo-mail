@@ -25,6 +25,8 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
       source: Buffer.from(source),
       flags: new Set(flags),
       internalDate: options.internalDate || new Date('2026-11-18T10:00:00Z'),
+      // RFC822.SIZE as the server reports it (tests may claim a larger size than the source).
+      size: options.size,
       modseq: box.modseq
     });
     return uid;
@@ -117,7 +119,8 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
           .filter(m =>
             Object.entries(header).every(([key, value]) => {
               const v = headerOf(m.source, key);
-              return v !== null && v.toLowerCase().includes(String(value).toLowerCase());
+              // Like IMAP SEARCH HEADER with an empty string: true matches every mail with that header.
+              return v !== null && (value === true || v.toLowerCase().includes(String(value).toLowerCase()));
             })
           )
           .map(m => m.uid);
@@ -132,7 +135,7 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
           if (query.source) out.source = Buffer.from(m.source);
           if (query.envelope) out.envelope = envelope(m);
           if (query.internalDate) out.internalDate = m.internalDate;
-          if (query.size) out.size = m.source.length;
+          if (query.size) out.size = m.size ?? m.source.length;
           if (query.headers) {
             const lines = query.headers
               .map(h => [h, headerOf(m.source, h)])
@@ -171,7 +174,7 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
         for (const uid of uids) {
           const m = box().messages.get(uid);
           box().messages.delete(uid);
-          uidMap.set(uid, add(target, m.source, [...m.flags]));
+          uidMap.set(uid, add(target, m.source, [...m.flags], { size: m.size }));
         }
         return {
           path: selected,
