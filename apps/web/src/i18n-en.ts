@@ -1862,5 +1862,14 @@ export const EN: Record<string, string> = {
   'Dieser Schlüssel gehört nicht zum Absender der E-Mail.': 'This key does not belong to the sender of the email.',
   'Dieses Konto wurde inzwischen entfernt.': 'This account has been removed in the meantime.',
   'Das Postfach wird gerade nicht überwacht.': 'The mailbox is not being monitored right now.',
-  'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.': 'The operation failed. Please try again.'
+  'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.': 'The operation failed. Please try again.',
+  'Dieser Bereich konnte nicht angezeigt werden.': 'This section could not be shown.',
+  'Ein Teil der App ließ sich nicht laden, meist nach einem Update. Neu laden behebt das.':
+    'Part of the app could not be loaded, usually after an update. Reloading fixes this.',
+  'Die anderen Bereiche funktionieren weiter. Versuche es erneut oder lade die App neu.':
+    'The other sections keep working. Try again or reload the app.',
+  'App neu laden': 'Reload app',
+  'Technische Details': 'Technical details',
+  'Levuvo Mail konnte nicht angezeigt werden.': 'Levuvo Mail could not be shown.',
+  'Deine Daten sind davon nicht betroffen. Lade die App neu.': 'Your data is not affected. Reload the app.'
 };

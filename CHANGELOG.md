@@ -17,6 +17,11 @@
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
 
+### Fixes
+- **Tasks open again on macOS and Windows:** the builds for macOS and Windows (case-insensitive disks) loaded the task helpers (`tasks.ts`) instead of the Tasks view (`Tasks.tsx`), so opening Tasks failed and the whole window went black. The view is now `TasksModule.tsx`, and a test rejects source files that differ only in case.
+- **No more black window when an area fails:** an error while loading or showing one area now stays in that area, with "Try again", "Reload app" and technical details; the rail and the other areas keep working. A part of the app that is missing because Levuvo was updated while its window was only hidden reloads the page once by itself. A crashed window process is reloaded instead of leaving an empty window. Unreadable due or reminder dates in tasks are shown as text instead of breaking the view.
+- **Desktop UI test on every platform:** CI starts the real desktop app on macOS ARM64, Windows ARM64, Windows x64 and Linux and opens every area, including an area that fails and a missing part after an update.
+
 ## 2.4.0 – 19 November 2026
 
 > **After updating:** the consent for cloud AI is asked again, because its text now lists every kind of content that is sent. Backups made with 2.4.0 cannot be restored in 2.3; to keep a way back, save a backup in 2.3 (Settings → Backup) before installing.

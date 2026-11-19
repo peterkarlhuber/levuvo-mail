@@ -96,6 +96,51 @@
   place-items: center;
   color: var(--muted);
 }
+/* Error boundary: a module that failed stays contained (ModuleBoundary.tsx). */
+.module-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--muted);
+}
+.module-error > svg {
+  color: var(--danger-text);
+}
+.module-error h2 {
+  color: var(--text);
+  font-size: var(--text-2xl);
+}
+.module-error p {
+  max-width: 46ch;
+}
+.module-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.module-error-details {
+  max-width: 60ch;
+  font-size: var(--text-sm);
+}
+.module-error-details code {
+  display: block;
+  margin-top: var(--space-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+.root-error {
+  height: 100vh;
+  display: flex;
+  background: var(--bg);
+  color: var(--text);
+}
 .empty-module {
   flex: 1;
   display: flex;

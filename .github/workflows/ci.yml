@@ -45,6 +45,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Accessibility (axe-core WCAG 2.2 AA, keyboard, phone layout)
         run: npm run test:a11y
+      - name: Desktop UI (Electron, every module opens, error boundaries, stale chunk)
+        run: xvfb-run -a npm run test:desktop-ui
       - name: License notices up to date
         run: |
           npm run notices

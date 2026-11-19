@@ -22,6 +22,7 @@ import { createUpdater } from './updater.mjs';
 import { classifyExternalUrl, isPreviewFrameUrl } from './links.mjs';
 import { createTranslator } from './i18n.mjs';
 import { createReminderMonitor } from './reminders.mjs';
+import { createRendererRecovery } from './renderer-recovery.mjs';
 import { themeFromColor, titleBarOverlay, windowFrameOptions } from './window-frame.mjs';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -495,6 +496,13 @@ async function boot() {
       event.preventDefault();
   });
   windowRef.webContents.on('will-attach-webview', event => event.preventDefault());
+  // A dead renderer leaves an empty (black) window: reload the page, with a loop guard.
+  const rendererRecovery = createRendererRecovery();
+  windowRef.webContents.on('render-process-gone', (_event, details) => {
+    console.warn('[Levuvo Mail] renderer ended:', details.reason, details.exitCode);
+    if (!windowRef || windowRef.isDestroyed() || quitting || !rendererRecovery.shouldReload(details.reason)) return;
+    void windowRef.loadURL(`${appOrigin}/`).catch(err => console.warn('[Levuvo Mail] reload failed:', err.message));
+  });
   windowRef.on('close', event => {
     if (!quitting) {
       event.preventDefault();
