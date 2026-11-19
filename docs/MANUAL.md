@@ -382,7 +382,8 @@ and files can be uploaded with the keyboard. In the **Chat** tab owners and edit
 (Enter sends, Shift+Enter starts a new line); readers follow along. Messages usually arrive within a few
 seconds because Levuvo watches the mailbox with IMAP IDLE. Reply, edit and delete with the buttons next
 to a message; deleting removes it for everyone. Only your device counts unread messages, and there are no
-read receipts. Messages written with the assistant are marked "AI-generated". The assistant and agents see
+read receipts. Messages written with the assistant are marked "AI-generated". When approving one you choose "Only this
+one" or "For this space until revoked"; revoke it in the space settings. The assistant and agents see
 a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving

@@ -197,6 +197,8 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
 
     // ------------------------------------------------------------ approvals
     reg.registerApproval('room_change', {
+      // Chat messages in a space where the user said "allow until revoked" go out without asking.
+      auto: async p => p?.action === 'chat_post' && (await service()).useChatGrant(p.room),
       summary: p => ({
         title: `Raum „${p.roomName}“: ${p.label}`,
         room: p.roomName,

@@ -192,7 +192,17 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
     '/api/mcp/approvals/decide',
     async b => {
       const edits = b.edits && typeof b.edits === 'object' ? b.edits : null;
+      const pending = approvals.list().find(i => i.id === String(b.id || ''));
       const item = await approvals.decide(String(b.id || ''), b.approve === true, edits);
+      // "For this space until revoked": later chat messages of the assistant there need no approval.
+      if (
+        b.grant === 'space' &&
+        item.status === 'approved' &&
+        pending?.type === 'room_change' &&
+        pending.payload?.action === 'chat_post' &&
+        pending.payload.room
+      )
+        await (await ctx.spaces.ready()).service.setChatGrant(pending.payload.room, true).catch(() => {});
       return { ...item, payload: undefined };
     },
     64 * 1024

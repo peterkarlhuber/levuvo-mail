@@ -178,6 +178,9 @@ export function ApprovalDetails({ a, t }: { a: Approval; t: Tr }) {
   );
 }
 
+const isChatPost = (a: Approval) =>
+  a.type === 'room_change' && (a.summary as Record<string, unknown> | undefined)?.kind === 'chat_post';
+
 export function ApprovalList({ onChange }: { onChange?: () => void }) {
   const { t } = useT();
   const { toast } = useUi();
@@ -194,9 +197,9 @@ export function ApprovalList({ onChange }: { onChange?: () => void }) {
     const timer = window.setInterval(load, 5000);
     return () => window.clearInterval(timer);
   }, [load]);
-  async function decide(id: string, approve: boolean) {
+  async function decide(id: string, approve: boolean, grant?: 'space') {
     try {
-      const r = await postJson<{ status: string }>('/api/mcp/approvals/decide', { id, approve }, 'ai-v1');
+      const r = await postJson<{ status: string }>('/api/mcp/approvals/decide', { id, approve, grant }, 'ai-v1');
       toast({
         text:
           r.status === 'approved'
@@ -230,8 +233,21 @@ export function ApprovalList({ onChange }: { onChange?: () => void }) {
               aria-label={t('Freigeben: {title}', { title: approvalTitle(a, t) })}
               onClick={() => void decide(a.id, true)}
             >
-              {t('Freigeben')}
+              {isChatPost(a) ? t('Nur diese') : t('Freigeben')}
             </Button>
+            {isChatPost(a) && (
+              <Button
+                size="sm"
+                icon={<Check size={14} />}
+                title={t(
+                  'Der Assistent darf in diesem Raum ab jetzt ohne Rückfrage im Chat schreiben. Zurücknehmen in den Einstellungen des Raums.'
+                )}
+                aria-label={t('Für diesen Raum bis auf Widerruf freigeben: {title}', { title: approvalTitle(a, t) })}
+                onClick={() => void decide(a.id, true, 'space')}
+              >
+                {t('Für diesen Raum bis auf Widerruf')}
+              </Button>
+            )}
             <Button
               size="sm"
               icon={<X size={14} />}
