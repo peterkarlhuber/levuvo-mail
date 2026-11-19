@@ -1,4 +1,4 @@
-// Local models of Levuvo's own Ollama: a fixed list to choose from. Choosing a model that is on this
+// Local models of Levuvo Mail's own Ollama: a fixed list to choose from. Choosing a model that is on this
 // computer switches to it; choosing one that is not shows its size and a download button, and it
 // becomes active once it is downloaded and verified. Downloads have a progress bar, cancel, resume
 // and delete. The search model can be switched; its index is then
@@ -249,7 +249,7 @@ export function LocalModelSettings({
       <Row
         label={t('Lokale KI')}
         hint={t(
-          'Levuvo bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.',
+          'Levuvo Mail bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.',
           { version: state.runtime.version || '', ram: String(ramGb), tier: t(recommended) }
         )}
       >

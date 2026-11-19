@@ -1,4 +1,4 @@
-// Models of Levuvo's own Ollama: what is installed, downloads with progress, cancel, resume and
+// Models of Levuvo Mail's own Ollama: what is installed, downloads with progress, cancel, resume and
 // delete. Only models of the fixed catalog (ai-model-catalog.mjs) are downloaded, always the variant
 // pinned for this platform (GGUF, or MLX on Apple silicon; requested from Ollama explicitly), and a
 // download only counts as finished when the model's manifest digest equals that variant's pin;

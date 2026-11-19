@@ -1,4 +1,4 @@
-// Levuvo's own Ollama: the pinned model catalog, the isolated runtime and the model downloads.
+// Levuvo Mail's own Ollama: the pinned model catalog, the isolated runtime and the model downloads.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';

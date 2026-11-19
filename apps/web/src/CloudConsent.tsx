@@ -49,7 +49,7 @@ export function CloudConsentBanner({ errors, onDone }: { errors: CloudError[]; o
               ? t('Warte auf Freigabe …')
               : pending.length > 1
                 ? t('{account} freigeben', { account: e.accountLabel || e.provider || '' })
-                : t('Freigeben')}
+                : t('Zugriff freigeben')}
           </button>
         ))}
         {oauth.busy && (

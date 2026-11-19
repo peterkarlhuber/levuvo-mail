@@ -249,7 +249,7 @@ export function ConnectListDialog({ links, onClose }: { links: TaskLink[]; onClo
                   busy={oauth.busy}
                   onClick={() => void oauth.start(e.provider!, e.accountId)}
                 >
-                  {oauth.busy ? t('Warte auf Freigabe …') : t('Freigeben')}
+                  {oauth.busy ? t('Warte auf Freigabe …') : t('Zugriff freigeben')}
                 </Button>
               )}
             </p>
