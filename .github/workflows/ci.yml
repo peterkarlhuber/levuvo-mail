@@ -96,8 +96,15 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
-      - name: Install (pinned commits)
-        run: python -m pip install --upgrade "pip>=25.0" && python -m pip install -r apps/ai/requirements.txt pytest ruff
+      # Tested with exactly what the installers ship (OPS-LEV-007): third-party packages from the
+      # hashed lock, Tabrion/Orkexa from their commit pins without resolving anything again, test
+      # tools (and pip) from their own hashed lock.
+      - name: Install (hashed locks, pinned commits)
+        run: |
+          python -m pip install --require-hashes -r apps/ai/requirements-dev-lock.txt
+          python -m pip install --require-hashes -r apps/ai/requirements-lock.txt
+          python -m pip install --no-deps -r apps/ai/requirements.txt
+          python -m pip check
       - name: Lint and format
         working-directory: apps/ai
         run: ruff check . && ruff format --check .
