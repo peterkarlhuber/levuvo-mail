@@ -1,0 +1,8 @@
+# Typst (Python package) for scripts/manual/build-pdf.mjs. Install with:
+#   python -m pip install --require-hashes -r scripts/manual/requirements.txt
+typst==0.14.8 \
+    --hash=sha256:a12766a83e390377008722a8c80afdd9195a297261fd3c9d1f3720f9aecd2b19 \
+    --hash=sha256:544fcd9ce55b140115d7442b3661c45897778650c307e2eb0749efed29bbfcea \
+    --hash=sha256:aba11243463f6994ca1140b8515e70be1a98fd3025ae3211b84103499b0c5a5a \
+    --hash=sha256:f47fe029f6ebe907f981ce0cb5208eab27eaf7342e319e6c798ac1dbae976f58 \
+    --hash=sha256:66eb2ebfe13275cf2a63ed7ff261eb5af3da5293077a5d6ca16e27a96d0d2f5e
