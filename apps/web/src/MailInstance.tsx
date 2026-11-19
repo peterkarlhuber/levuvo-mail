@@ -1136,6 +1136,7 @@ export default function MailInstance({
                     writeEnabled={writeEnabled}
                     onBack={() => setBundle(null)}
                     onAction={(action, uids) => void runAction(action, uids)}
+                    onOpenMessage={openMessage}
                   />
                 ) : (
                   <BundleRows messages={bundled} onOpen={setBundle} />

@@ -98,6 +98,19 @@ jobs:
         run: npm run release:check
       - run: node scripts/check-workflows.mjs
       - run: node scripts/secret-scan.mjs
+      - name: SBOM (CycloneDX) and licence notices for the release
+        run: |
+          npm run check:licenses
+          node scripts/sbom.mjs --commit "$GITHUB_SHA" --out "levuvo-mail-${{ needs.prepare.outputs.version }}.cdx.json"
+          git diff --exit-code THIRD-PARTY-NOTICES.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compliance
+          path: |
+            levuvo-mail-*.cdx.json
+            THIRD-PARTY-NOTICES.txt
+          if-no-files-found: error
+          retention-days: 30
 
   build:
     name: Build
@@ -113,7 +126,7 @@ jobs:
 
   publish:
     name: Create draft release
-    needs: [prepare, gate, build]
+    needs: [prepare, gate, quality, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Only this job may write.

@@ -63,5 +63,9 @@ export const PRIVACY_EN: Record<string, string> = {
   'Zähler des Cockpits löschen?': "Delete the cockpit's counters?",
   'Die Zähler für Tracker, externe Bilder und Abmeldungen werden gelöscht. Das KI-Protokoll leerst du unter KI & Agenten.':
     'The counters for trackers, external images and unsubscribes are deleted. You clear the AI log under AI & agents.',
-  'Zähler löschen': 'Delete counters'
+  'Zähler löschen': 'Delete counters',
+  'Wochenüberblick ({count} Newsletter)': 'Weekly overview ({count} newsletters)',
+  Wochenüberblick: 'Weekly overview',
+  'Weniger Absender': 'Fewer senders',
+  'Alle {count} Absender': 'All {count} senders'
 };
