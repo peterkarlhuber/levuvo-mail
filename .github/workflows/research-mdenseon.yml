@@ -16,32 +16,23 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
-      - name: mDenseOn licence and ONNX/GGUF routes
-        run: |
-          set +e
-          for r in lightonai/mDenseOn diegomo123/mDenseOn-ONNX algoprog/mDenseOn-ONNX; do
-            echo "=== $r"
-            curl -sS "https://huggingface.co/api/models/$r" | python3 -c "import json,sys; d=json.load(sys.stdin); print('LICENSE', d.get('sha'), (d.get('cardData') or {}).get('license'), [t for t in d.get('tags',[]) if t.startswith('license')], d.get('library_name')); [print(' file', s['rfilename']) for s in d.get('siblings',[])]"
-          done
-          curl -sSL "https://huggingface.co/lightonai/mDenseOn/resolve/main/README.md" | head -c 2500
-      - name: mDenseOn to GGUF with llama.cpp (feasibility)
+      - name: mDenseOn GGUF in Levuvo's pinned Ollama
         run: |
           set +e
           git clone --depth 1 https://github.com/ggml-org/llama.cpp /tmp/llama.cpp
           python -m pip install --quiet --index-url https://download.pytorch.org/whl/cpu torch
           python -m pip install --quiet "transformers>=4.48" sentencepiece gguf protobuf safetensors huggingface_hub numpy
-          python -c "from huggingface_hub import snapshot_download; print(snapshot_download('lightonai/mDenseOn', local_dir='/tmp/mdo'))"
-          python /tmp/llama.cpp/convert_hf_to_gguf.py /tmp/mdo --outtype f16 --outfile /tmp/mdo.gguf 2>&1 | tail -25
-          ls -la /tmp/mdo.gguf
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-      - name: Whisper in transformers.js (Node, CPU) with a German sample
-        run: |
-          set +e
-          sudo apt-get update -qq >/dev/null; sudo apt-get install -y -qq --no-install-recommends espeak-ng ffmpeg >/dev/null; which espeak-ng ffmpeg
-          espeak-ng -v de -s 140 -w /tmp/de.wav "Hallo Anna, ich schicke dir das Angebot bis Freitag. Die Lieferung kommt in Kalenderwoche drei. Viele Grüße, Peter."
-          ffmpeg -loglevel error -i /tmp/de.wav -ar 16000 -ac 1 -f f32le /tmp/de.f32
-          mkdir -p /tmp/w && cp scripts/research/whisper.mjs /tmp/w/ && cd /tmp/w && npm init -y >/dev/null && npm install --no-fund --no-audit @huggingface/transformers@4.3.2 >/dev/null 2>&1
-          node whisper.mjs
-          for r in whisper-base whisper-small whisper-large-v3-turbo; do for f in added_tokens.json special_tokens_map.json vocab.json merges.txt normalizer.json; do curl -sSL -o /tmp/f "https://huggingface.co/onnx-community/$r/resolve/main/$f" && echo " SMALL $r $f $(stat -c %s /tmp/f) $(sha256sum /tmp/f | cut -d' ' -f1)"; done; done
+          python -c "from huggingface_hub import snapshot_download; print(snapshot_download('lightonai/mDenseOn', revision='a5fdb000f7a21da96c3bddde3a782ef777316df3', local_dir='/tmp/mdo'))"
+          python /tmp/llama.cpp/convert_hf_to_gguf.py /tmp/mdo --outtype f16 --outfile /tmp/mdo.gguf 2>&1 | tail -3
+          sha256sum /tmp/mdo.gguf
+          v=$(python3 -c "import json; print(json.load(open('scripts/ollama/ollama-lock.json'))['version'])")
+          curl -sSL -o /tmp/ollama.tar.zst "https://github.com/ollama/ollama/releases/download/v$v/ollama-linux-amd64.tar.zst"
+          mkdir -p /tmp/ol && tar --zstd -xf /tmp/ollama.tar.zst -C /tmp/ol
+          /tmp/ol/bin/ollama serve > /tmp/ollama.log 2>&1 &
+          sleep 5
+          printf 'FROM /tmp/mdo.gguf\n' > /tmp/Modelfile
+          /tmp/ol/bin/ollama create mdenseon -f /tmp/Modelfile 2>&1 | tail -3
+          /tmp/ol/bin/ollama pull bge-m3 2>&1 | tail -1
+          node scripts/research/eval_ollama.mjs
+          /tmp/ol/bin/ollama show mdenseon 2>&1 | head -20
+          tail -30 /tmp/ollama.log | grep -iv "GIN" | tail -15
