@@ -17,6 +17,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pythonExe, pythonKey } from './build-ai-runtime.mjs';
+import { LOCK as OLLAMA_LOCK, assetFor, binaryIn } from './fetch-ollama.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const TARGETS = {
@@ -39,6 +40,25 @@ export function aiRuntimeProblems(dir, platform, arch) {
   const want = pythonKey(platform, arch, info.python);
   if (info.key !== want) problems.push(`AI runtime was built for ${info.key}, the target needs ${want}`);
   if (!existsSync(pythonExe(join(dir, 'python'), platform))) problems.push('AI runtime interpreter missing');
+  return problems;
+}
+
+/** Levuvo's own Ollama (build/ollama-runtime, npm run ollama:runtime): pinned version for this target. */
+export function ollamaRuntimeProblems(dir, platform, arch, lock = OLLAMA_LOCK) {
+  const manifest = join(dir, 'ollama-runtime.json');
+  if (!existsSync(manifest)) return [`${manifest} missing: run npm run ollama:runtime -- --arch ${arch} first`];
+  let info;
+  try {
+    info = JSON.parse(readFileSync(manifest, 'utf8'));
+  } catch {
+    return [`${manifest} is not valid JSON`];
+  }
+  const problems = [];
+  const asset = assetFor(platform, arch, lock);
+  if (info.version !== lock.version) problems.push(`Ollama ${info.version} bundled, pinned ${lock.version}`);
+  if (info.file !== asset.file || info.sha256 !== asset.sha256)
+    problems.push(`Ollama was fetched from ${info.file}, the target needs ${asset.file}`);
+  if (!binaryIn(dir, platform)) problems.push('Ollama binary missing');
   return problems;
 }
 
@@ -129,6 +149,8 @@ function main() {
   }
   const runtime = aiRuntimeProblems(join(root, 'build', 'ai-runtime'), t.platform, t.arch);
   if (runtime.length) fail(`Bundled AI runtime: ${runtime.join('; ')}`);
+  const ollama = ollamaRuntimeProblems(join(root, 'build', 'ollama-runtime'), t.platform, t.arch);
+  if (ollama.length) fail(`Bundled Ollama: ${ollama.join('; ')}`);
 
   node('node_modules/vite/bin/vite.js', ['build', '--config', 'apps/web/vite.config.ts'], 'Frontend build');
   node('node_modules/electron-builder/cli.js', builderArgs(target, env), 'electron-builder');

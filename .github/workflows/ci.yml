@@ -128,6 +128,32 @@ jobs:
       - name: Bundled CPython is the newest patch release (warning)
         run: node scripts/check-python-runtime.mjs
 
+  ollama:
+    name: Own Ollama (pinned build, isolation, model download with digest check)
+    # Levuvo's own Ollama on Linux with the same code as in the app: the pinned release (SHA-256),
+    # a private data folder and port, cloud off, and a real download of the smallest catalog model
+    # whose manifest digest must match the pin.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install (exact lockfile)
+        run: npm ci --no-fund --ignore-scripts
+      - name: Pinned Ollama (checksum, version)
+        run: node scripts/fetch-ollama.mjs --arch x64 --out "$RUNNER_TEMP/ollama"
+      - name: Live test against the real binary
+        env:
+          LEVUVO_OLLAMA_BIN: ${{ runner.temp }}/ollama/bin/ollama
+        run: node --test test/ollama-live/*.test.mjs
+      - name: Catalog pins still match the registry
+        run: node scripts/ollama/check-catalog.mjs
+
   electron-node:
     name: Tests in the Node of Electron (production runtime)
     # The server runs inside Electron's main process, whose Node differs from the setup-node line.
@@ -167,7 +193,7 @@ jobs:
   ci-ok:
     name: CI passed
     if: ${{ always() }}
-    needs: [check, security, ai, electron-node, desktop-build]
+    needs: [check, security, ai, ollama, electron-node, desktop-build]
     runs-on: ubuntu-24.04
     steps:
       - name: All required checks successful?

@@ -300,8 +300,13 @@ crash reports only if you turn them on.
 ## 17 Levuvo Mail Assistant (AI)
 
 The assistant is **off by default**. Switch it on under **Settings → AI & agents**. It works with a local
-model on this computer (Ollama; recommended **qwen3.5:9b**, with 8 GB RAM **qwen3.5:4b**), and
-**Qwen3-Embedding 0.6B** for search by meaning. "Download" fetches a missing model. Cloud models
+model on this computer. Levuvo brings its **own Ollama** for this, separate from any Ollama you installed.
+Models are not part of the installer: choose one under **Language model** (small from 8 GB RAM, standard
+from 16 GB, large from 32 GB; the size that fits this computer is suggested, e.g. **Qwen3.5 9B**) and
+Levuvo downloads it with a progress bar. "Cancel" pauses, "Resume" continues later, "Delete" frees the space
+again. **BGE-M3** is preset for search by meaning (the most accurate on German mail); another search model
+rebuilds the search index in the background. Every model is compared with its fixed checksum after the
+download. Cloud models
 (Anthropic, OpenAI) are used only after consent and never for accounts marked "No cloud AI". All
 results are labelled **AI-generated**; in the reading pane and the composer nothing is sent, saved or
 moved without your click. What a cloud model receives is listed in the consent dialog and in PRIVACY.md

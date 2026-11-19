@@ -33,6 +33,12 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
 - Accounts marked "No cloud AI" are refused for every cloud call (`ensureAllowed`), and are hidden from
   agent runs with a cloud model (`hiddenAccounts`, `mcp-server.mjs`).
 - Embeddings always run locally.
+- Levuvo ships its own Ollama (`ollama-runtime.mjs`, [MODELS.md](MODELS.md)): own models folder and home in
+  the app data folder, a free port on 127.0.0.1 only, Ollama's cloud features off (`OLLAMA_NO_CLOUD`), a
+  minimal environment without the user's `OLLAMA_*` variables. An Ollama installed by the user is never
+  contacted. Only models of the fixed list (`ai-model-catalog.mjs`) are downloaded; the manifest digest of
+  each must equal the pinned one, otherwise the model is deleted again (fail closed). Tasks refuse a model
+  that is not downloaded and verified (`model_missing`).
 - The UI sends message references, not content; the server loads the content itself (`routes-ai.mjs`).
 
 ### Isolation of the AI component
@@ -49,6 +55,10 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
   smoke-tested and its CPU architecture verified in CI (`scripts/build-ai-runtime.mjs`,
   `scripts/verify-app-arch.mjs`). On macOS it is signed and notarized with the app (hardened runtime,
   library validation on in release builds).
+- Ollama: the release asset of a pinned version, checked by size and SHA-256, its code signature (Team ID on
+  macOS, Authenticode signer on Windows), CPU architecture and version (`scripts/fetch-ollama.mjs`); the
+  signed build checks the bundled manifest again. GitHub advisories and OSV are checked weekly
+  (`check-ollama-runtime.mjs`), the model pins in every CI run (`check-catalog.mjs`).
 
 ### Prompt injection
 

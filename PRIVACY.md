@@ -44,7 +44,12 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 
 - **Local model (default):** The AI component of the app (a Python process shipped with it, based on
   Orkexa) sends the content of the messages you apply an AI function to only to **Ollama on this
-  computer** (address 127.0.0.1). Nothing leaves the device. Other addresses are refused.
+  computer** (address 127.0.0.1). Nothing leaves the device. Other addresses are refused. Levuvo brings
+  its own Ollama, separate from any Ollama you installed; its models and key pair are stored in the app
+  data folder (`ollama/`) and are not part of backups.
+- **Model downloads:** when you choose a model that is not on the computer yet, Levuvo's Ollama downloads
+  it from Ollama's model registry (registry.ollama.ai and its storage servers). They see your IP address
+  and which model is downloaded; no mail content is sent. Only models of a fixed list are downloaded.
 - **Cloud model (only with consent):** If you choose Anthropic or OpenAI, the app asks for your consent
   first and records the date and the version of the consent text. From then on, the content an AI
   function needs is sent to that provider and processed under its terms, possibly outside the EU:
@@ -102,7 +107,7 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 ## Connections to the internet
 
 - **Mail servers** (IMAP, SMTP, ManageSieve for filters/vacation reply) – always encrypted, certificates are verified.
-- **AI:** the local model talks only to Ollama on this computer (127.0.0.1). With a cloud model and your consent, the contents listed under "AI features" go to Anthropic (api.anthropic.com) or OpenAI (api.openai.com) over HTTPS.
+- **AI:** the local model talks only to Levuvo's own Ollama on this computer (127.0.0.1). Downloading a model you chose contacts registry.ollama.ai (IP address and model name only). With a cloud model and your consent, the contents listed under "AI features" go to Anthropic (api.anthropic.com) or OpenAI (api.openai.com) over HTTPS.
 - **Microsoft 365 calendar:** accepting an invitation in a Microsoft 365 calendar creates the event without attendees, so Microsoft does not send invitations on your behalf; your answer goes to the organizer as a reply mail.
 - **CalDAV/CardDAV servers** that you add yourself – HTTPS only.
 - **Task lists you connect yourself** (Tasks → Lists → "Connect a list": a CalDAV list, Microsoft To Do via Microsoft Graph, or Google Tasks): only the tasks in that list are sent to the server of that list (title, note, due date, reminder, priority, repetition, status); the link to the mail, the origin and the reminder state stay on this device. Nothing is sent before you connect a list. Google Tasks receives only title, note, due day and status (it cannot store the rest). CalDAV passwords are only sent to addresses of the account's own domain over HTTPS; Microsoft and Google receive the sign-in token of that account, which needs a one-time consent for tasks. The provider's privacy policy also applies. Disconnecting a list stops syncing and keeps the tasks on this device; nothing is deleted on the server.

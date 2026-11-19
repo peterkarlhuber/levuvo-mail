@@ -23,14 +23,23 @@
   ],
   "server": [
     "auth",
+    "busy",
+    "checksum",
     "cloud_blocked",
     "consent_missing",
     "crashed",
     "disabled",
+    "disk_full",
+    "download_failed",
     "feature_disabled",
+    "model_missing",
+    "network",
     "not_configured",
+    "not_in_catalog",
+    "ollama",
     "runtime_missing",
     "stopped",
-    "timeout"
+    "timeout",
+    "unreachable"
   ]
 }

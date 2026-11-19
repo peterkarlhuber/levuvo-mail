@@ -47,7 +47,10 @@
     "test:e2e:live": "node --test test/e2e/inbox-live.e2e.mjs",
     "test:servers": "test/servers/start.sh",
     "bench:mailbox": "node scripts/bench-large-mailbox.mjs",
-    "ai:runtime": "node scripts/build-ai-runtime.mjs"
+    "ai:runtime": "node scripts/build-ai-runtime.mjs",
+    "ollama:runtime": "node scripts/fetch-ollama.mjs",
+    "check:ollama": "node scripts/ollama/check-ollama-runtime.mjs",
+    "check:models": "node scripts/ollama/check-catalog.mjs"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.1",
@@ -205,6 +208,13 @@
         "filter": [
           "**/*",
           "!README.md"
+        ]
+      },
+      {
+        "from": "build/ollama-runtime",
+        "to": "ollama",
+        "filter": [
+          "**/*"
         ]
       }
     ]

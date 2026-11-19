@@ -6,7 +6,15 @@
 import { atomicWrite } from './local-store.mjs';
 import { appendFile, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { SidecarError } from './ai-sidecar.mjs';
+import {
+  DEFAULT_CHAT_MODEL,
+  DEFAULT_EMBED_MODEL,
+  catalogEntry,
+  defaultModel,
+  recommendedTier
+} from './ai-model-catalog.mjs';
 
 // Raised whenever the consent text changes: every cloud consent has to be given again.
 export const CONSENT_VERSION = '2026-11-19';
@@ -54,9 +62,9 @@ const VAULT_ID = 'ai';
 export const DEFAULT_AI_SETTINGS = {
   enabled: false,
   provider: 'ollama',
-  model: 'qwen3.5:9b',
+  model: DEFAULT_CHAT_MODEL,
   baseUrl: 'http://127.0.0.1:11434',
-  embedModel: 'qwen3-embedding:0.6b',
+  embedModel: DEFAULT_EMBED_MODEL,
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
   noCloudAccounts: [],
@@ -71,7 +79,11 @@ function invalid(message, code = 'ai_invalid') {
 
 const MODEL_NAME = /^[A-Za-z0-9._:/-]{1,120}$/;
 
-export function validateAiSettings(input, current) {
+/**
+ * `managed`: Levuvo's own Ollama runs the local models, so only models of the fixed catalog are
+ * accepted and the address is chosen by the app (the setting stays for development only).
+ */
+export function validateAiSettings(input, current, { managed = false } = {}) {
   const next = { ...current, features: { ...current.features }, consents: { ...current.consents } };
   if (input.enabled !== undefined) next.enabled = input.enabled === true;
   if (input.provider !== undefined) {
@@ -82,6 +94,13 @@ export function validateAiSettings(input, current) {
     if (input[key] === undefined) continue;
     const value = String(input[key]).trim();
     if (!MODEL_NAME.test(value) || isOllamaCloudModel(value)) throw invalid('Ungültiger Modellname.');
+    if (managed && (key === 'embedModel' || next.provider === 'ollama')) {
+      const entry = catalogEntry(value);
+      if (!entry || entry.kind !== (key === 'embedModel' ? 'embed' : 'chat'))
+        throw invalid('Dieses Modell steht nicht in der Liste.', 'ai_not_in_catalog');
+      next[key] = entry.id;
+      continue;
+    }
     next[key] = value;
   }
   if (input.baseUrl !== undefined) {
@@ -184,8 +203,40 @@ export function createAiLog(filename) {
   };
 }
 
-export function createAiService({ settingsFile, vault, sidecar, log, logger = () => {} }) {
-  const get = () => ({ ...DEFAULT_AI_SETTINGS, ...settingsFile.get() });
+export function createAiService({
+  settingsFile,
+  vault,
+  sidecar,
+  log,
+  logger = () => {},
+  // Levuvo's own Ollama (ollama-runtime.mjs) and its model manager (ollama-models.mjs). Without
+  // them (development without a bundled binary) the configured address is used.
+  localRuntime = null,
+  models = null,
+  totalmem = os.totalmem
+}) {
+  const managed = Boolean(localRuntime?.available);
+  // First start: the language model that fits the memory of this computer.
+  const get = () => {
+    const stored = settingsFile.get() || {};
+    const s = { ...DEFAULT_AI_SETTINGS, ...stored };
+    if (!stored.model) s.model = defaultModel(recommendedTier(totalmem()));
+    return s;
+  };
+  /** The Ollama address for this request: the own runtime (started on demand) or the setting. */
+  async function localUrl(s) {
+    if (!managed) return s.baseUrl;
+    return localRuntime.ensure();
+  }
+  // Downloaded-and-verified check of the catalog models, cached briefly (it asks Ollama).
+  const ready = new Map();
+  async function ensureModelReady(id) {
+    if (!managed || !models) return;
+    const hit = ready.get(id);
+    if (hit && Date.now() - hit < 60_000) return;
+    if (!(await models.isReady(id))) throw Object.assign(new SidecarError('model_missing'), { statusCode: 409 });
+    ready.set(id, Date.now());
+  }
   const keyOf = provider => {
     if (!vault?.available) return '';
     try {
@@ -197,17 +248,27 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
   // Fingerprint of the settings the running sidecar confirmed; '' while it is unconfirmed (new
   // process, failed configure, changed settings). Tasks only run on a confirmed configuration.
   let configured = '';
-  const fingerprintOf = (s, apiKey) => JSON.stringify([s.provider, s.model, s.baseUrl, s.embedModel, apiKey.length]);
+  const fingerprintOf = (s, apiKey, url) => JSON.stringify([s.provider, s.model, url, s.embedModel, apiKey.length]);
+  async function effectiveUrl(s) {
+    try {
+      return await localUrl(s);
+    } catch (err) {
+      // A cloud model still answers; only embeddings (search) need the local runtime then.
+      if (CLOUD_PROVIDERS.includes(s.provider)) return DEFAULT_AI_SETTINGS.baseUrl;
+      throw err;
+    }
+  }
   async function configure(callRaw) {
     configured = '';
     const s = get();
     const apiKey = CLOUD_PROVIDERS.includes(s.provider) ? keyOf(s.provider) : '';
-    const fingerprint = fingerprintOf(s, apiKey);
+    const baseUrl = await effectiveUrl(s);
+    const fingerprint = fingerprintOf(s, apiKey, baseUrl);
     const call = callRaw || ((m, p) => sidecar.call(m, p, { timeout: 15000 }));
     await call('configure', {
       provider: s.provider,
       model: s.model,
-      baseUrl: s.baseUrl,
+      baseUrl,
       embedModel: s.embedModel,
       apiKey
     });
@@ -216,7 +277,16 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
   /** Fails closed: a task never runs on a sidecar that still has an older provider configured. */
   async function ensureConfigured() {
     const s = get();
-    const want = fingerprintOf(s, CLOUD_PROVIDERS.includes(s.provider) ? keyOf(s.provider) : '');
+    let url;
+    try {
+      url = await effectiveUrl(s);
+    } catch (err) {
+      throw Object.assign(new SidecarError(err.kind === 'runtime_missing' ? 'runtime_missing' : 'unreachable'), {
+        statusCode: 503,
+        cause: err
+      });
+    }
+    const want = fingerprintOf(s, CLOUD_PROVIDERS.includes(s.provider) ? keyOf(s.provider) : '', url);
     if (configured === want && sidecar.running) return;
     try {
       await configure();
@@ -231,7 +301,8 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       ...s,
       keys: Object.fromEntries(CLOUD_PROVIDERS.map(p => [p, Boolean(keyOf(p))])),
       consentVersion: CONSENT_VERSION,
-      vaultAvailable: Boolean(vault?.available)
+      vaultAvailable: Boolean(vault?.available),
+      localRuntime: managed ? 'bundled' : 'external'
     };
   }
   /** True when content of this account must not reach the configured (cloud) model. */
@@ -263,7 +334,7 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     configure,
     async save(input) {
       const current = get();
-      const next = validateAiSettings(input, current);
+      const next = validateAiSettings(input, current, { managed });
       if (input.apiKey !== undefined) {
         const provider = String(input.keyProvider || next.provider);
         if (!CLOUD_PROVIDERS.includes(provider)) throw invalid('Für lokale Modelle wird kein Schlüssel benötigt.');
@@ -295,11 +366,23 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     },
     async status() {
       const s = get();
+      // The own runtime starts when the AI is on, so the settings can show its models.
+      if (managed && s.enabled) await localRuntime.ensure().catch(() => {});
       try {
         const st = await sidecar.call('status', { probeOllama: true }, { timeout: 8000 });
-        return { available: true, ...st, diagnostics: sidecar.diagnostics() };
+        return {
+          available: true,
+          ...st,
+          diagnostics: sidecar.diagnostics(),
+          local: managed ? localRuntime.diagnostics() : null
+        };
       } catch (err) {
-        return { available: false, reason: err.kind || 'runtime_missing', enabled: s.enabled };
+        return {
+          available: false,
+          reason: err.kind || 'runtime_missing',
+          enabled: s.enabled,
+          local: managed ? localRuntime.diagnostics() : null
+        };
       }
     },
     async models() {
@@ -307,6 +390,8 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     },
     async pull(model) {
       if (!MODEL_NAME.test(String(model || '')) || isOllamaCloudModel(model)) throw invalid('Ungültiger Modellname.');
+      // Own runtime: only catalog models, with progress and digest check (ollama-models.mjs).
+      if (managed && models) return models.download(String(model));
       void log.add({ type: 'model_download', model });
       return sidecar.call('pull', { model }, { timeout: 60 * 60 * 1000 });
     },
@@ -322,6 +407,8 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       const started = Date.now();
       try {
         await ensureConfigured();
+        if (kind === 'embed') await ensureModelReady(s.embedModel);
+        else if (s.provider === 'ollama') await ensureModelReady(s.model);
         const result = await sidecar.call('task', { kind, input });
         // Background indexing would flood the log; the indexer writes one entry per run instead.
         if (source !== 'index')
@@ -355,6 +442,7 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       const started = Date.now();
       try {
         await ensureConfigured();
+        if (s.provider === 'ollama') await ensureModelReady(s.model);
         const result = await sidecar.call('agent', params, { timeout: 15 * 60 * 1000 });
         void log.add({
           type: 'agent',
@@ -389,9 +477,13 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       await settingsFile.save({ ...DEFAULT_AI_SETTINGS });
       await log.clear();
       await sidecar.stop();
+      ready.clear();
       logger('ai: settings, keys and log removed');
     },
     log,
+    managed,
+    localModels: models,
+    localRuntime,
     get configuredFingerprint() {
       return configured;
     }

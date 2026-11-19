@@ -1,0 +1,277 @@
+{
+  "description": "Synthetic German test mailbox for comparing embedding models in Levuvo's semantic search. Queries are paraphrased on purpose: they share few words with the mail that answers them.",
+  "mails": [
+    {
+      "id": "m01",
+      "subject": "Rechnung 2026-1187 für Oktober",
+      "from": "Buchhaltung Kramer GmbH <buchhaltung@kramer.example>",
+      "text": "Sehr geehrte Damen und Herren, anbei erhalten Sie unsere Rechnung Nr. 2026-1187 über 1.428,00 € für die Wartungsarbeiten im Oktober. Zahlbar innerhalb von 14 Tagen ohne Abzug. Mit freundlichen Grüßen, Buchhaltung"
+    },
+    {
+      "id": "m02",
+      "subject": "Zahlungserinnerung",
+      "from": "Stadtwerke Linz <kundenservice@stadtwerke.example>",
+      "text": "Guten Tag, leider konnten wir für die Strom-Abschlagszahlung vom September noch keinen Zahlungseingang feststellen. Bitte überweisen Sie den offenen Betrag von 96,50 € bis zum 30. November, um Mahngebühren zu vermeiden."
+    },
+    {
+      "id": "m03",
+      "subject": "Termin Zahnarzt verschoben",
+      "from": "Praxis Dr. Weber <praxis@weber-zahn.example>",
+      "text": "Liebe Patientin, lieber Patient, Ihr Kontrolltermin am Dienstag muss leider entfallen, da Dr. Weber erkrankt ist. Wir bieten Ihnen als Ersatz Donnerstag, 9:30 Uhr an. Bitte bestätigen Sie kurz telefonisch."
+    },
+    {
+      "id": "m04",
+      "subject": "Kick-off Projekt Atlas",
+      "from": "Miriam Schön <m.schoen@firma.example>",
+      "text": "Hallo Team, das Auftaktmeeting für das Projekt Atlas findet am Montag um 10 Uhr im großen Besprechungsraum statt. Bitte bringt eure Ressourcenplanung für das erste Quartal mit. Agenda folgt."
+    },
+    {
+      "id": "m05",
+      "subject": "Ihre Bestellung wurde versandt",
+      "from": "Versandhaus Nord <shop@versandnord.example>",
+      "text": "Gute Nachrichten! Ihr Paket mit der Sendungsnummer 00340434 ist unterwegs und wird voraussichtlich am Freitag zugestellt. Inhalt: Bürostuhl ErgoPlus, Farbe Anthrazit."
+    },
+    {
+      "id": "m06",
+      "subject": "Urlaubsantrag genehmigt",
+      "from": "Personalabteilung <hr@firma.example>",
+      "text": "Hallo Peter, dein Antrag auf Erholungsurlaub vom 22. Dezember bis 6. Jänner wurde von deiner Führungskraft freigegeben. Restanspruch danach: 4 Tage."
+    },
+    {
+      "id": "m07",
+      "subject": "WLAN im Büro gestört",
+      "from": "IT-Support <it@firma.example>",
+      "text": "Liebe Kolleginnen und Kollegen, aufgrund eines defekten Access Points im zweiten Stock ist das drahtlose Netzwerk dort derzeit nicht verfügbar. Bitte nutzt bis morgen Mittag das LAN-Kabel oder arbeitet im ersten Stock."
+    },
+    {
+      "id": "m08",
+      "subject": "Mietvertrag Verlängerung",
+      "from": "Hausverwaltung Berger <office@berger-hv.example>",
+      "text": "Sehr geehrter Herr Huber, der Mietvertrag für die Wohnung Top 7 läuft Ende März aus. Wir bieten Ihnen eine Verlängerung um drei Jahre zu unveränderten Konditionen an. Bitte teilen Sie uns Ihre Entscheidung bis Ende Jänner mit."
+    },
+    {
+      "id": "m09",
+      "subject": "Geburtstagsfeier Lena",
+      "from": "Sabine <sabine.h@privat.example>",
+      "text": "Hallo ihr Lieben, Lena wird am 14. Dezember acht Jahre alt! Wir feiern am Samstag ab 15 Uhr bei uns im Garten bzw. im Wohnzimmer, falls es regnet. Bitte gebt bis Mittwoch Bescheid, ob ihr kommt."
+    },
+    {
+      "id": "m10",
+      "subject": "Angebot Fensterreinigung",
+      "from": "Glanz & Klar Reinigung <angebot@glanzklar.example>",
+      "text": "Vielen Dank für Ihre Anfrage. Für die Reinigung aller Fenster inklusive Rahmen in Ihrem Bürogebäude berechnen wir pauschal 640 € netto. Das Angebot gilt bis 15. Dezember."
+    },
+    {
+      "id": "m11",
+      "subject": "Passwort läuft ab",
+      "from": "IT-Support <it@firma.example>",
+      "text": "Ihr Kennwort für das Firmenkonto läuft in 5 Tagen ab. Bitte ändern Sie es rechtzeitig im Self-Service-Portal, sonst wird Ihr Zugang gesperrt."
+    },
+    {
+      "id": "m12",
+      "subject": "Flugbestätigung Wien–Hamburg",
+      "from": "Austrian Airlines <noreply@flug.example>",
+      "text": "Buchungscode QX7T2L. Hinflug am 3. Dezember, Abflug Wien 07:15, Ankunft Hamburg 08:55. Rückflug am 5. Dezember um 18:40. Freigepäck: 1 Koffer bis 23 kg."
+    },
+    {
+      "id": "m13",
+      "subject": "Hotelreservierung Hamburg",
+      "from": "Hotel am Hafen <reservierung@hotelhafen.example>",
+      "text": "Wir bestätigen Ihre Reservierung für zwei Nächte vom 3. bis 5. Dezember im Einzelzimmer mit Frühstück. Check-in ab 15 Uhr. Kostenfreie Stornierung bis 48 Stunden vor Anreise."
+    },
+    {
+      "id": "m14",
+      "subject": "Quartalszahlen Q3",
+      "from": "Controlling <controlling@firma.example>",
+      "text": "Anbei die Auswertung für das dritte Quartal: Der Umsatz stieg um 6 Prozent, die Kosten blieben stabil, der Deckungsbeitrag liegt bei 31 Prozent. Details im angehängten Bericht."
+    },
+    {
+      "id": "m15",
+      "subject": "Kündigung Fitnessstudio",
+      "from": "FitWorld <service@fitworld.example>",
+      "text": "Wir bestätigen den Eingang Ihrer Kündigung. Ihre Mitgliedschaft endet zum 31. Dezember. Bis dahin können Sie alle Kurse wie gewohnt nutzen."
+    },
+    {
+      "id": "m16",
+      "subject": "Elternabend 3b",
+      "from": "Volksschule Am Bach <direktion@vs-ambach.example>",
+      "text": "Liebe Eltern, der Elternabend der Klasse 3b findet am Donnerstag um 18:30 Uhr statt. Themen: Schikurs im Februar, Lesepass und die Wahl der Elternvertretung."
+    },
+    {
+      "id": "m17",
+      "subject": "Reklamation Lieferung 4471",
+      "from": "Thomas Gruber <t.gruber@kunde.example>",
+      "text": "Guten Tag, bei der gestrigen Lieferung waren drei der zwölf Kartons beschädigt und die Ware darin zerbrochen. Bitte senden Sie uns Ersatz oder schreiben Sie uns den Betrag gut. Fotos anbei."
+    },
+    {
+      "id": "m18",
+      "subject": "Steuerbescheid 2025",
+      "from": "Steuerberatung Mayr <kanzlei@mayr-stb.example>",
+      "text": "Sehr geehrter Herr Huber, der Einkommensteuerbescheid für 2025 ist eingelangt. Sie erhalten eine Gutschrift von 1.214 €. Die Auszahlung erfolgt in den nächsten Wochen auf Ihr Konto."
+    },
+    {
+      "id": "m19",
+      "subject": "Newsletter: Herbstaktion",
+      "from": "Gartenmarkt Grün <news@gruen.example>",
+      "text": "Jetzt 20 % auf alle Blumenzwiebeln und Gartengeräte! Nur bis Sonntag in allen Filialen und online. Tipp der Woche: Rosen winterfest machen."
+    },
+    {
+      "id": "m20",
+      "subject": "Server-Wartung am Wochenende",
+      "from": "IT-Betrieb <ops@firma.example>",
+      "text": "Am Samstag zwischen 22 und 4 Uhr werden die Datenbankserver aktualisiert. In dieser Zeit sind das CRM und die Zeiterfassung nicht erreichbar."
+    },
+    {
+      "id": "m21",
+      "subject": "Vertragsentwurf Kooperation",
+      "from": "Dr. Anna Lechner <lechner@kanzlei-lechner.example>",
+      "text": "Anbei der überarbeitete Entwurf der Kooperationsvereinbarung. Die Haftungsklausel in Punkt 8 habe ich wie besprochen begrenzt. Bitte prüfen Sie insbesondere die Kündigungsfristen in Punkt 11."
+    },
+    {
+      "id": "m22",
+      "subject": "Autoservice fällig",
+      "from": "Autohaus Steiner <service@steiner-auto.example>",
+      "text": "Ihr Fahrzeug mit dem Kennzeichen L-123AB ist zur jährlichen Inspektion und zur §57a-Begutachtung fällig. Vereinbaren Sie jetzt online einen Werkstatttermin."
+    },
+    {
+      "id": "m23",
+      "subject": "Mittagessen nächste Woche?",
+      "from": "Jonas <jonas@freunde.example>",
+      "text": "Hey, lange nicht gesehen! Hast du nächste Woche Zeit für ein Mittagessen? Mittwoch oder Donnerstag ginge bei mir, gerne beim Italiener am Hauptplatz."
+    },
+    {
+      "id": "m24",
+      "subject": "Spendenquittung",
+      "from": "Rotes Kreuz <spenden@rk.example>",
+      "text": "Herzlichen Dank für Ihre Unterstützung! Ihre Spende über 150 € wurde an das Finanzamt gemeldet und ist steuerlich absetzbar."
+    },
+    {
+      "id": "m25",
+      "subject": "Bewerbung als Projektassistenz",
+      "from": "Lisa Novak <lisa.novak@mail.example>",
+      "text": "Sehr geehrte Damen und Herren, mit großem Interesse habe ich Ihre Stellenausschreibung gelesen und bewerbe mich hiermit um die Position der Projektassistenz. Lebenslauf und Zeugnisse finden Sie im Anhang."
+    },
+    {
+      "id": "m26",
+      "subject": "Heizung macht Geräusche",
+      "from": "Martin (Nachbar) <martin.k@privat.example>",
+      "text": "Servus, bei uns im Haus klopft die Heizung seit gestern ziemlich laut, vor allem nachts. Ist das bei dir auch so? Sollen wir gemeinsam die Hausverwaltung anrufen?"
+    },
+    {
+      "id": "m27",
+      "subject": "Freigabe Marketingbudget",
+      "from": "Geschäftsführung <gf@firma.example>",
+      "text": "Das Budget von 45.000 € für die Frühjahrskampagne ist freigegeben. Bitte stimmt die Aufteilung auf Online und Print bis Ende des Monats mit dem Controlling ab."
+    },
+    {
+      "id": "m28",
+      "subject": "Ihre Paketzustellung ist fehlgeschlagen",
+      "from": "Paketdienst <info@paket-verfolgung.example>",
+      "text": "Wir konnten Ihr Paket nicht zustellen. Bitte bestätigen Sie Ihre Adresse und zahlen Sie eine Gebühr von 1,99 € über den folgenden Link, sonst wird das Paket zurückgesendet."
+    },
+    {
+      "id": "m29",
+      "subject": "Protokoll Teambesprechung",
+      "from": "Miriam Schön <m.schoen@firma.example>",
+      "text": "Hier das Protokoll von heute: Release verschiebt sich um eine Woche, Jonas übernimmt die Tests, Kundentermin mit Gruber am 12. Offene Punkte: Lizenzkosten klären."
+    },
+    {
+      "id": "m30",
+      "subject": "Versicherung: Schadensmeldung",
+      "from": "Uniqa Kundenservice <schaden@versicherung.example>",
+      "text": "Wir haben Ihre Meldung zum Wasserschaden in der Küche erhalten. Ein Sachverständiger wird sich in den nächsten Tagen bei Ihnen melden, um einen Besichtigungstermin zu vereinbaren."
+    },
+    {
+      "id": "m31",
+      "subject": "Konferenz-Einladung als Sprecher",
+      "from": "Digital Days Austria <program@digitaldays.example>",
+      "text": "Wir würden uns freuen, Sie als Vortragenden bei den Digital Days im März begrüßen zu dürfen. Thema: Datenschutz bei KI im Mittelstand. Reise- und Hotelkosten übernehmen wir."
+    },
+    {
+      "id": "m32",
+      "subject": "Leasingrate angepasst",
+      "from": "Bank Leasing <leasing@bank.example>",
+      "text": "Aufgrund der Zinsänderung beträgt Ihre monatliche Leasingrate ab Jänner 412,30 € statt bisher 398,10 €. Die Laufzeit bleibt unverändert."
+    },
+    {
+      "id": "m33",
+      "subject": "Neue Kollegin im Vertrieb",
+      "from": "Personalabteilung <hr@firma.example>",
+      "text": "Wir begrüßen ab 1. Dezember Frau Katharina Wolf im Vertriebsteam Süd. Sie übernimmt die Betreuung der Bestandskunden in Oberösterreich und Salzburg."
+    },
+    {
+      "id": "m34",
+      "subject": "Sicherheitslücke: Update installieren",
+      "from": "IT-Security <security@firma.example>",
+      "text": "Für den eingesetzten Browser wurde eine kritische Schwachstelle veröffentlicht. Bitte installiert das bereitgestellte Update noch heute und startet den Rechner neu."
+    },
+    {
+      "id": "m35",
+      "subject": "Fotos vom Wanderausflug",
+      "from": "Sabine <sabine.h@privat.example>",
+      "text": "Hier sind die Bilder vom Sonntag am Traunstein! Das Gipfelfoto ist richtig gut geworden. Nächstes Mal nehmen wir mehr Jause mit."
+    },
+    {
+      "id": "m36",
+      "subject": "Lieferverzug Bauteile",
+      "from": "Einkauf Zulieferer AG <einkauf@zulieferer.example>",
+      "text": "Leider verzögert sich die Lieferung der bestellten Platinen wegen Materialengpässen um etwa drei Wochen. Neuer voraussichtlicher Liefertermin ist der 10. Dezember."
+    },
+    {
+      "id": "m37",
+      "subject": "Abo-Verlängerung Zeitung",
+      "from": "Tageszeitung <abo@zeitung.example>",
+      "text": "Ihr Digitalabo verlängert sich automatisch am 1. Dezember um ein weiteres Jahr zum Preis von 119 €. Wenn Sie nicht verlängern möchten, kündigen Sie bitte vorher."
+    },
+    {
+      "id": "m38",
+      "subject": "Workshop Datenschutz",
+      "from": "Datenschutzbeauftragte <dsb@firma.example>",
+      "text": "Die verpflichtende DSGVO-Schulung für alle Mitarbeitenden findet am 28. November online statt. Dauer etwa zwei Stunden. Der Link kommt mit der Kalendereinladung."
+    },
+    {
+      "id": "m39",
+      "subject": "Gutschein eingelöst",
+      "from": "Buchhandlung Seitenweise <info@seitenweise.example>",
+      "text": "Ihr Geschenkgutschein über 50 € wurde beim Kauf von drei Büchern eingelöst. Restguthaben: 7,40 €."
+    },
+    {
+      "id": "m40",
+      "subject": "Frage zur Anlagenabnahme",
+      "from": "Thomas Gruber <t.gruber@kunde.example>",
+      "text": "Hallo, wann können wir die Abnahme der neuen Förderanlage in unserer Halle durchführen? Unser Werksleiter hätte Mitte Dezember Zeit."
+    }
+  ],
+  "queries": [
+    { "q": "Wann muss ich die Stromrechnung bezahlen?", "relevant": ["m02"] },
+    { "q": "Wer hat mir eine Rechnung über Wartung geschickt?", "relevant": ["m01"] },
+    { "q": "Ersatztermin beim Arzt", "relevant": ["m03"] },
+    { "q": "Wo und wann startet das neue Projekt?", "relevant": ["m04"] },
+    { "q": "Wann kommt der Bürosessel?", "relevant": ["m05"] },
+    { "q": "Habe ich über Weihnachten frei bekommen?", "relevant": ["m06"] },
+    { "q": "Internet im zweiten Stock funktioniert nicht", "relevant": ["m07"] },
+    { "q": "Bis wann muss ich mich wegen der Wohnung entscheiden?", "relevant": ["m08"] },
+    { "q": "Kindergeburtstag Einladung", "relevant": ["m09"] },
+    { "q": "Was kostet das Putzen der Glasflächen?", "relevant": ["m10"] },
+    { "q": "Reise nach Hamburg: Flugzeiten und Unterkunft", "relevant": ["m12", "m13"] },
+    { "q": "Wie lief das Geschäft im Herbst finanziell?", "relevant": ["m14"] },
+    { "q": "Mitgliedschaft beendet", "relevant": ["m15"] },
+    { "q": "Beschwerde über kaputte Ware", "relevant": ["m17"] },
+    { "q": "Bekomme ich Geld vom Finanzamt zurück?", "relevant": ["m18"] },
+    { "q": "Wann ist das CRM nicht verfügbar?", "relevant": ["m20"] },
+    { "q": "Anwältin hat Änderungen am Vertrag geschickt", "relevant": ["m21"] },
+    { "q": "Pickerl fürs Auto", "relevant": ["m22"] },
+    { "q": "Verdächtige Mail mit Zahlungslink für ein Paket", "relevant": ["m28"] },
+    { "q": "Was wurde im Meeting beschlossen?", "relevant": ["m29"] },
+    { "q": "Wasser in der Küche, wann kommt der Gutachter?", "relevant": ["m30"] },
+    { "q": "Anfrage für einen Vortrag", "relevant": ["m31"] },
+    { "q": "Monatliche Kosten für das Auto steigen", "relevant": ["m32"] },
+    { "q": "Wer ist neu im Verkauf?", "relevant": ["m33"] },
+    { "q": "Browser dringend aktualisieren", "relevant": ["m34"] },
+    { "q": "Bilder vom Berg", "relevant": ["m35"] },
+    { "q": "Teile kommen später", "relevant": ["m36"] },
+    { "q": "Schulung zur DSGVO", "relevant": ["m38"] },
+    { "q": "Abnahmetermin mit dem Kunden für die Maschine", "relevant": ["m40"] },
+    { "q": "Bewerbungen für offene Stellen", "relevant": ["m25"] }
+  ]
+}
