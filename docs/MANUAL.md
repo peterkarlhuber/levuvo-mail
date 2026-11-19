@@ -375,6 +375,16 @@ Title, note, due date, reminder, priority, repetition and status are synced (Goo
 day and status only); the link to the mail stays on this device. Disconnecting stops syncing and deletes
 nothing on the server. Tasks are stored encrypted on the device.
 
+**Tasks from spaces:** space tasks assigned to you ("Mine") also show here, marked with the space's name;
+under **Spaces** on the left you filter by space. Complete them or change title, note, due date and
+priority here or in the space: the change applies everywhere and goes encrypted to all members like any
+change in a space. If you are a reader in the space, you only see the task. The other way round, pick a
+space under **Space** in a task (as owner or editor): the task moves into the space, is assigned to you and
+all members see it. Reminder, repetition, list and the link to the mail are dropped. Space tasks are never
+synced with CalDAV, Microsoft To Do or Google Tasks; if the task was in a connected list, it is deleted
+there. Space tasks live only in the space (no copy in your task list) and are part of the backup with the
+space.
+
 ## 19 Spaces
 
 A **space** (Alt+4) collects everything about a topic, project or customer: notes several people edit at

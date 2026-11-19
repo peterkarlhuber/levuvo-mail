@@ -1,6 +1,7 @@
 // Tasks (see tasks.mjs). Account-free: a task outlives its mail account.
 // Shared with the AI core: the same store is available as ctx.tasks.
 import { VIEWS } from './tasks.mjs';
+import { createSpaceTaskLink } from './space-tasks.mjs';
 
 const zoneOf = value => {
   const tz = typeof value === 'string' ? value : '';
@@ -18,6 +19,15 @@ const zoneOf = value => {
 export function registerTaskRoutes(ctx) {
   const { api, requireAction } = ctx;
   const errorResponse = (reply, err) => ctx.errorResponse(reply, err, { domain: 'task' });
+  // The main area also lists my tasks from spaces and can put a task into a space
+  // (space-tasks.mjs). ctx.tasks itself stays the local list (AI core, reminders, sync).
+  const linked = createSpaceTaskLink({
+    tasks: ctx.tasks,
+    spaces: async () => {
+      if (!ctx.spaces?.ready) throw new Error('Räume sind gerade nicht verfügbar.');
+      return (await ctx.spaces.ready()).service;
+    }
+  });
   // Sync internals (etag, last agreed state) stay on the server; the UI sees the list only.
   const withLabels = task => {
     if (!task) return task;
@@ -31,7 +41,7 @@ export function registerTaskRoutes(ctx) {
     try {
       const view = VIEWS.includes(request.query?.view) ? request.query.view : 'all';
       const timeZone = zoneOf(request.query?.tz);
-      return { tasks: ctx.tasks.list({ view, timeZone }).map(withLabels) };
+      return { tasks: (await linked.list({ view, timeZone })).map(withLabels) };
     } catch (err) {
       return errorResponse(reply, err);
     }
@@ -45,13 +55,20 @@ export function registerTaskRoutes(ctx) {
         return errorResponse(reply, err);
       }
     });
-  post('/api/tasks/save', async b => ({ task: withLabels(await ctx.tasks.save(b.task || {})) }));
+  api.get('/api/tasks/spaces', async (_request, reply) => {
+    try {
+      return { spaces: await linked.targets() };
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
+  post('/api/tasks/save', async b => ({ task: withLabels(await linked.save(b.task || {})) }));
   post('/api/tasks/done', async b => {
-    const r = await ctx.tasks.setDone(String(b.id || ''), b.done === true);
+    const r = await linked.setDone(String(b.id || ''), b.done === true);
     return { task: withLabels(r.task), finished: r.finished ? withLabels(r.finished) : null };
   });
   post('/api/tasks/delete', async b => {
-    await ctx.tasks.remove(String(b.id || ''));
+    await linked.remove(String(b.id || ''));
     return { ok: true };
   });
   // ---------------------------------------------------------------- sync with connected lists
