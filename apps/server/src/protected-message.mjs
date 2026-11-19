@@ -42,6 +42,20 @@ const COMMON_WORDS = new Set([
   'levuvo'
 ]);
 
+/** The password without digits/punctuation at both ends and without separators (no regex: ReDoS). */
+function coreWord(pw) {
+  const chars = [...pw.toLowerCase()];
+  const letter = c => /\p{L}/u.test(c);
+  let start = 0;
+  let end = chars.length;
+  while (start < end && !letter(chars[start])) start++;
+  while (end > start && !letter(chars[end - 1])) end--;
+  return chars
+    .slice(start, end)
+    .filter(c => !/[\s._-]/.test(c))
+    .join('');
+}
+
 /**
  * True for passwords that an offline attacker tries first. The encrypted file can be attacked
  * without any rate limit, so length alone is not enough: few distinct characters, keyboard or
@@ -54,11 +68,7 @@ export function weakPassword(password) {
   const steps = codes.slice(1).map((c, i) => c - codes[i]);
   if (steps.every(d => d === 1) || steps.every(d => d === -1)) return true;
   if (/^\d+$/.test(pw) && pw.length < 16) return true;
-  const core = pw
-    .toLowerCase()
-    .replace(/^[\d\W_]+|[\d\W_]+$/gu, '')
-    .replace(/[\s._-]+/g, '');
-  return COMMON_WORDS.has(core);
+  return COMMON_WORDS.has(coreWord(pw));
 }
 
 /** Checks the password options from the composer. */

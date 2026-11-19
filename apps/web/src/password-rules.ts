@@ -18,6 +18,20 @@ const COMMON_PASSWORD_WORDS = new Set([
   'levuvo'
 ]);
 
+/** The password without digits/punctuation at both ends and without separators (no regex: ReDoS). */
+function coreWord(lower: string) {
+  const chars = [...lower];
+  const letter = (c: string) => /\p{L}/u.test(c);
+  let start = 0;
+  let end = chars.length;
+  while (start < end && !letter(chars[start])) start++;
+  while (end > start && !letter(chars[end - 1])) end--;
+  return chars
+    .slice(start, end)
+    .filter(c => !/[\s._-]/.test(c))
+    .join('');
+}
+
 /** Same rule as weakPassword() in apps/server/src/protected-message.mjs (the server checks again). */
 export function weakPassword(password: string) {
   const pw = password.normalize('NFC');
@@ -27,6 +41,5 @@ export function weakPassword(password: string) {
   const steps = codes.slice(1).map((c, i) => c - codes[i]);
   if (steps.every(d => d === 1) || steps.every(d => d === -1)) return true;
   if (/^\d+$/.test(pw) && pw.length < 16) return true;
-  const core = lower.replace(/^[\d\W_]+|[\d\W_]+$/gu, '').replace(/[\s._-]+/g, '');
-  return COMMON_PASSWORD_WORDS.has(core);
+  return COMMON_PASSWORD_WORDS.has(coreWord(lower));
 }
