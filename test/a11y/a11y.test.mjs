@@ -453,7 +453,13 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
             if (detail) {
               const m = byUid(Number(detail[1]));
               return route.fulfill(
-                json({ ...fixtures['GET /api/messages/1'].body, uid: m.uid, subject: m.subject, unread: m.unread })
+                json({
+                  ...fixtures['GET /api/messages/1'].body,
+                  uid: m.uid,
+                  subject: m.subject,
+                  unread: m.unread,
+                  attachments: []
+                })
               );
             }
             if (url.pathname === '/api/messages/batch-action')
@@ -504,6 +510,27 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     await page.locator('.reader-content h2', { hasText: 'Moodboard' }).waitFor();
     await page.keyboard.press('k');
     await until(async () => (await selected()).includes('Protokoll Workshop'), 'k selects the previous message');
+    await page.locator('.reader-content h2', { hasText: 'Protokoll Workshop' }).waitFor();
+    // r answers, f forwards the open message (composer prefilled from the detail).
+    await page.keyboard.press('r');
+    await page.locator('.compose-panel').waitFor();
+    assert.equal(
+      await page.locator('.compose-panel').getByLabel('Betreff', { exact: true }).inputValue(),
+      'Re: Protokoll Workshop 12.11.'
+    );
+    await page.keyboard.press('Escape');
+    await page.locator('.compose-panel').waitFor({ state: 'detached' });
+    await blur();
+    await page.keyboard.press('f');
+    await page.locator('.compose-panel').waitFor();
+    assert.equal(
+      await page.locator('.compose-panel').getByLabel('Betreff', { exact: true }).inputValue(),
+      'Fwd: Protokoll Workshop 12.11.'
+    );
+    assert.ok((await page.locator('.compose-panel').textContent()).includes('Weitergeleitete Nachricht'));
+    await page.keyboard.press('Escape');
+    await page.locator('.compose-panel').waitFor({ state: 'detached' });
+    await blur();
     await page.keyboard.press('Escape');
     await page.locator('.reader-column.reader-open').waitFor({ state: 'detached' });
     assert.ok((await selected()).includes('Protokoll Workshop'), 'Escape keeps the selection');

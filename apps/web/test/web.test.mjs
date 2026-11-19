@@ -934,3 +934,39 @@ test('Mail search: reducer, search mode and request paths', async () => {
     '/api/search/local?q=a%26b&limit=40&cursor=x%2Fy'
   );
 });
+
+test('Mail reader: selection, open state, detail loading and j/k steps', async () => {
+  const { initialReaderState: s0, readerReducer: reduce, stepSelection } = await import('../src/mail/reader-state.ts');
+  let s = reduce(s0, { type: 'selected', uid: 5, accountId: 'a1', open: false });
+  assert.deepEqual([s.selectedUid, s.selectedKey, s.open], [5, 'a1:5', false]);
+  s = reduce(s, { type: 'selected', uid: 6, accountId: 'a1', open: true });
+  assert.deepEqual([s.selectedKey, s.open], ['a1:6', true]);
+  // Clearing the selection keeps the reader state as it was; closing is its own step.
+  s = reduce(s, { type: 'selected', uid: null, accountId: 'a1', open: true });
+  assert.deepEqual([s.selectedUid, s.selectedKey, s.open], [null, null, true]);
+  assert.equal(reduce(s, { type: 'closed' }).open, false);
+  assert.equal(reduce(s, { type: 'keySelected', key: 'b2:1' }).selectedKey, 'b2:1');
+
+  s = reduce({ ...s, error: 'old' }, { type: 'detailRequested' });
+  assert.deepEqual([s.detail, s.error, s.busy], [null, '', true]);
+  s = reduce(s, { type: 'detailLoaded', detail: { uid: 6, flagged: false } });
+  s = reduce(s, { type: 'detailSettled' });
+  assert.deepEqual([s.detail.uid, s.busy], [6, false]);
+  s = reduce(s, { type: 'detailPatched', patch: { flagged: true } });
+  assert.equal(s.detail.flagged, true);
+  assert.equal(reduce(s0, { type: 'detailPatched', patch: { flagged: true } }).detail, null);
+  assert.equal(reduce(s, { type: 'detailFailed', error: 'x' }).error, 'x');
+  assert.deepEqual(reduce(s, { type: 'detailCleared' }), { ...s, detail: null, error: '', busy: false });
+  assert.equal(reduce(reduce(s, { type: 'retried' }), { type: 'retried' }).reload, s.reload + 2);
+
+  const rows = [1, 2, 3].map(uid => ({ uid, accountId: uid === 2 ? 'b' : 'a' }));
+  const step = (dir, o) => stepSelection(rows, dir, { keyed: false, selectedKey: null, selectedUid: null, ...o })?.uid;
+  assert.equal(step('down', {}), 1, 'j without a selection starts at the top');
+  assert.equal(step('up', {}), 1);
+  assert.equal(step('down', { selectedUid: 2 }), 3);
+  assert.equal(step('down', { selectedUid: 3 }), 3, 'stays on the last row');
+  assert.equal(step('up', { selectedUid: 1 }), 1);
+  assert.equal(step('up', { keyed: true, selectedKey: 'a:3' }), 2);
+  assert.equal(step('down', { keyed: true, selectedKey: 'b:2' }), 3);
+  assert.equal(stepSelection([], 'down', { keyed: false, selectedKey: null, selectedUid: null }), null);
+});
