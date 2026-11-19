@@ -325,11 +325,11 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
+  // Levuvo Mail's own Ollama: the fixed model list, downloads with progress, cancel and delete.
   const localModels = ai.localModels;
   const noRuntime = reply =>
     reply.code(409).send({
-      error: 'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.',
+      error: 'Das eigene Ollama von Levuvo Mail ist in dieser Installation nicht enthalten.',
       code: 'ai_runtime_missing'
     });
   api.get('/api/ai/local-models', async (_request, reply) => {
@@ -342,6 +342,38 @@ export function registerAiRoutes(ctx) {
     } catch (err) {
       return aiError(reply, err);
     }
+  });
+  // Status of the semantic index for Settings and the search: counts and state only, no content.
+  const embedInstalled = async () => {
+    if (!localModels) return true;
+    const list = await localModels.list().catch(() => null);
+    return Boolean(list?.models?.find(m => m.id === ai.get().embedModel)?.installed);
+  };
+  api.get('/api/ai/index-status', async () =>
+    semantic.overview(
+      ctx.accounts().map(a => a.id),
+      { modelInstalled: ai.get().enabled ? await embedInstalled() : true }
+    )
+  );
+  api.post('/api/ai/index/:action', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const ids = ctx.accounts().map(a => a.id);
+    switch (request.params.action) {
+      case 'pause':
+        await semantic.pause();
+        break;
+      case 'resume':
+        await semantic.resume();
+        void syncAll();
+        break;
+      case 'rebuild':
+        await semantic.rebuild(ids);
+        void syncAll();
+        break;
+      default:
+        return reply.code(404).send({ error: 'Unbekannte Aktion.', code: 'not_found' });
+    }
+    return semantic.overview(ids, { modelInstalled: await embedInstalled() });
   });
   for (const action of ['download', 'cancel', 'delete']) {
     api.post(`/api/ai/local-models/${action}`, { bodyLimit: 1024 }, async (request, reply) => {

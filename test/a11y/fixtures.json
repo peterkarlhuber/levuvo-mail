@@ -1276,5 +1276,63 @@
     "body": {
       "changed": false
     }
+  },
+  "GET /api/storage": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "dataDir": "/Users/demo/Library/Application Support/Levuvo Mail",
+      "platform": "darwin",
+      "canOpen": true,
+      "folders": [
+        {
+          "id": "data",
+          "path": "/Users/demo/Library/Application Support/Levuvo Mail",
+          "exists": true,
+          "bytes": 7854120000
+        },
+        {
+          "id": "models",
+          "path": "/Users/demo/Library/Application Support/Levuvo Mail/ollama/models",
+          "exists": true,
+          "bytes": 7189976408
+        },
+        {
+          "id": "index",
+          "path": "/Users/demo/Library/Application Support/Levuvo Mail/index",
+          "exists": true,
+          "bytes": 48211000
+        },
+        {
+          "id": "spaces",
+          "path": "/Users/demo/Library/Application Support/Levuvo Mail/spaces",
+          "exists": true,
+          "bytes": 2400000
+        },
+        {
+          "id": "restore",
+          "path": "/Users/demo/Library/Application Support/Levuvo Mail/before-restore",
+          "exists": false,
+          "bytes": null
+        }
+      ]
+    }
+  },
+  "GET /api/ai/index-status": {
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "state": "running",
+      "reason": null,
+      "model": "qwen3-embedding:0.6b",
+      "paused": false,
+      "messages": 12480,
+      "vectors": 4096,
+      "etaSeconds": 420,
+      "startedAt": 1795000000000,
+      "finishedAt": null,
+      "error": null,
+      "accounts": []
+    }
   }
 }

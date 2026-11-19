@@ -39,7 +39,7 @@ export function mailText(kind, { spaceName = '', inviterName = '' } = {}) {
     };
   }
   return {
-    subject: 'Levuvo-Raum: verschlüsselter Abgleich · encrypted space sync',
+    subject: 'Levuvo Mail – Raum: verschlüsselter Abgleich · encrypted space sync',
     text: [
       'Diese Nachricht gleicht einen gemeinsamen Raum in Levuvo Mail ab. Der Inhalt ist',
       'Ende-zu-Ende-verschlüsselt. Levuvo Mail verschiebt sie automatisch in einen eigenen Ordner.',
@@ -93,7 +93,7 @@ export async function buildSyncMail({ from, fromName = '', to, kind, spaceName, 
   );
 }
 
-// Largest raw sync mail: a 30 MiB envelope in base64 plus headers. Bigger ones are not even
+// Largest raw sync mail: a 30 MB envelope in base64 plus headers. Bigger ones are not even
 // downloaded (anyone can send a mail with the X-Levuvo-Space header).
 export const MAX_SYNC_MAIL_BYTES = 42 * 1024 * 1024;
 async function fetchSyncSource(client, uid) {

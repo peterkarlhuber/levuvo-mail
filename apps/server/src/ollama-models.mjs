@@ -219,7 +219,7 @@ export function createModelManager({
     const running = jobs.get(entry.id);
     if (running && ['downloading', 'verifying'].includes(running.status)) return publicJob(running);
     const have = await installed().catch(() => {
-      throw new ModelError('unreachable', 'Levuvos Ollama startet nicht.', { statusCode: 503 });
+      throw new ModelError('unreachable', 'Das Ollama von Levuvo Mail startet nicht.', { statusCode: 503 });
     });
     if (have.get(entry.id)?.verified) {
       const done = { status: 'done', completed: entry.size, total: entry.size, startedAt: Date.now() };

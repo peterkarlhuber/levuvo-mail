@@ -41,6 +41,7 @@ import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
+import { registerStorageRoutes } from './routes-storage.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { createBackgroundJobs } from './background-jobs.mjs';
@@ -190,6 +191,8 @@ export async function createMailServer({
   aiSidecar = null,
   ollamaRuntime = null,
   packaged = false,
+  /** Desktop only: shows a folder in Finder or Explorer (Settings → Privacy). */
+  openFolder = null,
   logger = () => {}
 } = {}) {
   if (desktop && !/^[a-f0-9]{64}$/.test(sessionSecret)) throw new Error('Desktop-Sitzungsschlüssel fehlt.');
@@ -698,6 +701,7 @@ export async function createMailServer({
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
+  registerStorageRoutes(ctx, { dir, openFolder });
   registerAiRoutes(ctx);
   const mcp = await setupMcp(ctx, { createJsonFile, dir });
   ctx.mcp = mcp;

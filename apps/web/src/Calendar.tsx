@@ -137,7 +137,7 @@ function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calend
   };
 }
 
-const MB = 1024 * 1024;
+const MB = 1_000_000; // decimal, like every size shown in the app
 const ATTACH_MAX_COUNT = 20;
 const ATTACH_MAX_TOTAL = 10 * MB;
 const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;

@@ -32,6 +32,7 @@ import WhenMenu from './WhenMenu';
 import { FOLLOW_UP_DAYS } from './when';
 import { usePrefs } from './prefs';
 import type { Identity } from './types';
+import { MB, prettySize } from './format';
 
 export type ComposeInitial = {
   mode: 'new' | 'reply' | 'replyAll' | 'forward';
@@ -100,13 +101,11 @@ type Props = {
   onSubmit: (payload: OutgoingPayload, restore: ComposeInitial, sendAt: string | null) => void;
 };
 
-const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 8 * MB;
 const MAX_ATTACHMENTS = 8;
-const MAX_IMAGE_BYTES = 1024 * 1024;
+const MAX_IMAGE_BYTES = 1 * MB;
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const parseAddresses = (value: string) => (value.trim() ? value.split(/[;,\s]+/).filter(Boolean) : []);
-const prettySize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MiB` : `${Math.ceil(bytes / 1024)} KiB`;
 export default function Composer({
   accountId,
   initial,
@@ -421,7 +420,7 @@ export default function Composer({
     if (empty) return t('Bitte einen Nachrichtentext eingeben.');
     if (subject.length > 250) return t('Der Betreff ist zu lang.');
     if (files.length > MAX_ATTACHMENTS || totalBytes > MAX_TOTAL_BYTES)
-      return t('Maximal acht Anhänge und insgesamt 8 MiB.');
+      return t('Maximal acht Anhänge und insgesamt 8 MB.');
     if (missing && (missing.own || missing.recipients.length))
       return t('Für die Verschlüsselung fehlen Schlüssel – Details oben.');
     if (security.method === 'password') {
@@ -430,7 +429,7 @@ export default function Composer({
         return t(
           'Dieses Passwort ist zu leicht zu erraten. Bitte das vorgeschlagene Passwort verwenden oder ein anderes wählen.'
         );
-      if (totalBytes > 5 * 1024 * 1024) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.');
+      if (totalBytes > 5 * MB) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MB enthalten.');
     }
     return '';
   }
@@ -560,7 +559,7 @@ export default function Composer({
     if (!incoming) return;
     const next = [...files, ...Array.from(incoming)];
     if (next.length > MAX_ATTACHMENTS || next.reduce((s, f) => s + f.size, 0) > MAX_TOTAL_BYTES) {
-      setError(t('Maximal acht Anhänge mit insgesamt 8 MiB.'));
+      setError(t('Maximal acht Anhänge mit insgesamt 8 MB.'));
       return;
     }
     setFiles(next);
@@ -863,7 +862,7 @@ export default function Composer({
               <div className="compose-files-head">
                 <Paperclip size={15} /> {t('Anhänge')}{' '}
                 <span>
-                  {files.length}/{MAX_ATTACHMENTS} · {prettySize(totalBytes)} / 8 MiB
+                  {files.length}/{MAX_ATTACHMENTS} · {prettySize(totalBytes)} / {prettySize(MAX_TOTAL_BYTES)}
                 </span>
               </div>
               {files.map((file, i) => (

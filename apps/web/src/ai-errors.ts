@@ -18,7 +18,7 @@ const texts = (t: (s: string) => string): Record<string, string> => ({
   // Levuvo's own Ollama and its model list
   ai_checksum: t('Prüfsumme stimmt nicht. Das Modell wurde entfernt. Bitte erneut herunterladen.'),
   ai_download_failed: t('Der Download ist fehlgeschlagen. Bitte erneut versuchen.'),
-  ai_not_in_catalog: t('Dieses Modell steht nicht in Levuvos Modellliste.'),
+  ai_not_in_catalog: t('Dieses Modell steht nicht in der Modellliste von Levuvo Mail.'),
   ai_busy: t('Gerade läuft ein Download. Bitte warten, bis er fertig ist.'),
   ai_unavailable: t('Der KI-Anbieter ist gerade überlastet oder gestört. Später erneut versuchen.'),
   ai_model_missing: t('Das gewählte Modell ist nicht installiert. In den Einstellungen herunterladen.'),

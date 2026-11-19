@@ -8,7 +8,7 @@ import { base64Size, checkAttachmentTotal, safeFilename, safeMimeType, withoutId
 import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 /** Microsoft Graph takes files up to 3 MB in one request (larger ones need an upload session). */
-const GRAPH_ATTACH_MAX = 3 * 1024 * 1024;
+const GRAPH_ATTACH_MAX = 3_000_000; // decimal, like the "3 MB" the app shows
 
 export const CLOUD_PREFIX = 'cloud:';
 export const GRAPH_SCOPES = [

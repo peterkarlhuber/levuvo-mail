@@ -172,6 +172,8 @@ export function createLocalIndex({
   vectorIdleMs = VECTOR_IDLE_MS
 }) {
   const loaded = new Map(); // accountId -> entry
+  const checkedAt = new Map(); // accountId -> ISO time of the last successful sync (this session)
+  const latestIso = (a, b) => (a && b ? (a > b ? a : b) : a || b || null);
   const base = id => path.join(dir, id.replace(/[^a-z0-9-]/gi, ''));
   const dbFile = id => `${base(id)}.lvdb`;
   const legacyFile = id => `${base(id)}.lvx`;
@@ -841,6 +843,10 @@ export function createLocalIndex({
         entry.meta('updatedAt', new Date().toISOString());
         trimTombstones(entry);
       }
+      // "Stand" in Settings is the last successful check, also when nothing was new (updatedAt
+      // only moves on changes and looked stuck after "Update now"). Kept in memory: an unchanged
+      // sync writes nothing to the database.
+      checkedAt.set(id, new Date().toISOString());
       protect(id);
       return { enabled: true, added, removed, skipped, complete: left > 0, total: countAll(entry) };
     },
@@ -980,6 +986,13 @@ export function createLocalIndex({
       return { removed: stmt(entry, 'DELETE FROM vectors WHERE model = ?').run(model).changes };
     },
 
+    /** Number of stored vectors of `model` (the progress of the semantic index). */
+    async vectorCount(id, model) {
+      const entry = await open(id);
+      if (!entry || !validModel(model)) return 0;
+      return stmt(entry, 'SELECT count(*) FROM vectors WHERE model = ?').pluck().get(model);
+    },
+
     /** Removes the vectors of every model except `model` (after the embedding model changed). */
     async dropOtherVectors(id, model) {
       const entry = await open(id);
@@ -1050,6 +1063,7 @@ export function createLocalIndex({
         folders: stmt(entry, 'SELECT count(*) FROM folders').pluck().get(),
         vectors: stmt(entry, 'SELECT count(*) FROM vectors').pluck().get(),
         updatedAt: entry.meta('updatedAt') || null,
+        checkedAt: latestIso(checkedAt.get(id), entry.meta('updatedAt')),
         generation: entry.meta('generation'),
         bytes
       };
@@ -1058,6 +1072,7 @@ export function createLocalIndex({
     async clear(id) {
       const entry = loaded.get(id);
       loaded.delete(id);
+      checkedAt.delete(id);
       if (entry?.vectorTimer) clearTimeout(entry.vectorTimer);
       try {
         // Emptied first: if the file cannot be deleted (Windows: open elsewhere), nothing remains in it.

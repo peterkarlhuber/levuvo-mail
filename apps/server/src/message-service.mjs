@@ -51,11 +51,11 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
     const meta = await fetchUidOne(client, uid, { size: true, flags: true });
     if (!meta) return null;
     if (!Number.isSafeInteger(meta.size) || meta.size < 0 || meta.size > MAX_MESSAGE_BYTES) {
-      throw tooLarge('Nachricht ist zu groß oder konnte nicht sicher geprüft werden (max. 12 MiB).');
+      throw tooLarge('Nachricht ist zu groß oder konnte nicht sicher geprüft werden (max. 12 MB).');
     }
     const msg = await fetchUidOne(client, uid, { source: true });
     if (!msg?.source) return null;
-    if (msg.source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Nachricht überschreitet 12 MiB.');
+    if (msg.source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Nachricht überschreitet 12 MB.');
 
     let source = msg.source;
     let parsed = await parse(source);
@@ -76,7 +76,7 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
         if (opened.raw) {
           source = Buffer.isBuffer(opened.raw) ? opened.raw : Buffer.from(opened.raw, 'binary');
           // Decrypted (possibly decompressed) content gets the same limit as the mail itself.
-          if (source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Entschlüsselte Nachricht überschreitet 12 MiB.');
+          if (source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Entschlüsselte Nachricht überschreitet 12 MB.');
           parsed = await parse(source);
         }
       } else if (crypto.pgp && /-----BEGIN PGP (MESSAGE|SIGNED MESSAGE)-----/.test(parsed.text || '')) {

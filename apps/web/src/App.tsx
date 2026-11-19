@@ -532,7 +532,7 @@ function Shell() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-panel">
-          <img src="/levuvo-header-logo.png" alt="Levuvo" className="onboarding-logo brand-image" />
+          <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="onboarding-logo brand-image" />
           <h1>
             {credentialsMissing ? (
               t('Zugang prüfen')
@@ -597,7 +597,7 @@ function Shell() {
     <div className={`app-frame density-${prefs.density}`}>
       <nav className="rail" aria-label={t('Bereiche')}>
         <span className="rail-logo" title="Levuvo Mail">
-          <img src="/favicon.png" alt="Levuvo" />
+          <img src="/favicon.png" alt="Levuvo Mail" />
         </span>
         {rail.map(item => (
           <button

@@ -146,7 +146,7 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
         {list?.updateNeeded && (
           <p className="banner warn" role="status">
             {t(
-              'Ein Mitglied nutzt eine neuere Levuvo-Version. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.'
+              'Ein Mitglied nutzt eine neuere Version von Levuvo Mail. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.'
             )}
           </p>
         )}
@@ -486,7 +486,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
       {detail.status === 'joining' && (
         <p className="banner info">
           {t(
-            'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald seine Levuvo-App die Mail abruft.'
+            'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald seine App Levuvo Mail die Mail abruft.'
           )}
         </p>
       )}
@@ -501,7 +501,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
       {detail.status === 'left' && <p className="banner warn">{t('Du hast diesen Raum verlassen.')}</p>}
       {detail.sendError && (
         <p className="banner warn">
-          {t('Einige Abgleich-Mails konnten noch nicht gesendet werden. Levuvo versucht es weiter.')}
+          {t('Einige Abgleich-Mails konnten noch nicht gesendet werden. Levuvo Mail versucht es weiter.')}
         </p>
       )}
       {/* WAI-ARIA tabs: one tab stop, arrows/Home/End move and select, the panel is labelled by its tab. */}

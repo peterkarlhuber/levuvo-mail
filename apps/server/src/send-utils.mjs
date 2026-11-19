@@ -3,7 +3,8 @@ import { readBody, readReference, readFromAddress, MAX_BODY_CHARS } from './mess
 import { cleanFilename } from './message-utils.mjs';
 
 export const MAX_ATTACHMENTS = 8;
-export const MAX_TOTAL_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+// Decimal like every size shown in the app (1 MB = 1,000,000 bytes), so the limit is what it says.
+export const MAX_TOTAL_ATTACHMENT_BYTES = 8_000_000;
 export const MAX_RECIPIENTS = 30;
 export { MAX_BODY_CHARS };
 export const MAX_SUBJECT_CHARS = 250;
@@ -71,7 +72,7 @@ export function parseAttachments(input) {
     const padding = encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0;
     const byteLength = (encoded.length / 4) * 3 - padding;
     total += byteLength;
-    if (total > MAX_TOTAL_ATTACHMENT_BYTES) invalid('Anhänge dürfen zusammen maximal 8 MiB groß sein.');
+    if (total > MAX_TOTAL_ATTACHMENT_BYTES) invalid('Anhänge dürfen zusammen maximal 8 MB groß sein.');
     const buffer = Buffer.from(encoded, 'base64');
     return {
       filename: cleanFilename(file.name, i),

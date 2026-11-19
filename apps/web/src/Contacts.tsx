@@ -224,7 +224,7 @@ export default function ContactsModule({
   }
   async function importFile(file?: File) {
     if (!file || !books.length) return;
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 5_000_000) {
       toast({ text: t('Datei zu groß (max. 5 MB).'), kind: 'error' });
       return;
     }
