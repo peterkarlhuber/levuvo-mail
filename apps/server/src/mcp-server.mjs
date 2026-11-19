@@ -363,7 +363,7 @@ export function buildTools(ctx) {
         },
         ['to', 'subject', 'body']
       ),
-      run: async a => {
+      run: async (a, agent) => {
         const to = emails(a.to);
         if (!to.length) throw toolError('At least one recipient is required.');
         return {
@@ -372,7 +372,9 @@ export function buildTools(ctx) {
           cc: emails(a.cc),
           subject: str(a.subject, 300).replace(/[\r\n]/g, ' '),
           text: str(a.body, 50000),
-          inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined
+          inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined,
+          // AI Act Art. 50(2): the sent mail says machine-readably that an agent wrote it.
+          aiAssisted: `agent; ${String(agent?.name || 'unknown')}`.replace(/[^\x20-\x7e]/g, '').slice(0, 150)
         };
       }
     },
@@ -680,7 +682,8 @@ const BUILTIN_APPROVALS = {
         subject: p.subject,
         text: p.text,
         inReplyTo: p.inReplyTo,
-        references: p.inReplyTo
+        references: p.inReplyTo,
+        ...(p.aiAssisted ? { aiAssisted: p.aiAssisted } : {})
       })
   },
   event: {

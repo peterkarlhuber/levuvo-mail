@@ -1,0 +1,42 @@
+{
+  "$comment": "Licence policy for everything that ships in Levuvo Mail (docs/compliance/LICENSING.md). allowed: no review needed. review: allowed only with an entry in exceptions (package name -> reason). Anything else fails the check. Expressions with OR pass if one alternative is allowed; AND needs all.",
+  "allowed": [
+    "MIT",
+    "MIT-0",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "Apache-2.0",
+    "Unlicense",
+    "CC0-1.0",
+    "Python-2.0",
+    "PSF-2.0",
+    "Zlib",
+    "BlueOak-1.0.0",
+    "MPL-2.0",
+    "BSD",
+    "Apache Software License",
+    "MIT License",
+    "BSD License",
+    "Python Software Foundation License",
+    "ISC License (ISCL)",
+    "Mozilla Public License 2.0 (MPL 2.0)"
+  ],
+  "review": [
+    "LGPL-2.1",
+    "LGPL-2.1+",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0",
+    "LGPL-3.0+",
+    "LGPL-3.0-or-later",
+    "EPL-2.0",
+    "CDDL-1.0"
+  ],
+  "exceptions": {
+    "openpgp": "LGPL-3.0+: used unmodified as a separate module in node_modules (not bundled into the UI), its source is public on npm/GitHub and the licence text ships in THIRD-PARTY-NOTICES.txt. Confirm with a lawyer how the asar integrity fuse relates to LGPL-3.0 section 4 (docs/compliance/OPEN-ITEMS.md L8).",
+    "tabrion": "Own package of Levuvo's author (peterkarlhuber/tabrion), no licence metadata.",
+    "orkexa": "Own package of Levuvo's author (peterkarlhuber/orkexa), no licence metadata.",
+    "levuvo-ai": "Levuvo Mail's own AI sidecar (apps/ai)."
+  }
+}

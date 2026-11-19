@@ -25,6 +25,7 @@ import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type
 import TemplateMenu from './TemplateMenu';
 import { AddVideoCallButton } from './VideoCall';
 import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
+import { complianceIssues } from './compliance-checks';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
 import { useT } from './i18n';
@@ -88,7 +89,13 @@ export type OutgoingPayload = {
   security: Security;
   replaceDraft?: { uid: number; uidValidity: string; draftId: string };
   followUp?: string;
+  /** Text written by the assistant or an agent: becomes the header X-Levuvo-AI-Assisted (AI Act Art. 50(2)). */
+  aiAssisted?: string;
 };
+
+/** Header value (printable ASCII) naming who wrote the text. */
+export const aiAssistedLabel = (who: string, model = '') =>
+  `${who}${model ? `; model=${model}` : ''}`.replace(/[^\x20-\x7e]/g, '').slice(0, 150);
 
 type Props = {
   accountId: string;
@@ -136,6 +143,10 @@ export default function Composer({
   const imageInput = useRef<HTMLInputElement>(null);
   const textArea = useRef<HTMLTextAreaElement>(null);
   const [security, setSecurity] = useState<Security>(initial.security || { method: null, sign: false, encrypt: false });
+  // Who wrote (part of) the text: the assistant (model) or an agent; cleared by the assistant's undo.
+  const [aiAssisted, setAiAssisted] = useState(
+    initial.aiGenerated ? aiAssistedLabel('agent', initial.aiGenerated) : ''
+  );
   const [missing, setMissing] = useState<{ recipients: string[]; own: boolean } | null>(null);
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -279,6 +290,7 @@ export default function Composer({
       references: initial.references,
       attachments: await Promise.all(files.map(fileToBase64)),
       security,
+      ...(aiAssisted ? { aiAssisted } : {}),
       ...(draftMeta.current.uid && draftMeta.current.uidValidity
         ? {
             replaceDraft: {
@@ -289,7 +301,21 @@ export default function Composer({
           }
         : {})
     }),
-    [toList, ccList, bccList, subject, from, format, html, text, initial.inReplyTo, initial.references, files, security]
+    [
+      toList,
+      ccList,
+      bccList,
+      subject,
+      from,
+      format,
+      html,
+      text,
+      initial.inReplyTo,
+      initial.references,
+      files,
+      security,
+      aiAssisted
+    ]
   );
 
   const saveDraft = useCallback(
@@ -455,11 +481,27 @@ export default function Composer({
       },
       lang
     ).finally(() => setChecking(false));
+    // Local rules (no AI, nothing logged) come first; the AI notes follow and are marked as AI.
+    const local = complianceIssues({
+      from,
+      to: toList,
+      cc: ccList,
+      bcc: bccList,
+      subject,
+      text: getDraft(),
+      encrypted: security.method === 'password' || (!!security.method && security.encrypt)
+    }).map(i => t(i.text, { ...i.vars, ...(i.items ? { what: i.items.map(w => t(w)).join(', ') } : {}) }));
+    const notes = [
+      ...local.map(m => `• ${m}`),
+      ...(issues.length
+        ? ['', t('Hinweise des Levuvo Mail Assistant (KI):'), ...issues.map(i => `• ${i.message}`)]
+        : [])
+    ];
     if (
-      issues.length &&
+      notes.length &&
       !(await confirm({
         title: t('Vor dem Senden prüfen'),
-        message: `${issues.map(i => `• ${i.message}`).join('\n')}\n\n${t('Hinweise des Levuvo Mail Assistant (KI). Trotzdem senden?')}`,
+        message: `${notes.join('\n').trim()}\n\n${t('Du entscheidest. Trotzdem senden?')}`,
         confirmLabel: sendAt ? t('Trotzdem planen') : t('Trotzdem senden')
       }))
     )
@@ -763,6 +805,15 @@ export default function Composer({
                 setDraft={setDraft}
                 subject={subject}
                 setSubject={setSubject}
+                onAssisted={model =>
+                  setAiAssisted(
+                    model
+                      ? aiAssistedLabel('Levuvo Mail Assistant', model)
+                      : initial.aiGenerated
+                        ? aiAssistedLabel('agent', initial.aiGenerated)
+                        : ''
+                  )
+                }
               />
               <Segmented
                 size="sm"
