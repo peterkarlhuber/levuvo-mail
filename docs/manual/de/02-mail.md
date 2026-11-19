@@ -42,6 +42,10 @@ Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt
 
 Über **Vorlagen** fügst du gespeicherte Texte ein oder speicherst die aktuelle Nachricht als Vorlage. Platzhalter wie `{Vorname}` oder `{Datum}` werden beim Einfügen automatisch ersetzt. Vorlagen verwaltest du unter **Einstellungen → Vorlagen**.
 
+### Hinweise vor dem Senden
+
+Bevor eine Mail hinausgeht, prüft Levuvo Mail sie auf deinem Computer, ohne KI. Sehen viele externe Empfänger aus mehreren Organisationen gegenseitig ihre Adressen, schlägt es **Bcc** vor. Gehen Kartennummern, Sozialversicherungsnummern, Passwörter oder Gesundheitsdaten unverschlüsselt nach außen, weist es darauf hin. Mit eingeschaltetem Assistenten erkennt die Prüfung auch diskriminierende Formulierungen und Drohungen. Du entscheidest, ob du trotzdem sendest; nichts davon wird gespeichert oder gemeldet. Die Hinweise sind keine Rechtsberatung.
+
 ## Ordnung halten
 
 | Was du tun willst | So geht es |
