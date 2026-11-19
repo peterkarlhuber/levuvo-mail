@@ -4,6 +4,7 @@ import { postJson } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { useFocusTrap } from './ui/focus';
+import { useTaskLinks } from './TaskLists';
 import {
   dueFromForm,
   duePresets,
@@ -19,7 +20,7 @@ import {
 } from './tasks';
 
 export type TaskDraft = Partial<
-  Pick<Task, 'id' | 'title' | 'notes' | 'due' | 'done' | 'remindAt' | 'priority' | 'repeat' | 'source'>
+  Pick<Task, 'id' | 'title' | 'notes' | 'due' | 'done' | 'remindAt' | 'priority' | 'repeat' | 'source' | 'list'>
 > & { mail?: TaskMailRef | null };
 
 export const tasksChanged = () => window.dispatchEvent(new CustomEvent('levuvo:tasks-changed'));
@@ -44,6 +45,10 @@ export default function TaskDialog({
   const [remind, setRemind] = useState<ReminderChoice>(reminderChoice(draft.remindAt ?? null, draft.due ?? null));
   const [customRemind, setCustomRemind] = useState(localDateTime(draft.remindAt ?? null));
   const [repeat, setRepeat] = useState<string>(draft.repeat ? `${draft.repeat.freq}:${draft.repeat.interval}` : '');
+  const [list, setList] = useState(draft.list || '');
+  // An edit opened without the list (e.g. from the reader) leaves the task in its list.
+  const [listTouched, setListTouched] = useState(false);
+  const { links } = useTaskLinks();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const titleInput = useRef<HTMLInputElement>(null);
@@ -83,6 +88,7 @@ export default function TaskDialog({
             remindAt,
             priority,
             repeat: due ? rep : null,
+            list: draft.id && !listTouched && draft.list === undefined ? undefined : list || null,
             done: draft.done === true,
             mail: draft.mail || null,
             source: draft.source
@@ -240,6 +246,25 @@ export default function TaskDialog({
               ))}
             </div>
           </div>
+          {(links.length > 0 || list) && (
+            <label className="dialog-field">
+              {t('Liste')}
+              <select
+                value={list}
+                onChange={e => {
+                  setList(e.target.value);
+                  setListTouched(true);
+                }}
+              >
+                <option value="">{t('Auf diesem Gerät')}</option>
+                {links.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} · {l.accountLabel}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="dialog-field">
             {t('Notiz')}
             <textarea rows={3} value={notes} maxLength={10_000} onChange={e => setNotes(e.target.value)} />

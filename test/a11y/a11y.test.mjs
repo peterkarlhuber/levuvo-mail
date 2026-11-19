@@ -176,6 +176,12 @@ test(
         await axe(page, 'task dialog');
         await page.keyboard.press('Escape');
         await page.locator('.task-dialog').waitFor({ state: 'detached' });
+        await page.locator('.task-list-actions button', { hasText: 'Liste verbinden' }).click();
+        await page.locator('.ui-dialog').waitFor();
+        await page.locator('.ui-dialog .empty-list').waitFor({ state: 'detached' });
+        await axe(page, 'connect task list');
+        await page.keyboard.press('Escape');
+        await page.locator('.ui-dialog').waitFor({ state: 'detached' });
         await page.locator('.rail-item[aria-label="Assistent"]').click();
         await page.locator('.assistant-panel').waitFor();
         await axe(page, 'assistant');

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Circle,
   CircleCheck,
+  Cloud,
   Flag,
   Inbox,
   ListTodo,
@@ -25,7 +26,18 @@ import { useTasks } from './task-reminders';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import TaskDialog, { tasksChanged, type TaskDraft } from './TaskDialog';
-import { dueState, filterView, localDate, viewCounts, type Task, type TaskMailRef, type TaskView } from './tasks';
+import { TaskListsNav, useTaskLinks } from './TaskLists';
+import {
+  dueState,
+  filterView,
+  inList,
+  localDate,
+  viewCounts,
+  type Task,
+  type TaskListFilter,
+  type TaskMailRef,
+  type TaskView
+} from './tasks';
 
 const ARCHIVE_KEY = 'levuvo-tasks-archive-on-done';
 const readArchivePref = () => {
@@ -44,16 +56,32 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
   const [editing, setEditing] = useState<TaskDraft | null>(null);
   const [quick, setQuick] = useState('');
   const [archiveOnDone, setArchiveOnDone] = useState(readArchivePref);
-  const all = useMemo(() => tasks || [], [tasks]);
+  const { links } = useTaskLinks();
+  const [listFilter, setListFilter] = useState<TaskListFilter>('all');
+  // A disconnected list falls back to all tasks.
+  const activeList =
+    listFilter === 'all' || listFilter === 'local' || links.some(l => l.id === listFilter) ? listFilter : 'all';
+  const everything = useMemo(() => tasks || [], [tasks]);
+  const all = useMemo(() => inList(everything, activeList), [everything, activeList]);
   const counts = viewCounts(all);
   const visible = filterView(all, view);
+  const listCounts = useMemo(() => {
+    const open = everything.filter(t => !t.done);
+    return Object.fromEntries([
+      ['all', open.length],
+      ['local', inList(open, 'local').length],
+      ...links.map(l => [l.id, inList(open, l.id).length])
+    ]) as Record<string, number>;
+  }, [everything, links]);
+  const newInList = activeList === 'all' || activeList === 'local' ? null : activeList;
+  const listName = (id: string | null | undefined) => links.find(l => l.id === id)?.name || '';
 
   async function quickAdd() {
     const title = quick.trim();
     if (!title) return;
     const due = view === 'today' ? localDate(new Date()) : null;
     try {
-      await postJson('/api/tasks/save', { task: { title, due } }, 'mail-v1');
+      await postJson('/api/tasks/save', { task: { title, due, list: newInList } }, 'mail-v1');
       setQuick('');
       tasksChanged();
     } catch (e) {
@@ -191,6 +219,11 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
                 <Sparkles size={11} />
               </span>
             )}
+            {task.list && activeList === 'all' && (
+              <span title={t('Liste')}>
+                <Cloud size={11} /> {listName(task.list)}
+              </span>
+            )}
             {task.mail && (
               <span className="task-mail-ref">
                 <Mail size={11} /> {task.mail.from || task.mail.subject}
@@ -228,7 +261,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
       <aside className="calendar-sidebar tasks-sidebar">
         <button
           className="btn primary"
-          onClick={() => setEditing({ due: view === 'today' ? localDate(new Date()) : null })}
+          onClick={() => setEditing({ due: view === 'today' ? localDate(new Date()) : null, list: newInList })}
         >
           <Plus size={15} /> {t('Neue Aufgabe')}
         </button>
@@ -247,6 +280,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
             )}
           </button>
         ))}
+        <TaskListsNav filter={activeList} onFilter={setListFilter} links={links} counts={listCounts} />
         <h3>{t('Optionen')}</h3>
         <label className="task-option">
           <input

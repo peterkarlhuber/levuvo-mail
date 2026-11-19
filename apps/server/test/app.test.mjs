@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createMailServer, withoutLegacyEnv } from '../src/app.mjs';
+import { BASE, LIST, fakeCaldav } from './helpers/fake-caldav.mjs';
 
 const SECRET = 'e'.repeat(64);
 const PORT = 4777;
@@ -491,4 +492,69 @@ test('Tasks API: save, list, done and delete without a mail account', async t =>
   );
   assert.equal((await post('/api/tasks/delete', { id: saved.id })).statusCode, 200);
   assert.deepEqual((await s.api.inject({ method: 'GET', url: '/api/tasks', headers: GET })).json().tasks, []);
+});
+
+test('Tasks API: connect a CalDAV list, sync, move a task, disconnect', async t => {
+  const dav = fakeCaldav();
+  const { s } = await server(t, { fetchImpl: dav.fetchImpl });
+  const post = (url, payload) =>
+    s.api.inject({ method: 'POST', url, headers: { ...POST, 'x-levuvo-action': 'mail-v1' }, payload });
+  const get = async url => (await s.api.inject({ method: 'GET', url, headers: GET })).json();
+  const account = await s.ctx.davStore.create(
+    { label: 'Nextcloud', serverUrl: `${BASE}/dav/`, username: 'peter' },
+    'geheim'
+  );
+  assert.deepEqual((await get('/api/tasks/sync')).links, []);
+  const { lists } = await get('/api/tasks/sync/sources');
+  assert.deepEqual(
+    lists.map(l => [l.provider, l.listId, l.connected]),
+    [['caldav', LIST, false]]
+  );
+  // Only lists the server offers can be connected.
+  assert.equal(
+    (
+      await post('/api/tasks/sync/link', {
+        provider: 'caldav',
+        accountId: account.id,
+        listId: 'https://evil.example.org/'
+      })
+    ).statusCode,
+    404
+  );
+  const local = (await post('/api/tasks/save', { task: { title: 'Wird übernommen' } })).json().task;
+  assert.equal(local.list, null);
+  assert.equal('sync' in local, false, 'sync internals stay on the server');
+  const linked = await post('/api/tasks/sync/link', {
+    provider: 'caldav',
+    accountId: account.id,
+    listId: LIST,
+    moveLocal: true
+  });
+  assert.equal(linked.statusCode, 200);
+  const link = linked.json().link;
+  assert.equal(link.name, 'Aufgaben & To-dos');
+  assert.equal(linked.json().result.pushed, 1);
+  assert.equal(dav.objects.size, 1);
+  const tasks = (await get('/api/tasks')).tasks;
+  assert.equal(tasks[0].list, link.id);
+  // Back to this device.
+  await post('/api/tasks/save', { task: { ...tasks[0], list: null } });
+  await post('/api/tasks/sync/run', {});
+  assert.equal(dav.objects.size, 0);
+  // Removing the CalDAV account disconnects its lists, the tasks stay.
+  await post('/api/tasks/save', { task: { title: 'Zweite', list: link.id } });
+  await post('/api/tasks/sync/run', { id: link.id });
+  assert.equal(dav.objects.size, 1);
+  const removed = await s.api.inject({
+    method: 'POST',
+    url: '/api/dav/accounts/remove',
+    headers: { ...POST, 'x-levuvo-action': 'accounts-v1' },
+    payload: { id: account.id, confirm: 'REMOVE_DAV_ACCOUNT' }
+  });
+  assert.equal(removed.statusCode, 200);
+  assert.deepEqual((await get('/api/tasks/sync')).links, []);
+  assert.deepEqual((await get('/api/tasks')).tasks.map(x => [x.title, x.list]).sort(), [
+    ['Wird übernommen', null],
+    ['Zweite', null]
+  ]);
 });

@@ -5,6 +5,10 @@
 // instead of being replaced by an empty one.
 //
 // Shared interface (also used by the AI core): list({ view }), get, save, setDone, remove.
+//
+// Optional sync (task-sync.mjs): a task can belong to a connected list (CalDAV, Microsoft To Do,
+// Google Tasks). It then carries `sync` = { link, remoteId, etag, base }; without it, it stays
+// on this device. The links and the deletions still to send live in the same file (`taskSync`).
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -184,11 +188,89 @@ export function nextDue(due, repeat) {
 
 // ------------------------------------------------------------------ store
 /**
- * `file` is { get(): { tasks }, save(next) } – encrypted on disk (openTaskFile) or in memory (tests).
+ * A repeating task that is finished: the open task moves to its next due date (the reminder moves
+ * by the same amount), the finished occurrence becomes a done copy without repetition that stays
+ * on this device.
  */
-export function createTaskStore(file, { now = () => new Date() } = {}) {
+export function advanceRepeat(task, stamp) {
+  const finished = {
+    ...task,
+    id: randomUUID(),
+    repeat: null,
+    remindAt: null,
+    remindedAt: null,
+    done: true,
+    doneAt: stamp,
+    sync: null,
+    createdAt: stamp,
+    updatedAt: stamp
+  };
+  const due = nextDue(task.due, task.repeat);
+  const shift = DATE.test(task.due)
+    ? Date.parse(`${due}T00:00:00Z`) - Date.parse(`${task.due}T00:00:00Z`)
+    : Date.parse(due) - Date.parse(task.due);
+  const next = {
+    ...task,
+    due,
+    done: false,
+    doneAt: null,
+    remindAt: task.remindAt ? new Date(Date.parse(task.remindAt) + shift).toISOString() : null,
+    remindedAt: null,
+    updatedAt: stamp
+  };
+  return { next, finished };
+}
+
+/** Sync part of the file: connected lists and deletions not yet sent. */
+export const syncStateOf = state => ({
+  links: Array.isArray(state?.taskSync?.links) ? state.taskSync.links : [],
+  tombstones: Array.isArray(state?.taskSync?.tombstones) ? state.taskSync.tombstones : []
+});
+/** A synced task that leaves its list (deleted or moved): its remote copy is deleted on the next sync. */
+function tombstoneFor(task) {
+  if (!task?.sync?.link || !task.sync.remoteId) return null;
+  return {
+    link: task.sync.link,
+    remoteId: task.sync.remoteId,
+    etag: task.sync.etag || '',
+    base: task.sync.base || null
+  };
+}
+
+/**
+ * `file` is { get(): { tasks, taskSync? }, save(next) } – encrypted on disk (openTaskFile) or in
+ * memory (tests). `onChange` runs after every change made through the store (used to start a sync).
+ */
+export function createTaskStore(file, { now = () => new Date(), onChange = () => {} } = {}) {
   const list = () => (Array.isArray(file.get().tasks) ? file.get().tasks : []);
-  const write = tasks => file.save({ tasks });
+  const write = async (tasks, tombstones = [], { notify = true } = {}) => {
+    const state = file.get();
+    const next = { ...state, tasks };
+    if (tombstones.length) {
+      const sync = syncStateOf(state);
+      next.taskSync = { ...state.taskSync, links: sync.links, tombstones: [...sync.tombstones, ...tombstones] };
+    }
+    await file.save(next);
+    if (!notify) return;
+    try {
+      onChange();
+    } catch {
+      /* a failing listener must not fail the change */
+    }
+  };
+  /** `list` in the input: a connected list's id, '' or null for this device, undefined = unchanged. */
+  const syncFor = (input, existing) => {
+    const current = existing?.sync || null;
+    if (input.list === undefined) return { sync: current, gone: null };
+    const target = typeof input.list === 'string' && input.list ? input.list : null;
+    if ((current?.link || null) === target) return { sync: current, gone: null };
+    if (target && !syncStateOf(file.get()).links.some(l => l.id === target))
+      throw fail('Diese Liste ist nicht mehr verbunden.', 'task_list_missing', 404);
+    return {
+      sync: target ? { link: target, remoteId: null, etag: '', base: null } : null,
+      gone: tombstoneFor(current && existing)
+    };
+  };
   const store = {
     available: true,
     list: ({ view = 'all', timeZone } = {}) => filterTasks(list(), view, { now: now(), timeZone }),
@@ -199,6 +281,7 @@ export function createTaskStore(file, { now = () => new Date() } = {}) {
       const existing = typeof input.id === 'string' ? current.find(t => t.id === input.id) : null;
       if (!existing && current.length >= MAX_TASKS) throw fail(`Höchstens ${MAX_TASKS} Aufgaben.`);
       const stamp = now().toISOString();
+      const { sync, gone } = syncFor(input, existing);
       const item = {
         id: existing?.id || randomUUID(),
         ...clean,
@@ -208,10 +291,11 @@ export function createTaskStore(file, { now = () => new Date() } = {}) {
         doneAt: clean.done ? existing?.doneAt || stamp : null,
         // A changed reminder time rings again.
         remindedAt: existing && existing.remindAt === clean.remindAt ? existing.remindedAt || null : null,
+        sync,
         createdAt: existing?.createdAt || stamp,
         updatedAt: stamp
       };
-      await write([...current.filter(t => t.id !== item.id), item]);
+      await write([...current.filter(t => t.id !== item.id), item], gone ? [gone] : []);
       return item;
     },
     /**
@@ -223,33 +307,16 @@ export function createTaskStore(file, { now = () => new Date() } = {}) {
       if (!task) throw fail('Die Aufgabe gibt es nicht mehr.', 'task_missing', 404);
       if (!(done === true && task.repeat && task.due && !task.done))
         return { task: await store.save({ ...task, done: done === true }), finished: null };
-      const stamp = now().toISOString();
-      const finished = {
-        ...task,
-        id: randomUUID(),
-        repeat: null,
-        remindAt: null,
-        done: true,
-        doneAt: stamp,
-        createdAt: stamp,
-        updatedAt: stamp
-      };
-      const due = nextDue(task.due, task.repeat);
-      const shift = DATE.test(task.due)
-        ? Date.parse(`${due}T00:00:00Z`) - Date.parse(`${task.due}T00:00:00Z`)
-        : Date.parse(due) - Date.parse(task.due);
-      const next = {
-        ...task,
-        due,
-        remindAt: task.remindAt ? new Date(Date.parse(task.remindAt) + shift).toISOString() : null,
-        remindedAt: null,
-        updatedAt: stamp
-      };
+      const { next, finished } = advanceRepeat(task, now().toISOString());
       await write([...list().filter(t => t.id !== id), next, finished]);
       return { task: next, finished };
     },
     async remove(id) {
-      await write(list().filter(t => t.id !== id));
+      const gone = tombstoneFor(list().find(t => t.id === id));
+      await write(
+        list().filter(t => t.id !== id),
+        gone ? [gone] : []
+      );
     },
     /** Open tasks whose reminder time has come and that were not announced yet. */
     dueReminders() {
@@ -259,7 +326,11 @@ export function createTaskStore(file, { now = () => new Date() } = {}) {
     async markReminded(ids) {
       const set = new Set(ids);
       const stamp = now().toISOString();
-      await write(list().map(t => (set.has(t.id) ? { ...t, remindedAt: stamp } : t)));
+      await write(
+        list().map(t => (set.has(t.id) ? { ...t, remindedAt: stamp } : t)),
+        [],
+        { notify: false }
+      );
     },
     /** An account was removed: its mail links go, the tasks stay. */
     async forgetAccount(accountId) {

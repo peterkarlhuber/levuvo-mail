@@ -24,6 +24,7 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Local search index: subject, sender, date and the first 3,000 characters of text (no attachments; end-to-end encrypted messages only in their unreadable, encrypted form); with the AI assistant on, also numeric embeddings (vectors) of these texts | app data folder, SQLite database **encrypted as a whole with SQLCipher (AES-256, HMAC-SHA512)**, key in the system keychain; can be switched off and deleted | search across all folders, offline reading |
 | Display (language, theme, column width), notification counters (message IDs only) | local app storage | convenience |
 | Address suggestions, preview texts, offline view | in memory only | faster work |
+| Tasks (title, note, due date, reminder, priority, repetition, status, link to the mail) | on this device, **encrypted with AES-256-GCM** (key in the system keychain); a task in a **connected list** is also stored on that list's server, **without** the link to the mail and without the origin marker | task list, reminders |
 | Shared spaces: notes, tasks, events, pinned mails, comments, files, member list (name, address, public keys) and the activity of the space | a full copy on the device of **every member**, **encrypted with AES-256-GCM**; changes travel as end-to-end encrypted mails between the members' own mailboxes | working together in a space |
 
 Decrypted content is not stored – not even for the offline view.
@@ -74,6 +75,7 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 
 - **Mail servers** (IMAP, SMTP, ManageSieve for filters/vacation reply) – always encrypted, certificates are verified.
 - **CalDAV/CardDAV servers** that you add yourself – HTTPS only.
+- **Task lists you connect yourself** (Tasks → Lists → "Connect a list"): only the tasks in that list are sent to the server of that list (title, note, due date, reminder, priority, repetition, status); the link to the mail, the origin and the reminder state stay on this device. Nothing is sent before you connect a list. The password is only sent to addresses of the account's own domain over HTTPS. Disconnecting a list stops syncing and keeps the tasks on this device; nothing is deleted on the server.
 - **Sign-in with Microsoft or Google (OAuth):** Sign-in takes place in the browser on Microsoft's or Google's pages. Levuvo Mail receives a sign-in token and stores only the refresh token in the keychain. The respective provider's privacy policy also applies.
 - **External images in HTML mails** are blocked until you choose “Load images” for a message (the sender can then detect that it was opened).
 - **Links** open in the default browser after confirmation (exception without confirmation: levuvo.at and the Microsoft/Google sign-in pages).

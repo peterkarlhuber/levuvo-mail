@@ -153,6 +153,8 @@ export function registerDavRoutes(ctx) {
     if (request.body?.confirm !== 'REMOVE_DAV_ACCOUNT') throw fail('Entfernen muss bestätigt werden.', 'dav_invalid');
     davService.reset(request.body.id);
     await davStore.remove(request.body.id);
+    // Its task lists are disconnected; the tasks stay on this device.
+    await ctx.taskSync?.forgetAccount(String(request.body.id || '')).catch(() => {});
     return { removed: true };
   });
 
