@@ -413,6 +413,21 @@ const summarize = (state, op) => {
   }
 };
 
+const DELETES = {
+  'note.delete': 'note',
+  'mail.remove': 'mail',
+  'task.delete': 'task',
+  'event.delete': 'event',
+  'file.delete': 'file'
+};
+function forgetActivity(state, match) {
+  for (const a of state.activity)
+    if (match(a)) {
+      a.label = '';
+      if (a.detail) a.detail = '';
+    }
+}
+
 /** Applies one verified operation. Returns false when the author was not allowed to do it. */
 export function applyOp(state, op, docs) {
   const { author, type } = op;
@@ -535,7 +550,7 @@ export function applyOp(state, op, docs) {
       break;
     case 'comment.add':
       if (state.comments[d.id]) return (state.ignored++, false);
-      state.comments[d.id] = { id: d.id, target: d.target, text: d.text, at: op.at, by: author };
+      state.comments[d.id] = { id: d.id, target: d.target, text: d.text, at: op.at, by: author, op: op.id };
       break;
     case 'comment.edit':
     case 'comment.delete': {
@@ -544,7 +559,10 @@ export function applyOp(state, op, docs) {
       if (!c || (c.by !== author && !(type === 'comment.delete' && member.role === 'owner')))
         return (state.ignored++, false);
       if (type === 'comment.edit') Object.assign(c, { text: d.text, editedAt: op.at });
-      else delete state.comments[d.id];
+      else {
+        delete state.comments[d.id];
+        forgetActivity(state, a => a.op === c.op);
+      }
       break;
     }
     case 'task.upsert': {
@@ -638,16 +656,53 @@ export function applyOp(state, op, docs) {
     default:
       return (state.ignored++, false);
   }
+  // Deleted content also leaves the activity feed: entries keep who did what and when, not titles.
+  if (DELETES[type]) forgetActivity(state, a => a.target?.kind === DELETES[type] && a.target.id === d.id);
   // Activity feed: what happened, by whom, when. No counts or per-person statistics.
   state.activity.push({ op: op.id, at: op.at, by: author, type, ...meta, ...summarize(state, op) });
   if (state.activity.length > 2000) state.activity.splice(0, state.activity.length - 2000);
   return true;
 }
 
-/** Folds sorted operations into a fresh state. */
-export function fold(spaceId, ops) {
-  const state = emptyState(spaceId);
+/**
+ * State without the content of deleted things: what a checkpoint keeps. Deleted notes, tasks,
+ * events and files become tombstones (so late changes to them stay ignored), file versions and
+ * keys of deleted files go, comments on things that no longer exist go, and activity entries
+ * about them lose their titles. Applied the same way on every device.
+ */
+export function purgeState(state, docs) {
+  const out = structuredClone(state);
+  const tomb = x => ({ id: x.id, deleted: true, createdAt: x.createdAt, createdBy: x.createdBy });
+  for (const coll of ['notes', 'tasks', 'events'])
+    for (const [key, x] of Object.entries(out[coll])) if (x.deleted) out[coll][key] = tomb(x);
+  for (const [key, f] of Object.entries(out.files))
+    if (f.deleted) out.files[key] = { ...tomb(f), name: '', folder: '', versions: [] };
+  const alive = target => {
+    if (!target || target.kind === 'space') return true;
+    const coll = { mail: 'mails', task: 'tasks', event: 'events', file: 'files', note: 'notes' }[target.kind];
+    const x = coll && out[coll][target.id];
+    return Boolean(x && !x.deleted);
+  };
+  for (const [key, c] of Object.entries(out.comments)) if (!alive(c.target)) delete out.comments[key];
+  const comments = new Set(Object.values(out.comments).map(c => c.op));
+  forgetActivity(out, a => !alive(a.target) || (a.type === 'comment.add' && !comments.has(a.op)));
+  const notes = new Map();
+  for (const [key, doc] of docs) if (out.notes[key] && !out.notes[key].deleted) notes.set(key, doc);
+  return { state: out, docs: notes };
+}
+
+/**
+ * Folds sorted operations into a fresh state, or onto a checkpoint ({ state, notes }: the state
+ * and the Yjs updates of the notes at that point).
+ */
+export function fold(spaceId, ops, base = null) {
+  const state = base ? structuredClone(base.state) : emptyState(spaceId);
   const docs = new Map();
+  for (const [key, update] of Object.entries(base?.notes || {})) {
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, Buffer.from(update, 'base64'));
+    docs.set(key, doc);
+  }
   for (const op of [...ops].sort(compareOps)) applyOp(state, op, docs);
   return { state, docs };
 }

@@ -38,6 +38,8 @@ export async function openSpaces(ctx, dir) {
     store,
     transport,
     logger: ctx.logger,
+    // Changes made within 20 s travel as one sync mail per member.
+    batchDelay: 20_000,
     accounts: () =>
       ctx
         .accounts()
