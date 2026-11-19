@@ -107,6 +107,8 @@ test('sending and the trash wait for approval; approval executes once', async t 
   assert.equal(pending[0].summary.subject, 'Hi');
   await approvals.decide(pending[0].id, true);
   assert.equal(calls.filter(c => c.executed === 'send').length, 1);
+  // AI Act Art. 50(2): the sent mail is marked as written by this agent.
+  assert.equal(calls.find(c => c.executed === 'send').payload.aiAssisted, 'agent; Helper');
   await assert.rejects(approvals.decide(pending[0].id, true));
   const check = await handle(agent, rpc('tools/call', { name: 'get_approval', arguments: { id: pending[0].id } }));
   assert.equal(JSON.parse(check.result.content[0].text).status, 'approved');

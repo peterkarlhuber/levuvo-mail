@@ -55,7 +55,11 @@ const TEXTS = {
     restartNow: 'Jetzt neu starten',
     updateReady: 'Update bereit',
     updateReadyDetail:
-      'Das Update wurde geprüft und heruntergeladen. Es wird beim Neustart installiert. Offene Entwürfe vorher speichern.'
+      'Das Update wurde geprüft und heruntergeladen. Es wird beim Neustart installiert. Offene Entwürfe vorher speichern.',
+    updateAvailable: 'Update verfügbar',
+    updateAvailableDetail:
+      'Automatische Updates sind ausgeschaltet (Einstellungen → Datenschutz). Updates schließen oft Sicherheitslücken – bitte bald installieren.',
+    download: 'Herunterladen'
   },
   en: {
     cancel: 'Cancel',
@@ -110,7 +114,11 @@ const TEXTS = {
     restartNow: 'Restart now',
     updateReady: 'Update ready',
     updateReadyDetail:
-      'The update was verified and downloaded. It will be installed on restart. Save open drafts first.'
+      'The update was verified and downloaded. It will be installed on restart. Save open drafts first.',
+    updateAvailable: 'Update available',
+    updateAvailableDetail:
+      'Automatic updates are switched off (Settings → Privacy). Updates often fix security issues – please install it soon.',
+    download: 'Download'
   }
 };
 
