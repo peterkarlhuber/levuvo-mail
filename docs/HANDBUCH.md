@@ -425,6 +425,16 @@ Google Tasks. Abgeglichen werden Titel, Notiz, Fälligkeit, Erinnerung, Priorit�
 beendet den Abgleich, auf dem Server wird nichts gelöscht. Aufgaben werden auf dem Gerät verschlüsselt
 gespeichert.
 
+**Aufgaben aus Räumen:** Raum-Aufgaben, die dir zugewiesen sind („Für mich“), stehen auch hier, mit dem
+Namen des Raums gekennzeichnet; links unter **Räume** filterst du nach einem Raum. Erledigen, Titel,
+Notiz, Fälligkeit und Priorität änderst du hier oder im Raum, die Änderung gilt überall und geht wie jede
+Raum-Änderung verschlüsselt an alle Mitglieder. Bist du im Raum Leser, siehst du die Aufgabe nur. Umgekehrt
+wählst du in einer Aufgabe unter **Raum** einen Raum (als Eigentümer oder Bearbeiter): Die Aufgabe wandert
+in den Raum, ist dir zugewiesen und alle Mitglieder sehen sie. Erinnerung, Wiederholung, Liste und der Link
+zur Mail entfallen dabei. Raum-Aufgaben werden nie mit CalDAV, Microsoft To Do oder Google Tasks
+abgeglichen; war die Aufgabe in einer verbundenen Liste, wird sie dort gelöscht. Raum-Aufgaben liegen nur
+im Raum (keine Kopie in deiner Aufgabenliste) und sind mit dem Raum in der Sicherung enthalten.
+
 ## 19 Räume
 
 Ein **Raum** (Alt+4) sammelt alles zu einem Thema, Projekt oder Kunden: Notizen, die mehrere gleichzeitig

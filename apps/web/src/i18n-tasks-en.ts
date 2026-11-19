@@ -68,5 +68,23 @@ export const TASKS_EN: Record<string, string> = {
   'Die Liste beim Anbieter ist zu groß für den Abgleich. Zur Sicherheit wurde nichts geändert.':
     'The list at the provider is too large to sync. To be safe, nothing was changed.',
   'Der Anbieter hat eine unerwartete Antwort geschickt.': 'The provider sent an unexpected answer.',
-  'Unerwartete Antwort des Anbieters.': 'Unexpected answer from the provider.'
+  'Unerwartete Antwort des Anbieters.': 'Unexpected answer from the provider.',
+  // Space tasks in the main area
+  'Kein Raum': 'No space',
+  'Aufgabe in den Raum verschoben.': 'Task moved to the space.',
+  'Aufgabe aus dem Raum „{name}“': 'Task from the space “{name}”',
+  'Mir zugewiesene Aufgaben aus dem Raum „{name}“': 'Tasks assigned to me in the space “{name}”',
+  'Nur lesen: In diesem Raum hast du die Rolle Leser.': 'Read only: your role in this space is reader.',
+  '„{title}“ wird im Raum „{space}“ für alle Mitglieder gelöscht.':
+    '“{title}” will be deleted in the space “{space}” for all members.',
+  'Änderungen gehen verschlüsselt an alle Mitglieder des Raums.': 'Changes go encrypted to all members of the space.',
+  'Die Aufgabe wird in den Raum verschoben und dir zugewiesen. Alle Mitglieder sehen sie. Erinnerung, Wiederholung, Liste und der Link zur E-Mail entfallen.':
+    'The task moves to the space and is assigned to you. All members see it. Reminder, repetition, list and the link to the email are dropped.',
+  'Die Aufgabe wird im Raum angelegt und dir zugewiesen. Alle Mitglieder sehen sie.':
+    'The task is created in the space and assigned to you. All members see it.',
+  'Ungültiges Feld: Titel.': 'Invalid field: title.',
+  'Ungültiges Feld: Notiz.': 'Invalid field: note.',
+  'Eine Raum-Aufgabe bleibt in ihrem Raum.': 'A space task stays in its space.',
+  'Räume sind gerade nicht verfügbar.': 'Spaces are not available right now.',
+  'In diesem Raum darfst du keine Aufgaben anlegen.': 'You may not add tasks in this space.'
 };

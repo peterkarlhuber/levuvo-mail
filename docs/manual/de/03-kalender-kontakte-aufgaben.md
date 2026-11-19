@@ -54,3 +54,7 @@ Kontakte von Microsoft 365 und Google erscheinen nach der Freigabe automatisch. 
 - **Erledigt:** Kreis vor der Aufgabe anklicken.
 
 **Mit anderen Listen abgleichen:** Unter **Liste verbinden** verknüpfst du Microsoft To Do, Google Tasks oder eine CalDAV-Liste. Dann siehst du deine Aufgaben auch auf dem Handy. Trennen beendet nur den Abgleich, auf dem Server wird nichts gelöscht.
+
+**Aufgaben aus Räumen:** Raum-Aufgaben, die dir zugewiesen sind, stehen auch hier, mit dem Namen des Raums. Unter **Räume** links filterst du nach einem Raum. Erledigen, Titel, Notiz, Fälligkeit und Priorität änderst du hier oder im Raum, die Änderung gilt überall und geht verschlüsselt an alle Mitglieder. Bist du im Raum Leser, siehst du die Aufgabe nur.
+
+**Aufgabe in einen Raum verschieben:** Wähl in einer Aufgabe unter **Raum** einen Raum, in dem du Eigentümer oder Bearbeiter bist. Die Aufgabe wandert in den Raum, ist dir zugewiesen, und alle Mitglieder sehen sie. Erinnerung, Wiederholung, Liste und der Link zur Mail entfallen dabei. Raum-Aufgaben werden nie mit Microsoft To Do, Google Tasks oder CalDAV abgeglichen; war die Aufgabe in einer verbundenen Liste, wird sie dort gelöscht.
