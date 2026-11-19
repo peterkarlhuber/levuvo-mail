@@ -43,7 +43,8 @@ test('OPS-LEV-002: Dependabot and CI cover the Python runtime', () => {
   const dependabot = read('.github/dependabot.yml');
   assert.match(dependabot, /package-ecosystem: pip\n\s+directory: \/apps\/ai/);
   const ci = read('.github/workflows/ci.yml');
-  assert.match(ci, /pip install --require-hashes -r apps\/ai\/requirements-audit\.txt/);
+  assert.match(ci, /install --require-hashes -r apps\/ai\/requirements-audit\.txt/);
+  assert.match(ci, /requirements-dev-lock\.txt; do/);
   for (const lock of ['requirements-lock.txt', 'requirements-build.txt', 'requirements-backends.txt'])
     assert.ok(ci.includes(lock) && read('.github/workflows/supply-chain.yml').includes(lock), lock);
   assert.match(read('.github/workflows/supply-chain.yml'), /check-python-runtime\.mjs --strict/);

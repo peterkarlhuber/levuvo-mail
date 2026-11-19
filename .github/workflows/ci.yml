@@ -117,10 +117,12 @@ jobs:
           node scripts/build-ai-runtime.mjs --out "$RUNNER_TEMP/ai-runtime"
       - name: Vulnerability scan of the hashed Python locks (pip-audit, blocking)
         run: |
-          python -m pip install --require-hashes -r apps/ai/requirements-audit.txt
-          for lock in requirements-lock.txt requirements-build.txt requirements-backends.txt requirements-audit.txt; do
+          # Own environment, so the scanner's dependencies never mix with the tested ones.
+          python -m venv "$RUNNER_TEMP/audit"
+          "$RUNNER_TEMP/audit/bin/pip" install --require-hashes -r apps/ai/requirements-audit.txt
+          for lock in requirements-lock.txt requirements-build.txt requirements-backends.txt requirements-audit.txt requirements-dev-lock.txt; do
             echo "::group::pip-audit $lock"
-            pip-audit --require-hashes --disable-pip --progress-spinner off -r "apps/ai/$lock"
+            "$RUNNER_TEMP/audit/bin/pip-audit" --require-hashes --disable-pip --progress-spinner off -r "apps/ai/$lock"
             echo '::endgroup::'
           done
       - name: Bundled CPython is the newest patch release (warning)

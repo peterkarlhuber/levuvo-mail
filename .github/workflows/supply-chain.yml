@@ -31,9 +31,11 @@ jobs:
         run: node scripts/check-electron-support.mjs
       - name: pip-audit of the hashed Python locks
         run: |
-          python -m pip install --require-hashes -r apps/ai/requirements-audit.txt -r apps/ai/requirements-build.txt
-          for lock in requirements-lock.txt requirements-build.txt requirements-backends.txt requirements-audit.txt; do
-            pip-audit --require-hashes --disable-pip --progress-spinner off -r "apps/ai/$lock"
+          python -m pip install --require-hashes -r apps/ai/requirements-build.txt
+          python -m venv "$RUNNER_TEMP/audit"
+          "$RUNNER_TEMP/audit/bin/pip" install --require-hashes -r apps/ai/requirements-audit.txt
+          for lock in requirements-lock.txt requirements-build.txt requirements-backends.txt requirements-audit.txt requirements-dev-lock.txt; do
+            "$RUNNER_TEMP/audit/bin/pip-audit" --require-hashes --disable-pip --progress-spinner off -r "apps/ai/$lock"
           done
       - name: Bundled CPython is the newest patch release
         run: node scripts/check-python-runtime.mjs --strict
