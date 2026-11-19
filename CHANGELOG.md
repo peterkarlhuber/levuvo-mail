@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 – 19 November 2026
+
+> **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.
 
 ### New
+- **Shared spaces:** a space collects everything about one topic, project or customer: notes several people edit at the same time (with checklists), pinned mails with internal comments, tasks and events with assignees, files with versions and an activity list. Members are invited by e-mail address and have the role owner, editor or reader. There is no Levuvo server: every member keeps an encrypted copy, and changes travel end-to-end encrypted (Ed25519/X25519, AES-256-GCM) as mails between the members' existing mailboxes, across providers. Removing a member rotates the space key. The assistant and agents see a space only if its owner allows it, and every change they propose waits for approval. Spaces are part of the encrypted backup. See `docs/SPACES.md`.
 - **Microsoft To Do and Google Tasks:** lists of Microsoft 365 / Outlook.com and Google accounts signed in with the provider can be connected the same way. Microsoft To Do keeps title, note, due day, reminder, priority (low, normal, high), repetition and done; Google Tasks keeps title, note, due day and done, while reminder, priority, repetition and a time of day stay on this device and are never overwritten from there. Accounts signed in before get a one-time "Allow" button for tasks; calendar and contacts keep working without it.
 - **Task lists in sync (CalDAV):** a list of a CalDAV account (Nextcloud, mailbox.org, iCloud, Radicale …) can be connected under Tasks → Lists. Its tasks appear in Levuvo, and tasks created or moved there are synced both ways: title, note, due date (with or without time), reminder, priority, repetition and done. Changes on both sides are merged per field; when the same field was changed on both, the newer change wins and the sync says so. A task deleted on one side and changed on the other is kept. Finishing a repeating task moves it to its next date on every device. Properties written by other apps stay untouched. Sync runs shortly after each change, every ten minutes and on "Sync now". The list on this device stays the default; the link to the mail is never sent.
 - **Design foundation:** one shared scale for spacing, type, weights, radii, layers and elevation; type sizes are now in rem, so the system font size setting is respected. Shared, accessible building blocks (button, icon button, field, segmented control, dialog, toolbar with overflow menu) for all new screens, documented in `docs/design-system.md`. `npm test` rejects raw sizes, layers, radii and colours in the stylesheets.
@@ -45,8 +48,6 @@
 - **Mail list:** the quick actions shown on hover no longer cover subject and preview.
 - **Phones:** the message list scrolls again and its last rows are no longer hidden behind the navigation.
 - **Contacts:** the search field no longer takes up half of the contact list; address and phone types are shown in the UI language, and e-mail types written as `INTERNET,WORK` are read as "work".
-
-### Fixes
 - **Inbox:** no more empty "(no subject)" entry from "Unknown" that cannot be deleted. When a message is deleted or moved on another connection (this app's own action, a second computer, a phone) and the live connection has not been told yet, Dovecot still answers for it with an empty stand-in (size 0, date 1970, no sender or subject). Such entries are now ignored in the list, the live inbox, the reading pane, the local search index and before moving or deleting.
 
 ### Fixes (audit of 2.2.2)

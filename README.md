@@ -1,4 +1,4 @@
-# Levuvo Mail 2.2.2
+# Levuvo Mail 2.3.0
 
 Email, calendar and contacts for **macOS (Apple Silicon)** and **Windows (ARM64, x64)**.
 *Less effort. More impact.*
