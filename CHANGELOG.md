@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.5.0 – 19 November 2026
+
+> **Larger installer, models on demand:** the installer now contains Levuvo's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
 
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
