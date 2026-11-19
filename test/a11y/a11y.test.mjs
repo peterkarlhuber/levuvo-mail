@@ -414,4 +414,167 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-checked')), 'true');
     await context.close();
   });
+
+  // Regression test for the mail view (list, search, reader): pins the behaviour while
+  // MailInstance is split into modules (ARC-LEV-005). Requests are recorded, the server is mocked.
+  await t.test('mail view: list, filters, search, reader and bulk actions', async () => {
+    const inbox = fixtures['GET /api/messages'].body;
+    const accountId = fixtures['GET /api/status'].body.accountId;
+    const byUid = uid => inbox.messages.find(m => m.uid === uid);
+    const requests = [];
+    const json = b => ({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+    const { page, context, errors } = await open({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: 'dark',
+      setup: async context => {
+        await context.route(
+          url => url.pathname.startsWith('/api/'),
+          route => {
+            const req = route.request();
+            const url = new URL(req.url());
+            const body = req.method() === 'POST' ? req.postDataJSON() : null;
+            requests.push({ method: req.method(), path: url.pathname, query: url.search, body });
+            if (url.pathname === '/api/search') {
+              const q = url.searchParams.get('q').toLowerCase();
+              const hits = inbox.messages.filter(m => m.subject.toLowerCase().includes(q));
+              return route.fulfill(json({ ...inbox, total: hits.length, messages: hits }));
+            }
+            if (url.pathname === '/api/search/local') {
+              const first = !url.searchParams.get('cursor');
+              const hit = {
+                ...byUid(first ? 8 : 4),
+                accountId: 'other-account',
+                accountLabel: 'Büro',
+                folder: 'INBOX'
+              };
+              return route.fulfill(json({ messages: [hit], total: 2, nextCursor: first ? 'page-2' : null }));
+            }
+            const detail = url.pathname.match(/^\/api\/messages\/(\d+)$/);
+            if (detail) {
+              const m = byUid(Number(detail[1]));
+              return route.fulfill(
+                json({ ...fixtures['GET /api/messages/1'].body, uid: m.uid, subject: m.subject, unread: m.unread })
+              );
+            }
+            if (url.pathname === '/api/messages/batch-action')
+              return route.fulfill(json({ destination: 'Trash', count: body.uids.length }));
+            if (/^\/api\/messages\/\d+\/action$/.test(url.pathname)) return route.fulfill(json({ ok: true }));
+            return route.fallback();
+          }
+        );
+      }
+    });
+    const count = () => page.locator('.list-count').textContent();
+    const rows = () => page.locator('.message-row').count();
+    const row = subject => page.locator('.message-row', { hasText: subject }).first();
+    const selected = () => page.locator('.message-row.selected .message-subject').textContent();
+    const blur = () =>
+      page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    const until = async (fn, what) => {
+      for (let i = 0; i < 50 && !(await fn()); i++) await page.waitForTimeout(100);
+      assert.ok(await fn(), what);
+    };
+
+    // List: title, count with unread folder counter, filter chips.
+    assert.equal((await page.locator('.message-title-row h1').textContent()).trim(), 'Posteingang.');
+    assert.equal(await count(), '12 Nachrichten · 11 ungelesen');
+    assert.equal(await rows(), 12);
+    await page.locator('.filter-chips button', { hasText: 'Anhang' }).click();
+    assert.equal(await rows(), 1);
+    assert.equal(await count(), '1 von 12 geladenen');
+    await page.locator('.filter-chips button', { hasText: 'Ungelesen' }).click();
+    assert.equal(await rows(), 11);
+    assert.equal(await page.locator('.filter-chips button[aria-pressed="true"]').textContent(), 'Ungelesen');
+    await page.locator('.filter-chips button', { hasText: 'Alle' }).click();
+    assert.equal(await rows(), 12);
+
+    // Reader: opening a message loads the detail and marks it read after a short delay.
+    await row('Protokoll Workshop').locator('.message-item').click();
+    await page.locator('.reader-column.reader-open .reader-content h2', { hasText: 'Protokoll Workshop' }).waitFor();
+    await until(
+      () => requests.some(r => r.path === '/api/messages/10/action' && r.body?.action === 'markRead'),
+      'opened message is marked read'
+    );
+    await until(async () => !(await row('Protokoll Workshop').getAttribute('class')).includes('unread'), 'row read');
+    assert.equal(await count(), '12 Nachrichten · 10 ungelesen');
+    // j/k move the selection, Escape closes the reader.
+    await blur();
+    await page.keyboard.press('j');
+    await until(async () => (await selected()).includes('Moodboard'), 'j selects the next message');
+    await page.locator('.reader-content h2', { hasText: 'Moodboard' }).waitFor();
+    await page.keyboard.press('k');
+    await until(async () => (await selected()).includes('Protokoll Workshop'), 'k selects the previous message');
+    await page.keyboard.press('Escape');
+    await page.locator('.reader-column.reader-open').waitFor({ state: 'detached' });
+    assert.ok((await selected()).includes('Protokoll Workshop'), 'Escape keeps the selection');
+
+    // Bulk actions: select all, count, then trash two messages; the list drops them.
+    await page.locator('.select-all input').check();
+    assert.equal(await page.locator('.bulk-toolbar span').first().textContent(), '12 ausgewählt');
+    await page.locator('.bulk-toolbar button[aria-label="Auswahl aufheben"]').click();
+    assert.equal(await page.locator('.bulk-toolbar').count(), 0);
+    await row('Mittagessen').locator('.message-select input').check();
+    await row('Ihre Rechnung').locator('.message-select input').check();
+    assert.equal(await page.locator('.bulk-toolbar span').first().textContent(), '2 ausgewählt');
+    await page.locator('.bulk-toolbar button[aria-label="In den Papierkorb"]').click();
+    await until(async () => (await rows()) === 10, 'trashed messages leave the list');
+    const trash = requests.find(r => r.path === '/api/messages/batch-action');
+    assert.deepEqual(trash.body, { folder: 'INBOX', action: 'trash', uids: [7, 8] });
+    await page.locator('.toast', { hasText: '2 Nachrichten nach „Papierkorb“ verschoben.' }).waitFor();
+
+    // Trashing the open message selects the next one.
+    await row('Protokoll Workshop').locator('.message-item').click();
+    await blur();
+    await page.keyboard.press('#');
+    await until(async () => (await rows()) === 9, 'open message trashed');
+    assert.ok((await selected()).includes('Moodboard'), 'next message is selected after removal');
+
+    // Search in this folder: debounced server search, hit count, clearing restores the folder.
+    const searches = () => requests.filter(r => r.path === '/api/search');
+    await page.locator('.searchbox input').fill('Server');
+    await until(async () => (await count()) === '2 Treffer', 'search shows hit count');
+    assert.equal(searches().length, 1, 'one request after the typing pause');
+    assert.equal(searches()[0].query, `?folder=INBOX&q=Server&limit=40&account=${encodeURIComponent(accountId)}`);
+    assert.equal(await rows(), 2);
+    const loadsBefore = requests.filter(r => r.path === '/api/messages').length;
+    await page.locator('.searchbox button[aria-label="Suche löschen"]').click();
+    await until(async () => (await rows()) === 12, 'clearing the search reloads the folder');
+    assert.equal(requests.filter(r => r.path === '/api/messages').length, loadsBefore + 1);
+    assert.equal(await page.locator('.searchbox input').inputValue(), '');
+    // One character only filters the loaded list locally.
+    await page.locator('.searchbox input').fill('M');
+    await page.waitForTimeout(500);
+    assert.equal(searches().length, 1, 'no server search below two characters');
+    assert.ok((await rows()) < 12);
+    await page.locator('.searchbox input').fill('');
+
+    // Search everywhere (local index): own title, no filters, paging with the cursor.
+    await page.locator('.scope-toggle').click();
+    assert.equal(await page.locator('.scope-toggle').getAttribute('aria-pressed'), 'true');
+    await page.locator('.searchbox input').fill('Rechnung');
+    await page.locator('.message-title-row h1', { hasText: 'Suche in allen Ordnern' }).waitFor();
+    await until(async () => (await count()) === '2 Treffer', 'everywhere search shows the total');
+    assert.equal(await page.locator('.filter-chips').count(), 0);
+    assert.equal(await page.locator('.select-all').count(), 0);
+    const local = () => requests.filter(r => r.path === '/api/search/local');
+    assert.equal(local()[0].query, '?q=Rechnung&limit=40');
+    await until(async () => (await rows()) === 2, 'the next page loads through the cursor');
+    assert.equal(local()[1].query, '?q=Rechnung&limit=40&cursor=page-2');
+    await page.locator('.searchbox button[aria-label="Suche löschen"]').click();
+    assert.equal(await page.locator('.scope-toggle').getAttribute('aria-pressed'), 'false');
+    await page.locator('.message-title-row h1', { hasText: 'Posteingang' }).waitFor();
+    await until(async () => (await rows()) === 12, 'folder list is back');
+    await axe(page, 'mail view after search');
+
+    // Switching folders resets search and selection; the filter chip stays.
+    await page.locator('.filter-chips button', { hasText: 'Markiert' }).click();
+    await page.locator('.folder-item', { hasText: 'Gesendet' }).first().click();
+    await page.locator('.message-title-row h1', { hasText: 'Gesendet' }).waitFor();
+    assert.equal(await page.locator('.filter-chips button[aria-pressed="true"]').textContent(), 'Markiert');
+    assert.equal(await page.locator('.searchbox input').inputValue(), '');
+    assert.equal(await page.locator('.message-row.selected').count(), 0);
+    assert.ok(requests.some(r => r.path === '/api/messages' && r.query.startsWith('?folder=Sent&')));
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
 });
