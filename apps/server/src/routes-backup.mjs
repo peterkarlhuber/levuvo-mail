@@ -91,7 +91,7 @@ export function registerBackupRoutes(ctx) {
       async request => {
         const { file, password } = request.body || {};
         if (typeof file !== 'string' || !file) throw fail('Keine Sicherungsdatei ausgewählt.', 'backup_invalid');
-        const backup = await decryptBackup(file, password);
+        const backup = await decryptBackup(file, password, { ownApp: ctx.version });
         await stageRestore({ dir: ctx.dataDir, accountsPath: ctx.accountsPath, vault: ctx.store, backup });
         backupState.pending = true;
         ctx.logger(`restore staged (backup from ${backup.createdAt})`);

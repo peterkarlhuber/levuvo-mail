@@ -104,7 +104,9 @@ export function createPgp({ meta, vault }) {
       throw fail('Bitte zuerst den OpenPGP-Schlüssel entsperren.', 'pgp_locked', 423);
     return entry.key;
   }
-  async function verifications(signatures, extraKeys = []) {
+  /** `fromEmail` binds each signature to the From address: a valid signature by a key of another
+   * address is shown as "signed by someone else", not as a green seal (SEC-LEV-002). */
+  async function verifications(signatures, fromEmail = '', extraKeys = []) {
     const d = data();
     const known = await Promise.all(
       [...d.public.map(k => k.armored), ...d.own.map(k => k.publicArmored)].map(a =>
@@ -128,7 +130,8 @@ export function createPgp({ meta, vault }) {
         keyId,
         known: Boolean(key),
         signer: key ? emailsOf(key)[0] || key.getUserIDs()[0] : null,
-        fingerprint: key ? key.getFingerprint().toUpperCase() : null
+        fingerprint: key ? key.getFingerprint().toUpperCase() : null,
+        ...(key ? { matchesSender: Boolean(fromEmail) && emailsOf(key).includes(String(fromEmail).toLowerCase()) } : {})
       });
     }
     return out;
@@ -169,7 +172,11 @@ export function createPgp({ meta, vault }) {
       return storeOwn(privateKey);
     },
     /** Imports a public or private key. Unprotected private keys are protected with `passphrase`. */
-    async importKey(armored, passphrase = '') {
+    /**
+     * `onlyFor`: a public key taken from a mail must carry the sender's address; otherwise a mail could
+     * plant a key under any name and later forged mails from that name would show a green seal.
+     */
+    async importKey(armored, passphrase = '', { onlyFor = '' } = {}) {
       if (typeof armored !== 'string' || armored.length > 200_000)
         throw fail('Kein gültiger OpenPGP-Schlüssel.', 'pgp_key_invalid');
       if (armored.includes('PRIVATE KEY BLOCK')) {
@@ -196,6 +203,8 @@ export function createPgp({ meta, vault }) {
       }
       const key = await readPublic(armored);
       const info = await describe(key);
+      if (onlyFor && !info.emails.includes(String(onlyFor).toLowerCase()))
+        throw fail('Dieser Schlüssel gehört nicht zum Absender der E-Mail.', 'pgp_key_sender', 422);
       const d = data();
       await save({
         ...d,
@@ -274,7 +283,7 @@ export function createPgp({ meta, vault }) {
      * Unwraps an incoming PGP message. Returns null if the message is not PGP-protected.
      * { raw (decrypted/unwrapped message), encrypted, signatures[], error? }
      */
-    async open(raw) {
+    async open(raw, fromEmail = '') {
       const ct = contentTypeOf(raw);
       const { headers } = (await import('./mime-crypto.mjs')).splitMessage(raw);
       const outer = headers.filter(h => !/^(content-|mime-version)/i.test(h.name)).map(h => h.raw);
@@ -295,10 +304,10 @@ export function createPgp({ meta, vault }) {
           });
           const innerText = Buffer.from(inner).toString('binary');
           const nested = contentTypeOf(innerText);
-          let sigs = await verifications(signatures);
+          let sigs = await verifications(signatures, fromEmail);
           let rawInner = joinMessage(outer, innerText);
           if (nested.type === 'multipart/signed') {
-            const unwrapped = await this.open(rawInner);
+            const unwrapped = await this.open(rawInner, fromEmail);
             if (unwrapped?.raw) {
               rawInner = unwrapped.raw;
               sigs = [...sigs, ...unwrapped.signatures];
@@ -332,7 +341,7 @@ export function createPgp({ meta, vault }) {
             encrypted: false,
             method: 'pgp',
             raw: joinMessage(outer, parts[0]),
-            signatures: await verifications(result.signatures)
+            signatures: await verifications(result.signatures, fromEmail)
           };
         } catch {
           return {
@@ -347,7 +356,7 @@ export function createPgp({ meta, vault }) {
     },
 
     /** Inline PGP in a text body. */
-    async openInline(text) {
+    async openInline(text, fromEmail = '') {
       if (text.includes('-----BEGIN PGP MESSAGE-----')) {
         const armored = text.slice(
           text.indexOf('-----BEGIN PGP MESSAGE-----'),
@@ -362,7 +371,12 @@ export function createPgp({ meta, vault }) {
             verificationKeys: await verificationKeys(),
             config: DECRYPT_CONFIG
           });
-          return { encrypted: true, method: 'pgp', text: plain, signatures: await verifications(signatures) };
+          return {
+            encrypted: true,
+            method: 'pgp',
+            text: plain,
+            signatures: await verifications(signatures, fromEmail)
+          };
         } catch {
           return {
             encrypted: true,
@@ -386,7 +400,7 @@ export function createPgp({ meta, vault }) {
             encrypted: false,
             method: 'pgp',
             text: message.getText(),
-            signatures: await verifications(result.signatures)
+            signatures: await verifications(result.signatures, fromEmail)
           };
         } catch {
           return null;

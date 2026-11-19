@@ -121,10 +121,18 @@ export function registerMailRoutes(ctx) {
   const cryptoFor = () => ({ pgp: ctx.pgp, smime: ctx.smime });
   const inboxPath = folders => folders.find(f => f.path.toUpperCase() === 'INBOX')?.path || 'INBOX';
 
-  async function inboxState(account, { fresh = false } = {}) {
+  async function inboxState(account, { fresh = false, cachedOnly = false } = {}) {
     if (ctx.watch && fresh) await watchers.refresh(account.id);
     const cached = ctx.watch ? watchers.snapshot(account.id) : null;
     if (cached) return cached;
+    // The desktop background monitor asks every 20 s: while the IDLE watcher is down (server away,
+    // wrong password, expired token) it must not open a new login each time; the watcher itself
+    // reconnects with backoff (REL-LEV-007).
+    if (ctx.watch && cachedOnly)
+      throw Object.assign(new Error('Das Postfach wird gerade nicht überwacht.'), {
+        statusCode: 409,
+        code: 'inbox_watcher_down'
+      });
     // Taken before the IMAP read: the snapshot must never claim to include changes made while it ran.
     const checkedAt = Date.now();
     const live = await withImap(client => monitorInbox(client, { previewCache, accountKey: account.id }), account);
@@ -306,7 +314,10 @@ export function registerMailRoutes(ctx) {
   });
   api.get('/api/inbox/monitor', async (request, reply) => {
     try {
-      return await inboxState(request.mailAccount, { fresh: request.query?.fresh === '1' });
+      return await inboxState(request.mailAccount, {
+        fresh: request.query?.fresh === '1',
+        cachedOnly: request.query?.cachedOnly === '1'
+      });
     } catch (err) {
       return errorResponse(reply, err);
     }

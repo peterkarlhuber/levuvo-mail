@@ -422,3 +422,40 @@ test('Task sync: moving lists, unlinking keeps tasks, wrong password is reported
   assert.equal(r[l2.id].code, 'dav_auth_failed');
   assert.equal(sync.links()[0].lastErrorCode, 'dav_auth_failed');
 });
+
+test('REL-LEV-010: a create whose answer was lost does not make a duplicate on the server', async () => {
+  const s = setup();
+  let loseAnswer = true;
+  const flaky = {
+    ...s.caldav,
+    caps: s.caldav.caps,
+    create: async (...args) => {
+      const made = await s.caldav.create(...args);
+      if (loseAnswer) throw Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+      return made;
+    }
+  };
+  const sync = createTaskSync({
+    file: s.file,
+    adapters: { caldav: flaky },
+    now: () => new Date(s.time.at),
+    timeZone: 'Europe/Vienna'
+  });
+  const link = await sync.link({
+    provider: 'caldav',
+    accountId: 'dav-1',
+    accountLabel: 'Nextcloud',
+    listId: LIST,
+    name: 'Aufgaben'
+  });
+  const task = await s.store.save({ title: 'Angebot schicken', due: '2026-11-21' });
+  await s.store.save({ ...task, list: link.id });
+  await sync.run(link.id);
+  assert.equal(s.server.objects.size, 1, 'the server has the task');
+  assert.equal(s.store.get(task.id).sync.remoteId, null, 'but this device did not learn about it');
+  loseAnswer = false;
+  await sync.run(link.id);
+  assert.equal(s.server.objects.size, 1, 'no second copy');
+  assert.ok(s.store.get(task.id).sync.remoteId);
+  assert.equal(s.store.list().length, 1, 'no copy imported back either');
+});

@@ -76,8 +76,20 @@ function createWatcher(account, { clientFactory, prepare, previewCache, onSnapsh
     }, DEBOUNCE_MS);
   }
 
+  // A stop() during an await below (token refresh, connect) must not leave a connection behind
+  // that stays open in IDLE for good (REL-LEV-014): every step checks `stopped` again.
+  const stoppedDuring = () => {
+    if (!stopped) return false;
+    try {
+      client?.close();
+    } catch {
+      /* already closed */
+    }
+    return true;
+  };
   async function runOnce() {
     const config = prepare ? await prepare(account) : account.imap;
+    if (stopped) return;
     client = clientFactory(config);
     const closed = new Promise(resolve => client.once('close', resolve));
     client.on('error', () => {});
@@ -85,10 +97,13 @@ function createWatcher(account, { clientFactory, prepare, previewCache, onSnapsh
     client.on('expunge', scheduleRefresh);
     client.on('flags', scheduleRefresh);
     await client.connect();
+    if (stoppedDuring()) return;
     await client.mailboxOpen('INBOX', { readOnly: true });
+    if (stoppedDuring()) return;
     state.connected = true;
     backoff = MIN_BACKOFF_MS;
     await refresh();
+    if (stoppedDuring()) return;
     fallbackTimer = timers.setInterval(() => void refresh(), FALLBACK_REFRESH_MS);
     await closed;
   }

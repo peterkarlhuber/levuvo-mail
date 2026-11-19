@@ -175,3 +175,13 @@ test('writing profile: known tone and address only, plain text limited', () => {
   assert.throws(() => validateAiSettings({ profile: { tone: 'evil' } }, base), /Tonfall/);
   assert.throws(() => validateAiSettings({ profile: { address: 'ihr' } }, base), /Anrede/);
 });
+
+test('REL-LEV-011: a running sidecar is killed when the app process exits, the hook goes with it', async () => {
+  const before = process.listenerCount('exit');
+  const sidecar = createSidecar({ resolve: fakeResolve, env: { PATH: process.env.PATH }, timeoutMs: 500 });
+  await sidecar.call('status');
+  assert.equal(process.listenerCount('exit'), before + 1, 'kill-on-exit hook while running');
+  await sidecar.stop();
+  await new Promise(r => setTimeout(r, 50));
+  assert.equal(process.listenerCount('exit'), before, 'removed after the process ended');
+});

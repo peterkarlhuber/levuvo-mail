@@ -222,6 +222,23 @@ export async function createAccountManager({
     }
     managed = next;
   }
+  // Every change of the account list runs one after another and is derived from the list as it is
+  // at that moment, not from a copy taken before a multi-second login test (REL-LEV-012).
+  let queue = Promise.resolve();
+  function mutate(change) {
+    const run = queue.then(async () => {
+      const next = change(managed);
+      await persist(next);
+    });
+    queue = run.catch(() => {});
+    return run;
+  }
+  const addNew = item => list => {
+    if (all().length >= MAX_ACCOUNTS) invalid('Maximal fünf Konten erlaubt.', 409);
+    if (all().some(a => a.imap.user.toLowerCase() === item.user))
+      invalid('Dieses Postfach ist bereits eingerichtet.', 409);
+    return [...list, item];
+  };
   function requireVault() {
     if (!store.available)
       invalid(
@@ -342,7 +359,7 @@ export async function createAccountManager({
     store.set(item.id, 'imap', password);
     try {
       store.set(item.id, 'smtp', smtpPassword);
-      await persist([...managed, item]);
+      await mutate(addNew(item));
     } catch (err) {
       try {
         store.delete(item.id, 'imap');
@@ -359,7 +376,6 @@ export async function createAccountManager({
     const next = normalizeAccount(input, prior);
     if (all().some(a => a.id !== id && a.imap.user.toLowerCase() === next.user))
       invalid('E-Mail-Adresse wird bereits verwendet.', 409);
-    const updated = managed.map(a => (a.id === id ? next : a));
     const previous = getCredentials(prior);
     const nextImap = input.password ? validateSecret(input.password) : previous.imapPassword;
     const nextSmtp = input.smtpPassword
@@ -380,7 +396,12 @@ export async function createAccountManager({
     }
     try {
       for (const [kind, secret] of changes) store.set(id, kind, secret);
-      await persist(updated);
+      await mutate(list => {
+        if (!list.some(a => a.id === id)) invalid('Dieses Konto wurde inzwischen entfernt.', 409);
+        if (all().some(a => a.id !== id && a.imap.user.toLowerCase() === next.user))
+          invalid('E-Mail-Adresse wird bereits verwendet.', 409);
+        return list.map(a => (a.id === id ? next : a));
+      });
     } catch (err) {
       for (const [kind, , old] of changes)
         try {
@@ -412,7 +433,7 @@ export async function createAccountManager({
     item.id = `managed-${randomBytes(6).toString('hex')}`;
     store.set(item.id, 'oauth', refreshToken);
     try {
-      await persist([...managed, item]);
+      await mutate(addNew(item));
     } catch (err) {
       try {
         store.delete(item.id, 'oauth');
@@ -462,7 +483,10 @@ export async function createAccountManager({
     store.set(id, 'imap', account.imap.password);
     try {
       store.set(id, 'smtp', account.smtp.password);
-      await persist([...managed, item]);
+      await mutate(list => {
+        if (list.some(x => x.id === id)) invalid('Bereits in den Schlüsselbund übernommen.', 409);
+        return [...list, item];
+      });
     } catch (err) {
       try {
         store.delete(id, 'imap');
@@ -477,7 +501,7 @@ export async function createAccountManager({
     const item = managed.find(m => m.id === id);
     if (!item) invalid('Dieses Konto ist nicht über die Oberfläche verwaltet.', 404);
     // The underlying mailbox and messages are NEVER deleted.
-    await persist(managed.filter(a => a.id !== id));
+    await mutate(list => list.filter(a => a.id !== id));
     let cleanupFailed = false;
     for (const kind of ['imap', 'smtp', 'oauth', 'index-key'])
       try {

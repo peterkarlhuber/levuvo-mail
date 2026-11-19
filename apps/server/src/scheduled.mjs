@@ -382,7 +382,8 @@ export async function sendDue(
     wasSent = null,
     instanceId = '',
     claims = new Map(),
-    pollMs = 300
+    pollMs = 300,
+    keepAliveMs = 10_000
   }
 ) {
   const { folder, uidValidity = '', items } = await listScheduled(client, preferredDrafts);
@@ -478,6 +479,10 @@ export async function sendDue(
       results.push({ uid: item.uid, sent: false });
       return;
     }
+    // A large mail over a slow uplink takes longer than the IMAP socket timeout (30 s); without
+    // traffic the server or ImapFlow drops the idle connection and $LevuvoSent can no longer be set
+    // (REL-LEV-005). NOOPs keep it alive while SMTP runs.
+    const keepAlive = setInterval(() => void client.noop?.().catch(() => {}), keepAliveMs);
     try {
       await submit(recipients, raw);
     } catch (err) {
@@ -500,6 +505,8 @@ export async function sendDue(
         results.push({ uid: item.uid, sent: false, uncertain: true });
       }
       return;
+    } finally {
+      clearInterval(keepAlive);
     }
     await client.messageFlagsAdd(String(item.uid), [SENT_FLAG], { uid: true }).catch(() => {});
     await saveSent(raw).catch(() => {});

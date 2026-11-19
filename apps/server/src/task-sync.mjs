@@ -206,12 +206,25 @@ export function createTaskSync({
     const suspicious = remote.size === 0 && syncedHere.length >= 10;
     if (suspicious) result.errors++;
 
+    // A create whose answer was lost (network cut, crash, failed save) left a task on the server
+    // that no local task knows. Before creating again, an unknown remote task with exactly the same
+    // content is taken as that earlier create instead of making a duplicate (REL-LEV-010).
+    const linked = new Set(tasks.map(t => t.sync?.remoteId).filter(Boolean));
+    const adopted = new Set();
+    const earlierCreate = local =>
+      [...remote.values()].find(
+        r => !linked.has(r.remoteId) && !adopted.has(r.remoteId) && !known.has(r.remoteId) && same(r.fields, local)
+      );
     for (const task of tasks) {
       const local = project(task, caps, timeZone);
       const sync = task.sync;
       if (!sync.remoteId) {
         // New in this list (or moved into it): create on the server.
-        const made = await attempt('create', () => adapter.create(link, local));
+        const earlier = earlierCreate(local);
+        if (earlier) adopted.add(earlier.remoteId);
+        const made = earlier
+          ? { remoteId: earlier.remoteId, etag: earlier.etag, fields: earlier.fields }
+          : await attempt('create', () => adapter.create(link, local));
         if (made?.remoteId) {
           known.add(made.remoteId);
           ops.push({
@@ -224,7 +237,7 @@ export function createTaskSync({
               base: made.fields ? cleanRemote(made.fields, caps) : local
             }
           });
-          result.pushed++;
+          if (!earlier) result.pushed++;
         }
         continue;
       }

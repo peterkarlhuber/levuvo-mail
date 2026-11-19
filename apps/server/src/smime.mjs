@@ -84,20 +84,55 @@ const MOZILLA_ROOTS = (() => {
     return [];
   }
 })();
-/** Chain validation against Mozilla roots + user-trusted certificates (no network, no OCSP). */
-function chainTrusted(leafDer, chainDers, trustedDers) {
+const EKU_EMAIL = '1.3.6.1.5.5.7.3.4';
+const EKU_ANY = '2.5.29.37.0';
+/** Extended key usage allows S/MIME (no extension = no restriction). */
+const ekuAllowsEmail = cert => !cert.keyUsage || cert.keyUsage.includes(EKU_EMAIL) || cert.keyUsage.includes(EKU_ANY);
+/** basicConstraints pathLenConstraint and keyUsage keyCertSign of a CA certificate (pkijs). */
+function caLimits(cert) {
+  try {
+    const parsed = pkijs.Certificate.fromBER(new Uint8Array(cert.raw));
+    const ext = oid => (parsed.extensions || []).find(e => e.extnID === oid);
+    const bc = ext('2.5.29.19')?.parsedValue;
+    const ku = ext('2.5.29.15')?.parsedValue;
+    const bits = ku?.valueBlock?.valueHexView;
+    return {
+      pathLen:
+        typeof bc?.pathLenConstraint === 'number' ? bc.pathLenConstraint : bc?.pathLenConstraint?.valueBlock?.valueDec,
+      // keyUsage bit 5 (keyCertSign) = 0x04 in the first byte; no extension = not restricted.
+      certSign: !ku || Boolean(bits && bits[0] & 0x04)
+    };
+  } catch {
+    return { pathLen: undefined, certSign: false };
+  }
+}
+/** May `issuer` sign certificates, with `below` CA certificates between it and the leaf? */
+function validIssuer(issuer, below) {
+  if (issuer.ca !== true || !ekuAllowsEmail(issuer)) return false;
+  const { pathLen, certSign } = caLimits(issuer);
+  return certSign && (typeof pathLen !== 'number' || below <= pathLen);
+}
+
+/**
+ * Chain validation against Mozilla roots + user-trusted certificates (no network, no OCSP).
+ * Every issuer must be a CA (basicConstraints CA:TRUE, keyCertSign, path length) and allow S/MIME;
+ * the leaf must allow emailProtection. Otherwise any certificate in a mail could act as an
+ * intermediate CA and vouch for any address (SEC-LEV-005).
+ */
+export function chainTrusted(leafDer, chainDers, trustedDers) {
   try {
     const leaf = new X509Certificate(Buffer.from(leafDer));
     const pool = [...chainDers.map(d => new X509Certificate(Buffer.from(d)))];
     const anchors = [...MOZILLA_ROOTS, ...trustedDers.map(d => new X509Certificate(Buffer.from(d)))];
     if (anchors.some(a => a.fingerprint256 === leaf.fingerprint256)) return true;
+    if (!ekuAllowsEmail(leaf)) return false;
     let current = leaf;
     for (let depth = 0; depth < 8; depth++) {
       const now = Date.now();
       if (Date.parse(current.validTo) < now || Date.parse(current.validFrom) > now) return false;
-      const anchor = anchors.find(a => current.checkIssued(a) && current.verify(a.publicKey));
-      if (anchor) return true;
-      const issuer = pool.find(c => c !== current && current.checkIssued(c) && current.verify(c.publicKey));
+      const issues = c => current.checkIssued(c) && current.verify(c.publicKey) && validIssuer(c, depth);
+      if (anchors.some(issues)) return true;
+      const issuer = pool.find(c => c !== current && issues(c));
       if (!issuer) return false;
       current = issuer;
     }

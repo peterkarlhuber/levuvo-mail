@@ -62,17 +62,26 @@ app.setAboutPanelOptions?.({
   website: 'https://levuvo.at'
 });
 
-async function shutdown() {
+// One shutdown for every way of quitting (menu, Dock, logout, system shutdown, updater, restore):
+// the server stops its schedulers, syncs and the AI sidecar before the process ends (REL-LEV-011).
+let shutdownPromise = null;
+let shutdownDone = false;
+function shutdown() {
   quitting = true;
-  backgroundMonitor?.stop();
-  reminderMonitor?.stop();
-  if (followupTimer) clearInterval(followupTimer);
-  if (taskTimer) clearInterval(taskTimer);
-  try {
-    await mailServer?.close();
-  } catch {
-    /* already closed */
-  }
+  shutdownPromise ??= (async () => {
+    backgroundMonitor?.stop();
+    reminderMonitor?.stop();
+    if (followupTimer) clearInterval(followupTimer);
+    if (taskTimer) clearInterval(taskTimer);
+    try {
+      await mailServer?.close();
+    } catch {
+      /* already closed */
+    }
+  })().finally(() => {
+    shutdownDone = true;
+  });
+  return shutdownPromise;
 }
 
 async function quitWithConfirmation() {
@@ -373,7 +382,7 @@ async function boot() {
   };
   backgroundMonitor = createDesktopInboxMonitor({
     listAccounts: async () => (await localGet('/api/accounts')).accounts,
-    readInbox: async accountId => localGet(`/api/inbox/monitor?account=${encodeURIComponent(accountId)}`),
+    readInbox: async accountId => localGet(`/api/inbox/monitor?account=${encodeURIComponent(accountId)}&cachedOnly=1`),
     notify: ({ label, count, id }) => nativeNotify({ label, count, accountId: id }),
     intervalMs: 20000,
     logger: msg => console.warn('[Levuvo Mail]', msg)
@@ -531,8 +540,16 @@ app.on('activate', showWindow);
 app.on('window-all-closed', () => {
   /* stays in the tray; mail is still watched */
 });
-app.on('before-quit', () => {
+app.on('before-quit', event => {
   quitting = true;
+  if (shutdownDone) return;
+  // Quit only after a clean shutdown, at most 8 seconds (the OS may be shutting down).
+  event.preventDefault();
+  const limit = new Promise(resolve => setTimeout(resolve, 8000));
+  void Promise.race([shutdown(), limit]).finally(() => {
+    shutdownDone = true;
+    app.quit();
+  });
 });
 app
   .whenReady()

@@ -558,3 +558,32 @@ test('Tasks API: connect a CalDAV list, sync, move a task, disconnect', async t 
     ['Zweite', null]
   ]);
 });
+
+test('REL-LEV-007: the background monitor never opens a login while the IDLE watcher is down', async t => {
+  let logins = 0;
+  const imap = fakeImapFactory({ offline: false });
+  const { s } = await server(t, {
+    watch: true,
+    imapFactory: config => {
+      logins++;
+      return imap(config);
+    },
+    watcherFactory: () => ({
+      on() {},
+      once() {},
+      async connect() {
+        throw Object.assign(new Error('down'), { code: 'ECONNREFUSED' });
+      },
+      close() {}
+    })
+  });
+  const id = await addAccount(s);
+  const before = logins;
+  const r = await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}&cachedOnly=1`, headers: GET });
+  assert.equal(r.statusCode, 409);
+  assert.equal(r.json().code, 'inbox_watcher_down');
+  assert.equal(logins, before, 'no extra login');
+  // The app itself (without cachedOnly) still reads the inbox live.
+  const live = await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}`, headers: GET });
+  assert.equal(live.statusCode, 200);
+});

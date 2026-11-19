@@ -92,7 +92,7 @@ export function registerCryptoRoutes(ctx) {
       const armored = attachmentBytes(att).toString('utf8');
       if (armored.includes('PRIVATE KEY'))
         throw fail('Private Schlüssel werden aus E-Mails nicht übernommen.', 'pgp_key_invalid');
-      return await pgp.importKey(armored);
+      return await pgp.importKey(armored, '', { onlyFor: loaded.parsed.from?.address || '-' });
     } catch (err) {
       return errorResponse(reply, err);
     }

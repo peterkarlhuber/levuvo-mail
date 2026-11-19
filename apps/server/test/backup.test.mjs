@@ -206,6 +206,9 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
   const GET = { host: HOST, cookie: `levuvo_desktop_session=${SECRET}` };
   const POST = { ...GET, origin: `http://${HOST}`, 'content-type': 'application/json', 'x-levuvo-action': 'backup-v1' };
   let restarts = 0;
+  // Waits for the restart event itself instead of a fixed time (QA-LEV-011: slow CI timers).
+  let restarted;
+  const restartRequested = new Promise(resolve => (restarted = resolve));
   const s = await createMailServer({
     desktop: true,
     sessionSecret: SECRET,
@@ -214,7 +217,10 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
     accountsFile: join(dir, 'accounts.json'),
     watch: false,
     background: false,
-    onRestartRequested: () => restarts++
+    onRestartRequested: () => {
+      restarts++;
+      restarted();
+    }
   });
   s.setPortForTesting(4790);
   t.after(() => s.close());
@@ -282,7 +288,10 @@ test('Restore routes: backup, staged restore freezes changes until the restart',
   });
   const restart = await s.api.inject({ method: 'POST', url: '/api/backup/restart', headers: POST, payload: {} });
   assert.equal(restart.statusCode, 200);
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // The server's restart timer is unref'd; a ref'd one keeps the test process alive meanwhile.
+  const alive = setInterval(() => {}, 1000);
+  await restartRequested;
+  clearInterval(alive);
   assert.equal(restarts, 1);
 });
 
@@ -374,4 +383,27 @@ test('Backup: shared spaces travel as encrypted files together with both keychai
     { kdf: FAST }
   );
   await assert.rejects(decryptBackup(crafted, PASSWORD), e => e.code === 'backup_invalid');
+});
+
+test('DB-LEV-005: backups from a newer app or with a newer store format are refused before restoring', async () => {
+  const { newerApp } = await import('../src/backup.mjs');
+  assert.equal(newerApp('2.4.0', '2.3.0'), true);
+  assert.equal(newerApp('2.3.0', '2.3.0'), false);
+  assert.equal(newerApp('2.2.9', '2.3.0'), false);
+  assert.equal(newerApp('10.0.0', '9.9.9'), true);
+  const accounts = JSON.stringify({ version: 1, accounts: [] });
+  const newer = await encryptBackup({ files: { 'accounts.json': accounts } }, PASSWORD, { app: '2.4.0', kdf: FAST });
+  await assert.rejects(decryptBackup(newer, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_version');
+  assert.ok(await decryptBackup(newer, PASSWORD, { ownApp: '2.4.0' }));
+  const format2 = await encryptBackup(
+    { files: { 'accounts.json': JSON.stringify({ version: 2, accounts: [] }) } },
+    PASSWORD,
+    { app: '2.3.0', kdf: FAST }
+  );
+  await assert.rejects(decryptBackup(format2, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_version');
+  const broken = await encryptBackup({ files: { 'dav.json': JSON.stringify({ accounts: 'x' }) } }, PASSWORD, {
+    app: '2.3.0',
+    kdf: FAST
+  });
+  await assert.rejects(decryptBackup(broken, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_invalid');
 });

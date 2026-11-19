@@ -1,11 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-let drafts;
-try {
-  drafts = await import('../src/drafts.mjs');
-} catch (err) {
-  if (err.code !== 'ERR_MODULE_NOT_FOUND') throw err;
-}
+// Imported unconditionally: a missing module must fail the run, never skip the tests (QA-LEV-012).
+const drafts = await import('../src/drafts.mjs');
 
 const uuid = '11111111-2222-4222-8222-333333333333';
 const fresh = () => ({
@@ -23,7 +19,6 @@ const folders = [
   { path: 'INBOX.Trash', specialUse: '\\Trash' },
   { path: 'INBOX.Sent', specialUse: '\\Sent' }
 ];
-const skip = !drafts && 'npm install erforderlich (nodemailer)';
 function client(opts = {}) {
   const calls = [];
   return {
@@ -63,17 +58,17 @@ function client(opts = {}) {
   };
 }
 
-test('Draft saving is off by default', { skip }, () => {
+test('Draft saving is off by default', () => {
   assert.equal(drafts.draftEnabled({}), false);
   assert.equal(drafts.draftEnabled({ ENABLE_DRAFTS: 'true' }), true);
   assert.equal(drafts.findDraftFolder(folders).path, 'INBOX.Drafts');
 });
-test('MIME of a draft contains the stored identifier and flag', { skip }, async () => {
+test('MIME of a draft contains the stored identifier and flag', async () => {
   const raw = await drafts.composeDraft('peter@example.at', fresh());
   assert.equal(drafts.parseDraftId(raw), uuid);
   assert.match(raw.toString(), /Levuvo Entwurf/);
 });
-test('First draft is appended without deleting any other message', { skip }, async () => {
+test('First draft is appended without deleting any other message', async () => {
   const c = client();
   const result = await drafts.saveDraft(c, 'peter@example.at', fresh());
   assert.equal(result.uid, 24);
@@ -85,7 +80,7 @@ test('First draft is appended without deleting any other message', { skip }, asy
   assert.deepEqual(c.calls.find(x => x[0] === 'append').slice(1, 3), ['INBOX.Drafts', ['\\Draft', '\\Seen']]);
   assert.equal(c.calls.at(-1)[0], 'unlock');
 });
-test('Draft revision is APPEND before UID MOVE to the trash', { skip }, async () => {
+test('Draft revision is APPEND before UID MOVE to the trash', async () => {
   const c = client();
   const result = await drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' });
   assert.equal(result.previousRemoved, true);
@@ -98,7 +93,7 @@ test('Draft revision is APPEND before UID MOVE to the trash', { skip }, async ()
     ['move', '23', 'INBOX.Trash', { uid: true }]
   );
 });
-test('Stale UID or UIDVALIDITY collision stops all write actions', { skip }, async () => {
+test('Stale UID or UIDVALIDITY collision stops all write actions', async () => {
   const c = client();
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '999' }), {
     code: 'draft_conflict'
@@ -108,12 +103,12 @@ test('Stale UID or UIDVALIDITY collision stops all write actions', { skip }, asy
     false
   );
 });
-test('UIDPLUS is required, nothing is written if it is missing', { skip }, async () => {
+test('UIDPLUS is required, nothing is written if it is missing', async () => {
   const c = client({ noUidplus: true });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', fresh()), { code: 'uidplus_required' });
   assert.equal(c.calls.length, 0);
 });
-test('After an unclear APPEND the old draft is never deleted', { skip }, async () => {
+test('After an unclear APPEND the old draft is never deleted', async () => {
   const c = client({ appendResult: false });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' }), {
     code: 'draft_save_uncertain'
@@ -123,7 +118,7 @@ test('After an unclear APPEND the old draft is never deleted', { skip }, async (
     false
   );
 });
-test('Unknown or larger draft is not overwritten', { skip }, async () => {
+test('Unknown or larger draft is not overwritten', async () => {
   const c = client({ previousMissing: true });
   await assert.rejects(drafts.saveDraft(c, 'peter@example.at', { ...fresh(), previousUid: '23', uidValidity: '100' }), {
     code: 'draft_conflict'
@@ -133,13 +128,13 @@ test('Unknown or larger draft is not overwritten', { skip }, async () => {
     false
   );
 });
-test('Invalid payload and attachments are blocked', { skip }, () => {
+test('Invalid payload and attachments are blocked', () => {
   assert.throws(() => drafts.validateDraft({ ...fresh(), to: ['header\r\n@example.org'] }));
   assert.throws(() => drafts.validateDraft({ ...fresh(), attachments: [{ name: 'bad' }] }), /ungültig/i);
   assert.throws(() => drafts.validateDraft({ ...fresh(), previousUid: '0', uidValidity: '100' }));
 });
 
-test('Without a drafts folder the first save creates one next to the inbox', { skip }, async () => {
+test('Without a drafts folder the first save creates one next to the inbox', async () => {
   const c = client({
     folders: [
       { path: 'INBOX', delimiter: '.' },

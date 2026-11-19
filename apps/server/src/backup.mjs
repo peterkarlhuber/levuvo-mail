@@ -146,6 +146,24 @@ function ownKeyNames(cryptoJson) {
   return names;
 }
 
+// Stores whose file carries a format version: a backup from a newer Levuvo with a newer format
+// would otherwise be restored and then fail (or be reset) at the next start (DB-LEV-005).
+const FORMAT_CHECKS = {
+  'accounts.json': v => v.version === 1 && Array.isArray(v.accounts),
+  'dav.json': v => v.version === 1 && Array.isArray(v.accounts)
+};
+const versionParts = v =>
+  String(v || '')
+    .split(/[.-]/)
+    .slice(0, 3)
+    .map(x => Number.parseInt(x, 10) || 0);
+/** True when `backupApp` is a newer Levuvo version than `ownApp` (major, minor, patch). */
+export function newerApp(backupApp, ownApp) {
+  const [a, b] = [versionParts(backupApp), versionParts(ownApp)];
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return false;
+}
+
 function parseJsonFile(name, text) {
   if (BACKUP_FILES[name].kind === 'jsonl') {
     for (const line of text.split('\n')) if (line.trim()) JSON.parse(line);
@@ -344,7 +362,7 @@ export function readBackupHeader(text) {
 }
 
 /** Decrypts and checks a backup file. Wrong password and tampering give the same answer. */
-export async function decryptBackup(text, password) {
+export async function decryptBackup(text, password, { ownApp = '' } = {}) {
   checkPassword(password);
   const { doc, kdf } = readBackupHeader(text);
   let plain;
@@ -364,6 +382,11 @@ export async function decryptBackup(text, password) {
   } catch {
     throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
   }
+  if (ownApp && newerApp(doc.app, ownApp))
+    throw fail(
+      'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.',
+      'backup_version'
+    );
   return validateContent(content, doc);
 }
 
@@ -375,11 +398,19 @@ function validateContent(content, doc) {
     // Unknown names are ignored (a newer version may add files); never used as a path.
     if (!Object.hasOwn(BACKUP_FILES, name)) continue;
     if (typeof text !== 'string') throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
+    let value;
     try {
-      parseJsonFile(name, text);
+      value = parseJsonFile(name, text);
     } catch {
       throw fail('Die Sicherung ist beschädigt.', 'backup_invalid');
     }
+    if (FORMAT_CHECKS[name] && !FORMAT_CHECKS[name](value))
+      throw fail(
+        typeof value.version === 'number' && value.version > 1
+          ? 'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.'
+          : 'Die Sicherung ist beschädigt.',
+        typeof value.version === 'number' && value.version > 1 ? 'backup_version' : 'backup_invalid'
+      );
     files[name] = text;
   }
   const allowed = new Set(files['crypto.json'] ? ownKeyNames(JSON.parse(files['crypto.json'])) : []);

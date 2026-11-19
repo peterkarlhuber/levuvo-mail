@@ -127,6 +127,18 @@ export function createSidecar({
       } catch {
         throw new SidecarError('runtime_missing');
       }
+      // If the app ends without a clean stop (crash, forced quit), the Python process must not
+      // stay behind on its own (REL-LEV-011).
+      const orphan = proc;
+      const killOnExit = () => {
+        try {
+          orphan.kill();
+        } catch {
+          /* already gone */
+        }
+      };
+      process.once('exit', killOnExit);
+      orphan.once('exit', () => process.removeListener('exit', killOnExit));
       await new Promise((resolveSpawn, rejectSpawn) => {
         proc.once('spawn', resolveSpawn);
         proc.once('error', () => rejectSpawn(new SidecarError('runtime_missing')));
