@@ -623,6 +623,13 @@ export async function createMailServer({
   const aiSettings = await createJsonFile(path.join(dir, 'ai.json'), DEFAULT_AI_SETTINGS);
   // Progress of the semantic index (model, index generation, last run) per account; no content.
   const semanticState = await createJsonFile(path.join(dir, 'ai-semantic.json'), { accounts: {} });
+  // Writing-style profile per contact (greetings, closings, du/Sie): addresses of other people,
+  // so encrypted with a keychain key; memory only without a keychain.
+  const styleFile = await createSealedJsonFile(
+    path.join(dir, 'ai-style.json'),
+    { accounts: {} },
+    { vault: store, keyName: 'ai-style-key' }
+  );
   let ai;
   const sidecar =
     aiSidecar ||
@@ -655,6 +662,7 @@ export async function createMailServer({
     internalRequest,
     aiForgetHooks: [],
     semanticState,
+    styleFile,
     desktop,
     env: effectiveEnv,
     logger,

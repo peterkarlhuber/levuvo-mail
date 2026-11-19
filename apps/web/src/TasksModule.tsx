@@ -1,6 +1,6 @@
 // "Aufgaben" module: own list with views (today, upcoming, overdue, all open, done), quick add,
 // priority, reminders, repetition and the link back to the mail a task came from.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlarmClock,
   AlertTriangle,
@@ -19,7 +19,8 @@ import {
   Plus,
   Repeat,
   Sparkles,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import { postAction, postJson } from './api';
 import { useTasks } from './task-reminders';
@@ -33,6 +34,8 @@ import {
   formatTaskDate,
   inList,
   localDate,
+  spaceFilter,
+  spacesOf,
   viewCounts,
   type Task,
   type TaskListFilter,
@@ -52,17 +55,28 @@ const readArchivePref = () => {
 export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMailRef) => void }) {
   const { t, locale } = useT();
   const { toast, confirm } = useUi();
-  const { tasks, error } = useTasks();
+  const { tasks, error, reload } = useTasks();
+  // Space tasks change when other members work on them: refresh while the module is open.
+  useEffect(() => {
+    const timer = window.setInterval(() => void reload(), 30_000);
+    return () => window.clearInterval(timer);
+  }, [reload]);
   const [view, setView] = useState<TaskView>('today');
   const [editing, setEditing] = useState<TaskDraft | null>(null);
   const [quick, setQuick] = useState('');
   const [archiveOnDone, setArchiveOnDone] = useState(readArchivePref);
   const { links } = useTaskLinks();
   const [listFilter, setListFilter] = useState<TaskListFilter>('all');
-  // A disconnected list falls back to all tasks.
-  const activeList =
-    listFilter === 'all' || listFilter === 'local' || links.some(l => l.id === listFilter) ? listFilter : 'all';
   const everything = useMemo(() => tasks || [], [tasks]);
+  const spaces = useMemo(() => spacesOf(everything), [everything]);
+  // A disconnected list (or a space without my tasks) falls back to all tasks.
+  const activeList =
+    listFilter === 'all' ||
+    listFilter === 'local' ||
+    links.some(l => l.id === listFilter) ||
+    spaces.some(sp => spaceFilter(sp.id) === listFilter)
+      ? listFilter
+      : 'all';
   const all = useMemo(() => inList(everything, activeList), [everything, activeList]);
   const counts = viewCounts(all);
   const visible = filterView(all, view);
@@ -71,10 +85,14 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
     return Object.fromEntries([
       ['all', open.length],
       ['local', inList(open, 'local').length],
-      ...links.map(l => [l.id, inList(open, l.id).length])
+      ...links.map(l => [l.id, inList(open, l.id).length]),
+      ...spaces.map(sp => [spaceFilter(sp.id), inList(open, spaceFilter(sp.id)).length])
     ]) as Record<string, number>;
-  }, [everything, links]);
-  const newInList = activeList === 'all' || activeList === 'local' ? null : activeList;
+  }, [everything, links, spaces]);
+  const inSpace = activeList.startsWith('space:') ? spaces.find(sp => spaceFilter(sp.id) === activeList) : null;
+  // New tasks go into the list or space that is shown (a space only if I may add tasks there).
+  const newInList = activeList === 'all' || activeList === 'local' || inSpace ? null : activeList;
+  const newInSpace = inSpace && !inSpace.readOnly ? inSpace.id : null;
   const listName = (id: string | null | undefined) => links.find(l => l.id === id)?.name || '';
 
   async function quickAdd() {
@@ -82,7 +100,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
     if (!title) return;
     const due = view === 'today' ? localDate(new Date()) : null;
     try {
-      await postJson('/api/tasks/save', { task: { title, due, list: newInList } }, 'mail-v1');
+      await postJson('/api/tasks/save', { task: { title, due, list: newInList, space: newInSpace } }, 'mail-v1');
       setQuick('');
       tasksChanged();
     } catch (e) {
@@ -121,7 +139,12 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
   async function remove(task: Task) {
     const ok = await confirm({
       title: t('Aufgabe löschen?'),
-      message: task.title,
+      message: task.space
+        ? t('„{title}“ wird im Raum „{space}“ für alle Mitglieder gelöscht.', {
+            title: task.title,
+            space: task.space.name
+          })
+        : task.title,
       confirmLabel: t('Löschen'),
       danger: true
     });
@@ -164,6 +187,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
 
   const row = (task: Task) => {
     const state = dueState(task);
+    const locked = Boolean(task.space?.readOnly);
     return (
       <div
         key={task.id}
@@ -173,7 +197,14 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
         <button
           className="icon-button task-check"
           aria-label={task.done ? t('Als offen markieren') : t('Als erledigt markieren')}
-          title={task.done ? t('Als offen markieren') : t('Als erledigt markieren')}
+          title={
+            locked
+              ? t('Nur lesen: In diesem Raum hast du die Rolle Leser.')
+              : task.done
+                ? t('Als offen markieren')
+                : t('Als erledigt markieren')
+          }
+          disabled={locked}
           onClick={() => void toggle(task)}
         >
           {task.done ? <CircleCheck size={19} /> : <Circle size={19} />}
@@ -208,6 +239,13 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
                 <span className="sr-only"> {t('Von der KI vorgeschlagen')}</span>
               </span>
             )}
+            {task.space && !inSpace && (
+              <span className="task-space" title={t('Aufgabe aus dem Raum „{name}“', { name: task.space.name })}>
+                <Users size={11} aria-hidden="true" />
+                <span className="sr-only">{t('Raum')}: </span>
+                {task.space.name}
+              </span>
+            )}
             {task.list && activeList === 'all' && (
               <span title={t('Liste')}>
                 <Cloud size={11} /> {listName(task.list)}
@@ -232,14 +270,16 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
               <Mail size={15} />
             </button>
           )}
-          <button
-            className="icon-button"
-            title={t('Löschen')}
-            aria-label={t('Löschen')}
-            onClick={() => void remove(task)}
-          >
-            <Trash2 size={15} />
-          </button>
+          {!locked && (
+            <button
+              className="icon-button"
+              title={t('Löschen')}
+              aria-label={t('Löschen')}
+              onClick={() => void remove(task)}
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -250,7 +290,13 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
       <aside className="calendar-sidebar tasks-sidebar">
         <button
           className="btn primary"
-          onClick={() => setEditing({ due: view === 'today' ? localDate(new Date()) : null, list: newInList })}
+          onClick={() =>
+            setEditing({
+              due: view === 'today' ? localDate(new Date()) : null,
+              list: newInList,
+              space: newInSpace ? { id: newInSpace, name: inSpace!.name } : null
+            })
+          }
         >
           <Plus size={15} /> {t('Neue Aufgabe')}
         </button>
@@ -270,6 +316,26 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
           </button>
         ))}
         <TaskListsNav filter={activeList} onFilter={setListFilter} links={links} counts={listCounts} />
+        {spaces.length > 0 && (
+          <>
+            <h3>{t('Räume')}</h3>
+            {spaces.map(sp => (
+              <button
+                key={sp.id}
+                className={`folder-item ${activeList === spaceFilter(sp.id) ? 'active' : ''}`}
+                onClick={() => setListFilter(spaceFilter(sp.id))}
+                aria-current={activeList === spaceFilter(sp.id) ? 'page' : undefined}
+                title={t('Mir zugewiesene Aufgaben aus dem Raum „{name}“', { name: sp.name })}
+              >
+                <Users size={16} strokeWidth={1.8} aria-hidden="true" />
+                <span>{sp.name}</span>
+                {(listCounts[spaceFilter(sp.id)] || 0) > 0 && (
+                  <span className="folder-count">{listCounts[spaceFilter(sp.id)]}</span>
+                )}
+              </button>
+            ))}
+          </>
+        )}
         <h3>{t('Optionen')}</h3>
         <label className="task-option">
           <input
@@ -294,7 +360,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
             <span className="period">.</span>
           </h1>
         </div>
-        {view !== 'done' && !error?.locked && (
+        {view !== 'done' && !error?.locked && !(inSpace && inSpace.readOnly) && (
           <form
             className="task-quick"
             onSubmit={e => {

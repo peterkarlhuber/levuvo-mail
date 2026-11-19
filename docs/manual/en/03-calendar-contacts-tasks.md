@@ -54,3 +54,7 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 - **Done:** Click the circle in front of the task.
 
 **Sync with other lists:** **Connect a list** links Microsoft To Do, Google Tasks or a CalDAV list. Then you see your tasks on your phone too. Disconnecting only ends the sync; nothing is deleted on the server.
+
+**Tasks from spaces:** Space tasks assigned to you also show here, with the space's name. Under **Spaces** on the left you filter by space. Complete them or change title, note, due date and priority here or in the space: the change applies everywhere and goes encrypted to all members. If you are a reader in the space, you only see the task.
+
+**Move a task into a space:** In a task, pick a space under **Space** where you are owner or editor. The task moves into the space, is assigned to you, and all members see it. Reminder, repeat, list and the link to the email are dropped. Space tasks are never synced with Microsoft To Do, Google Tasks or CalDAV; if the task was in a connected list, it is deleted there.

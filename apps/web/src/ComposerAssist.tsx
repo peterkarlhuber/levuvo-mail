@@ -10,7 +10,7 @@ import { useT } from './i18n';
 import { Button } from './ui';
 import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
 
-type Draft = { subject: string; body: string };
+type Draft = { subject: string; body: string; styleContact?: string };
 type Issue = { kind: 'attachment' | 'tone' | 'recipient' | 'sensitive' | 'legal'; message: string };
 
 const REWRITES: { mode: string; label: string }[] = [
@@ -32,11 +32,22 @@ type Props = {
   setDraft: (text: string) => void;
   subject: string;
   setSubject: (s: string) => void;
+  /** The first recipient typed in "To": a new mail then follows the style learned for that person. */
+  recipient?: string;
   /** Model that wrote the current text, or null after undo (machine-readable marking on send). */
   onAssisted?: (model: string | null) => void;
 };
 
-export function ComposerAssist({ accountId, source, getDraft, setDraft, subject, setSubject, onAssisted }: Props) {
+export function ComposerAssist({
+  accountId,
+  source,
+  getDraft,
+  setDraft,
+  subject,
+  setSubject,
+  recipient,
+  onAssisted
+}: Props) {
   const { t, lang } = useT();
   const { toast } = useUi();
   const [features, setFeatures] = useState<Partial<Record<AiFeature, boolean>> | null>(null);
@@ -45,7 +56,7 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
   const undo = useRef<string | null>(null);
   // The last change by the assistant stays marked with an undo until the next run, not only in a
   // 5-second toast (EU AI Act Art. 50 marking, WCAG 2.2.1).
-  const [changed, setChanged] = useState<string | null>(null);
+  const [changed, setChanged] = useState<{ model: string; contact: string } | null>(null);
   const menu = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -75,12 +86,13 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
     setBusy(label);
     try {
       const refs = source && kind !== 'rewrite' ? [source] : undefined;
-      const r = await runAi<Draft>(kind, { account: accountId, refs, input, lang });
+      const withTo = kind === 'compose' && recipient ? { ...input, to: recipient } : input;
+      const r = await runAi<Draft>(kind, { account: accountId, refs, input: withTo, lang });
       const before = getDraft();
       undo.current = before;
       setDraft(r.result.body);
       if (r.result.subject && !subject.trim()) setSubject(r.result.subject);
-      setChanged(r.model);
+      setChanged({ model: r.model, contact: r.result.styleContact || '' });
       onAssisted?.(r.model);
       toast({
         text: t('Vom Assistenten geschrieben ({model}). Bitte vor dem Senden prüfen.', { model: r.model }),
@@ -123,7 +135,8 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
       </Button>
       {changed && !busy && (
         <span className="ai-label compose-ai-changed">
-          <Sparkles size={11} aria-hidden="true" /> {t('Vom Assistenten geändert ({model})', { model: changed })}{' '}
+          <Sparkles size={11} aria-hidden="true" /> {t('Vom Assistenten geändert ({model})', { model: changed.model })}
+          {changed.contact && <> · {t('Im Stil deiner Mails an {email}', { email: changed.contact })}</>}{' '}
           <button type="button" className="text-button" onClick={revert}>
             {t('Rückgängig')}
           </button>
