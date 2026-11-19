@@ -107,6 +107,8 @@ export function registerSpaceRoutes(ctx, { dir }) {
     const version = request.query?.v ? Number(request.query.v) : undefined;
     if (version !== undefined && (!Number.isInteger(version) || version < 1))
       throw fail('Ungültige Version.', 'spaces_invalid');
+    // ?check=1: only whether it can be downloaded now (no decryption, no transfer).
+    if (request.query?.check) return s.checkFile(request.params.id, request.params.file, version);
     const file = await s.readFile(request.params.id, request.params.file, version);
     // Always a download, never rendered inside the app (content comes from other people).
     for (const [k, v] of Object.entries(downloadHeaders(file.name))) reply.header(k, v);
