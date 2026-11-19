@@ -135,7 +135,7 @@ without opening it.
 work when Levuvo Mail is closed. Requirement: your provider offers ManageSieve. For accounts signed in
 with Microsoft or Google, Levuvo Mail stores the **vacation reply** with the provider (Microsoft 365 /
 Gmail) – formatted, with the signature if you choose, but without embedded images (an uploaded logo is
-left out); set up rules in the provider's webmail. The first time, “Allow” asks for a one-time consent.
+left out); set up rules in the provider's webmail. The first time, “Approve” asks for a one-time consent.
 
 - **Vacation reply:** enable, optional from/until date, subject, text, “at most every … days” per sender.
   The text is formatted like the signature (bold, links, images). **“Append the account's signature

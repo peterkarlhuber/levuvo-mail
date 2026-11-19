@@ -37,7 +37,7 @@ contained in every installed app. Security comes from PKCE and the local redirec
    and tasks (Graph) with the same refresh token, so an account without the tasks consent keeps
    calendar and contacts; the tasks consent is asked for once when a To Do list is connected. The
    out-of-office reply uses its own token (`MailboxSettings.ReadWrite`) in the same way: accounts
-   without it are asked once (“Allow”) in Settings → Filters & vacation.
+   without it are asked once (“Approve”) in Settings → Filters & vacation.
 5. Enter the **Application (client) ID** in `package.json`. No client secret is needed.
 
 Notes for customers with Microsoft 365:
@@ -92,7 +92,7 @@ Important – please plan for this before publication:
 - Microsoft 365 / Outlook.com and Gmail have no ManageSieve, so Levuvo Mail stores the reply with the
   provider: Microsoft Graph `PATCH /me/mailboxSettings` (`automaticRepliesSetting`) and Gmail
   `PUT users/me/settings/vacation`. It answers while Levuvo Mail is closed.
-- New accounts grant the permission at sign-in. Older accounts see **“Allow”** in
+- New accounts grant the permission at sign-in. Older accounts see **“Approve”** in
   Settings → Filters & vacation; it opens the provider's sign-in page for exactly this mailbox.
 - If the Gmail API is not enabled in the Google project, the app says so; mail is unaffected.
 - **Images:** both providers keep the reply as HTML (bold, links, lists) but cannot hold embedded

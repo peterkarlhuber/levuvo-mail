@@ -769,8 +769,15 @@ export const EN: Record<string, string> = {
     "OpenPGP: create or import a key (Settings → Security), send your public key to contacts, import theirs. S/MIME: import your certificate authority's certificate as a .p12 file. When composing, choose “Sign”/“Encrypt”.",
   'Ohne Verbindung zeigt Levuvo Mail die zuletzt geladenen Listen und Nachrichten sowie Treffer aus dem lokalen Suchindex. Änderungen (Verschieben, Senden) sind erst wieder online möglich.':
     'Without a connection, Levuvo Mail shows the most recently loaded lists and messages as well as results from the local search index. Changes (moving, sending) are only possible once you are back online.',
-  'Das ausführliche Handbuch liegt dem Release-Kit als HANDBUCH.md (Deutsch) und MANUAL.md (English) bei.':
-    'The detailed manual is included in the release kit as HANDBUCH.md (German) and MANUAL.md (English).',
+  Handbuch: 'Manual',
+  Kurzhilfe: 'Quick help',
+  'Kapitel des Handbuchs': 'Manual chapters',
+  'Im Handbuch suchen': 'Search the manual',
+  'Das Handbuch ist in dieser Version nicht enthalten.': 'The manual is not included in this version.',
+  'Schritt für Schritt erklärt: Einrichtung, E-Mail, Kalender, Kontakte, Aufgaben, Räume, Assistent und Einstellungen. Fragen dazu beantwortet auch der Assistent.':
+    'Explained step by step: setup, email, calendar, contacts, tasks, spaces, assistant and settings. The assistant also answers questions about it.',
+  'Bild nicht gefunden.': 'Image not found.',
+  '„{label}“': '“{label}”',
   'Tastenkürzel anzeigen': 'Show keyboard shortcuts',
   'Desktop-App': 'Desktop app',
   'Browser (Entwicklung)': 'Browser (development)',
@@ -914,7 +921,7 @@ export const EN: Record<string, string> = {
   'Aktion entfernen': 'Remove action',
   'Danach keine weiteren Regeln anwenden': 'Do not apply further rules afterwards',
   'Regel hinzufügen': 'Add rule',
-  'Auf dem Server aktiv: „{name}“ (nicht von Levuvo).': 'Active on the server: “{name}” (not from Levuvo).',
+  'Auf dem Server aktiv: „{name}“ (nicht von Levuvo Mail).': 'Active on the server: “{name}” (not from Levuvo Mail).',
   Gespeichert: 'Saved',
   'Auf dem Server speichern': 'Save on the server',
   'Schlüssel erzeugen': 'Create key',
@@ -1295,7 +1302,7 @@ export const EN: Record<string, string> = {
     '{accounts} still needs a one-time permission at the provider.',
   'Warte auf Freigabe …': 'Waiting for permission …',
   '{account} freigeben': 'Allow {account}',
-  Freigeben: 'Allow access',
+  'Zugriff freigeben': 'Allow access',
   Aktionen: 'Actions',
   'Neue E-Mail schreiben': 'Write new email',
   'E-Mails durchsuchen': 'Search emails',
@@ -1421,7 +1428,7 @@ export const EN: Record<string, string> = {
   'Zurückstellen & Nachfassen': 'Snooze & follow-up',
   'Zurückstellen (Taste B) nimmt eine Nachricht aus dem Posteingang und bringt sie zur gewählten Zeit ungelesen zurück. „Nachfassen“ beim Senden erinnert dich, wenn bis dahin keine Antwort kam – zu finden unter „Nachfassen“ in der Ordnerleiste.':
     'Snooze (key B) removes a message from the inbox and brings it back unread at the chosen time. “Follow-up” when sending reminds you if no reply has arrived by then – see “Follow-up” in the folder list.',
-  'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.':
+  'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Zugriff freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.':
     'Microsoft 365 and Google are included through the signed-in account (allow access once). Connect other providers via CalDAV/CardDAV (e.g. Nextcloud, mailbox.org, iCloud with app password, Fastmail). Answer invitations right in the email; move events by drag & drop.',
   'Einen anderen Kalender wählen, um den Termin dorthin zu verschieben.':
     'Choose another calendar to move the event there.',
@@ -1560,10 +1567,10 @@ export const EN: Record<string, string> = {
   'Mindestens {count} Zeichen.': 'At least {count} characters.',
   'Die Passwörter stimmen nicht überein.': 'The passwords do not match.',
   'Sicherung erstellt. Bewahre sie an einem zweiten Ort auf.': 'Backup created. Keep it in a second place.',
-  'Das ist keine Levuvo-Sicherung.': 'This is not a Levuvo backup.',
+  'Das ist keine Sicherung von Levuvo Mail.': 'This is not a Levuvo Mail backup.',
   'Sicherung wiederherstellen?': 'Restore backup?',
-  'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.':
-    'Settings, accounts, local contacts and calendar, templates, snoozed messages, own keys, spaces and assistant data on this device are replaced by the backup from {date}. The current data is kept as a safety copy first. Levuvo restarts afterwards.',
+  'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo Mail startet danach neu.':
+    'Settings, accounts, local contacts and calendar, templates, snoozed messages, own keys, spaces and assistant data on this device are replaced by the backup from {date}. The current data is kept as a safety copy first. Levuvo Mail restarts afterwards.',
   Wiederherstellen: 'Restore',
   'Wiederherstellung abgebrochen. Es wurde nichts geändert.': 'Restore cancelled. Nothing was changed.',
   '{count} E-Mail-Konten (ohne Passwörter)': '{count} mail accounts (without passwords)',
@@ -1581,8 +1588,8 @@ export const EN: Record<string, string> = {
     'Restored from the backup of {date}. If needed, enter passwords and sign-ins again under Accounts.',
   'Wiederherstellung bereit': 'Restore ready',
   'Die Sicherung vom {date} wurde geprüft. Sie wird beim Neustart übernommen; bis dahin sind keine Änderungen möglich.':
-    'The backup from {date} was checked. It is applied when Levuvo restarts; until then, nothing can be changed.',
-  'Bitte Levuvo jetzt beenden und neu starten.': 'Please quit and restart Levuvo now.',
+    'The backup from {date} was checked. It is applied when Levuvo Mail restarts; until then, nothing can be changed.',
+  'Bitte Levuvo Mail jetzt beenden und neu starten.': 'Please quit and restart Levuvo Mail now.',
   'Jetzt neu starten': 'Restart now',
   'Sicherung erstellen': 'Create backup',
   'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel, gemeinsame Räume und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.':
@@ -1593,8 +1600,8 @@ export const EN: Record<string, string> = {
     'Store the file in a second place (USB stick, NAS, cloud folder) and keep the password safe. Mailbox passwords, sign-ins and API keys are not included; the search index is rebuilt.',
   'Sicherung speichern': 'Save backup',
   'Wiederherstellen oder auf neuen Rechner umziehen': 'Restore or move to a new computer',
-  'Wähle eine Levuvo-Sicherung (.levuvo) und gib ihr Passwort ein. Die Daten werden geprüft und beim Neustart übernommen. Danach die Passwörter der Konten einmal neu eingeben.':
-    'Choose a Levuvo backup (.levuvo) and enter its password. The data is checked and applied when Levuvo restarts. Afterwards, enter the account passwords once more.',
+  'Wähle eine Sicherung von Levuvo Mail (.levuvo) und gib ihr Passwort ein. Die Daten werden geprüft und beim Neustart übernommen. Danach die Passwörter der Konten einmal neu eingeben.':
+    'Choose a Levuvo Mail backup (.levuvo) and enter its password. The data is checked and applied when Levuvo Mail restarts. Afterwards, enter the account passwords once more.',
   'Sicherungsdatei wählen': 'Choose backup file',
   'Passwort der Sicherung': 'Backup password',
   'Ungültiges Passwort.': 'Invalid password.',
@@ -1606,8 +1613,8 @@ export const EN: Record<string, string> = {
   'Die Daten sind zu groß für eine Sicherung.': 'The data is too large for a backup.',
   'Der Schlüsselbund ist nicht verfügbar; die privaten Schlüssel könnten nicht gesichert werden.':
     'The keychain is not available; the private keys could not be backed up.',
-  'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.':
-    'This backup comes from a newer version of Levuvo. Please update first.',
+  'Diese Sicherung stammt aus einer neueren Version von Levuvo Mail. Bitte zuerst aktualisieren.':
+    'This backup comes from a newer version of Levuvo Mail. Please update first.',
   'Die Sicherung ist beschädigt.': 'The backup is damaged.',
   'Falsches Passwort oder beschädigte Sicherung.': 'Wrong password or damaged backup.',
   'Der Schlüssel für Kalender, Kontakte oder Aufgaben fehlt im Schlüsselbund. Die Wiederherstellung wurde abgebrochen.':
@@ -1616,8 +1623,8 @@ export const EN: Record<string, string> = {
     'The system keychain is not available. Without it, no restore is possible.',
   'Keine Sicherungsdatei ausgewählt.': 'No backup file selected.',
   'Es wartet keine Wiederherstellung.': 'No restore is waiting.',
-  'Eine Wiederherstellung wartet auf den Neustart von Levuvo. Bis dahin sind keine Änderungen möglich.':
-    'A restore is waiting for Levuvo to restart. Until then, nothing can be changed.',
+  'Eine Wiederherstellung wartet auf den Neustart von Levuvo Mail. Bis dahin sind keine Änderungen möglich.':
+    'A restore is waiting for Levuvo Mail to restart. Until then, nothing can be changed.',
   'Zurück zur Einrichtung': 'Back to setup',
   'Umzug von einem anderen Rechner? Sicherung wiederherstellen': 'Moving from another computer? Restore a backup',
   // Shared spaces (server messages)
@@ -1655,8 +1662,8 @@ export const EN: Record<string, string> = {
   'Die Datei wird gerade von einem anderen Mitglied geholt. Bitte gleich noch einmal versuchen.':
     'The file is being fetched from another member. Please try again in a moment.',
   'Die Datei ist beschädigt.': 'The file is damaged.',
-  'Ein Mitglied nutzt eine neuere Levuvo-Version. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.':
-    'A member uses a newer version of Levuvo. Some sync mails can only be read after an update; they are kept until then.',
+  'Ein Mitglied nutzt eine neuere Version von Levuvo Mail. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.':
+    'A member uses a newer version of Levuvo Mail. Some sync mails can only be read after an update; they are kept until then.',
   'hat Cloud-KI und externe Agenten für den Raum erlaubt': 'allowed cloud AI and external agents for the space',
   'hat Cloud-KI und externe Agenten für den Raum wieder ausgeschlossen':
     'excluded cloud AI and external agents from the space again',
@@ -1761,14 +1768,14 @@ export const EN: Record<string, string> = {
   Mitglieder: 'Members',
   Besitzer: 'Owner',
   '{n} Abgleich-Mails warten': '{n} sync mails waiting',
-  'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald seine Levuvo-App die Mail abruft.':
-    "Joining waits for the owner's confirmation. It happens automatically as soon as their Levuvo app fetches the mail.",
+  'Der Beitritt wartet auf die Bestätigung durch den Besitzer. Das geht automatisch, sobald sein Levuvo Mail die Mail abruft.':
+    "Joining waits for the owner's confirmation. It happens automatically as soon as their Levuvo Mail fetches the mail.",
   'Du wurdest aus diesem Raum entfernt. Neue Inhalte erreichen dich nicht mehr.':
     'You were removed from this space. New content no longer reaches you.',
   'Dieser Raum wurde aufgelöst und kann nur noch gelesen werden.': 'This space was dissolved and can only be read.',
   'Du hast diesen Raum verlassen.': 'You left this space.',
-  'Einige Abgleich-Mails konnten noch nicht gesendet werden. Levuvo versucht es weiter.':
-    'Some sync mails could not be sent yet. Levuvo keeps trying.',
+  'Einige Abgleich-Mails konnten noch nicht gesendet werden. Levuvo Mail versucht es weiter.':
+    'Some sync mails could not be sent yet. Levuvo Mail keeps trying.',
   'offene Aufgaben': 'open tasks',
   '{n} für dich': '{n} for you',
   'kommende Termine': 'upcoming events',
