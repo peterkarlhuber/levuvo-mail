@@ -167,3 +167,12 @@ test('QA-LEV-010: integration and UI suites run nightly against test servers fro
   for (const area of ['/api/tasks/sync/link', '/api/spaces/create', '/api/backup/restore', 'tools/call'])
     assert.ok(suite.includes(area), area);
 });
+
+test('OPS-LEV-008: tests start child Node processes through NODE_BIN, which also works under Electron', async () => {
+  const { readdirSync } = await import('node:fs');
+  const offenders = [];
+  for (const dir of ['apps/server/test/', 'apps/web/test/'])
+    for (const name of readdirSync(new URL(dir, repo)).filter(n => n.endsWith('.test.mjs')))
+      if (/command:\s*process\.execPath/.test(read(`${dir}${name}`))) offenders.push(name);
+  assert.deepEqual(offenders, [], 'use NODE_BIN from apps/server/test/fixtures/node-bin.mjs');
+});

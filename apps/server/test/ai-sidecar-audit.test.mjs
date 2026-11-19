@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { isOllamaCloudModel } from '../src/ai-service.mjs';
+import { NODE_BIN } from './fixtures/node-bin.mjs';
 
 test('Ollama cloud models (":cloud" and "-cloud" tags) are never accepted as local models', () => {
   for (const name of ['gpt-oss:120b-cloud', 'qwen3-coder:480b-cloud', 'kimi:cloud', ' deepseek-v3.1:671B-CLOUD '])
@@ -29,7 +30,7 @@ test('REL-LEV-004: timed-out requests that would fill every worker restart the s
   const sidecar = createSidecar({
     resolve: () => {
       spawned++;
-      return { command: process.execPath, args: [fake], cwd: process.cwd(), pythonPath: '' };
+      return { command: NODE_BIN, args: [fake], cwd: process.cwd(), pythonPath: '' };
     },
     env: { PATH: process.env.PATH },
     timeoutMs: 150,
