@@ -6,6 +6,16 @@
 - **Video calls with Jitsi Meet:** "Add video call" in an event creates a link with a random room name (125 bits, cannot be guessed) and puts it in the location or, if that is taken, at the top of the description, so attendees get it with the invitation. Events with a Jitsi link show "Join video call" and "Copy link". The composer has a "Video call" button that inserts the link at the cursor, and "Start video call" in a space chat sends it to all members; links in chat messages can now be clicked. The default server is meet.ffmuc.net (Freifunk München, Germany); an own Jitsi server can be set under Settings → General → Video calls (https only). Levuvo Mail only builds the link and opens no connection itself; the call runs in the browser after the usual link confirmation.
 - **Contact history (mini CRM):** every contact has a "History" with emails (local search index, all accounts and folders), shared events, tasks and notes on one timeline, with filters. Notes can be added, edited and deleted; "Add task" creates a task linked to the person, and tasks made from one of their mails appear as well. The reader's contact card shows open tasks and the latest notes and can add both, also for people who are not in an address book. Notes are stored only on this device, encrypted with AES-256-GCM (key `contact-notes-key` in the keychain, fail closed), are part of the backup and are deleted with the last contact that has the address. No AI and no online lookup.
 
+### User manual
+- **Levuvo Mail user manual (German, English):** a task-oriented manual for first-time users, from installation and the first account to email, calendar, contacts, tasks, spaces, the AI assistant, settings, troubleshooting and a one-page shortcut reference. Built as an accessible PDF (PDF/UA-1, tagged, alt texts) with screenshots of the app in its default dark theme; the `Manual` workflow builds and checks it on every change.
+- **Manual in the app:** Settings → Help shows the manual with chapter list and search; the question mark in the rail opens it.
+- **The assistant answers app questions from the manual:** for "how do I …" questions it reads only the few matching sections (found with the same local search model as the mail search, by word match without one) and links to them as sources.
+
+### Fixes
+- **Alt shortcuts on the Mac:** Option + 1–5 and Option + , switch views again (they used the typed character, which is different on a Mac keyboard).
+- **"Allow access" button:** the Microsoft/Google permission button for calendars, contacts and tasks no longer showed "Approve" in English.
+- The product is called "Levuvo Mail" everywhere in the app, also in file names of calendar and contact exports.
+
 ### Window frame (macOS)
 - **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
 

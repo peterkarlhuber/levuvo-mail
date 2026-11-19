@@ -1,0 +1,73 @@
+name: User manual
+# Builds the user manual as tagged PDF/UA-1 (German and English) from docs/manual and uploads
+# it as an artifact. Screenshots are committed; "Run workflow" with screenshots=true takes them
+# again from the built app and uploads them too (commit them by hand after checking).
+on:
+  pull_request:
+    paths:
+      - 'docs/manual/**'
+      - 'scripts/manual/**'
+      - 'apps/server/src/ai-model-catalog.mjs'
+      - '.github/workflows/manual.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'docs/manual/**'
+      - 'scripts/manual/**'
+      - 'apps/server/src/ai-model-catalog.mjs'
+  workflow_dispatch:
+    inputs:
+      screenshots:
+        description: 'Take the screenshots again from the built app'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: manual-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pdf:
+    name: Manual PDF (DE, EN)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Inter font and Typst
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q fonts-inter poppler-utils
+          python -m pip install --require-hashes -r scripts/manual/requirements.txt
+      - name: Install (exact lockfile)
+        run: npm ci --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Screenshots from the built app
+        if: ${{ inputs.screenshots }}
+        run: |
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run manual:screenshots
+      - name: Build the PDFs
+        run: npm run manual:pdf
+      - name: Check the PDFs (tagged, title, page count)
+        run: node scripts/manual/check-pdf.mjs dist/manual
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: levuvo-mail-manual
+          path: dist/manual/*.pdf
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ inputs.screenshots }}
+        with:
+          name: levuvo-mail-manual-screenshots
+          path: docs/manual/img
