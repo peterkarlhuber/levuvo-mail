@@ -1066,3 +1066,10 @@ test('Window frame: only the desktop app on macOS and Windows draws its own titl
   );
   assert.equal(detectWindowFrame('Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0 Electron/45.3.1 Safari/537.36'), null);
 });
+
+test('Protect with password: the composer refuses the same weak passwords as the server', async () => {
+  const { weakPassword } = await import('../src/password-rules.ts');
+  const server = await import('../../server/src/protected-message.mjs');
+  for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
+    assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
+});
