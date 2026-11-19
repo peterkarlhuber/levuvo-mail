@@ -331,3 +331,31 @@
 .task-list-error .task-consent {
   margin-left: var(--space-2);
 }
+/* Tablet and phone: the shared .calendar-sidebar rule hides the sidebar at 960px, but tasks need
+   their views, lists and "Neue Aufgabe" there too, so they move into a wrapping strip on top. */
+@media (max-width: 960px) {
+  .tasks-module {
+    flex-direction: column;
+  }
+  .calendar-sidebar.tasks-sidebar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: auto;
+    max-height: 45dvh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-3);
+  }
+  .tasks-sidebar h3 {
+    flex-basis: 100%;
+    margin: var(--space-1) var(--space-1) 0;
+  }
+  .tasks-sidebar .btn.primary {
+    margin-bottom: 0;
+  }
+  .tasks-main {
+    padding: var(--space-3) var(--space-4);
+  }
+}

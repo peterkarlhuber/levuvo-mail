@@ -286,5 +286,7 @@ export const AI_EN: Record<string, string> = {
   'Regel vorschlagen': 'Suggest rule',
   'Vom Assistenten einsortiert': 'Sorted by the assistant',
   'Frage an das Postfach': 'Question to the mailbox',
-  'Aufgabe für den Assistenten': 'Task for the assistant'
+  'Aufgabe für den Assistenten': 'Task for the assistant',
+  'Verlauf des Assistenten': 'Assistant history',
+  'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})'
 };

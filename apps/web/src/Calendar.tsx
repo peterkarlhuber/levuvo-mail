@@ -428,6 +428,20 @@ function EventEditor({
   );
   const readOnly = Boolean(cal?.readOnly) || invitedByOther;
   const set = (patch: Partial<Draft>) => setD(old => ({ ...old, ...patch }));
+  // Loading the Microsoft attachment list is not an edit; everything else the user typed is.
+  const dirty =
+    JSON.stringify({ ...d, attachments: d.attachmentsChanged ? d.attachments : null }) !==
+    JSON.stringify({ ...initial, attachments: null });
+  // Backdrop and Escape must not silently throw away what was typed (WCAG 3.3.4 spirit).
+  async function requestClose() {
+    if (
+      dirty &&
+      !readOnly &&
+      !(await confirm({ title: t('Änderungen verwerfen?'), confirmLabel: t('Verwerfen'), danger: true }))
+    )
+      return;
+    onClose();
+  }
   const attendeeList = d.attendees
     .split(/[\s,;]+/)
     .map(s => s.trim().toLowerCase())
@@ -596,7 +610,7 @@ function EventEditor({
       className="modal-scrim"
       role="presentation"
       onMouseDown={ev => {
-        if (ev.target === ev.currentTarget) onClose();
+        if (ev.target === ev.currentTarget) void requestClose();
       }}
     >
       <form
@@ -613,7 +627,7 @@ function EventEditor({
           // An open attachment preview closes first (it listens for Escape itself).
           if (ev.key === 'Escape' && !scopeFor && !document.querySelector('.preview-panel')) {
             ev.stopPropagation();
-            onClose();
+            void requestClose();
           }
         }}
       >

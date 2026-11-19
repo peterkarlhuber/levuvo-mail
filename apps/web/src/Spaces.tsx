@@ -1,6 +1,6 @@
 // Shared spaces ("Räume"): one place per topic, project or customer with notes, mails,
 // tasks, events and files, shared end-to-end encrypted over the members' own mailboxes.
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity as ActivityIcon,
   CalendarDays,
@@ -24,7 +24,7 @@ import {
 import { download } from './api';
 import { Button, Field, IconButton, Segmented } from './ui';
 import { useUi } from './ConfirmDialog';
-import { dateLabel, fullDateLabel, initials, prettySize } from './format';
+import { dateLabel, dueDateLabel, fullDateLabel, initials, prettySize } from './format';
 import { useT } from './i18n';
 import type { AccountItem } from './types';
 import {
@@ -176,7 +176,11 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
                             : t('{n} Mitglieder · {tasks} offen', { n: s.members, tasks: s.openTasks })}
                 </small>
               </span>
-              {s.sendError && <span className="space-dot warn" title={t('Versand wird wiederholt')} />}
+              {s.sendError && (
+                <span className="space-dot warn" title={t('Versand wird wiederholt')}>
+                  <span className="sr-only">{t('Versand wird wiederholt')}</span>
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -473,12 +477,37 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
           {t('Einige Abgleich-Mails konnten noch nicht gesendet werden. Levuvo versucht es weiter.')}
         </p>
       )}
-      <nav className="space-tabs" role="tablist">
+      {/* WAI-ARIA tabs: one tab stop, arrows/Home/End move and select, the panel is labelled by its tab. */}
+      <nav
+        className="space-tabs"
+        role="tablist"
+        aria-label={detail.name}
+        onKeyDown={e => {
+          const at = tabs.findIndex(x => x.id === tab);
+          const next =
+            e.key === 'ArrowRight'
+              ? (at + 1) % tabs.length
+              : e.key === 'ArrowLeft'
+                ? (at - 1 + tabs.length) % tabs.length
+                : e.key === 'Home'
+                  ? 0
+                  : e.key === 'End'
+                    ? tabs.length - 1
+                    : -1;
+          if (next < 0) return;
+          e.preventDefault();
+          setTab(tabs[next].id);
+          document.getElementById(`space-tab-${tabs[next].id}`)?.focus();
+        }}
+      >
         {tabs.map(x => (
           <button
             key={x.id}
+            id={`space-tab-${x.id}`}
             role="tab"
             aria-selected={tab === x.id}
+            aria-controls="space-tabpanel"
+            tabIndex={tab === x.id ? 0 : -1}
             className={tab === x.id ? 'active' : ''}
             onClick={() => setTab(x.id)}
           >
@@ -487,7 +516,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
           </button>
         ))}
       </nav>
-      <div className="space-body">
+      <div className="space-body" id="space-tabpanel" role="tabpanel" aria-labelledby={`space-tab-${tab}`}>
         {tab === 'overview' && <Overview detail={detail} names={names} onTab={setTab} />}
         {tab === 'notes' && <Notes detail={detail} canEdit={canEdit} run={run} op={op} />}
         {tab === 'mails' && <Mails detail={detail} names={names} canEdit={canEdit} op={op} />}
@@ -845,14 +874,14 @@ function Tasks({
               type="checkbox"
               checked={x.status === 'done'}
               disabled={!canEdit}
-              aria-label={t('Erledigt')}
+              aria-label={t('„{title}“ erledigt', { title: x.title })}
               onChange={e => void op('task.upsert', { id: x.id, status: e.target.checked ? 'done' : 'open' })}
             />
             <button className="space-task-title" onClick={() => setOpen(open === x.id ? null : x.id)}>
               <strong>{x.title}</strong>
               <small className="muted">
                 {statusLabel(x)}
-                {x.due ? ` · ${t('fällig {date}', { date: dateLabel(x.due) })}` : ''}
+                {x.due ? ` · ${t('fällig {date}', { date: dueDateLabel(x.due) })}` : ''}
                 {x.assignee ? ` · ${names[x.assignee] || ''}` : ''}
                 {x.priority === 'high' ? ` · ${t('wichtig')}` : ''}
               </small>
@@ -987,7 +1016,7 @@ function Events({
           <li key={ev.id}>
             <strong>{ev.title}</strong>
             <span className="muted">
-              {ev.allDay ? new Date(ev.start).toLocaleDateString() : fullDateLabel(ev.start)}
+              {ev.allDay ? dueDateLabel(ev.start.slice(0, 10)) : fullDateLabel(ev.start)}
               {ev.location ? ` · ${ev.location}` : ''}
               {ev.attendees.length
                 ? ` · ${ev.attendees
@@ -1044,6 +1073,16 @@ function Files({
     }
     setBusy(false);
   };
+  // One hidden file input opened by real buttons, so upload works by keyboard (WCAG 2.1.1).
+  const picker = useRef<HTMLInputElement>(null);
+  const target = useRef('');
+  const pick = (fileId = '') => {
+    target.current = fileId;
+    if (picker.current) {
+      picker.current.multiple = !fileId;
+      picker.current.click();
+    }
+  };
   const fetchFile = (fileId: string, v?: number) => {
     // The server answers 409 while parts are still on their way from another member.
     void fetch(`/api/spaces/${detail.id}/files/${fileId}${v ? `?v=${v}` : ''}`, {
@@ -1086,16 +1125,16 @@ function Files({
             >
               <Plus size={14} /> {t('Ordner')}
             </Button>
-            <label className={`btn small primary ${busy ? 'disabled' : ''}`}>
-              <Upload size={14} /> {t('Hochladen')}
-              <input
-                type="file"
-                multiple
-                hidden
-                disabled={busy}
-                onChange={e => void upload(e.target.files).then(() => (e.target.value = ''))}
-              />
-            </label>
+            <Button size="sm" variant="primary" busy={busy} icon={<Upload size={14} />} onClick={() => pick()}>
+              {t('Hochladen')}
+            </Button>
+            <input
+              ref={picker}
+              type="file"
+              hidden
+              tabIndex={-1}
+              onChange={e => void upload(e.target.files, target.current).then(() => (e.target.value = ''))}
+            />
           </>
         )}
         {busy && <LoaderCircle className="spin" size={16} />}
@@ -1135,18 +1174,12 @@ function Files({
               <IconButton label={t('Herunterladen')} onClick={() => fetchFile(f.id)} icon={<Download size={15} />} />
               {canEdit && (
                 <>
-                  <label
-                    className="icon-button"
-                    title={t('Neue Version hochladen')}
-                    aria-label={t('Neue Version hochladen')}
-                  >
-                    <Upload size={15} />
-                    <input
-                      type="file"
-                      hidden
-                      onChange={e => void upload(e.target.files, f.id).then(() => (e.target.value = ''))}
-                    />
-                  </label>
+                  <IconButton
+                    label={t('Neue Version hochladen')}
+                    disabled={busy}
+                    onClick={() => pick(f.id)}
+                    icon={<Upload size={15} />}
+                  />
                   <IconButton
                     label={t('Datei löschen')}
                     onClick={async () => {

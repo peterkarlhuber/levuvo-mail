@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bot, Check, Copy, KeyRound, Plus, Trash2, X } from 'lucide-react';
 import { getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
+import { dueDateLabel, fullDateLabel } from './format';
 import { useT } from './i18n';
 import { Button, IconButton } from './ui';
 import { Row, Section, Toggle } from './Settings';
@@ -46,7 +47,9 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
     case 'send':
       return t('Nachricht an {to} senden: „{subject}“', { to: (s.to || []).join(', '), subject: s.subject || '' });
     case 'event':
-      return t('Termin anlegen: „{summary}“ am {start}', { summary: s.summary || '', start: s.start || '' });
+      return t('Termin anlegen: „{summary}“ am {start}', { summary: s.summary || '', start: when(s.start) });
+    case 'task':
+      return t('Aufgabe anlegen: „{title}“', { title: s.title || '' });
     case 'contact':
       return t('Kontakt speichern: {name}', { name: s.name || '' });
     case 'trash':
@@ -78,6 +81,13 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
 type Tr = (s: string, v?: Record<string, string | number>) => string;
 const list = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
 const text = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
+/** Dates in the app's language instead of raw ISO strings ("2026-11-20T09:00:00Z"). */
+function when(v: unknown) {
+  const s = text(v);
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return dueDateLabel(s);
+  return Number.isNaN(Date.parse(s)) ? s : fullDateLabel(s);
+}
 
 /**
  * Everything the approved action will do: every recipient and the sending account, the full text,
@@ -99,13 +109,20 @@ export function ApprovalDetails({ a, t }: { a: Approval; t: Tr }) {
       body = text(s.text);
       break;
     case 'event':
-      add(t('Beginn'), text(s.start));
-      add(t('Ende'), text(s.end));
+      add(t('Beginn'), when(s.start));
+      add(t('Ende'), when(s.end));
       add(t('Ort'), text(s.location));
       add(t('Teilnehmende'), list(s.attendees).join(', '));
       body = text(s.description);
       if (list(s.attendees).length) note = t('Es werden keine Einladungen verschickt.');
       break;
+    case 'task': {
+      const prio: Record<string, string> = { high: t('Hoch'), medium: t('Mittel'), low: t('Niedrig') };
+      add(t('Fällig'), when(s.due));
+      add(t('Priorität'), prio[text(s.priority)] || '');
+      body = text(s.notes);
+      break;
+    }
     case 'contact':
       add(t('E-Mail'), list(s.emails).join(', '));
       add(t('Telefon'), list(s.phones).join(', '));
@@ -129,7 +146,8 @@ export function ApprovalDetails({ a, t }: { a: Approval; t: Tr }) {
         folder: t('Ordner'),
         account: t('Konto')
       };
-      for (const [key, label] of Object.entries(labels)) add(label, text(c[key]));
+      for (const [key, label] of Object.entries(labels))
+        add(label, key === 'due' || key === 'start' ? when(c[key]) : text(c[key]));
       body = [c.description, c.notes, c.text].map(text).filter(Boolean).join('\n\n');
       break;
     }

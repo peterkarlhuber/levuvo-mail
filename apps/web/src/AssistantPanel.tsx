@@ -189,52 +189,59 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                 )}
               </p>
             )}
-            {entries.map(e => (
-              <div key={e.id} className="assistant-entry">
-                <div className="assistant-prompt">{e.prompt}</div>
-                {e.busy && (
-                  <div className="ai-hint">
-                    <LoaderCircle className="spin" size={14} />{' '}
-                    {e.kind === 'ask' ? t('Sucht im Postfach…') : t('Arbeitet…')}
-                  </div>
-                )}
-                {e.error && <div className="reader-security warning">{e.error}</div>}
-                {e.kind === 'ask' && e.answer && (
-                  <div className="assistant-answer">
-                    <p>{e.answer}</p>
-                    {e.sources && e.sources.length > 0 && (
-                      <ul className="assistant-sources">
-                        {e.sources.map(s => (
-                          <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
-                            <button className="text-button" onClick={() => onOpenMessage(s)}>
-                              {s.subject || t('(ohne Betreff)')}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <span className="ai-label">
-                      <Sparkles size={11} /> {t('KI-generiert')} · {e.model}
-                    </span>
-                  </div>
-                )}
-                {e.kind === 'task' && e.report && (
-                  <div className="assistant-answer">
-                    <p className="assistant-report">{e.report}</p>
-                    {Boolean(e.newApprovals) && (
-                      <p className="ai-hint">
-                        <CircleCheck size={13} />{' '}
-                        {t('{count} Freigaben warten unten auf dich.', { count: e.newApprovals || 0 })}
-                      </p>
-                    )}
-                    <span className="ai-label">
-                      <Sparkles size={11} /> {t('KI-generiert')} · {e.model} ·{' '}
-                      {t('{count} Schritte', { count: e.steps || 0 })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
+            {/* Answers, progress and errors are announced to screen readers as they arrive (WCAG 4.1.3). */}
+            <div role="log" aria-live="polite" aria-relevant="additions text" aria-label={t('Verlauf des Assistenten')}>
+              {entries.map(e => (
+                <div key={e.id} className="assistant-entry">
+                  <div className="assistant-prompt">{e.prompt}</div>
+                  {e.busy && (
+                    <div className="ai-hint">
+                      <LoaderCircle className="spin" size={14} />{' '}
+                      {e.kind === 'ask' ? t('Sucht im Postfach…') : t('Arbeitet…')}
+                    </div>
+                  )}
+                  {e.error && (
+                    <div className="reader-security warning" role="alert">
+                      {e.error}
+                    </div>
+                  )}
+                  {e.kind === 'ask' && e.answer && (
+                    <div className="assistant-answer">
+                      <p>{e.answer}</p>
+                      {e.sources && e.sources.length > 0 && (
+                        <ul className="assistant-sources">
+                          {e.sources.map(s => (
+                            <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
+                              <button className="text-button" onClick={() => onOpenMessage(s)}>
+                                {s.subject || t('(ohne Betreff)')}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <span className="ai-label">
+                        <Sparkles size={11} /> {t('KI-generiert')} · {e.model}
+                      </span>
+                    </div>
+                  )}
+                  {e.kind === 'task' && e.report && (
+                    <div className="assistant-answer">
+                      <p className="assistant-report">{e.report}</p>
+                      {Boolean(e.newApprovals) && (
+                        <p className="ai-hint">
+                          <CircleCheck size={13} />{' '}
+                          {t('{count} Freigaben warten unten auf dich.', { count: e.newApprovals || 0 })}
+                        </p>
+                      )}
+                      <span className="ai-label">
+                        <Sparkles size={11} /> {t('KI-generiert')} · {e.model} ·{' '}
+                        {t('{count} Schritte', { count: e.steps || 0 })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
             <ApprovalSection onPending={onPending} />
           </div>
           <form
