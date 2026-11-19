@@ -13,7 +13,12 @@ let cached: Promise<VideoSettings> | null = null;
 export const setVideoSettings = (next: VideoSettings) => (cached = Promise.resolve(next));
 /** Video settings, loaded once per session (and again after a change). */
 export function loadVideoSettings(force = false) {
-  if (!cached || force) cached = getJson<VideoSettings>('/api/video');
+  if (!cached || force)
+    cached = getJson<VideoSettings>('/api/video').then(s => {
+      if (typeof s?.server !== 'string' || typeof s.defaultServer !== 'string')
+        throw new Error('Verbindung fehlgeschlagen.');
+      return { ...s, custom: typeof s.custom === 'string' ? s.custom : '' };
+    });
   cached.catch(() => (cached = null));
   return cached;
 }
