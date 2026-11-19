@@ -1,0 +1,74 @@
+/* =====================================================================
+   Desktop window frame
+   The desktop app hides the system title bar (apps/desktop/main.mjs). html[data-window-frame]
+   is set by src/window-frame.ts: "mac" keeps the traffic lights in the top of the rail,
+   "win" draws the window buttons over the top right corner. Browsers are not affected.
+   ===================================================================== */
+.window-drag-region {
+  display: none;
+}
+[data-window-frame] {
+  --titlebar-h: var(--titlebar-h-mac);
+}
+[data-window-frame='win'] {
+  --titlebar-h: var(--titlebar-h-win);
+}
+
+/* The top strip moves the window and maximizes it on double click. It sits first in the
+   document and below the app (z-index -1), so clicks reach the app; drag regions do not depend
+   on stacking, and controls inside the strip stay clickable because they are declared no-drag
+   (later regions win). */
+[data-window-frame] .window-drag-region {
+  display: block;
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--titlebar-h);
+  z-index: -1;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+[data-window-frame]
+  :is(
+    button,
+    a[href],
+    input,
+    select,
+    textarea,
+    label,
+    summary,
+    [role='button'],
+    [role='tab'],
+    [role='switch'],
+    [contenteditable='true'],
+    [tabindex]:not([tabindex='-1']),
+    .resizer,
+    .message-row
+  ) {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+/* macOS: the traffic lights sit in the top of the rail, above the logo. */
+[data-window-frame='mac'] .rail {
+  padding-top: calc(var(--titlebar-h) + var(--space-4));
+}
+[data-window-frame='mac'] .sidebar-inner {
+  padding-top: calc(var(--space-4) + var(--space-2));
+}
+
+/* Windows: keep the top right corner free for minimize, maximize and close. */
+[data-window-frame='win'] .reader-toolbar::after {
+  content: '';
+  order: 99;
+  flex: none;
+  width: var(--window-controls-w);
+  height: 1px;
+}
+[data-window-frame='win'] :is(.calendar-toolbar, .space-header, .settings-head) {
+  padding-right: var(--window-controls-w);
+}
+/* Narrow window: the mail list is the right-most column (the reader opens on top of it). */
+@media (max-width: 960px) {
+  [data-window-frame='win'] .message-header {
+    padding-right: var(--window-controls-w);
+  }
+}

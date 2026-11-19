@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Window
+- **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
+- **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).
+
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
 
