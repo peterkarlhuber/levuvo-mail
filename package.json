@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:syntax": "node scripts/check-syntax.mjs",
-    "release:check": "npm run check:release-version && npm run check:electron-support && npm audit --omit=dev --audit-level=high && npm run check:syntax && npm run lint && npm run format:check && npm test && npm run typecheck && npm run build && npm run notices",
+    "release:check": "npm run check:release-version && npm run check:electron-support && npm audit --omit=dev --audit-level=high && npm run check:syntax && npm run lint && npm run format:check && npm test && npm run typecheck && npm run build && npm run notices && npm run check:licenses && npm run check:compliance",
     "audit:runtime": "npm audit --omit=dev",
     "audit:strict": "npm audit --audit-level=moderate",
     "desktop:dev": "npm run build && electron .",
@@ -37,6 +37,9 @@
     "release:manifest": "node scripts/generate-release-manifest.mjs",
     "release:verify": "node scripts/verify-release-artifacts.mjs",
     "notices": "node scripts/third-party-notices.mjs",
+    "sbom": "node scripts/sbom.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "check:compliance": "node scripts/check-compliance.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:release-version": "node scripts/check-release-version.mjs",
     "check:electron-support": "node scripts/check-electron-support.mjs",
@@ -227,6 +230,7 @@
   "homepage": "https://levuvo.at",
   "license": "SEE LICENSE IN LICENSE",
   "levuvo": {
+    "supportUntil": "2031-11-30",
     "oauth": {
       "microsoft": {
         "clientId": ""

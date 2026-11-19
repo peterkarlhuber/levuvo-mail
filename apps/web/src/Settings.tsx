@@ -36,6 +36,8 @@ import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
 import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
+import { PrivacyDataSettings } from './SettingsPrivacyData';
+import { AboutCompliance } from './AboutCompliance';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
 
@@ -524,6 +526,7 @@ function Privacy() {
           </button>
         </Row>
       </Section>
+      <PrivacyDataSettings />
       <Section title={t('Gespeicherte Daten auf diesem Gerät')}>
         <ul className="plain-list">
           <li>
@@ -670,13 +673,7 @@ function About({ runtime }: { runtime: Runtime }) {
           [Firmenbuchnummer · Firmenbuchgericht · UID]
         </address>
       </Section>
-      <Section title={t('Lizenzen')}>
-        <p className="settings-description">
-          {t(
-            'Levuvo Mail verwendet Open-Source-Komponenten, u. a. Electron, React, Fastify, ImapFlow, Nodemailer, OpenPGP.js, PKI.js, ical.js, tsdav, TipTap und Lucide. Die vollständigen Lizenztexte liegen der Installation bei (THIRD-PARTY-NOTICES).'
-          )}
-        </p>
-      </Section>
+      <AboutCompliance />
     </>
   );
 }
