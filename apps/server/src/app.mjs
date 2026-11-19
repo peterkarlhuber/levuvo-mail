@@ -11,6 +11,7 @@ import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
 import { readFile, rename } from 'node:fs/promises';
+import rateLimit from '@fastify/rate-limit';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -458,7 +459,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|manual)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -697,20 +698,24 @@ export async function createMailServer({
   // The user manual for the help view (chapters as Markdown) and its screenshots.
   const manual = createManual({ ai });
   ctx.manual = manual;
-  api.get('/api/manual', async request => {
-    const lang = request.query?.lang === 'en' ? 'en' : 'de';
-    return {
-      lang,
-      chapters: manual.chapters(lang).map(c => ({ id: c.id, number: c.number, title: c.title, markdown: c.markdown }))
-    };
-  });
-  api.get('/api/manual/img/:lang/:file', async (request, reply) => {
-    const file = manual.imagePath(request.params.lang, request.params.file);
-    if (!file) return reply.code(404).send({ error: 'Bild nicht gefunden.' });
-    return reply
-      .type('image/png')
-      .header('Cache-Control', 'private, max-age=3600')
-      .send(await readFile(file));
+  // Rate-limited because the routes read files (the manual is cached after the first read).
+  api.register(async app => {
+    await app.register(rateLimit, { global: false, timeWindow: '1 minute' });
+    app.get('/api/manual', { config: { rateLimit: { max: 120 } } }, async request => {
+      const lang = request.query?.lang === 'en' ? 'en' : 'de';
+      return {
+        lang,
+        chapters: manual.chapters(lang).map(c => ({ id: c.id, number: c.number, title: c.title, markdown: c.markdown }))
+      };
+    });
+    app.get('/api/manual/img/:lang/:file', { config: { rateLimit: { max: 600 } } }, async (request, reply) => {
+      const file = manual.imagePath(request.params.lang, request.params.file);
+      if (!file) return reply.code(404).send({ error: 'Bild nicht gefunden.' });
+      return reply
+        .type('image/png')
+        .header('Cache-Control', 'private, max-age=3600')
+        .send(await readFile(file));
+    });
   });
   registerAccountRoutes(ctx);
   registerMailRoutes(ctx);
