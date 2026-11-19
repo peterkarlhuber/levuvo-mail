@@ -47,6 +47,8 @@ export type ComposeInitial = {
   attachments?: File[];
   notice?: string;
   draftId?: string;
+  /** Label of a draft an AI agent wrote (X-Levuvo-AI-Generated); kept on every save until sent. */
+  aiGenerated?: string;
   draftUid?: number;
   draftUidValidity?: string;
   security?: Security;
@@ -312,7 +314,8 @@ export default function Composer({
             text: base.text,
             from,
             inReplyTo: initial.inReplyTo || null,
-            attachments: base.attachments
+            attachments: base.attachments,
+            ...(initial.aiGenerated ? { aiGenerated: initial.aiGenerated } : {})
           },
           'draft-v1',
           accountId
@@ -335,7 +338,7 @@ export default function Composer({
         }
       }
     },
-    [draftsEnabled, payloadBase, subject, from, initial.inReplyTo, accountId]
+    [draftsEnabled, payloadBase, subject, from, initial.inReplyTo, initial.aiGenerated, accountId]
   );
 
   useEffect(() => {
@@ -843,6 +846,13 @@ export default function Composer({
               />
             )}
             {initial.notice && <p className="compose-hint">{initial.notice}</p>}
+            {initial.aiGenerated && (
+              <p className="compose-hint" role="note">
+                {t('Dieser Entwurf wurde von einem KI-Agenten erstellt ({label}). Bitte vor dem Senden prüfen.', {
+                  label: initial.aiGenerated
+                })}
+              </p>
+            )}
 
             <div className="compose-files">
               <div className="compose-files-head">

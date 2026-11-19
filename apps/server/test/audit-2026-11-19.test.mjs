@@ -310,7 +310,7 @@ test('AIS-LEV-001: the approval shows the sending account, CC, the full text and
   const event = approvals.list().find(i => i.type === 'event');
   assert.deepEqual(
     [event.summary.attendees, event.summary.location, event.summary.description],
-    [['gast@example.org'], 'Büro', 'Agenda']
+    [['gast@example.org'], 'Büro', 'Agenda\n\n— KI-erstellt / AI-generated (Levuvo Mail, Agent: Bot)']
   );
 });
 

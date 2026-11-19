@@ -21,6 +21,30 @@ export function findDraftFolder(folders, preferred = '') {
     null
   );
 }
+export const AI_HEADER = 'X-Levuvo-AI-Generated';
+
+/** The AI label of a draft (see validateDraft), or null. */
+export function parseAiGenerated(source) {
+  if (!source || !Buffer.isBuffer(source)) return null;
+  const headers = source
+    .subarray(0, 16000)
+    .toString('latin1')
+    .split(/\r?\n\r?\n/, 1)[0]
+    .replace(/\r?\n[ \t]+/g, ' ');
+  const raw = /(?:^|\n)X-Levuvo-AI-Generated:[ \t]*([^\r\n]{1,400})/i.exec(headers)?.[1]?.trim();
+  if (!raw) return null;
+  // RFC 2047 encoded words (umlauts in agent names) are decoded; anything else is shown as text.
+  const text = raw.replace(/=\?utf-8\?([bq])\?([^?]*)\?=\s*/gi, (_, enc, data) =>
+    enc.toLowerCase() === 'b'
+      ? Buffer.from(data, 'base64').toString('utf8')
+      : Buffer.from(
+          data.replace(/_/g, ' ').replace(/=([0-9a-f]{2})/gi, (_m, h) => String.fromCharCode(parseInt(h, 16))),
+          'latin1'
+        ).toString('utf8')
+  );
+  return text.slice(0, 200);
+}
+
 export function parseDraftId(source) {
   if (!source || !Buffer.isBuffer(source)) return null;
   const headers = source
@@ -58,6 +82,15 @@ export function validateDraft(input) {
     (typeof input.inReplyTo !== 'string' || !/^<[^<>\r\n\0\s]+>$/.test(input.inReplyTo) || input.inReplyTo.length > 254)
   )
     throw problem('Ungültige Antwortreferenz.');
+  if (
+    input.aiGenerated !== undefined &&
+    input.aiGenerated !== null &&
+    (typeof input.aiGenerated !== 'string' ||
+      !input.aiGenerated.trim() ||
+      /[\r\n\0]/.test(input.aiGenerated) ||
+      input.aiGenerated.length > 200)
+  )
+    throw problem('Ungültige KI-Kennzeichnung.');
   // Base64 fields are validated and decoded with the same limits as SMTP sends.
   const attachments = parseAttachments(input.attachments || []);
   return {
@@ -72,7 +105,10 @@ export function validateDraft(input) {
     from: readFromAddress(input.from),
     previousUid: input.previousUid == null ? null : String(input.previousUid),
     uidValidity: input.uidValidity == null ? null : String(input.uidValidity),
-    attachments
+    attachments,
+    // Drafts written by an agent keep this label (AIS-LEV-008) until the user sends them; the sent
+    // message does not carry it (the user reviewed and sent it).
+    ...(input.aiGenerated ? { extraHeaders: { [AI_HEADER]: input.aiGenerated.trim() } } : {})
   };
 }
 export async function composeDraft(mailbox, data) {

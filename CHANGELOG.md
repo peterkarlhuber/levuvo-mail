@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### AI core and search index (internal audit of 19 November 2026)
+- **Semantic search on large mailboxes:** the first embedding run continues where it stopped after a restart, sleep or an Ollama outage instead of starting over; it reads texts batch by batch instead of all at once. New messages written during a long index sync are never skipped. The vector set in memory follows changes instead of being reloaded after every batch and is released after ten idle minutes.
+- **Search index format:** the stored schema version is read; older files are migrated, files of a newer version (after rolling back an update) are rebuilt.
+- **Ollama cloud models** with tags like `gpt-oss:120b-cloud` are refused as local models (settings, download, model list), like `:cloud` before: content would otherwise leave the device.
+- **Clear AI error messages:** every error kind of the AI component (rate limit, provider overloaded, model without tools, disk full, too many steps, …) has its own text. A short Ollama outage no longer makes agent runs fail until the next restart.
+- **AI component stays responsive:** status and settings no longer wait behind slow model calls; when timed-out calls would block every worker, the component restarts. Messages for an AI function load three at a time.
+- **AI labels that last:** drafts, events and contacts created by agents keep a label (draft header shown in reader and composer, closing line in events and contacts).
+- **Agent calendar tools** report an invalid or too long range (more than 62 days) as an error instead of "no free time".
+- **Inbox bundles by AI:** messages the model skipped are not sent again on every list update; after errors the next try waits (30 s, doubling up to 30 min).
+- **Maintenance:** no more import cycle between the AI routes and the MCP server (`ai-payloads.mjs`); built-in approval types use the same registry as added ones; AI background timers start only with the app's background jobs and stop on close. The AI sidecar is tested against the pinned Orkexa API and installed in CI from the hashed locks.
+
 ## 2.3.0 – 19 November 2026
 
 > **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.

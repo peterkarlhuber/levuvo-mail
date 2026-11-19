@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const MAX_LINE = 16 * 1024 * 1024;
 const PASS_ENV = ['PATH', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP', 'TMPDIR', 'LANG', 'LC_ALL'];
+// Worker threads of the Python process for model calls (server.py). Status, configuration and the
+// model list run in a separate pool there and never count here.
+const SIDECAR_WORKERS = 4;
+const CONTROL_METHODS = new Set(['status', 'configure', 'models']);
 const PROXY_ENV = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'SSL_CERT_FILE', 'REQUESTS_CA_BUNDLE'];
 
 /**
@@ -64,7 +68,9 @@ export function createSidecar({
   env = process.env,
   logger = () => {},
   idleMs = 15 * 60 * 1000,
-  timeoutMs = 180_000,
+  // Longer than the sidecar's own worst case for one task: 180 s per model call with one retry
+  // (engine.py), so a slow answer is not given up on while Python is still allowed to finish it.
+  timeoutMs = 400_000,
   onStart = async () => {},
   // Installed app: only the runtime shipped with it (hash-pinned packages), never a Python found
   // on the computer.
@@ -76,6 +82,10 @@ export function createSidecar({
   let idleTimer = null;
   let crashes = [];
   const pending = new Map();
+  // Requests given up on by a timeout whose Python worker may still be running. Python cannot be
+  // interrupted mid-call; when they would fill every worker, the process is restarted instead of
+  // queueing new work behind them (REL-LEV-004).
+  const abandoned = new Set();
   const stderrTail = [];
 
   function failAll(kind) {
@@ -94,7 +104,10 @@ export function createSidecar({
       return;
     }
     const p = pending.get(msg?.id);
-    if (!p) return;
+    if (!p) {
+      abandoned.delete(msg?.id); // a late answer: its worker is free again
+      return;
+    }
     pending.delete(msg.id);
     clearTimeout(p.timer);
     if (msg.error) p.reject(new SidecarError(msg.error?.data?.kind || 'internal', msg.error.message));
@@ -165,6 +178,7 @@ export function createSidecar({
         failAll('stopped');
       });
       proc.stdin.on('error', () => {});
+      abandoned.clear();
       child = proc;
       try {
         await onStart(rawCall);
@@ -183,9 +197,16 @@ export function createSidecar({
     if (!child) return Promise.reject(new SidecarError('stopped'));
     const id = nextId++;
     return new Promise((resolveCall, rejectCall) => {
+      const proc = child;
       const timer = setTimeout(() => {
         pending.delete(id);
         rejectCall(new SidecarError('timeout'));
+        if (CONTROL_METHODS.has(method) || child !== proc) return;
+        abandoned.add(id);
+        if (abandoned.size >= SIDECAR_WORKERS) {
+          logger('ai sidecar: every worker is stuck on a timed-out request, restarting');
+          void stop();
+        }
       }, timeout);
       timer.unref?.();
       pending.set(id, { resolve: resolveCall, reject: rejectCall, timer });
@@ -205,6 +226,7 @@ export function createSidecar({
     const proc = child;
     if (!proc) return;
     child = null;
+    abandoned.clear();
     failAll('stopped');
     try {
       proc.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'shutdown' })}\n`);
