@@ -9,7 +9,8 @@
 //
 // Variants: a tag on the registry can offer a GGUF variant (runner "llamacpp", every platform) and
 // an MLX variant (runner "mlx", Macs with Apple silicon only), with different files and sizes.
-// digest/size pin the GGUF variant; mlx pins the MLX one where the registry offers it. Levuvo asks
+// digest/size pin the GGUF variant; mlx pins the MLX one where the registry offers it, or is false
+// where an offered MLX variant was reviewed and not taken (Macs then get GGUF too). Levuvo asks
 // Ollama for the variant explicitly (variantFor), so what is downloaded never depends on Ollama's
 // own preference, and checks it against that variant's pin.
 //
@@ -30,7 +31,7 @@ const QWEN_QUERY = 'Instruct: Given a search query, retrieve relevant emails tha
 /**
  * @type {ReadonlyArray<{id: string, name: string, vendor: string, origin: string, eu: boolean,
  *   kind: 'chat'|'embed', tier: Tier, license: string, licenseUrl: string, size: number,
- *   digest: string, mlx?: {digest: string, size: number}, default?: boolean, queryPrefix?: string}>}
+ *   digest: string, mlx?: {digest: string, size: number} | false, default?: boolean, queryPrefix?: string}>}
  */
 export const MODEL_CATALOG = Object.freeze([
   // Small, from 8 GB RAM
@@ -46,6 +47,7 @@ export const MODEL_CATALOG = Object.freeze([
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
     size: 3_324_173_934,
     digest: 'sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04',
+    mlx: { size: 3_973_305_013, digest: 'sha256:7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13' },
     default: true
   },
   {
@@ -59,7 +61,9 @@ export const MODEL_CATALOG = Object.freeze([
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
     size: 4_587_156_505,
-    digest: 'sha256:b37049369adfe3d2b653af0ab301a062ca5cbe96ace6aa0d3f2559ee9b563fc2'
+    digest: 'sha256:b37049369adfe3d2b653af0ab301a062ca5cbe96ace6aa0d3f2559ee9b563fc2',
+    // The MLX variant (7.5 GB) is too big for the small tier: GGUF on every platform.
+    mlx: false
   },
   {
     id: 'ministral-3:3b',
@@ -87,6 +91,7 @@ export const MODEL_CATALOG = Object.freeze([
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
     size: 6_550_825_550,
     digest: 'sha256:56671c2ab9385f9cfcb404638e32cd62d88e3501d44822208363c010179a3c90',
+    mlx: { size: 7_639_229_431, digest: 'sha256:d63f830f28d515fefea546f213fca7a75e9dd5176ef51a6deabc952d1c99a911' },
     default: true
   },
   {
@@ -100,7 +105,8 @@ export const MODEL_CATALOG = Object.freeze([
     license: 'Apache-2.0',
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
     size: 8_021_618_941,
-    digest: 'sha256:6114515d63c17436a7c0417d82820ac65ad643e2806c5a3c89cb62846436ed0b'
+    digest: 'sha256:6114515d63c17436a7c0417d82820ac65ad643e2806c5a3c89cb62846436ed0b',
+    mlx: { size: 7_714_091_504, digest: 'sha256:c7597fc90b86aff6965317f37dd5465402284e26382d9b4bf2dfe3ef1491f4b6' }
   },
   {
     id: 'ministral-3:8b',
@@ -128,6 +134,7 @@ export const MODEL_CATALOG = Object.freeze([
     licenseUrl: 'https://www.apache.org/licenses/LICENSE-2.0',
     size: 17_741_872_154,
     digest: 'sha256:aaee06c39dcf2437cde036998d960e1fc1494b8191be7cc9657d01e509097813',
+    mlx: { size: 18_174_721_847, digest: 'sha256:47951e4a666180bc2aedfc93c169472f2de783696fe196efbf063f5730ecf163' },
     default: true
   },
   {

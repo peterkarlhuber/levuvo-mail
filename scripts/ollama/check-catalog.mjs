@@ -21,12 +21,15 @@ export async function checkCatalog({ catalog = MODEL_CATALOG, fetchImpl = fetch,
     found.push({ id: entry.id, variants: m.variants });
     const pins = { llamacpp: { digest: entry.digest, size: entry.size }, ...(entry.mlx ? { mlx: entry.mlx } : {}) };
     for (const runner of RUNNERS) {
+      if (runner === 'mlx' && entry.mlx === false) continue; // reviewed, not used
       const pin = pins[runner];
       const got = m.variants[runner];
       if (pin && !got) problems.push(`${entry.id} (${runner}): variant no longer offered, pinned ${pin.digest}`);
-      else if (!pin && got) problems.push(`${entry.id} (${runner}): new variant ${got.digest} (${got.size} bytes), not pinned`);
+      else if (!pin && got)
+        problems.push(`${entry.id} (${runner}): new variant ${got.digest} (${got.size} bytes), not pinned`);
       else if (pin && got) {
-        if (got.digest !== pin.digest) problems.push(`${entry.id} (${runner}): digest ${got.digest}, pinned ${pin.digest}`);
+        if (got.digest !== pin.digest)
+          problems.push(`${entry.id} (${runner}): digest ${got.digest}, pinned ${pin.digest}`);
         if (got.size !== pin.size) problems.push(`${entry.id} (${runner}): size ${got.size}, pinned ${pin.size}`);
       }
     }
