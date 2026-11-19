@@ -11,6 +11,11 @@ import { SidecarError } from './ai-sidecar.mjs';
 export const CONSENT_VERSION = '2026-11-18';
 export const AI_PROVIDERS = ['ollama', 'anthropic', 'openai'];
 export const CLOUD_PROVIDERS = ['anthropic', 'openai'];
+/**
+ * Ollama models served by Ollama's cloud (tag `cloud` or `…-cloud`, e.g. `gpt-oss:120b-cloud`):
+ * their content leaves the device, so they are never accepted as a local model.
+ */
+export const isOllamaCloudModel = name => /:(?:[^:/]*-)?cloud$/i.test(String(name || '').trim());
 export const AI_FEATURES = [
   'digest',
   'translate',
@@ -75,7 +80,7 @@ export function validateAiSettings(input, current) {
   for (const key of ['model', 'embedModel']) {
     if (input[key] === undefined) continue;
     const value = String(input[key]).trim();
-    if (!MODEL_NAME.test(value) || value.endsWith(':cloud')) throw invalid('Ungültiger Modellname.');
+    if (!MODEL_NAME.test(value) || isOllamaCloudModel(value)) throw invalid('Ungültiger Modellname.');
     next[key] = value;
   }
   if (input.baseUrl !== undefined) {
@@ -302,8 +307,7 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       return sidecar.call('models', {}, { timeout: 10000 });
     },
     async pull(model) {
-      if (!MODEL_NAME.test(String(model || '')) || String(model).endsWith(':cloud'))
-        throw invalid('Ungültiger Modellname.');
+      if (!MODEL_NAME.test(String(model || '')) || isOllamaCloudModel(model)) throw invalid('Ungültiger Modellname.');
       void log.add({ type: 'model_download', model });
       return sidecar.call('pull', { model }, { timeout: 60 * 60 * 1000 });
     },

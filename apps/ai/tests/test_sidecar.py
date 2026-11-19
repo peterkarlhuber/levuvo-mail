@@ -121,10 +121,9 @@ def test_engine_configuration_rules() -> None:
 
 
 def test_classify_errors_without_details() -> None:
-    class ProviderConnectionError(Exception):
-        pass
+    from orkexa.errors import ProviderConnectionError
 
-    assert classify(ProviderConnectionError("secret prompt")).kind == "unreachable"
+    assert classify(ProviderConnectionError("secret prompt", provider="openai")).kind == "unreachable"
     assert classify(RuntimeError("mail content")).kind == "internal"
     assert str(classify(RuntimeError("mail content"))) == "internal"
 

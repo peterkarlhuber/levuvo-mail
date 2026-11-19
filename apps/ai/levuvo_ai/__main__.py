@@ -7,7 +7,7 @@ import sys
 from typing import Any
 
 from . import __version__
-from .engine import Engine
+from .engine import Engine, is_cloud_model
 from .server import RpcError, Server
 
 
@@ -37,13 +37,13 @@ def build_handlers(engine: Engine) -> dict[str, Any]:
             "models": [
                 {"name": m.name, "size": getattr(m, "size", None), "family": getattr(m, "family", None)}
                 for m in listed
-                if not str(m.name).endswith(":cloud")
+                if not is_cloud_model(str(m.name)) and not getattr(m, "remote", False)
             ]
         }
 
     def pull(params: dict[str, Any]) -> dict[str, Any]:
         name = str(params.get("model") or "")
-        if not name or name.endswith(":cloud"):
+        if not name or is_cloud_model(name):
             raise RpcError("invalid_input", "invalid model")
         last = ""
         for progress in engine.ollama(timeout=30.0).pull(name):

@@ -21,6 +21,13 @@ DEFAULT_MODELS = {"ollama": "qwen3.5:9b", "anthropic": "claude-sonnet-5-5", "ope
 DEFAULT_EMBED_MODEL = "qwen3-embedding:0.6b"
 
 
+def is_cloud_model(name: str) -> bool:
+    """Ollama models that run on Ollama's cloud service: tag ``cloud`` or ending in ``-cloud``
+    (``gpt-oss:120b-cloud``). Their content leaves the device, so the local provider refuses them."""
+    tag = name.strip().rsplit("/", 1)[-1].rpartition(":")[2].lower()
+    return tag == "cloud" or tag.endswith("-cloud")
+
+
 def loopback_url(url: str) -> str:
     """Accepts only http://loopback[:port] (Ollama has no authentication, so no remote host)."""
     parts = urlsplit(url.strip().rstrip("/"))
@@ -76,13 +83,15 @@ class Engine:
         model = str(params.get("model") or DEFAULT_MODELS[provider]).strip()
         if not model or len(model) > 200 or any(c.isspace() for c in model):
             raise RpcError("invalid_input", "invalid model name")
-        if provider == "ollama" and model.endswith(":cloud"):
+        if provider == "ollama" and is_cloud_model(model):
             raise RpcError("invalid_input", "Ollama cloud models are not allowed: content would leave the device")
         api_key = str(params.get("apiKey") or "")
         if provider != "ollama" and not api_key:
             raise RpcError("auth", "an API key is required for a cloud provider")
         base_url = loopback_url(str(params.get("baseUrl") or DEFAULT_OLLAMA_URL))
         embed = str(params.get("embedModel") or DEFAULT_EMBED_MODEL).strip()
+        if is_cloud_model(embed):
+            raise RpcError("invalid_input", "Ollama cloud models are not allowed: content would leave the device")
         with self._lock:
             self._config = replace(
                 self._config,
@@ -101,17 +110,30 @@ class Engine:
         return OllamaClient(self.config.base_url, timeout=timeout)
 
     def _ollama_caps(self, model: str) -> dict[str, str]:
-        if model not in self._caps:
-            caps: dict[str, str] = {}
-            try:
-                caps.update(self.ollama().show(model).capability_overrides())
-            except Exception:
-                caps["tools"] = "unknown"
-            # Ollama implements response_format/json_schema for every chat model.
-            caps["structured_output"] = "supported"
-            caps.setdefault("system_messages", "supported")
-            self._caps[model] = caps
-        return self._caps[model]
+        """What the model can do, from ``/api/show``.
+
+        Only an answer is cached. When Ollama cannot be asked (starting, loading the model), the
+        fallback is used for this request only, so a short outage does not make every later agent run
+        fail with ``unsupported`` until the next reconfiguration.
+        """
+        with self._lock:
+            cached = self._caps.get(model)
+        if cached is not None:
+            return cached
+        caps: dict[str, str] = {}
+        try:
+            caps.update(self.ollama().show(model).capability_overrides())
+            known = True
+        except Exception:
+            caps["tools"] = "unknown"
+            known = False
+        # Ollama implements response_format/json_schema for every chat model.
+        caps["structured_output"] = "supported"
+        caps.setdefault("system_messages", "supported")
+        if known:
+            with self._lock:
+                self._caps[model] = caps
+        return caps
 
     def agent(
         self,

@@ -1,0 +1,5 @@
+# Test and lint tools of the AI sidecar CI job. Locked with hashes in requirements-dev-lock.txt:
+#   uv pip compile --universal --generate-hashes --only-binary :all: --python-version 3.13 requirements-dev.in -o requirements-dev-lock.txt
+pytest==9.2.0
+ruff==0.17.5
+pip==26.2.2
