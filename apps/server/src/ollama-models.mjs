@@ -211,9 +211,10 @@ export function createModelManager({
     } catch (err) {
       const reason = job.controller.signal.reason;
       if (job.canceled) {
-        job.status = 'canceled';
+        // Parts first, then the status: a discard right after the pause must see them.
         job.pausedAt = Date.now();
         job.parts = [...new Set([...(job.parts || []), ...(await partsSince(job.startedAt).catch(() => []))])];
+        job.status = 'canceled';
       } else {
         job.status = 'error';
         job.error = (reason instanceof ModelError ? reason : err).kind || 'download_failed';

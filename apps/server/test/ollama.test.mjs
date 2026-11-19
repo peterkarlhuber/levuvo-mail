@@ -345,8 +345,9 @@ test('downloads: the parts of one paused model can be discarded while another mo
     assert.equal((await job('ministral-3:3b')).status, 'downloading');
     // Nothing paused under that name: nothing to do.
     assert.deepEqual(await mm.discardPartial('gemma4:e2b'), { removed: 0 });
-    mm.cancel('ministral-3:3b');
   } finally {
+    mm.cancel('ministral-3:3b');
+    mm.cancel('gemma4:e2b');
     await ollama.close();
     rmSync(dir, { recursive: true, force: true });
   }
