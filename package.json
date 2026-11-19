@@ -72,6 +72,7 @@
     "sanitize-html": "2.18.2",
     "timezones-ical-library": "3.0.0",
     "tsdav": "2.5.0",
+    "unpdf": "2.2.1",
     "yjs": "13.6.33"
   },
   "devDependencies": {

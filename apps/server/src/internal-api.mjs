@@ -13,6 +13,8 @@ export function createInternalApi(request) {
     messages: (account, { folder = 'INBOX', limit = 20 } = {}) =>
       get(`/api/messages?folder=${q(folder)}&limit=${Number(limit)}&account=${q(account)}`),
     message: (account, folder, uid) => get(`/api/messages/${Number(uid)}?folder=${q(folder)}&account=${q(account)}`),
+    attachmentText: (account, folder, uid) =>
+      get(`/api/messages/${Number(uid)}/attachment-text?folder=${q(folder)}&account=${q(account)}`),
     searchLocal: (query, account = '') =>
       get(`/api/search/local?q=${q(query)}${account ? `&account=${q(account)}` : ''}`),
     events: (from, to) => get(`/api/calendar/events?from=${q(from)}&to=${q(to)}`),

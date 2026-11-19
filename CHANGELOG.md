@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Ask your mailbox
+- **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
+- **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
+- **Sources with a quote:** every source email shows sender, date and a passage from it; a passage is shown only if it literally occurs in that email or attachment.
+- **Follow-up questions:** "and the price?" refers to the previous answer (the last two turns go along, framed as untrusted). The bin icon starts a new conversation.
+
 ### Spaces
 - **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
 - **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
@@ -38,6 +44,9 @@
 
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
+
+### Protect with password
+- **Security review:** easily guessed passwords (few distinct characters, runs like "1234567890", common words with digits) are refused, because the encrypted file can be attacked offline without a limit; the suggested random password stays the default. A copied password is removed from the clipboard after one minute. The composer now says that automatically saved drafts stay unencrypted in the own Drafts folder until sending. Review notes in SECURITY.md.
 
 ### Fixes
 - **Tasks open again on macOS and Windows:** the builds for macOS and Windows (case-insensitive disks) loaded the task helpers (`tasks.ts`) instead of the Tasks view (`Tasks.tsx`), so opening Tasks failed and the whole window went black. The view is now `TasksModule.tsx`, and a test rejects source files that differ only in case.

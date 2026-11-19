@@ -5,8 +5,9 @@ import { AI_EN } from './i18n-ai-en';
 import { TASKS_EN } from './i18n-tasks-en';
 import { CHAT_EN } from './i18n-chat-en';
 import { COMPLIANCE_EN } from './i18n-compliance-en';
+import { PRIVACY_EN } from './i18n-privacy-en';
 
-const EN: Record<string, string> = { ...BASE_EN, ...AI_EN, ...TASKS_EN, ...CHAT_EN, ...COMPLIANCE_EN };
+const EN: Record<string, string> = { ...BASE_EN, ...AI_EN, ...TASKS_EN, ...CHAT_EN, ...PRIVACY_EN, ...COMPLIANCE_EN };
 
 // German is the source language: t('Neue Nachricht') returns the German text or its
 // English translation. Placeholders: t('{count} Nachrichten', { count: 3 }).

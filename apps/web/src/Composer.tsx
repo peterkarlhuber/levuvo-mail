@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { weakPassword } from './password-rules';
 import { EXTENSIONS, htmlToPlain, normalize, plainToHtml, SIGNATURE_SEPARATOR, Toolbar } from './editor';
 import {
   BellRing,
@@ -451,6 +452,10 @@ export default function Composer({
       return t('Für die Verschlüsselung fehlen Schlüssel – Details oben.');
     if (security.method === 'password') {
       if ((security.password || '').length < 10) return t('Das Passwort muss mindestens 10 Zeichen lang sein.');
+      if (weakPassword(security.password || ''))
+        return t(
+          'Dieses Passwort ist zu leicht zu erraten. Bitte das vorgeschlagene Passwort verwenden oder ein anderes wählen.'
+        );
       if (totalBytes > 5 * 1024 * 1024) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.');
     }
     return '';
@@ -1025,7 +1030,30 @@ function PasswordPanel({
   const { t } = useT();
   const { toast } = useUi();
   const [visible, setVisible] = useState(true);
-  const strength = password.length >= 16 ? 'strong' : password.length >= 10 ? 'ok' : 'weak';
+  const strength =
+    password.length < 10 ? 'short' : weakPassword(password) ? 'weak' : password.length >= 16 ? 'strong' : 'ok';
+  // The copied password is removed from the clipboard after a minute, if it is still there.
+  const clearTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(clearTimer.current), []);
+  function copyPassword() {
+    void navigator.clipboard
+      .writeText(password)
+      .then(() => {
+        toast({
+          text: t('Passwort kopiert. Es wird nach einer Minute aus der Zwischenablage entfernt.'),
+          kind: 'success'
+        });
+        window.clearTimeout(clearTimer.current);
+        const copied = password;
+        clearTimer.current = window.setTimeout(() => {
+          void navigator.clipboard
+            .readText()
+            .then(current => (current === copied ? navigator.clipboard.writeText('') : undefined))
+            .catch(() => {});
+        }, 60_000);
+      })
+      .catch(() => toast({ text: t('Kopieren nicht möglich.'), kind: 'error' }));
+  }
   return (
     <div className="password-panel">
       <div className="password-row">
@@ -1064,22 +1092,19 @@ function PasswordPanel({
               className="icon-button"
               aria-label={t('Passwort kopieren')}
               title={t('Passwort kopieren')}
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(password)
-                  .then(() => toast({ text: t('Passwort kopiert.'), kind: 'success' }))
-                  .catch(() => toast({ text: t('Kopieren nicht möglich.'), kind: 'error' }))
-              }
+              onClick={copyPassword}
             >
               <Copy size={15} />
             </button>
           </span>
           <span className={`password-strength ${strength}`}>
-            {strength === 'weak'
+            {strength === 'short'
               ? t('Zu kurz (mindestens 10 Zeichen)')
-              : strength === 'ok'
-                ? t('Ausreichend')
-                : t('Stark')}
+              : strength === 'weak'
+                ? t('Zu leicht zu erraten')
+                : strength === 'ok'
+                  ? t('Ausreichend')
+                  : t('Stark')}
           </span>
         </label>
         <label>
@@ -1096,7 +1121,7 @@ function PasswordPanel({
       <p className="password-help" id="password-help">
         <KeyRound size={13} />{' '}
         {t(
-          'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar.'
+          'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar, und automatisch gespeicherte Entwürfe liegen bis zum Senden unverschlüsselt in deinem Entwürfe-Ordner.'
         )}
       </p>
     </div>

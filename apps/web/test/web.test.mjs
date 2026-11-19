@@ -1125,3 +1125,10 @@ test('Guardrails before sending: open circulars, sensitive data unencrypted, hea
   const en = loadDictionary(root);
   for (const text of COMPLIANCE_TEXTS) assert.ok(en[text], `missing English: ${text}`);
 });
+
+test('Protect with password: the composer refuses the same weak passwords as the server', async () => {
+  const { weakPassword } = await import('../src/password-rules.ts');
+  const server = await import('../../server/src/protected-message.mjs');
+  for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
+    assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
+});
