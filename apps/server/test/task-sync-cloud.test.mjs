@@ -339,8 +339,8 @@ test('Google Tasks sync: paging, day-only due dates, reminder and repetition sta
 });
 
 test('OAuth: the Microsoft To Do token is asked for separately and cached apart', async () => {
-  assert.ok(PROVIDERS.microsoft.scopes.includes('https://graph.microsoft.com/Tasks.ReadWrite'));
-  assert.ok(PROVIDERS.google.scopes.includes('https://www.googleapis.com/auth/tasks'));
+  assert.ok(new Set(PROVIDERS.microsoft.scopes).has('https://graph.microsoft.com/Tasks.ReadWrite'));
+  assert.ok(new Set(PROVIDERS.google.scopes).has('https://www.googleapis.com/auth/tasks'));
   assert.doesNotMatch(PROVIDERS.microsoft.cloudScope, /Tasks/, 'calendar consent of older accounts stays valid');
   const requests = [];
   const oauth = createOAuthManager({
