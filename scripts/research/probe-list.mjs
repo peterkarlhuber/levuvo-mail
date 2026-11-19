@@ -11,8 +11,12 @@ for (const e of MODEL_CATALOG) {
     const res = await fetch(`https://registry.ollama.ai/v2/library/${name}/manifests/${tag}`, { headers: h });
     const raw = Buffer.from(await res.arrayBuffer());
     let j = {};
-    try { j = JSON.parse(raw); } catch {}
-    console.log(`${e.id} ua=${ua ? 'ollama' : 'node'} ${res.status} ct=${res.headers.get('content-type')} sha=${createHash('sha256').update(raw).digest('hex')} mt=${j.mediaType} www=${res.headers.get('www-authenticate')}`);
+    try {
+      j = JSON.parse(raw);
+    } catch {}
+    console.log(
+      `${e.id} ua=${ua ? 'ollama' : 'node'} ${res.status} ct=${res.headers.get('content-type')} sha=${createHash('sha256').update(raw).digest('hex')} mt=${j.mediaType} www=${res.headers.get('www-authenticate')}`
+    );
     for (const m of j.manifests || []) console.log(`   child ${JSON.stringify(m).slice(0, 400)}`);
   }
 }

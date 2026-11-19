@@ -69,7 +69,7 @@
 .local-model-paused > strong {
   display: block;
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 .local-model-paused-hint {
   margin: var(--space-1) 0 var(--space-2);
