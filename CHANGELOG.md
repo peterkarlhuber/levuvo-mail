@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Local models
+- **Downloads on Macs with Apple silicon work again:** Ollama there downloads the MLX variant of a model (for example Qwen3.5 9B: 7.6 GB instead of 6.6 GB), which did not match the pinned GGUF variant and was deleted again as "checksum does not match". Every model now pins both variants, Levuvo Mail requests the right one explicitly and checks it against its pin; the list shows the size of the variant this computer downloads. Gemma 4 E2B stays GGUF on Macs (its MLX variant is 7.5 GB, too big for the small tier).
+- **Choosing is not downloading:** picking a model that is not on this computer shows its size, the free disk space and a "Download (size)" button; it becomes active once it is downloaded and verified, until then the current model stays. Picking a model that is already there just switches to it.
+- **Interrupted downloads** have a line each with "Resume" and "Discard", and one model's parts can be discarded while another model downloads.
+- **Checks:** the catalog check compares both variants with the registry in every CI run and reports a variant the registry adds; a weekly job downloads an MLX and a GGUF model for real on a Mac with Apple silicon.
+
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
 - **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
