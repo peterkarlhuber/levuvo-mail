@@ -19,7 +19,13 @@ export type SpeechState = { models: SpeechModel[]; selected: string | null; enab
 export const MAX_SECONDS = 300;
 const RATE = 16_000;
 
-export const speechModels = () => getJson<SpeechState>('/api/ai/speech/models');
+/** The speech models and the selection; a malformed answer counts as "no models". */
+export const speechModels = () =>
+  getJson<Partial<SpeechState>>('/api/ai/speech/models').then(s => ({
+    models: Array.isArray(s?.models) ? s.models : [],
+    selected: typeof s?.selected === 'string' ? s.selected : null,
+    enabled: Boolean(s?.enabled)
+  }));
 
 /** The model to dictate with: the selected one if it is installed, else none. */
 export async function dictationModel(): Promise<SpeechModel | null> {
