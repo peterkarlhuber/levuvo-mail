@@ -29,9 +29,18 @@ export type Task = {
   contact?: { email: string; name: string } | null;
   /** Connected list the task is synced with (null: only on this device). */
   list?: string | null;
+  /**
+   * Space the task belongs to (a space task assigned to me, shown in the main area). Its changes
+   * go to the space; `readOnly` when my role there is reader.
+   */
+  space?: TaskSpaceRef | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type TaskSpaceRef = { id: string; name: string; readOnly?: boolean };
+/** List filter value of a space. */
+export const spaceFilter = (spaceId: string) => `space:${spaceId}`;
 
 export type TaskSyncProvider = 'caldav' | 'microsoft' | 'google';
 /** A connected list (CalDAV, Microsoft To Do, Google Tasks). */
@@ -55,12 +64,19 @@ export type TaskListSource = {
   name: string;
   connected: boolean;
 };
-/** 'all', 'local' (this device only) or a connected list's id. */
+/** 'all', 'local' (this device only), a connected list's id or `space:<id>` (see spaceFilter). */
 export type TaskListFilter = string;
-export function inList<T extends Pick<Task, 'list'>>(list: T[], filter: TaskListFilter) {
+export function inList<T extends Pick<Task, 'list' | 'space'>>(list: T[], filter: TaskListFilter) {
   if (filter === 'all') return list;
-  if (filter === 'local') return list.filter(t => !t.list);
+  if (filter === 'local') return list.filter(t => !t.list && !t.space);
+  if (filter.startsWith('space:')) return list.filter(t => t.space && spaceFilter(t.space.id) === filter);
   return list.filter(t => t.list === filter);
+}
+/** Spaces that tasks in the list belong to (for the sidebar), by name. */
+export function spacesOf<T extends Pick<Task, 'space'>>(list: T[]) {
+  const seen = new Map<string, TaskSpaceRef>();
+  for (const t of list) if (t.space && !seen.has(t.space.id)) seen.set(t.space.id, t.space);
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');

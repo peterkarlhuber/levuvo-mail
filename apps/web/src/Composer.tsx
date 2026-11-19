@@ -805,6 +805,7 @@ export default function Composer({
                 setDraft={setDraft}
                 subject={subject}
                 setSubject={setSubject}
+                recipient={toList[0]}
                 onAssisted={model =>
                   setAiAssisted(
                     model
