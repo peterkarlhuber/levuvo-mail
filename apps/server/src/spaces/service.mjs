@@ -18,13 +18,23 @@ import {
   unb64u,
   wrapKey
 } from './crypto.mjs';
-import { appendTextUpdate, applyOp, compareOps, fold, noteText, validCard, validateOpData } from './model.mjs';
+import {
+  appendTextUpdate,
+  applyOp,
+  compareOps,
+  fold,
+  noteText,
+  OP_TYPES,
+  validCard,
+  validateOpData
+} from './model.mjs';
 
 export const CHUNK_SIZE = 5 * 1024 * 1024;
 export const MAX_FILE_SIZE = 250 * 1024 * 1024;
 const MAX_ENVELOPE_OPS_BYTES = 4 * 1024 * 1024;
 const INVITE_DAYS = 14;
 const AUTO_FETCH_LIMIT = 25 * 1024 * 1024;
+const NEED_PAUSE = 60 * 60_000;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const SPACE_ID = /^[a-f0-9]{32}$/;
 const now = () => new Date().toISOString();
@@ -158,6 +168,20 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     // The key epoch is fixed when queued: a member removed meanwhile still gets the removal
     // notice under the key they have, and never content under the new one.
     r.outbox.push({ id: randomId(8), to: to.id, email: to.email, tries: 0, nextAt: 0, epoch: r.epoch, ...item });
+  }
+  /**
+   * Asks a member for the ops we lack. At most one open request per member, and the same
+   * request (same version vector) not again within NEED_PAUSE: a gap that an answer does not
+   * close must not turn into an endless need/ops exchange.
+   */
+  function askFor(r, member, vv) {
+    const key = JSON.stringify(vv);
+    if ((r.outbox || []).some(i => i.kind === 'need' && i.to === member.id && i.vv)) return;
+    r.asked ||= {};
+    const last = r.asked[member.id];
+    if (last && last.key === key && Date.now() - last.at < NEED_PAUSE) return;
+    r.asked[member.id] = { key, at: Date.now() };
+    enqueue(r, member, { kind: 'need', vv });
   }
   /** Queues ops for every other active member, split into envelopes of reasonable size. */
   function broadcastOps(r, ops, { include = [] } = {}) {
@@ -451,16 +475,14 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     );
     enqueue(r, owner, { kind: 'join', envelope });
     await store.save(r);
-    inv.accepted = clock();
-    await store.saveIndex({ ...index, invitations: index.invitations.filter(i => i.id !== invitationId) });
+    await store.updateIndex(i => ({ ...i, invitations: i.invitations.filter(x => x.id !== invitationId) }));
     changed(r.id);
     void flush().catch(() => {});
     return summary(r);
   }
 
   async function declineInvitation(invitationId) {
-    const index = store.index();
-    await store.saveIndex({ ...index, invitations: index.invitations.filter(i => i.id !== invitationId) });
+    await store.updateIndex(i => ({ ...i, invitations: i.invitations.filter(x => x.id !== invitationId) }));
   }
 
   /** Owner: new space key for everyone still in the space. Called after removals. */
@@ -533,7 +555,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
 
   // ---------------------------------------------------------------- receiving
   const verifiedOp = (r, op, state) => {
-    if (!op || op.v !== 1 || op.space !== r.id || typeof op.author !== 'string') return null;
+    if (!op || !Number.isInteger(op.v) || op.v < 1 || op.space !== r.id || typeof op.author !== 'string') return null;
     if (
       op.id !== `${op.author}:${op.seq}` ||
       !Number.isInteger(op.seq) ||
@@ -548,10 +570,15 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     if (!card) return undefined; // author not known yet: keep for later
     if (memberIdOf(card.signPub, card.boxPub) !== op.author) return null;
     if (!signatureValid(op, card.signPub)) return null;
+    // Correctly signed ops this version cannot apply (a newer format or op type, or data it
+    // considers invalid) are kept unchanged and passed on: they close the author's sequence, so
+    // version vectors match and members do not ask each other for them forever. The fold
+    // ignores them.
+    if (op.v !== 1 || !OP_TYPES.has(op.type)) return op;
     try {
       return { ...op, data: validateOpData(op.type, op.data) };
     } catch {
-      return null;
+      return op;
     }
   };
 
@@ -609,7 +636,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
         if (inner.vv && typeof inner.vv === 'object' && r.status === 'active') {
           const mine = versionVector(r);
           const behind = Object.entries(inner.vv).some(([a, n]) => Number.isInteger(n) && n > (mine[a] || 0));
-          if (behind && after.members[sender.id]) enqueue(r, after.members[sender.id], { kind: 'need', vv: mine });
+          if (behind && after.members[sender.id]) askFor(r, after.members[sender.id], mine);
         }
         // Fetch file contents of small, current versions automatically.
         if (added && r.status === 'active') {
@@ -713,29 +740,28 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       const existing = store.get(env.space);
       if (existing && existing.status === 'active') return 'duplicate';
       if (typeof inv.token !== 'string' || !/^[a-f0-9]{32}$/.test(inv.token)) return 'invalid';
-      const index = store.index();
-      if (index.invitations.some(i => i.space === env.space && i.token === inv.token)) return 'duplicate';
+      if (store.index().invitations.some(i => i.space === env.space && i.token === inv.token)) return 'duplicate';
       const email = String(inv.email || '').toLowerCase();
-      index.invitations = [
-        ...index.invitations.filter(i => i.space !== env.space),
-        {
-          id: randomId(8),
-          space: env.space,
-          token: inv.token,
-          name: String(inv.name || '').slice(0, 120),
-          description: String(inv.description || '').slice(0, 2000),
-          role: inv.role === 'reader' ? 'reader' : 'editor',
-          email,
-          expires: String(inv.expires || ''),
-          owner: card,
-          ownerSafetyCode: safetyCode(card.signPub, card.boxPub),
-          // A different From address than the inviter's card is shown as a warning.
-          fromMismatch: Boolean(from && from.toLowerCase() !== card.email),
-          accountId,
-          receivedAt: clock()
-        }
-      ].slice(-200);
-      await store.saveIndex(index);
+      const entry = {
+        id: randomId(8),
+        space: env.space,
+        token: inv.token,
+        name: String(inv.name || '').slice(0, 120),
+        description: String(inv.description || '').slice(0, 2000),
+        role: inv.role === 'reader' ? 'reader' : 'editor',
+        email,
+        expires: String(inv.expires || ''),
+        owner: card,
+        ownerSafetyCode: safetyCode(card.signPub, card.boxPub),
+        // A different From address than the inviter's card is shown as a warning.
+        fromMismatch: Boolean(from && from.toLowerCase() !== card.email),
+        accountId,
+        receivedAt: clock()
+      };
+      await store.updateIndex(index => ({
+        ...index,
+        invitations: [...index.invitations.filter(i => i.space !== env.space), entry].slice(-200)
+      }));
       changed(null);
       return 'invitation';
     }
@@ -871,6 +897,8 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
   function list() {
     return {
       identity: { id: keys.id, safetyCode: keys.safetyCode },
+      // Sync mails in a newer format arrived: another member uses a newer Levuvo version.
+      updateNeeded: Object.values(store.index().cursors || {}).some(c => c?.future?.length > 0),
       spaces: store
         .all()
         .map(summary)

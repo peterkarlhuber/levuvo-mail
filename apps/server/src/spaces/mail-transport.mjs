@@ -82,21 +82,71 @@ async function fetchSyncSource(client, uid) {
   return fetchUidOne(client, uid, { source: true });
 }
 
-/** Reads the envelope from a raw sync mail, or null if it is none. */
+/** Highest sync format this version understands (header "X-Levuvo-Space: v<N>" and envelope.v). */
+export const SYNC_VERSION = 1;
+const versionOf = value => {
+  const m = /^\s*v(\d{1,4})\b/i.exec(String(value || ''));
+  return m ? Number(m[1]) : 0;
+};
+
+/**
+ * Reads the envelope from a raw sync mail, or null if it is none. A mail in a newer format than
+ * this version understands comes back as { future: <version> } and is kept for after an update.
+ */
 export async function parseSyncMail(source) {
   if (!source || source.length > MAX_SYNC_MAIL_BYTES) return null;
   const parsed = await PostalMime.parse(source, { attachmentEncoding: 'arraybuffer' });
   const header = (parsed.headers || []).find(h => h.key === SPACES_HEADER.toLowerCase());
   if (!header) return null;
+  const headerVersion = versionOf(header.value);
+  if (headerVersion > SYNC_VERSION) return { future: headerVersion, from: parsed.from?.address || '' };
   const part = (parsed.attachments || []).find(a => a.mimeType === ENVELOPE_TYPE || a.filename === 'levuvo-space.json');
   if (!part) return null;
   const raw = Buffer.from(part.content);
   if (raw.length > 30 * 1024 * 1024) return null;
+  let envelope;
   try {
-    return { envelope: JSON.parse(raw.toString('utf8')), from: parsed.from?.address || '' };
+    envelope = JSON.parse(raw.toString('utf8'));
   } catch {
     return null;
   }
+  if (Number.isInteger(envelope?.v) && envelope.v > SYNC_VERSION)
+    return { future: envelope.v, from: parsed.from?.address || '' };
+  return { envelope, from: parsed.from?.address || '' };
+}
+
+// Inbox mails whose envelope could not be handled (e.g. the local copy could not be saved) are
+// tried again later with growing pauses, at most this many times.
+const MAX_INBOX_TRIES = 8;
+// A mail in the hidden folder that fails this often is passed over, so it cannot block the rest.
+const MAX_HIDDEN_TRIES = 10;
+const MAX_FUTURE = 500;
+const retryDelay = n => Math.min(6 * 3600_000, 60_000 * 2 ** n);
+
+/** Per-account receive state, kept in the spaces index. Old cursors ({ uidValidity, last }) still work. */
+function cursorState(saved) {
+  const c = saved && typeof saved === 'object' ? saved : {};
+  const uids = v => (Array.isArray(v) ? v.filter(u => Number.isSafeInteger(u) && u > 0) : []);
+  return {
+    uidValidity: String(c.uidValidity || ''),
+    last: Number(c.last || 0),
+    // UIDs this device itself moved into the hidden folder (from the MOVE answer): already handled.
+    done: uids(c.done),
+    // Hidden-folder mails in a newer format, read again once an update understands them.
+    future: Array.isArray(c.future) ? c.future.filter(f => Number.isSafeInteger(f?.uid) && f.v > 0) : [],
+    stuck: c.stuck && typeof c.stuck === 'object' ? { ...c.stuck } : {},
+    // INBOX and junk: the highest UID looked at, and mails to try again later.
+    folders: Object.fromEntries(
+      Object.entries(c.folders && typeof c.folders === 'object' ? c.folders : {}).map(([path, f]) => [
+        path,
+        {
+          uidValidity: String(f?.uidValidity || ''),
+          seen: Number(f?.seen || 0),
+          retry: f?.retry && typeof f.retry === 'object' ? { ...f.retry } : {}
+        }
+      ])
+    )
+  };
 }
 
 /**
@@ -151,40 +201,71 @@ export function createMailTransport(ctx, store) {
             return false;
           }
         };
-        // 1. The hidden folder: mails another device of this person already moved there.
-        const index = store.index();
-        const cursor = index.cursors?.[accountId] || {};
-        let validity;
-        let backlog;
+        const read = async uid => {
+          const message = await fetchSyncSource(client, uid);
+          return message?.source ? parseSyncMail(message.source).catch(() => null) : null;
+        };
+        const before = JSON.stringify(store.index().cursors?.[accountId] || null);
+        const cursor = cursorState(store.index().cursors?.[accountId]);
+
+        // 1. The hidden folder: mails another device of this person already moved there. The
+        //    cursor only ever moves over mails that were actually read (or that this device moved
+        //    there itself, known from the MOVE answer), never to UIDNEXT: a second device may
+        //    have moved other mails in meanwhile.
         let lock = await client.getMailboxLock(hidden.path);
         try {
-          validity = String(client.mailbox?.uidValidity || '');
-          const last = cursor.uidValidity === validity ? Number(cursor.last || 0) : 0;
-          cursor.last = last;
-          const uids = ((await client.search({ uid: `${last + 1}:*` }, { uid: true })) || [])
-            .filter(u => u > last)
-            .sort((a, b) => a - b);
-          let done = 0;
-          for (const uid of uids.slice(0, MAX_PER_RUN)) {
-            const message = await fetchSyncSource(client, uid);
-            const mail = message?.source ? await parseSyncMail(message.source).catch(() => null) : null;
-            if (mail && !(await handleSafe(mail))) break;
-            cursor.last = uid;
-            done++;
+          const validity = String(client.mailbox?.uidValidity || '');
+          if (cursor.uidValidity !== validity)
+            Object.assign(cursor, { uidValidity: validity, last: 0, done: [], future: [], stuck: {} });
+          // Mails in a newer format, kept from before an update: read them again now if possible.
+          const future = [];
+          for (const f of cursor.future) {
+            if (f.v > SYNC_VERSION) {
+              future.push(f);
+              continue;
+            }
+            const mail = await read(f.uid);
+            if (mail?.future) future.push({ uid: f.uid, v: mail.future });
+            else if (mail?.envelope && !(await handleSafe(mail))) future.push(f);
           }
-          // Everything up to UIDNEXT was handled: only then may the cursor jump over mails moved in below.
-          backlog = done < uids.length;
+          cursor.future = future;
+          const done = new Set(cursor.done);
+          const uids = ((await client.search({ uid: `${cursor.last + 1}:*` }, { uid: true })) || [])
+            .filter(u => u > cursor.last)
+            .sort((a, b) => a - b);
+          for (const uid of uids.slice(0, MAX_PER_RUN)) {
+            if (!done.has(uid)) {
+              const mail = await read(uid);
+              if (mail?.future) {
+                cursor.future = [...cursor.future, { uid, v: mail.future }].slice(-MAX_FUTURE);
+              } else if (mail && !(await handleSafe(mail))) {
+                // Try again next run, unless this one mail keeps failing.
+                const tries = (cursor.stuck[uid] || 0) + 1;
+                if (tries < MAX_HIDDEN_TRIES) {
+                  cursor.stuck = { [uid]: tries };
+                  break;
+                }
+              }
+            }
+            cursor.last = uid;
+            cursor.stuck = {};
+          }
+          cursor.done = [...done].filter(u => u > cursor.last);
           // Transport mails are not kept forever: everything is in each member's local copy.
-          const before = new Date(Date.now() - RETENTION_DAYS * 86400_000);
-          const old = ((await client.search({ before }, { uid: true })) || []).filter(
-            u => u <= Number(cursor.last || 0)
+          // Mails waiting for an update stay.
+          const keep = new Set(cursor.future.map(f => f.uid));
+          const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400_000);
+          const old = ((await client.search({ before: cutoff }, { uid: true })) || []).filter(
+            u => u <= cursor.last && !keep.has(u)
           );
           if (old.length) await client.messageDelete(old.join(','), { uid: true });
         } finally {
           lock.release();
         }
+
         // 2. New sync mails in the inbox (or junk): process, then move into the hidden folder.
-        let movedAny = false;
+        //    Only UIDs above the last one looked at are searched; mails that are no sync mail
+        //    (or too large) are never downloaded twice.
         const sources = [
           folders.find(f => f.path.toUpperCase() === 'INBOX'),
           findSpecialFolder(folders, '\\Junk')
@@ -192,39 +273,61 @@ export function createMailTransport(ctx, store) {
         for (const folder of sources) {
           lock = await client.getMailboxLock(folder.path);
           try {
-            const uids =
-              (await client.search({ header: { [SPACES_HEADER.toLowerCase()]: 'v1' } }, { uid: true })) || [];
+            const validity = String(client.mailbox?.uidValidity || '');
+            let state = cursor.folders[folder.path];
+            if (!state || state.uidValidity !== validity) state = { uidValidity: validity, seen: 0, retry: {} };
+            const now = Date.now();
+            const due = Object.entries(state.retry)
+              .filter(([, r]) => !(r?.at > now))
+              .map(([uid]) => Number(uid));
+            const fresh = (
+              (await client.search(
+                { uid: `${state.seen + 1}:*`, header: { [SPACES_HEADER.toLowerCase()]: true } },
+                { uid: true }
+              )) || []
+            )
+              .filter(u => u > state.seen)
+              .sort((a, b) => a - b)
+              .slice(0, MAX_PER_RUN);
+            const retry = { ...state.retry };
+            let seen = state.seen;
             const moved = [];
-            for (const uid of uids.slice(0, MAX_PER_RUN)) {
-              const message = await fetchSyncSource(client, uid);
-              if (!message?.source) continue;
-              const mail = await parseSyncMail(message.source).catch(() => null);
-              // Mails that only pretend to be sync mails stay where they are.
+            const handled = new Set();
+            for (const uid of [...due, ...fresh]) {
+              if (uid > seen) seen = uid;
+              const mail = await read(uid);
+              delete retry[uid];
+              // Mails that only pretend to be sync mails (or are too large) stay where they are.
               if (!mail) continue;
-              if (await handleSafe(mail)) moved.push(uid);
+              if (mail.future) {
+                // A newer format: out of the inbox; the hidden folder keeps it for after an update.
+                moved.push(uid);
+                continue;
+              }
+              if (await handleSafe(mail)) {
+                moved.push(uid);
+                handled.add(uid);
+                continue;
+              }
+              const tries = (state.retry[uid]?.n || 0) + 1;
+              if (tries < MAX_INBOX_TRIES) retry[uid] = { n: tries, at: now + retryDelay(tries) };
             }
             if (moved.length) {
-              await client.messageMove(moved.join(','), hidden.path, { uid: true });
-              movedAny = true;
+              const result = await client.messageMove(moved.join(','), hidden.path, { uid: true });
+              const sameFolder = String(result?.uidValidity || '') === cursor.uidValidity;
+              for (const [from, to] of result?.uidMap instanceof Map ? result.uidMap : [])
+                if (sameFolder && handled.has(from) && to > cursor.last) cursor.done.push(to);
             }
+            cursor.folders[folder.path] = { uidValidity: validity, seen, retry };
           } finally {
             lock.release();
           }
         }
-        // Mails moved just now were handled already: skip them on the next pass. Not while older
-        // mails of the hidden folder still wait (more than one run's worth, or one that failed):
-        // the cursor stays at the last handled one, and the moved mails are read once more (the
-        // spaces ignore changes they already have).
-        if (movedAny && !backlog) {
-          const status = await client.status(hidden.path, { uidNext: true, uidValidity: true }).catch(() => null);
-          if (status?.uidNext && String(status.uidValidity || validity) === validity)
-            cursor.last = Number(status.uidNext) - 1;
-        }
-        index.cursors = {
-          ...(index.cursors || {}),
-          [accountId]: { uidValidity: validity, last: Number(cursor.last || 0) }
-        };
-        await store.saveIndex(index);
+        cursor.done = cursor.done.slice(-5000);
+        // Saved only when something changed, and merged into the index as it is now: invitations
+        // accepted or declined while this run was busy are not brought back.
+        if (JSON.stringify(cursor) !== before)
+          await store.updateIndex(index => ({ ...index, cursors: { ...(index.cursors || {}), [accountId]: cursor } }));
       }, account);
       return processed;
     }

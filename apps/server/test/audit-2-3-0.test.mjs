@@ -376,7 +376,12 @@ test('H-04: Microsoft To Do and Google Tasks send If-Match; a 412 is a conflict,
 // ------------------------------------------------------------------ spaces
 test('H-03: a backlog in the hidden folder is never skipped when new sync mails arrive', async () => {
   const mail = createMailStore({ folders: ['INBOX', 'Junk', 'INBOX/Levuvo Spaces'] });
-  const store = { value: {}, index: () => store.value, saveIndex: async v => (store.value = v || store.value) };
+  const store = {
+    value: {},
+    index: () => store.value,
+    saveIndex: async v => (store.value = v || store.value),
+    updateIndex: async fn => (store.value = fn(store.value))
+  };
   const ctx = { accounts: () => [{ id: 'a' }], withImap: async fn => fn(mail.client()) };
   const transport = createMailTransport(ctx, store);
   const sync = (n, to = 'INBOX') =>

@@ -35,6 +35,7 @@ export type Invitation = {
 };
 export type SpaceList = {
   identity: { id: string; safetyCode: string };
+  updateNeeded?: boolean;
   spaces: SpaceSummary[];
   invitations: Invitation[];
 };
