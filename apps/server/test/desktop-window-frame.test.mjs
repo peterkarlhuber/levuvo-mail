@@ -13,6 +13,8 @@ test('Window frame: macOS keeps the traffic lights in the rail, Windows overlays
   const mac = windowFrameOptions('darwin', true);
   assert.equal(mac.titleBarStyle, 'hidden');
   assert.ok(mac.trafficLightPosition.x + 52 <= 72, 'traffic lights fit into the 72 px rail');
+  assert.ok(mac.trafficLightPosition.x >= 14, 'traffic lights keep a clear left margin');
+  assert.equal(mac.trafficLightPosition.y + 6, MAC_TITLEBAR_HEIGHT / 2, 'traffic lights are centred in the strip');
   const win = windowFrameOptions('win32', false);
   assert.equal(win.titleBarStyle, 'hidden');
   assert.deepEqual(win.titleBarOverlay, { color: '#ffffff', symbolColor: '#141414', height: WIN_TITLEBAR_HEIGHT });

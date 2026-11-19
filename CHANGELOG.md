@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Window frame (macOS)
+- **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
+
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
 - **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
