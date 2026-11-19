@@ -37,7 +37,7 @@ type LogEntry = {
   reason?: string;
 };
 
-const FEATURES: { id: AiFeature; label: string; hint: string }[] = [
+const FEATURES: { id: AiFeature; label: string; hint: string; optIn?: boolean }[] = [
   {
     id: 'digest',
     label: 'Zusammenfassen & Kernaussagen',
@@ -57,7 +57,13 @@ const FEATURES: { id: AiFeature; label: string; hint: string }[] = [
   },
   { id: 'assess', label: 'Phishing- & Betrugseinschätzung', hint: 'Begründung zusätzlich zu den festen Prüfregeln' },
   { id: 'search', label: 'Semantische Suche & Fragen', hint: 'Suche nach Bedeutung, Antworten mit Quellnachricht' },
-  { id: 'agents', label: 'Agenten & Routinen', hint: 'Bereitet Entwürfe vor, die du freigibst' }
+  { id: 'agents', label: 'Agenten & Routinen', hint: 'Bereitet Entwürfe vor, die du freigibst' },
+  {
+    id: 'commitments',
+    label: 'Versprechen-Tracker',
+    hint: 'Liest neue gesendete und empfangene Mails im Hintergrund (nur mit lokalem Modell) und schlägt Aufgaben und Erinnerungen zu Zusagen vor. Standardmäßig aus.',
+    optIn: true
+  }
 ];
 
 const PROVIDER_NAMES: Record<AiProvider, string> = { ollama: 'Ollama', anthropic: 'Anthropic', openai: 'OpenAI' };
@@ -330,7 +336,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
           <Row key={f.id} label={t(f.label)} hint={t(f.hint)}>
             <Toggle
               label={t(f.label)}
-              checked={settings.features[f.id] !== false}
+              checked={f.optIn ? settings.features[f.id] === true : settings.features[f.id] !== false}
               onChange={v => void save({ features: { [f.id]: v } })}
             />
           </Row>

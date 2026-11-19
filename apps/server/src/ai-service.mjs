@@ -37,7 +37,9 @@ export const AI_FEATURES = [
   'extract',
   'assess',
   'search',
-  'agents'
+  'agents',
+  // Opt-in (checked with === true): reads new sent and received mail in the background.
+  'commitments'
 ];
 const TASK_FEATURE = {
   digest: 'digest',
@@ -54,7 +56,8 @@ const TASK_FEATURE = {
   extract: 'extract',
   assess: 'assess',
   ask: 'search',
-  embed: 'search'
+  embed: 'search',
+  commitments: 'commitments'
 };
 const LOG_DAYS = 30;
 const LOG_MAX = 5000;
@@ -66,7 +69,7 @@ export const DEFAULT_AI_SETTINGS = {
   model: DEFAULT_CHAT_MODEL,
   baseUrl: 'http://127.0.0.1:11434',
   embedModel: DEFAULT_EMBED_MODEL,
-  features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
+  features: Object.fromEntries(AI_FEATURES.map(f => [f, f !== 'commitments'])),
   consents: {},
   noCloudAccounts: [],
   profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '' }

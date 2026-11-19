@@ -67,3 +67,18 @@ export function applyRanking<T extends ReplyRef>(replies: T[], items: RankItem[]
     .sort((a, b) => a.s - b.s || a.n - b.n)
     .map(({ r }) => ({ ...r, ai: byKey.get(`${r.accountId}|${r.uid}`) || null }));
 }
+
+/**
+ * When to remind about a promise someone made: the morning after the promised day, or in three
+ * days when no day was named. Never in the past (then tomorrow morning).
+ */
+export function reminderFor(due: string | null, now: Date = new Date()) {
+  const morning = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 9, 0, 0);
+  let at: Date;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(due || '');
+  if (m) at = morning(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1));
+  else at = morning(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3));
+  if (at.getTime() < now.getTime() + 3600_000)
+    at = morning(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  return at;
+}

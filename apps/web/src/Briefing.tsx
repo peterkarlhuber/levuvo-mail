@@ -8,6 +8,7 @@ import {
   BellRing,
   CalendarDays,
   CircleCheck,
+  Handshake,
   Inbox,
   ListTodo,
   LoaderCircle,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import { aiEnabled, aiErrorText, aiLocal } from './ai';
 import { ApiError, getJson, postJson } from './api';
+import { CommitmentList, useCommitments } from './Commitments';
 import { useUi } from './ConfirmDialog';
 import { applyRanking, greetingFor, localDay, type RankItem } from './day-utils';
 import { useT } from './i18n';
@@ -207,7 +209,9 @@ export function Briefing({
       ? applyRanking(data.replies, rank.items)
       : data.replies.map(r => ({ ...r, ai: null }))
     : [];
-  const empty = data && isEmptyBriefing(data);
+  const { data: promises } = useCommitments();
+  const openPromises = promises?.items || [];
+  const empty = data && isEmptyBriefing(data) && !openPromises.length;
   const heading = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 
   if (auto && !data) return null;
@@ -378,6 +382,18 @@ export function Briefing({
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+          {openPromises.length > 0 && (
+            <section className="briefing-section" aria-labelledby="briefing-promises">
+              <h3 id="briefing-promises">
+                <Handshake size={15} aria-hidden="true" /> {t('Versprechen')}
+              </h3>
+              <CommitmentList
+                compact
+                items={openPromises.slice(0, 6)}
+                onOpenMail={c => open({ type: 'mail', accountId: c.accountId, folder: c.folder, uid: c.uid })}
+              />
             </section>
           )}
           {data.followups.length > 0 && (

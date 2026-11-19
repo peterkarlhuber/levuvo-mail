@@ -1550,5 +1550,43 @@
       },
       "unavailable": []
     }
+  },
+  "GET /api/commitments": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "enabled": true,
+      "local": true,
+      "items": [
+        {
+          "id": "c1",
+          "accountId": "primary",
+          "accountLabel": "Arbeit",
+          "folder": "Gesendet",
+          "uid": 3,
+          "subject": "Re: Angebot Website-Relaunch",
+          "direction": "mine",
+          "what": "Angebot an Lukas schicken",
+          "who": "lukas@hofer-it.at",
+          "whoName": "",
+          "due": "2026-11-21",
+          "quote": "Ich schicke dir das Angebot bis Freitag."
+        },
+        {
+          "id": "c2",
+          "accountId": "primary",
+          "accountLabel": "Arbeit",
+          "folder": "INBOX",
+          "uid": 1,
+          "subject": "Angebot Website-Relaunch",
+          "direction": "theirs",
+          "what": "Lukas schickt die Zugangsdaten",
+          "who": "lukas@hofer-it.at",
+          "whoName": "Lukas Hofer",
+          "due": null,
+          "quote": "Die Zugangsdaten schicke ich dir morgen."
+        }
+      ]
+    }
   }
 }

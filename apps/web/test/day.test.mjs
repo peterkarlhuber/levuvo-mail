@@ -46,3 +46,12 @@ test('Mein Tag: the AI ranking only reorders, never hides a mail', () => {
   assert.equal(out[0].ai.reason, 'Frage an dich');
   assert.equal(out[1].ai, null);
 });
+
+test('Versprechen: reminder the morning after the promised day, never in the past', async () => {
+  const { reminderFor } = await import('../src/day-utils.ts');
+  const now = new Date(2026, 10, 19, 20, 0);
+  assert.equal(reminderFor('2026-11-21', now).getTime(), new Date(2026, 10, 22, 9, 0).getTime());
+  assert.equal(reminderFor(null, now).getTime(), new Date(2026, 10, 22, 9, 0).getTime());
+  assert.equal(reminderFor('2026-11-10', now).getTime(), new Date(2026, 10, 20, 9, 0).getTime());
+  assert.equal(reminderFor('kein Datum', now).getTime(), new Date(2026, 10, 22, 9, 0).getTime());
+});

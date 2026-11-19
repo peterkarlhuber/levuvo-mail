@@ -33,5 +33,23 @@ export const DAY_EN: Record<string, string> = {
   'Termine, fällige Aufgaben, Mails, die auf deine Antwort warten, und Neues aus den Räumen auf einen Blick.':
     'Events, tasks due, emails waiting for your answer and news from your spaces at a glance.',
   'Übersicht konnte nicht erstellt werden.': 'The overview could not be created.',
-  'Automatisch nur mit einem lokalen Modell.': 'Automatically only with a local model.'
+  'Automatisch nur mit einem lokalen Modell.': 'Automatically only with a local model.',
+  Versprechen: 'Promises',
+  'Versprechen-Tracker': 'Promise tracker',
+  'Versprechen aus deinen Mails': 'Promises from your emails',
+  'Erinnerung am {when}, falls bis dahin nichts kommt.': 'Reminder on {when} if nothing arrives by then.',
+  'Von der KI in deinen Mails gefunden. Bitte prüfen.': 'Found in your emails by the AI. Please check.',
+  'Du hast {who} zugesagt': 'You promised {who}',
+  jemandem: 'someone',
+  '{who} hat dir zugesagt': '{who} promised you',
+  Jemand: 'Someone',
+  'bis {when}': 'by {when}',
+  'Als Aufgabe': 'As a task',
+  'Erinnern, falls nichts kommt': 'Remind me if nothing arrives',
+  'Vorschlag „{what}“ verwerfen': 'Discard suggestion “{what}”',
+  'Liest neue gesendete und empfangene Mails im Hintergrund (nur mit lokalem Modell) und schlägt Aufgaben und Erinnerungen zu Zusagen vor. Standardmäßig aus.':
+    'Reads new sent and received emails in the background (local model only) and suggests tasks and reminders for promises. Off by default.',
+  'Der Versprechen-Tracker ist ausgeschaltet.': 'The promise tracker is switched off.',
+  'Läuft nur mit einem lokalen Modell.': 'Runs with a local model only.',
+  'Vorschlag nicht gefunden.': 'Suggestion not found.'
 };

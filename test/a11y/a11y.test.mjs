@@ -354,6 +354,7 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
         briefing: true
       });
       await page.locator('.briefing .briefing-item').first().waitFor({ timeout: 10_000 });
+      await page.locator('.briefing .commitment').first().waitFor();
       await axe(page, `briefing ${colorScheme}`);
       // Opening an entry closes the overview and goes there.
       await page.locator('.briefing-item', { hasText: 'Angebot Website-Relaunch' }).click();
