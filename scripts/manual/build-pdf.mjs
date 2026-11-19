@@ -23,7 +23,8 @@ const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 const TEXT = {
   de: {
     title: 'Benutzerhandbuch',
-    subtitle: 'E-Mail, Kalender, Kontakte, Aufgaben, Räume und KI-Assistent für macOS und Windows',
+    subtitle: 'E-Mail, Kalender, Kontakte, Aufgaben, Räume und KI-Assistent|für macOS und Windows',
+    back: 'Alles läuft auf deinem Computer. Deine Nachrichten und Passwörter gehen nie über einen Server von Levuvo Mail.',
     toc: 'Inhalt',
     running: 'Benutzerhandbuch',
     version: `Version ${version}`,
@@ -37,7 +38,8 @@ const TEXT = {
   },
   en: {
     title: 'User manual',
-    subtitle: 'Email, calendar, contacts, tasks, spaces and AI assistant for macOS and Windows',
+    subtitle: 'Email, calendar, contacts, tasks, spaces and AI assistant|for macOS and Windows',
+    back: 'Everything runs on your computer. Your messages and passwords never pass through a Levuvo Mail server.',
     toc: 'Contents',
     running: 'User manual',
     version: `Version ${version}`,
@@ -155,6 +157,8 @@ for (const lang of languages) {
     `  running: "${t.running}",`,
     `  cover-shot: "${image('mail.png')}",`,
     `  cover-alt: "${t.coverAlt}",`,
+    `  cover: "${process.env.MANUAL_COVER || 'night'}",`,
+    `  back: "${t.back}",`,
     ')',
     '',
     body

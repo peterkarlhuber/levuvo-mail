@@ -10,6 +10,10 @@
 #let warn-bg = rgb("#fff6df")
 #let warn-text = rgb("#6b4a00")
 #let warn = rgb("#855c00")
+// Dark theme tokens (--bg, --border-strong, --muted) for the cover.
+#let night = rgb("#0b0b0b")
+#let night-line = rgb("#2a2a2a")
+#let night-muted = rgb("#a0a0a0")
 
 #let key(k) = box(
   fill: surface-2,
@@ -62,24 +66,39 @@
 }
 
 // The logo as in the app's sidebar: the wordmark image followed by "mail." in heavy Inter.
-#let logo(height: 10mm) = box(
+#let logo(height: 10mm, light: false) = box(
   baseline: 0pt,
   {
-    box(image("../assets/wordmark-dark.png", height: height, alt: "Levuvo Mail"))
-    h(height * 0.1)
-    box(text(size: height * 0.92, weight: 800, tracking: -0.02em, fill: ink, [mail#text(fill: muted)[.]]))
+    let word = if light { "../assets/wordmark-white.png" } else { "../assets/wordmark-dark.png" }
+    // The wordmark image has room below its baseline (21 % of its height); "mail" matches the
+    // x-height of "Levuvo" and shares its baseline.
+    box(baseline: 21%, image(word, height: height, alt: "Levuvo Mail"))
+    h(height * 0.14)
+    box(text(
+      size: height * 0.82,
+      weight: 800,
+      tracking: -0.02em,
+      fill: if light { white } else { ink },
+      [mail#text(fill: if light { night-muted } else { muted })[.]],
+    ))
   },
 )
 
+// Chapter openers: a large light number, a short rule, the title. The page has no header.
+// A subtitle may carry "|" for a deliberate line break.
+#let lines(t) = t.split("|").map(x => [#x]).join(linebreak())
+
 #let chapter-title(it) = {
   pagebreak(weak: true)
-  v(18mm)
+  v(14mm)
   if it.numbering != none {
-    text(size: 13pt, weight: "semibold", fill: muted, counter(heading).display("1"))
-    v(2mm)
+    text(size: 64pt, weight: 800, tracking: -2pt, fill: border-strong, counter(heading).display("01"))
+    v(1mm)
   }
-  block(text(size: 28pt, weight: "bold", tracking: -0.4pt, hyphenate: false, it.body + "."))
-  v(7mm)
+  line(length: 16mm, stroke: 1.6pt + ink)
+  v(5mm)
+  block(text(size: 30pt, weight: "bold", tracking: -0.6pt, hyphenate: false, it.body + "."))
+  v(9mm)
 }
 
 #let manual(
@@ -93,6 +112,8 @@
   motto: "Less effort. More impact.",
   cover-shot: none,
   cover-alt: "",
+  cover: "night",
+  back: "",
   body,
 ) = {
   set document(title: "Levuvo Mail – " + title, author: "Levuvo Mail", keywords: ("Levuvo Mail", title))
@@ -167,23 +188,71 @@
   show table: it => block(width: 100%, above: 4mm, below: 5mm, it)
 
   // ---- Cover ----
-  page(margin: (x: 22mm, top: 24mm, bottom: 20mm), header: none, footer: none, {
-    logo(height: 11mm)
-    v(1fr)
-    text(size: 38pt, weight: "bold", tracking: -0.8pt, title + ".")
-    v(3mm)
-    block(width: 85%, text(size: 13pt, fill: muted, hyphenate: false, subtitle))
-    v(10mm)
-    if cover-shot != none {
-      block(radius: 9pt, clip: true, stroke: 0.75pt + border-strong, image(cover-shot, width: 100%, alt: cover-alt))
-    }
-    v(1fr)
-    grid(
-      columns: (1fr, auto),
-      text(size: 9pt, fill: muted)[#version · #date],
-      text(size: 9pt, weight: "semibold", motto),
-    )
-  })
+  let edition = text(size: 9pt, tracking: 0.3pt)[#version #h(4pt) · #h(4pt) #date]
+  if cover == "night" {
+    // Dark like the app: logo, title, and the inbox running off the bottom-right corner.
+    page(margin: 0pt, fill: night, header: none, footer: none, {
+      set text(fill: white)
+      place(top + left, dx: 22mm, dy: 24mm, logo(height: 11mm, light: true))
+      place(top + right, dx: -22mm, dy: 28.5mm, text(fill: night-muted, edition))
+      place(top + left, dx: 22mm, dy: 78mm, block(width: 166mm, {
+        text(size: 50pt, weight: "bold", tracking: -1.4pt, hyphenate: false, title + ".")
+        v(-2mm)
+        block(width: 166mm, text(size: 13.5pt, fill: night-muted, hyphenate: false, lines(subtitle)))
+      }))
+      if cover-shot != none {
+        place(top + left, dx: 38mm, dy: 158mm, block(
+          width: 236mm,
+          radius: 10pt,
+          clip: true,
+          stroke: 0.8pt + night-line,
+          image(cover-shot, width: 100%, alt: cover-alt),
+        ))
+      }
+    })
+  } else if cover == "editorial" {
+    // Light top with a large title, a black band below that carries the screenshot.
+    page(margin: 0pt, header: none, footer: none, {
+      place(top + left, dx: 0mm, dy: 168mm, rect(width: 100%, height: 129mm, fill: night))
+      place(top + left, dx: 22mm, dy: 24mm, logo(height: 10.5mm))
+      place(top + right, dx: -22mm, dy: 28mm, text(fill: muted, edition))
+      place(top + left, dx: 22mm, dy: 22mm + 30mm, line(length: 166mm, stroke: 0.6pt + border-strong))
+      place(top + left, dx: 22mm, dy: 70mm, block(width: 166mm, {
+        text(size: 54pt, weight: "bold", tracking: -1.6pt, hyphenate: false, title + ".")
+        v(-2mm)
+        block(width: 166mm, text(size: 13.5pt, fill: muted, hyphenate: false, lines(subtitle)))
+      }))
+      if cover-shot != none {
+        place(top + left, dx: 22mm, dy: 134mm, block(
+          width: 166mm,
+          radius: 9pt,
+          clip: true,
+          stroke: 0.8pt + night-line,
+          image(cover-shot, width: 100%, alt: cover-alt),
+        ))
+      }
+      place(bottom + left, dx: 22mm, dy: -18mm, text(size: 9pt, weight: "semibold", fill: white, motto))
+    })
+  } else {
+    // Typographic: a large pale mark as backdrop, everything else small and precise.
+    page(margin: 0pt, header: none, footer: none, {
+      place(top + left, dx: 58mm, dy: 28mm, pdf.artifact(image("../assets/mark-pale.png", height: 190mm)))
+      place(top + left, dx: 22mm, dy: 170mm, block(width: 166mm, {
+        logo(height: 9.5mm)
+        v(10mm)
+        line(length: 16mm, stroke: 1.6pt + ink)
+        v(7mm)
+        text(size: 50pt, weight: "bold", tracking: -1.4pt, hyphenate: false, title + ".")
+        v(-2mm)
+        block(width: 166mm, text(size: 13.5pt, fill: muted, hyphenate: false, lines(subtitle)))
+      }))
+      place(bottom + left, dx: 22mm, dy: -20mm, block(width: 166mm, grid(
+        columns: (1fr, auto),
+        text(fill: muted, edition),
+        text(size: 9pt, weight: "semibold", motto),
+      )))
+    })
+  }
 
   // ---- Contents ----
   page(header: none, {
@@ -201,4 +270,23 @@
   })
 
   body
+
+  // ---- Back cover ----
+  let dark = cover != "minimal"
+  pagebreak(to: "even", weak: true)
+  page(margin: 0pt, fill: if dark { night } else { white }, header: none, footer: none, {
+    set text(fill: if dark { white } else { ink })
+    place(center + horizon, dy: -14mm, block(width: 120mm, align(center, {
+      image(if dark { "../assets/mark-white.png" } else { "../assets/mark-dark.png" }, height: 16mm, alt: "Levuvo Mail")
+      v(10mm)
+      logo(height: 9mm, light: dark)
+      v(7mm)
+      text(size: 11pt, fill: if dark { night-muted } else { muted }, hyphenate: false, back)
+    })))
+    place(bottom + center, dy: -20mm, {
+      text(size: 9pt, weight: "semibold", motto)
+      v(1.5mm)
+      text(size: 8.5pt, fill: if dark { night-muted } else { muted }, edition)
+    })
+  })
 }

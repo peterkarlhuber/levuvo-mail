@@ -178,10 +178,18 @@ export function createManual({ root = DEFAULT_ROOT, ai = null } = {}) {
   }
 
   /** A screenshot file of the manual, or null. Only plain names from docs/manual/img/<lang>/. */
+  // The path comes from the directory listing, never from the request: a name that is not in
+  // docs/manual/img/<lang>/ simply has no entry.
+  const images = new Map(); // lang -> Map(file -> path)
   function imagePath(lang, file) {
-    if (!MANUAL_LANGS.includes(lang) || !IMAGE.test(file)) return null;
-    const p = path.join(root, 'img', lang, file);
-    return existsSync(p) ? p : null;
+    const l = MANUAL_LANGS.find(x => x === lang);
+    if (!l || typeof file !== 'string' || !IMAGE.test(file)) return null;
+    if (!images.has(l)) {
+      const dir = path.join(root, 'img', l);
+      const list = existsSync(dir) ? readdirSync(dir).filter(f => IMAGE.test(f)) : [];
+      images.set(l, new Map(list.map(f => [f, path.join(dir, f)])));
+    }
+    return images.get(l).get(file) || null;
   }
 
   return { chapters, sections, search, imagePath };
