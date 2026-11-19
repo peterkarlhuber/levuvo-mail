@@ -40,6 +40,7 @@ import {
   type TaskView
 } from './tasks';
 
+import { PageTitle } from './ui';
 const ARCHIVE_KEY = 'levuvo-tasks-archive-on-done';
 const readArchivePref = () => {
   try {
@@ -289,10 +290,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
       </aside>
       <section className="tasks-main">
         <div className="contacts-head">
-          <h1>
-            {views.find(v => v.id === view)?.label || t('Aufgaben')}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{views.find(v => v.id === view)?.label || t('Aufgaben')}</PageTitle>
         </div>
         {view !== 'done' && !error?.locked && (
           <form
