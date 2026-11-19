@@ -7,6 +7,7 @@ import { CHAT_EN } from './i18n-chat-en';
 import { COMPLIANCE_EN } from './i18n-compliance-en';
 import { CRM_EN } from './i18n-crm-en';
 import { PRIVACY_EN } from './i18n-privacy-en';
+import { PLAN_EN } from './i18n-plan-en';
 
 const EN: Record<string, string> = {
   ...BASE_EN,
@@ -15,7 +16,8 @@ const EN: Record<string, string> = {
   ...CHAT_EN,
   ...PRIVACY_EN,
   ...COMPLIANCE_EN,
-  ...CRM_EN
+  ...CRM_EN,
+  ...PLAN_EN
 };
 
 // German is the source language: t('Neue Nachricht') returns the German text or its

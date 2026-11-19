@@ -17,6 +17,7 @@ import {
   Repeat,
   Trash2,
   Users,
+  UsersRound,
   X
 } from 'lucide-react';
 import { download, fileToBase64, getJson, postJson } from './api';
@@ -28,6 +29,8 @@ import { Segmented, useFocusTrap } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
+import { FindTimeDialog } from './FindTime';
+import { SchedulingPollsDialog } from './SchedulingPolls';
 import { AddVideoCallButton, JoinVideoCall, useVideoServers } from './VideoCall';
 import { findVideoLink, withVideoLink } from './video-call';
 import { useTasks } from './task-reminders';
@@ -937,6 +940,8 @@ export default function CalendarModule({
   const [cloudErrors, setCloudErrors] = useState<CloudError[]>([]);
   const [busy, setBusy] = useState(false);
   const [editor, setEditor] = useState<Draft | null>(null);
+  const [findTime, setFindTime] = useState(false);
+  const [pollsOpen, setPollsOpen] = useState(false);
   const [own, setOwn] = useState<string[]>([]);
   const [now, setNow] = useState(() => new Date());
   const grid = useRef<HTMLDivElement>(null);
@@ -1513,6 +1518,9 @@ export default function CalendarModule({
         <button className="text-button subtle" onClick={onOpenSettings}>
           {calendars.every(c => c.source === 'local') ? t('Kalender verbinden') : t('Kalender verwalten')}
         </button>
+        <button className="text-button subtle" onClick={() => setPollsOpen(true)}>
+          {t('Abstimmungen')}
+        </button>
       </aside>
       <main className="calendar-main">
         <header className="calendar-toolbar">
@@ -1531,6 +1539,14 @@ export default function CalendarModule({
           </h1>
           <button className="icon-button" aria-label={t('Aktualisieren')} onClick={() => void load()} disabled={busy}>
             <RefreshCcw size={16} className={busy ? 'spin' : ''} />
+          </button>
+          <button
+            className="btn small find-time-button"
+            aria-label={t('Termin finden')}
+            title={t('Termin finden')}
+            onClick={() => setFindTime(true)}
+          >
+            <UsersRound size={15} aria-hidden="true" /> <span>{t('Termin finden')}</span>
           </button>
           <Segmented
             label={t('Ansicht')}
@@ -1564,6 +1580,34 @@ export default function CalendarModule({
         </div>
       </main>
       {taskEdit && <TaskDialog draft={taskEdit} onClose={() => setTaskEdit(null)} />}
+      {findTime && (
+        <FindTimeDialog
+          accounts={accounts}
+          calendars={calendars}
+          onClose={() => setFindTime(false)}
+          onSent={() => {
+            setFindTime(false);
+            setPollsOpen(true);
+          }}
+          onCreate={(slot, attendees) => {
+            if (!firstWritable) {
+              toast({ text: t('Kein beschreibbarer Kalender verbunden.'), kind: 'error' });
+              return;
+            }
+            const start = new Date(slot.start);
+            const end = new Date(slot.end);
+            setFindTime(false);
+            setEditor({
+              ...draftFrom(null, start, false, `${firstWritable.accountId}|${firstWritable.url}`),
+              endDate: ymd(end),
+              endTime: hm(end),
+              attendees: attendees.join(', '),
+              notify: true
+            });
+          }}
+        />
+      )}
+      {pollsOpen && <SchedulingPollsDialog onClose={() => setPollsOpen(false)} onBooked={() => void load()} />}
       {editor && (
         <EventEditor
           draft={editor}

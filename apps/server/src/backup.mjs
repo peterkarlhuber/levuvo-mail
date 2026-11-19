@@ -73,6 +73,10 @@ export const BACKUP_FILES = {
   'tasks-local.json': { kind: 'json', encrypted: 'tasks-key' },
   // Notes of the contact history (text about other people), encrypted like the address book.
   'contact-notes.json': { kind: 'json', encrypted: 'contact-notes-key' },
+  // Scheduling polls, offers and booking links (addresses, times), encrypted.
+  'scheduling.json': { kind: 'json', encrypted: 'scheduling-key' },
+  // Automations (rules with addresses) and their short log, encrypted.
+  'automations.json': { kind: 'json', encrypted: 'automations-key' },
   'ai.json': { kind: 'json' },
   'ai-log.jsonl': { kind: 'jsonl' },
   // Own assistant routines. ai-semantic.json (index progress) stays out: vectors are rebuilt.

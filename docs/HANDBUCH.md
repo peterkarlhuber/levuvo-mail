@@ -9,7 +9,7 @@ auf deinem Gerät; Levuvo sieht weder deine Nachrichten noch deine Zugangsdaten.
 6 Ordnung halten · 7 Suche & Offline · 8 Filter & Abwesenheit · 9 Kalender · 10 Kontakte ·
 11 Verschlüsselung · 12 Sicherheit & Phishing · 13 Einstellungen · 14 Tastenkürzel ·
 15 Fehlerbehebung · 16 Datenschutz · 17 Levuvo Mail Assistant (KI) · 18 Aufgaben · 19 Räume ·
-20 Sicherung & Umzug · 21 Neue Absender & Bündel
+20 Sicherung & Umzug · 21 Neue Absender & Bündel · 22 Automatisierungen
 
 ---
 
@@ -211,6 +211,31 @@ liegt im Schlüsselbund.
   Jitsi-Server trägst du unter **Einstellungen → Allgemein → Videocalls** ein (nur https). Wer den Link
   hat, kann teilnehmen – teile ihn also nur mit den Gewünschten. Lobby und Ende-zu-Ende-Verschlüsselung
   schaltest du im Call über die Sicherheitsoptionen von Jitsi ein.
+
+### Termin finden, Abstimmungen und Buchungslinks
+
+- **Termin finden** (Kalender, oben): Personen eintragen, Dauer, Zeitraum und Uhrzeiten wählen,
+  **Freie Zeiten suchen**. Levuvo Mail prüft deine Kalender und – bei Kolleginnen und Kollegen in
+  Microsoft 365 oder Google – deren „frei/belegt“ (keine Titel). Hat dir jemand seinen Kalender
+  freigegeben (z. B. Nextcloud), ordnest du ihn unter „Kalender der Personen zuordnen“ zu. Wessen
+  Kalender nicht lesbar ist, ist markiert und stimmt per Mail ab. Zeiten, zu denen alle frei sind, stehen
+  oben; sonst die, zu denen die meisten können.
+- **Eine Zeit gewählt:** „Termin eintragen und einladen“ öffnet den Termin mit allen Personen.
+- **Team abstimmen lassen:** bis zu 8 Zeiten wählen, Titel eintragen, **Abstimmung senden**. Jede Person
+  bekommt eine eigene Mail (niemand sieht die anderen Adressen) und klickt bei jeder passenden Zeit auf
+  „Passt“; das öffnet eine vorbereitete Antwort im eigenen Mailprogramm. Einfach mit den Nummern
+  antworten („1 und 3“) geht auch. Unter **Abstimmungen** (Kalender, links) siehst du, wer wann kann, und
+  legst mit **Festlegen** den Termin fest – alle bekommen eine Einladung.
+- **Externen Zeiten anbieten:** wie oben, aber wer zuerst eine Zeit anklickt, bekommt sie: Levuvo Mail
+  trägt den Termin ein und schickt die Einladung, sobald die Antwort ankommt. Wer später eine schon
+  vergebene Zeit wählt, bekommt automatisch die noch freien Zeiten.
+- **Buchungslinks** (Einstellungen → Buchungslinks): ein Link für Signatur oder Webseite. Wer ihn
+  anklickt, schreibt dir eine Mail; Levuvo Mail antwortet automatisch mit freien Zeiten (Dauer,
+  Wochentage, Uhrzeiten, Vorlauf, Puffer und Zeitraum stellst du ein). Ein Klick auf eine Zeit bucht sie,
+  beide bekommen eine Kalendereinladung. Termintitel deines Kalenders werden nie gezeigt.
+- **Ohne eigenen Server:** Abstimmungen, Angebote und Buchungslinks laufen über ganz normale Mails.
+  Antworten werden erkannt, solange Levuvo Mail geöffnet ist, sonst beim nächsten Start. Automatische
+  Antworten gehen nie an Abwesenheitsnotizen oder Mailinglisten, höchstens 5 pro Absender und Tag.
 
 ## 10 Kontakte
 
@@ -484,3 +509,29 @@ Kontakten stehen und denen du nie geschrieben hast, warten unter „Neue Absende
 blockierst. **Bündel** fassen Newsletter, Rechnungen, Benachrichtigungen u. Ä. in je einer Zeile zusammen;
 mit eingeschaltetem lokalem Modell hilft der Assistent beim Einsortieren. Die **Anhang-Übersicht** zeigt
 alle Anhänge eines Ordners, die **Phishing-Prüfung** warnt bei verdächtigen Mails (Kapitel 12).
+
+## 22 Automatisierungen
+
+**Einstellungen → Automatisierungen.** Regeln, die Levuvo Mail auf **neue** Mails im Posteingang anwendet,
+z. B. „Rechnungen von muster.at in den Ordner Buchhaltung und eine Aufgabe zum Bezahlen anlegen“.
+
+- **Neue Automatisierung:** Name, Konto (oder alle Konten), Bedingungen (Absender, Empfänger, Betreff,
+  Text, überall – enthält, enthält nicht, ist genau, endet auf – sowie „Anhänge vorhanden/keine“) und
+  Aktionen: in Ordner verschieben, als gelesen markieren, mit Stern markieren, **Aufgabe anlegen**
+  (Titel mit {subject} und {from}, Fälligkeit in Tagen; die Aufgabe verweist auf die Mail).
+- **In einfachen Worten beschreiben** (bei eingeschaltetem Assistenten): Die lokale KI schlägt daraus eine
+  Regel vor. Sie ist als **KI-Vorschlag** mit dem Modellnamen gekennzeichnet und füllt nur den Editor –
+  du prüfst und änderst sie dort. Gesendet wird nur deine Beschreibung mit deinen Ordnernamen, keine Mail.
+- **So läuft die Regel:** Unter dem Editor steht die Regel in Klartext. Er wird aus der Regel selbst
+  gebildet, nicht von der KI – was dort steht, passiert.
+- **Probelauf:** zeigt, welche der 50 neuesten Mails die Regel behandeln würde und welche Aufgabe
+  entstünde. Dabei wird nichts verändert.
+- **Speichern (aus)** oder **Speichern und einschalten.** Eine eingeschaltete Regel gilt nur für Mails, die
+  ab dann ankommen; ältere Mails bleiben unberührt. Mit dem Schalter in der Liste schaltest du sie aus
+  und ein, mit den Pfeilen änderst du die Reihenfolge.
+- **Grenzen:** Automatisierungen löschen, beantworten, leiten oder senden nie etwas und verschieben nie in
+  den Papierkorb. Sie laufen, solange Levuvo Mail geöffnet ist; was in der Zwischenzeit kam, wird beim
+  nächsten Start nachgeholt. Für Regeln, die auch bei geschlossener App wirken, gibt es die Serverfilter
+  (Kapitel 8).
+- **Protokoll:** zeigt 30 Tage lang, welche Regel bei welcher Mail (Betreff) was getan hat, auch Fehler
+  (z. B. ein gelöschter Zielordner). Gespeichert verschlüsselt auf diesem Gerät, ohne Mailtext.

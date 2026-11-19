@@ -1,0 +1,327 @@
+/* Welle 5: "Termin finden", polls, booking links and automations. */
+
+/* ---------------------------------------------------------------- Termin finden */
+.find-time-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.find-time-form,
+.find-time-send {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.find-time-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.find-time-calendars summary {
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: var(--text-md);
+}
+.find-time-calendars[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.find-time-result {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.find-time-people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.find-time-people li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+.find-time-people li small {
+  color: var(--muted);
+}
+.find-time-people li.unknown {
+  border-style: dashed;
+}
+.find-time-slots,
+.poll-slots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.find-time-slots label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: var(--surface);
+}
+.find-time-slots label.picked {
+  border-color: var(--accent);
+  background: var(--selected);
+}
+.slot-time {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.slot-fit {
+  font-size: var(--text-sm);
+  color: var(--warn-text);
+}
+.slot-fit.all {
+  color: var(--ok-text);
+}
+.find-time-send {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------- polls */
+.poll-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface);
+}
+.poll-card.cancelled,
+.poll-card.expired {
+  opacity: 0.7;
+}
+.poll-card header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.poll-card h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.poll-status {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.poll-tools {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+.poll-slots li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1-5) var(--space-2);
+  border-radius: var(--radius-md);
+}
+.poll-slots li.booked {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+.poll-yes {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+.poll-yes meter {
+  width: 64px;
+}
+
+/* ---------------------------------------------------------------- booking links */
+.booking-card,
+.auto-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg);
+}
+.booking-card.off,
+.auto-card.off {
+  background: var(--surface-2);
+}
+.booking-head,
+.auto-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.booking-head .icon-button {
+  margin-left: auto;
+}
+.booking-grid,
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+.booking-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.booking-days legend {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  margin-bottom: var(--space-1);
+}
+.booking-share code {
+  display: block;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+  word-break: break-all;
+  user-select: all;
+}
+.booking-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---------------------------------------------------------------- automations */
+.auto-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+.auto-card-tools {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-0-5);
+}
+.auto-describe {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+.auto-log {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+.auto-log li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  color: var(--text-2);
+}
+.auto-log li.failed {
+  color: var(--danger-text);
+}
+.auto-log time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.auto-words {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  margin-bottom: var(--space-3);
+}
+.auto-words .field,
+.auto-words textarea {
+  width: 100%;
+}
+.auto-ai-note {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+.auto-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.auto-block legend {
+  padding: 0 var(--space-1);
+  font-size: var(--text-md);
+  color: var(--text-2);
+}
+.auto-preview {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+}
+.auto-preview h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.auto-preview p {
+  margin: 0 0 var(--space-2);
+  line-height: 1.5;
+}
+.auto-dry ul {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.auto-dry li {
+  display: flex;
+  flex-direction: column;
+}
+.auto-dry small {
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .find-time-button span {
+    display: none;
+  }
+  .auto-log li {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

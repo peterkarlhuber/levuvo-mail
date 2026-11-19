@@ -42,6 +42,18 @@ Standard ist der Server meet.ffmuc.net von Freifunk München in Deutschland. Ein
 
 Erinnerungen erscheinen als Mitteilung deines Computers, auch wenn das Fenster geschlossen ist.
 
+### Termin finden und abstimmen
+
+Mit **Termin finden** in der Kalenderleiste suchst du eine Zeit, zu der alle können. Trag die Personen, die Dauer, den Zeitraum und die Uhrzeiten ein und wähle **Freie Zeiten suchen**. Levuvo Mail prüft deine eigenen Kalender und, wo möglich, frei/belegt von Kolleginnen und Kollegen in Microsoft 365 oder Google. Dabei werden nur Beginn und Ende gelesen, nie Titel. Danach hast du drei Wege:
+
+- **Termin eintragen und einladen:** Eine Zeit wählen, der Termin wird angelegt und alle bekommen eine Einladung.
+- **Team abstimmen lassen:** Bis zu 8 Zeiten wählen. Jede Person bekommt eine eigene Mail mit einem Link pro Zeit und antwortet mit einem Klick aus ihrem eigenen Mailprogramm. Unter **Abstimmungen** in der Kalender-Seitenleiste siehst du, wer wann kann, und mit **Festlegen** trägst du den Termin ein und lädst alle ein.
+- **Externen Zeiten anbieten:** Die erste Zeit, die jemand wählt, wird sofort gebucht.
+
+### Buchungslinks
+
+Unter **Einstellungen → Buchungslinks** legst du einen Link für deine Signatur oder Webseite an. Wer ihn anklickt, schreibt dir eine Mail, und Levuvo Mail antwortet automatisch mit freien Zeiten aus deinen Kalendern. Ein Klick auf eine Zeit bucht sie, und beide bekommen eine Einladung. Du bestimmst Dauer, Wochentage, Uhrzeiten, Vorlauf und Puffer. Das funktioniert ohne eigenen Server, solange Levuvo Mail geöffnet ist. Auf automatische Mails wie Abwesenheitsnotizen antwortet Levuvo Mail nie.
+
 ## Kontakte
 
 Öffne die Kontakte mit `Alt` + `3`.
