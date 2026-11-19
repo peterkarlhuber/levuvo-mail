@@ -57,6 +57,8 @@ import { createOllamaRuntime } from './ollama-runtime.mjs';
 import { createModelManager } from './ollama-models.mjs';
 import { registerSpaceRoutes, spacesDir, SPACES_TICK_MS } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
+import { EMPTY_SCHEDULING, registerSchedulingRoutes } from './routes-scheduling.mjs';
+import { EMPTY_AUTOMATIONS, registerAutomationRoutes } from './routes-automations.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -492,7 +494,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy|manual)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|manual)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -560,7 +562,9 @@ export async function createMailServer({
     }
     if (
       err.code &&
-      /^(oauth|dav|sieve|autoreply|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)
+      /^(oauth|dav|sieve|autoreply|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task|scheduling|automation)_/.test(
+        err.code
+      )
     ) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
@@ -775,6 +779,18 @@ export async function createMailServer({
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerSchedulingRoutes(ctx, {
+    file: await createSealedJsonFile(path.join(dir, 'scheduling.json'), EMPTY_SCHEDULING, {
+      vault: store,
+      keyName: 'scheduling-key'
+    })
+  });
+  registerAutomationRoutes(ctx, {
+    file: await createSealedJsonFile(path.join(dir, 'automations.json'), EMPTY_AUTOMATIONS, {
+      vault: store,
+      keyName: 'automations-key'
+    })
+  });
 
   if (desktop) {
     api.get('/', async (_request, reply) => {
