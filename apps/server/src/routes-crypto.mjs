@@ -141,6 +141,10 @@ export function registerCryptoRoutes(ctx) {
     const next = { ...settings.get() };
     if (typeof b.crashReports === 'boolean') next.crashReports = b.crashReports;
     if (typeof b.localIndex === 'boolean') next.localIndex = b.localIndex;
+    // Automatic installation of updates (CRA Annex I Part I (2)(c): on by default, opt-out).
+    if (typeof b.autoUpdates === 'boolean') next.autoUpdates = b.autoUpdates;
+    // Header X-Levuvo-AI-Assisted on mails the assistant wrote (AI Act Art. 50(2), on by default).
+    if (typeof b.markAiAssisted === 'boolean') next.markAiAssisted = b.markAiAssisted;
     await settings.save(next);
     if (next.localIndex === false) for (const a of ctx.accounts()) await ctx.localIndex.clear(a.id);
     return next;

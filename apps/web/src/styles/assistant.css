@@ -161,6 +161,25 @@
   margin: 0 0 var(--space-1-5);
   padding-left: var(--space-5);
 }
+.assistant-sources li + li {
+  margin-top: var(--space-1-5);
+}
+.assistant-source-meta {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.assistant-quote {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.assistant-quote-file {
+  display: block;
+  font-style: normal;
+}
 .assistant-approvals h3 {
   font-size: var(--text-md);
   margin: var(--space-1) 0;

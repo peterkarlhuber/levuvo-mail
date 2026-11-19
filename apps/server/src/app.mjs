@@ -41,7 +41,10 @@ import { registerAccountRoutes } from './routes-accounts.mjs';
 import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
+import { registerPrivacyRoutes } from './routes-privacy.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
+import { registerDataRightsRoutes } from './routes-data-rights.mjs';
+import { applyPendingWipe, pendingWipe } from './data-rights.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { createBackgroundJobs } from './background-jobs.mjs';
@@ -50,7 +53,7 @@ import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
 import { createOllamaRuntime } from './ollama-runtime.mjs';
 import { createModelManager } from './ollama-models.mjs';
-import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
+import { registerSpaceRoutes, spacesDir, SPACES_TICK_MS } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
 
 const { ImapFlow } = imapflow;
@@ -201,6 +204,15 @@ export async function createMailServer({
   const api = Fastify({ logger: false, bodyLimit: 16 * 1024 });
   let activePort = desktop ? 0 : browserPort;
   const allowedBrowserOrigins = new Set(['http://127.0.0.1:5173', 'http://localhost:5173']);
+  // "Delete all data on this device" staged before the last restart: remove everything first.
+  const wipeState = { pending: false, done: null };
+  try {
+    const wiped = await applyPendingWipe({ dir, accountsPath, vault: store, logger });
+    if (wiped) wipeState.done = { ...wiped, at: new Date().toISOString() };
+  } catch (err) {
+    logger(`delete all data could not be completed: ${err.code || err.message}`);
+  }
+  wipeState.pending = Boolean(await pendingWipe(dir));
   // A restore staged before the last restart replaces the data files before any store reads them.
   const backupState = { pending: false, restored: null };
   try {
@@ -478,7 +490,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -719,10 +731,13 @@ export async function createMailServer({
 
   api.get('/api/runtime', async () => ({ desktop, version: APP_VERSION, platform: process.platform }));
   registerAccountRoutes(ctx);
+  // Before the mail routes: unsubscribing counts into the cockpit (ctx.privacy).
+  await registerPrivacyRoutes(ctx, { createJsonFile, file: path.join(dir, 'privacy-stats.json') });
   registerMailRoutes(ctx);
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
+  registerDataRightsRoutes(ctx, { wipeState, supportUntil: PACKAGE.levuvo?.supportUntil || '' });
   registerAiRoutes(ctx);
   const mcp = await setupMcp(ctx, { createJsonFile, dir });
   ctx.mcp = mcp;
@@ -776,9 +791,10 @@ export async function createMailServer({
       if (background) {
         jobs.start();
         timers.push(...ctx.startBackgroundJobs());
-        // Shared spaces: fetch and send sync mails.
+        // Shared spaces poll on their own schedule (see routes-spaces.mjs); the IMAP IDLE
+        // connection wakes them at once when a sync mail arrives.
         setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
-        timers.push(setInterval(() => void ctx.spaces.tick(), 60_000));
+        timers.push(setInterval(() => void ctx.spaces.tick(), SPACES_TICK_MS));
         if (taskSync) taskSchedule = scheduleTaskSync(taskSync);
       }
       await mcp.start();

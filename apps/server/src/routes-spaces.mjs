@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { openSpaceStore } from './spaces/store.mjs';
 import { createSpaceService, MAX_FILE_SIZE } from './spaces/service.mjs';
-import { createMailTransport } from './spaces/mail-transport.mjs';
+import { createMailTransport, snapshotHasSyncMail } from './spaces/mail-transport.mjs';
 import { loadParsedMessage } from './message-service.mjs';
 import { htmlToText } from './html-mail.mjs';
 import { attachmentBytes, cleanFilename, downloadHeaders, validFolder, validUid } from './message-utils.mjs';
@@ -28,8 +28,19 @@ const DIRECT_OPS = new Set([
   'file.update',
   'file.delete',
   'folder.create',
-  'folder.delete'
+  'folder.delete',
+  'chat.edit',
+  'chat.delete'
 ]);
+const CHAT_WAIT_MS = 25_000;
+// Receiving: right away when the IDLE connection reports a sync mail; otherwise polled. With a
+// healthy IDLE connection a slow safety poll is enough (junk folder, missed pushes); without
+// one, accounts with spaces are polled often so chat stays usable.
+const WAKE_DELAY_MS = 300;
+const POLL_IDLE_MS = 2 * 60_000;
+const POLL_NO_IDLE_MS = 30_000;
+const FULL_SCAN_MS = 5 * 60_000;
+export const SPACES_TICK_MS = 15_000;
 
 export async function openSpaces(ctx, dir) {
   const store = await openSpaceStore({ dir, vault: ctx.store });
@@ -114,6 +125,37 @@ export function registerSpaceRoutes(ctx, { dir }) {
     for (const [k, v] of Object.entries(downloadHeaders(file.name))) reply.header(k, v);
     return reply.type('application/octet-stream').send(file.data);
   });
+
+  // Chat: messages, waiting for the next change (long poll), writing and marking as read.
+  read('/api/spaces/:id/chat', async (request, _reply, s) =>
+    s.chat(request.params.id, {
+      before: String(request.query?.before || '').slice(0, 64),
+      limit: Number(request.query?.limit) || 100
+    })
+  );
+  read('/api/spaces/:id/chat/wait', async (request, _reply, s) => {
+    const rev = Number(request.query?.rev);
+    if (!Number.isSafeInteger(rev) || rev < 0) throw fail('Ungültige Eingabe.', 'spaces_invalid');
+    s.chat(request.params.id, { limit: 1 }); // 404 for unknown spaces before waiting
+    const changed = await s.waitForChange(request.params.id, rev, CHAT_WAIT_MS);
+    return { changed };
+  });
+  guard('/api/spaces/:id/chat/post', async (request, _reply, s) => {
+    const b = request.body || {};
+    // Written by the user: never marked as AI-generated here (the assistant has its own tool).
+    const id = await s.postChat(request.params.id, { text: b.text, replyTo: b.replyTo || null });
+    return { id };
+  });
+  guard('/api/spaces/:id/chat/read', async (request, _reply, s) => {
+    const ids = Array.isArray(request.body?.ids) ? request.body.ids.slice(0, 2000) : null;
+    await s.markChatRead(request.params.id, ids);
+    return { ok: true };
+  });
+
+  // The assistant may write in this chat without asking (until revoked), or not.
+  guard('/api/spaces/:id/chat/grant', async (request, _reply, s) => ({
+    grant: await s.setChatGrant(request.params.id, request.body?.on === true)
+  }));
 
   guard('/api/spaces/create', async (request, _reply, s) => {
     const b = request.body || {};
@@ -262,20 +304,36 @@ export function registerSpaceRoutes(ctx, { dir }) {
   });
 
   // ------------------------------------------------------------ background sync
+  // Transport-neutral: the service hands envelopes to `transport.send` and takes them from
+  // `receiveEnvelope`. What wakes the receive is decided here (IDLE push, polling). A relay
+  // server could later be one more source that calls `wake`, and one more way to send.
   let lastFullScan = 0;
+  const lastRun = new Map(); // account id → time of the last receive
   let running = null;
-  async function runSync(s, { all = false } = {}) {
-    if (running) return running;
+  let again = null; // accounts asked for while a run was busy
+  async function runSync(s, { all = false, ids: only = null } = {}) {
+    if (running) {
+      if (only) {
+        again ||= new Set();
+        for (const id of only) again.add(id);
+      }
+      return running;
+    }
     running = (async () => {
       const { transport } = await ready();
       const configured = ctx.accounts().filter(a => a.imap?.configured);
       // Accounts with spaces every run; every account now and then, for new invitations.
-      const full = all || Date.now() - lastFullScan > 5 * 60_000;
+      const full = all || (!only && Date.now() - lastFullScan > FULL_SCAN_MS);
       if (full) lastFullScan = Date.now();
-      const ids = full ? configured.map(a => a.id) : s.accountIds().filter(id => configured.some(a => a.id === id));
+      const ids = only
+        ? only.filter(id => configured.some(a => a.id === id))
+        : full
+          ? configured.map(a => a.id)
+          : s.accountIds().filter(id => configured.some(a => a.id === id));
       let received = 0;
       const errors = [];
       for (const id of ids) {
+        lastRun.set(id, Date.now());
         try {
           received += await transport.receive(id, (envelope, from) => s.receiveEnvelope(id, envelope, { from }));
         } catch (err) {
@@ -286,20 +344,60 @@ export function registerSpaceRoutes(ctx, { dir }) {
       return { received, sent, errors };
     })().finally(() => {
       running = null;
+      if (again?.size) {
+        const next = [...again];
+        again = null;
+        void service()
+          .then(s => runSync(s, { ids: next }))
+          .catch(() => {});
+      }
     });
     return running;
   }
+
+  // New mail pushed over the IMAP IDLE connection the app keeps for the inbox anyway.
+  const snapshots = new Map();
+  const wakeTimers = new Map();
+  function wake(accountId) {
+    if (wakeTimers.has(accountId)) return;
+    const timer = setTimeout(() => {
+      wakeTimers.delete(accountId);
+      void service()
+        .then(s => runSync(s, { ids: [accountId] }))
+        .catch(() => {});
+    }, WAKE_DELAY_MS);
+    timer.unref?.();
+    wakeTimers.set(accountId, timer);
+  }
+  ctx.watchers?.subscribe?.((accountId, snapshot) => {
+    const prev = snapshots.get(accountId);
+    snapshots.set(accountId, { uidValidity: snapshot?.uidValidity, highestUid: snapshot?.highestUid });
+    if (spaces && snapshotHasSyncMail(prev, snapshot)) wake(accountId);
+  });
+  const idleHealthy = id => {
+    const st = ctx.watchers?.status?.(id);
+    return Boolean(st?.connected && st?.healthy);
+  };
+
   ctx.spaces = {
     ready,
     addMail,
+    wake,
     error: () => spacesError,
     sync: async opts => runSync(await service(), opts),
-    // Background job (wired from app.mjs): only once spaces exist or the user opened them.
+    // Background job (wired from app.mjs, every SPACES_TICK_MS): only once spaces exist or the
+    // user opened them.
     tick: async () => {
       try {
         const s = await service();
-        if (!s.list().spaces.length && !s.hasPendingMail() && Date.now() - lastFullScan < 15 * 60_000) return;
-        await runSync(s);
+        const now = Date.now();
+        if (!s.list().spaces.length && !s.hasPendingMail() && now - lastFullScan < 15 * 60_000) return;
+        if (now - lastFullScan > FULL_SCAN_MS) return void (await runSync(s));
+        const due = s
+          .accountIds()
+          .filter(id => now - (lastRun.get(id) || 0) >= (idleHealthy(id) ? POLL_IDLE_MS : POLL_NO_IDLE_MS));
+        if (due.length) await runSync(s, { ids: due });
+        else if (s.hasPendingMail()) await s.flush();
       } catch {}
     }
   };

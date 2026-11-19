@@ -90,6 +90,7 @@ export const NOT_BACKED_UP = {
   'auto-replies.json': 'editor copy of the out-of-office reply; the reply is stored with the provider',
   'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
   'mcp-approvals.json': 'short-lived approvals that expire',
+  'privacy-stats.json': 'daily counters of the privacy cockpit; they start again from zero',
   // Levuvo's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
   // and the key pair the server creates for itself.
   'ollama/': 'models of the own Ollama; downloaded again from the fixed model list',

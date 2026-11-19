@@ -22,12 +22,66 @@ const fail = (message, code = 'protected_invalid', statusCode = 400) => {
   throw Object.assign(new Error(message), { code, statusCode });
 };
 
+// Passwords people pick first; checked after lower-casing and removing digits/punctuation at the ends.
+const COMMON_WORDS = new Set([
+  'passwort',
+  'password',
+  'kennwort',
+  'geheim',
+  'secret',
+  'qwertz',
+  'qwerty',
+  'qwertzuiop',
+  'qwertyuiop',
+  'asdfghjkl',
+  'letmein',
+  'welcome',
+  'willkommen',
+  'hallo',
+  'admin',
+  'levuvo'
+]);
+
+/** The password without digits/punctuation at both ends and without separators (no regex: ReDoS). */
+function coreWord(pw) {
+  const chars = [...pw.toLowerCase()];
+  const letter = c => /\p{L}/u.test(c);
+  let start = 0;
+  let end = chars.length;
+  while (start < end && !letter(chars[start])) start++;
+  while (end > start && !letter(chars[end - 1])) end--;
+  return chars
+    .slice(start, end)
+    .filter(c => !/[\s._-]/.test(c))
+    .join('');
+}
+
+/**
+ * True for passwords that an offline attacker tries first. The encrypted file can be attacked
+ * without any rate limit, so length alone is not enough: few distinct characters, keyboard or
+ * alphabet runs ("1234567890", "abcdefghij") and common words with digits are refused.
+ */
+export function weakPassword(password) {
+  const pw = String(password || '').normalize('NFC');
+  if (new Set(pw.toLowerCase()).size < 5) return true;
+  const codes = [...pw.toLowerCase()].map(c => c.codePointAt(0));
+  const steps = codes.slice(1).map((c, i) => c - codes[i]);
+  if (steps.every(d => d === 1) || steps.every(d => d === -1)) return true;
+  if (/^\d+$/.test(pw) && pw.length < 16) return true;
+  return COMMON_WORDS.has(coreWord(pw));
+}
+
 /** Checks the password options from the composer. */
 export function readPasswordProtection(value) {
   if (!value || typeof value !== 'object') fail('Bitte ein Passwort festlegen.');
   const password = typeof value.password === 'string' ? value.password : '';
   if (password.length < 10) fail('Das Passwort muss mindestens 10 Zeichen lang sein.');
   if (password.length > 200) fail('Das Passwort ist zu lang (höchstens 200 Zeichen).');
+  if (weakPassword(password))
+    fail(
+      'Dieses Passwort ist zu leicht zu erraten. Bitte das vorgeschlagene Passwort verwenden oder ein anderes wählen.',
+      'protected_weak'
+    );
   const hint = typeof value.hint === 'string' ? value.hint.trim() : '';
   if (hint.length > 120 || /[\r\n]/.test(hint)) fail('Der Passwort-Hinweis ist zu lang.');
   if (hint && hint.toLowerCase().includes(password.toLowerCase()))

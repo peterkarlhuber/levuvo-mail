@@ -6,6 +6,30 @@
 - **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving.
 - **Vacation reply for Microsoft 365 / Outlook.com and Gmail:** accounts signed in with Microsoft or Google store the reply with the provider (Microsoft Graph mailbox settings, Gmail vacation settings), so it answers while Levuvo Mail is closed: on/off, from/until, audience (all senders, only contacts, only my organization), formatted text and the signature; Gmail also gets the subject. Both providers cannot keep embedded images, so an uploaded logo is left out and the app says so. Needs the new scopes `MailboxSettings.ReadWrite` (Microsoft) and `gmail.settings.basic` plus the Gmail API (Google) in the app registrations (docs/OAUTH-SETUP.md); older accounts are asked once ("Allow"). The editor copy stays on the device, encrypted.
 
+### Window frame (macOS)
+- **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
+
+### Ask your mailbox
+- **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
+- **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
+- **Sources with a quote:** every source email shows sender, date and a passage from it; a passage is shown only if it literally occurs in that email or attachment.
+- **Follow-up questions:** "and the price?" refers to the previous answer (the last two turns go along, framed as untrusted). The bin icon starts a new conversation.
+
+### Spaces
+- **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
+- **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
+- **Unread messages** are counted on the rail, in the list of spaces and on the tab, on this device only: there are no read receipts and no typing indicators.
+- **Assistant:** it can read and search the chat and, after your approval, write a message; such messages are marked "AI-generated" for every member. Approve "Only this one" or "For this space until revoked" (then it writes there without asking, at most 10 messages in 10 minutes, until you revoke it in the space settings).
+
+### Compliance
+- Compliance: gap analyses and templates for the Cyber Resilience Act, the AI Act, the GDPR, accessibility and other rules in `docs/compliance/` (vulnerability handling, 24 h/72 h reporting, support period, risk assessment, technical documentation, EU declaration of conformity template, record of processing, DPIA template, options for DOC-LEV-009, AI system inventory, licensing policy, user information); coordinated vulnerability disclosure policy in `SECURITY.md`; compliance section in the release checklist. Not legal advice.
+- Every release carries a CycloneDX 1.6 SBOM (`levuvo-mail-<version>.cdx.json`: npm packages, Electron, AI sidecar with its Python packages, CPython, Ollama) and `THIRD-PARTY-NOTICES.txt`; CI checks a licence policy for npm and Python packages (`npm run check:licenses`, `scripts/license-policy.json`) and the compliance file and support period (`npm run check:compliance`). The licence notices now also list packages npm de-duplicates and reproduce Apache NOTICE files.
+- Settings → Privacy → "Your data": **Export my data** (readable JSON of the device-local data, GDPR Art. 15/20, no private keys or passwords), **Delete all data on this device** (all Levuvo files and keychain entries, removed at the next start before anything opens; CRA Annex I Part I (2)(m)) and **Install updates automatically** (on by default; when off, Levuvo Mail asks before downloading, CRA Annex I Part I (2)(c)).
+- Settings → About: **Security and support** (end of security support of this version, how to report a vulnerability, SBOM) and **Open-source licences** with the full texts of the app, the AI runtime and Ollama.
+- AI Act Art. 50(2): mails whose text the assistant wrote or rewrote, and mails an agent sends after approval, carry the machine-readable header `X-Levuvo-AI-Assisted` (who wrote it, model). On by default; Settings → AI & agents → "Mark AI-written mails".
+- The assistant's base rules now also carry the compliance limits: use personal data only as far as needed, never rate or profile people (applicants, employees), no guesses about emotions or sensitive traits, output is a marked suggestion, no legal/tax/medical advice as fact.
+- **Guardrails at the moment of action:** before sending, Levuvo Mail warns locally, without AI, when many external recipients from several organisations see each other's addresses (use Bcc), when card numbers, Austrian social security numbers or passwords go unencrypted outside the organisation, and when a mail appears to contain health data (GDPR Art. 9). The optional AI check also points out discriminatory wording, sharing other people's sensitive data and threats. Switching off automatic updates or the AI marking asks once and explains why. You always decide; nothing is logged, counted or reported. The assistant declines requests the law forbids (for example ranking applicants) with a short reason and a lawful alternative.
+
 ## 2.5.0 – 19 November 2026
 
 > **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
@@ -24,6 +48,17 @@
 
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
+
+### Newsletter hub
+- **Weekly overview:** the newsletter bundle offers "Weekly overview": the assistant reads the newsletters of the last seven days (at most 20) and gives one line per newsletter plus up to three highlights; each line opens the mail. Runs only when started, marked as AI-generated, under the "Summarize" function and its cloud rules.
+- **All senders:** the newsletter bundle lists every sender (not only the first twelve) with one-click unsubscribe.
+
+### Privacy cockpit
+- **Settings → Privacy shows what happened in the last 30 days:** how many tracking pixels were blocked (per day), how often the AI ran on this device and how often in the cloud (per function, and how much of it ran automatically), which external agents (MCP) accessed what, newsletter unsubscribes, external images you loaded and model downloads. "What left Levuvo Mail" lists every kind of data that went off the device.
+- **Data-minimised:** besides the existing AI log (no content) only daily counters are stored – no addresses, hosts, subjects or message IDs; 30 days, deletable, not in backups.
+
+### Protect with password
+- **Security review:** easily guessed passwords (few distinct characters, runs like "1234567890", common words with digits) are refused, because the encrypted file can be attacked offline without a limit; the suggested random password stays the default. A copied password is removed from the clipboard after one minute. The composer now says that automatically saved drafts stay unencrypted in the own Drafts folder until sending. Review notes in SECURITY.md.
 
 ### Fixes
 - **Tasks open again on macOS and Windows:** the builds for macOS and Windows (case-insensitive disks) loaded the task helpers (`tasks.ts`) instead of the Tasks view (`Tasks.tsx`), so opening Tasks failed and the whole window went black. The view is now `TasksModule.tsx`, and a test rejects source files that differ only in case.

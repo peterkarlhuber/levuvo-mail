@@ -28,6 +28,7 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Snoozed mails and follow-up reminders (subject, sender address, time) and sender screening decisions (allowed and blocked addresses per account) | app data folder, **encrypted with AES-256-GCM** (key in the system keychain) | snooze, follow-ups, screening of new senders |
 | AI settings, consents (provider, date, version of the consent text), own routines, connected agents (name, permission level, **hash** of the token only) | app data folder, readable only by your user account | AI features, MCP server |
 | AI log (time, function or tool, provider, model, result – no message content) | app data folder, 30 days | transparency about what the AI and agents did |
+| Privacy cockpit counters (per day: number of blocked trackers, external images loaded, newsletter unsubscribes – no addresses, hosts, subjects or message IDs) | app data folder, 30 days, deletable under Settings → Privacy; not part of backups | showing what was blocked and what left the device |
 | Pending agent approvals with the prepared content (recipients, text, event, contact, task) | app data folder, **encrypted with AES-256-GCM**; invalid after 7 days, the content is removed once decided | your approval before an agent acts |
 | Shared spaces: notes, tasks, events, pinned mails, comments, files, member list (name, address, public keys) and the activity of the space | a full copy on the device of **every member**, **encrypted with AES-256-GCM**; changes travel as end-to-end encrypted mails between the members' own mailboxes | working together in a space |
 
@@ -56,6 +57,8 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   - the messages you apply the function to;
   - for reply suggestions and "Bullet points to email" also up to five of your most recently sent
     emails as a style sample (only the text you wrote, at most 1,500 characters each);
+  - for the weekly newsletter overview the newsletters of the last seven days (at most 20, each shortened
+    to 2,500 characters), only when you start it;
   - for questions to the mailbox the emails the search found, across all accounts that are not marked
     "No cloud AI";
   - for tasks and routines of the built-in assistant the emails, events, contacts and tasks it reads
@@ -73,7 +76,10 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - **What is stored:** the AI settings (app data folder, no key) and an **AI log** of what the AI and
   agents did (time, function or tool, provider, model, result) **without message content**, kept for 30
   days on this device. It is not used to monitor anyone's performance.
-- **Transparency:** AI results are labelled as AI-generated. In the reading pane and the composer
+- **Transparency:** AI results are labelled as AI-generated. A mail whose text the assistant or an agent
+  wrote carries the header `X-Levuvo-AI-Assisted` (who wrote it and the model) when sent, so recipients
+  and their systems can recognise AI-generated text (AI Act Art. 50(2)); it can be switched off under
+  Settings → AI & agents → "Mark AI-written mails". In the reading pane and the composer
   nothing is sent, saved, moved or deleted without your click; a text the assistant rewrote stays marked
   with "Undo" until the next change.
 - **Semantic index:** the vectors for semantic search are derived from the encrypted local search index
@@ -104,6 +110,13 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - For organizations: templates for an internal usage policy, the record of processing activities, the
   security concept and a short AI guide for users are in [docs/ai](docs/ai/).
 
+## Hints before sending
+
+Before a mail goes out, Levuvo Mail checks on this device, without AI, for open recipient lists and for
+card numbers, social security numbers, passwords or health data sent unencrypted outside your
+organisation, and shows a hint. You decide whether to send. The result is not stored, counted or sent
+anywhere.
+
 ## Connections to the internet
 
 - **Mail servers** (IMAP, SMTP, ManageSieve for filters/vacation reply) – always encrypted, certificates are verified.
@@ -113,9 +126,10 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - **Task lists you connect yourself** (Tasks → Lists → "Connect a list": a CalDAV list, Microsoft To Do via Microsoft Graph, or Google Tasks): only the tasks in that list are sent to the server of that list (title, note, due date, reminder, priority, repetition, status); the link to the mail, the origin and the reminder state stay on this device. Nothing is sent before you connect a list. Google Tasks receives only title, note, due day and status (it cannot store the rest). CalDAV passwords are only sent to addresses of the account's own domain over HTTPS; Microsoft and Google receive the sign-in token of that account, which needs a one-time consent for tasks. The provider's privacy policy also applies. Disconnecting a list stops syncing and keeps the tasks on this device; nothing is deleted on the server.
 - **Out-of-office reply of Microsoft 365 / Google accounts** (Settings → Filters & vacation): when you save it, its text (with the signature if you choose so), dates and audience are sent to Microsoft Graph (mailbox settings) or the Gmail API of that same account; the provider then answers senders from there. Nothing is sent before you save. Embedded images are not sent. It needs a one-time consent for mailbox settings. A copy of the editor content stays on this device, **encrypted with AES-256-GCM** (key in the system keychain), so the editor shows it again; it is not part of backups.
 - **Sign-in with Microsoft or Google (OAuth):** Sign-in takes place in the browser on Microsoft's or Google's pages. Levuvo Mail receives a sign-in token and stores only the refresh token in the keychain. The respective provider's privacy policy also applies.
+- **Newsletter unsubscribe** (only when you confirm it): a one-click unsubscribe sends a single HTTPS POST without cookies to the sender's unsubscribe address (only public addresses, no redirects); otherwise an unsubscribe mail goes to the address the sender named, from your account.
 - **External images in HTML mails** are blocked until you choose “Load images” for a message (the sender can then detect that it was opened).
 - **Links** open in the default browser after confirmation (exceptions without confirmation: levuvo.at, and the Microsoft/Google sign-in that Levuvo Mail starts itself; links to those sign-in pages from a mail are confirmed like any other link).
-- **Updates** (signed versions only): roughly every six hours a request to Levuvo's update server ([address]). For technical reasons the IP address, operating system and app version are transmitted; no account data or content.
+- **Updates** (signed versions only): roughly every six hours a request to Levuvo's update server ([address]). Updates are installed automatically by default; under Settings → Privacy → "Install updates automatically" you can switch this off, then Levuvo Mail asks before downloading an update. For technical reasons the IP address, operating system and app version are transmitted; no account data or content.
 - **Crash reports – only with consent:** Off by default. If you switch them on under Settings → Privacy and the build contains a report address, a technical report (memory dump of the crashed process, app version, operating system) is sent to [recipient/service] after a crash. The mail engine runs in the app's main process, so a memory dump can contain fragments of emails, addresses or keys that were in memory at the time of the crash; only switch crash reports on if that is acceptable for your data. Legal basis: consent (Art. 6(1)(a) GDPR), revocable at any time by switching it off.
 - **Shared spaces:** Changes are sent as end-to-end encrypted mails from your mail account to the other members' addresses and moved into a folder called “Levuvo Spaces” on arrival (kept 30 days, then deleted). Mail providers on the way see sender, recipient, time and size, never content. The invitation mail contains the name of the space in readable form. Members you invite receive the content of the space; a removed member keeps what they already had, but cannot read anything added later (the key is replaced). The activity list shows who changed what and when; it contains no statistics or evaluation of individual people. Deleting a mail, comment, task, event, note or file in a space removes its content from every member's copy with the owner's next checkpoint (usually within a minute; members whose app is offline when it happens, on their next sync), deletes the file parts from the device and never sends it to people who join later. Limits: a member who already had the content may have kept it elsewhere (a download, a screenshot), and a member removed before the deletion keeps their copy from before the removal.
 - **Diagnostic report:** Saved as a file only at your request (version, system, error counters, connection status – no content, no addresses). You decide whether to pass it on.
@@ -127,10 +141,15 @@ The AI features (Settings → AI & agents) are switched off until you switch the
 - Shared spaces: leaving a space or dissolving it (owner) stops syncing; afterwards the local copy can be deleted under Spaces. Copies on other members' devices are under their control.
 - The search index can be switched off under Settings → Search & offline (it is deleted in the process).
 - Backup files you saved yourself are not touched by Levuvo; delete them yourself when no longer needed. Safety copies from a restore are in `before-restore/` in the app data folder.
+- The privacy cockpit's counters can be deleted under Settings → Privacy → "Delete counters"; they expire after 30 days anyway.
 - All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
+- **Delete all data on this device** (Settings → Privacy) removes everything Levuvo Mail stored on this computer – settings, accounts, local calendar, contacts, tasks, templates, spaces, search index, AI data and models – and its keychain entries, at the next start; the window's own storage is cleared too. Data on your providers' servers is not touched.
 - After uninstalling, the app data folder can be deleted: macOS `~/Library/Application Support/Levuvo Mail`, Windows `%APPDATA%\Levuvo Mail`.
 
 ## Your rights
+
+**Export:** Settings → Privacy → "Export my data" saves a readable copy (JSON) of the data that exists only on this device, without private keys, passwords or tokens. Mails, events and contacts on the servers can be exported with .eml, ICS and vCard export or at the provider.
+
 
 Since Levuvo receives no personal data from the app (exceptions: voluntary crash reports and
 technical data when checking for updates), requests for access and deletion concerning emails, events

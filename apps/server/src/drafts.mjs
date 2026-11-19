@@ -107,7 +107,7 @@ export function validateDraft(input) {
     uidValidity: input.uidValidity == null ? null : String(input.uidValidity),
     attachments,
     // Drafts written by an agent keep this label (AIS-LEV-008) until the user sends them; the sent
-    // message does not carry it (the user reviewed and sent it).
+    // message carries X-Levuvo-AI-Assisted instead (AI Act Art. 50(2), see send-utils.mjs).
     ...(input.aiGenerated ? { extraHeaders: { [AI_HEADER]: input.aiGenerated.trim() } } : {})
   };
 }

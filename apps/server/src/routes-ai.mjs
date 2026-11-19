@@ -6,9 +6,11 @@ import { contactPayload, eventPayload, messageForAi, securityDetails, securityFa
 // Re-exported for existing callers; the mappers live in ai-payloads.mjs.
 export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 import { createSemanticIndex } from './ai-semantic.mjs';
+import { readSources, retrieve, verifiedQuote } from './ask-mailbox.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
+const MAX_NEWSLETTERS = 20;
 const MAX_CLIENT_TEXT = 60_000;
 const STYLE_TTL = 60 * 60 * 1000;
 const LOAD_PARALLEL = 3;
@@ -29,6 +31,33 @@ export async function mapLimit(items, limit, fn) {
 
 function clientText(value, limit = MAX_CLIENT_TEXT) {
   return String(value ?? '').slice(0, limit);
+}
+
+/**
+ * The sources of an answer for the UI: only mails that were really given to the model, each with
+ * its metadata and a quote that literally occurs in it (or none). Mail text stays on the server.
+ */
+export function askSources(result, sourceMap) {
+  const quotes = new Map((result.quotes || []).map(q => [String(q?.id), String(q?.quote || '')]));
+  const out = [];
+  for (const id of result.sources || []) {
+    const s = sourceMap[Number(String(id).slice(1)) - 1];
+    if (!s || out.some(o => o.accountId === s.accountId && o.folder === s.folder && o.uid === s.uid)) continue;
+    const quote = verifiedQuote(quotes.get(String(id)), s);
+    const attachment = quote ? (s.attachments || []).find(a => verifiedQuote(quote, { text: a.text })) : null;
+    out.push({
+      accountId: s.accountId,
+      folder: s.folder,
+      uid: s.uid,
+      subject: s.subject,
+      fromName: s.fromName,
+      fromEmail: s.fromEmail,
+      date: s.date,
+      quote,
+      attachment: attachment ? attachment.filename : ''
+    });
+  }
+  return out;
 }
 
 const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
@@ -110,6 +139,21 @@ export function registerAiRoutes(ctx) {
           timeZone: clientText(input.timeZone, 60)
         };
       }
+      case 'newsletters': {
+        // Weekly overview of the newsletter bundle: up to 20 newsletters of one account, shortened.
+        if (!accountId) throw Object.assign(new Error('Konto fehlt.'), { statusCode: 400, code: 'ai_invalid' });
+        const refs = (Array.isArray(body.refs) ? body.refs : []).slice(0, MAX_NEWSLETTERS);
+        if (!refs.length)
+          throw Object.assign(new Error('Keine Nachricht gewählt.'), { statusCode: 400, code: 'ai_invalid' });
+        const details = await mapLimit(refs, LOAD_PARALLEL, ref => loadDetail(accountId, ref));
+        return {
+          lang,
+          items: details.map((d, i) => {
+            const m = messageForAi(d);
+            return { id: `n${i + 1}`, from: m.from, date: m.date, subject: m.subject, text: m.text.slice(0, 2500) };
+          })
+        };
+      }
       case 'translate': {
         const [d] = await loadThread(accountId, body.refs);
         return { lang, target: input.target === 'en' ? 'en' : 'de', text: messageForAi(d).text };
@@ -150,17 +194,47 @@ export function registerAiRoutes(ctx) {
         // Accounts marked "No cloud AI" are left out before the search when a cloud model answers,
         // so none of their text is ever part of the input.
         const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
-        const hits = await semantic.search(ids, question, { limit: 8 });
-        body.sourceMap = hits.map(h => ({ accountId: h.accountId, folder: h.folder, uid: h.uid, subject: h.subject }));
+        // A follow-up question: the earlier turns help find and understand, they are not trusted.
+        const history = (Array.isArray(input.history) ? input.history : []).slice(-2).map(h => ({
+          question: clientText(h?.question, 500),
+          answer: clientText(h?.answer, 1500)
+        }));
+        const hits = await retrieve({
+          semantic,
+          localIndex: ctx.localIndex,
+          ids,
+          question,
+          context: history.map(h => h.question).join(' '),
+          limit: 8
+        });
+        const read = await readSources(hits, {
+          mapLimit,
+          load: async h => messageForAi(await loadDetail(h.accountId, h)),
+          attachments: async h => (await internalApi(ctx).attachmentText(h.accountId, h.folder, h.uid)).files
+        });
+        body.sourceMap = read.map(h => ({
+          accountId: h.accountId,
+          folder: h.folder,
+          uid: h.uid,
+          subject: h.subject,
+          fromName: h.fromName || '',
+          fromEmail: h.fromEmail || '',
+          date: h.date || '',
+          text: h.text,
+          attachments: h.attachments
+        }));
         return {
           lang,
           question,
-          sources: hits.map((h, i) => ({
+          history,
+          sources: read.map((h, i) => ({
             id: `s${i + 1}`,
             from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
+            to: h.to || '',
             date: h.date,
             subject: h.subject,
-            text: String(h.text || '').slice(0, 2500)
+            text: String(h.text || '').slice(0, i < 5 ? 6000 : 2000),
+            attachments: (h.attachments || []).map(a => ({ name: a.filename, text: a.text.slice(0, 4000) }))
           }))
         };
       }
@@ -328,10 +402,10 @@ export function registerAiRoutes(ctx) {
       // Every account whose mail text is in the input is checked again, right before the model call.
       const sources = Array.isArray(body.sourceMap) ? body.sourceMap.map(s => s.accountId) : [];
       const result = await ai.run(kind, input, { accountId, sources });
-      if (kind === 'ask' && Array.isArray(body.sourceMap))
-        result.sources = (result.sources || [])
-          .map(id => body.sourceMap[Number(String(id).slice(1)) - 1])
-          .filter(Boolean);
+      if (kind === 'ask' && Array.isArray(body.sourceMap)) {
+        result.sources = askSources(result, body.sourceMap);
+        delete result.quotes;
+      }
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {
       return aiError(reply, err);

@@ -8,6 +8,10 @@ import * as Y from 'yjs';
 
 const bad = message => new Error(message);
 export const ROLES = ['owner', 'editor', 'reader'];
+// Chat messages of a space. Like comments they are content: owners and editors write, readers
+// read. They never enter the activity feed (that would only repeat the chat).
+export const CHAT_TYPES = ['chat.post', 'chat.edit', 'chat.delete'];
+export const CHAT_MAX = 10_000;
 const CONTENT = new Set([
   'note.create',
   'note.update',
@@ -27,7 +31,8 @@ const CONTENT = new Set([
   'file.update',
   'file.delete',
   'folder.create',
-  'folder.delete'
+  'folder.delete',
+  ...CHAT_TYPES
 ]);
 const OWNER_ONLY = new Set([
   'space.update',
@@ -231,6 +236,18 @@ export function validateOpData(type, data = {}) {
     case 'folder.create':
     case 'folder.delete':
       return { path: folderPath(data.path, true) };
+    case 'chat.post':
+      return clean({
+        id: id(data.id),
+        text: str(data.text, CHAT_MAX, { required: true, multiline: true }),
+        replyTo: data.replyTo === undefined || data.replyTo === null ? undefined : id(data.replyTo),
+        // Written with the assistant (EU AI Act Art. 50): shown as AI-generated to every member.
+        ai: data.ai === true ? true : undefined
+      });
+    case 'chat.edit':
+      return { id: id(data.id), text: str(data.text, CHAT_MAX, { required: true, multiline: true }) };
+    case 'chat.delete':
+      return { id: id(data.id) };
     default:
       throw bad('unknown operation');
   }
@@ -652,6 +669,36 @@ export function applyOp(state, op, docs) {
     case 'folder.create':
       state.folders[d.path] = { path: d.path, at: op.at, by: author };
       break;
+    case 'chat.post':
+      // Created on first use: spaces without chat fold (and digest) exactly as before.
+      state.chat ||= {};
+      if (state.chat[d.id] || state.chatGone?.[d.id]) return (state.ignored++, false);
+      state.chat[d.id] = clean({
+        id: d.id,
+        text: d.text,
+        at: op.at,
+        by: author,
+        lc: op.lc,
+        seq: op.seq,
+        replyTo: d.replyTo,
+        ai: d.ai
+      });
+      return true;
+    case 'chat.edit':
+    case 'chat.delete': {
+      const c = state.chat?.[d.id];
+      // Only the author edits a message; the owner may also remove it.
+      if (!c || (c.by !== author && !(type === 'chat.delete' && member.role === 'owner')))
+        return (state.ignored++, false);
+      if (type === 'chat.edit') Object.assign(c, { text: d.text, editedAt: op.at });
+      else {
+        delete state.chat[d.id];
+        // Remembered (id only) so a late or replayed post of the same message stays deleted.
+        state.chatGone ||= {};
+        state.chatGone[d.id] = true;
+      }
+      return true;
+    }
     case 'folder.delete':
       if (
         Object.values(state.files).some(f => !f.deleted && (f.folder === d.path || f.folder.startsWith(`${d.path}/`)))

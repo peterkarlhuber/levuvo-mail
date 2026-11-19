@@ -1466,8 +1466,8 @@ export const EN: Record<string, string> = {
   Stark: 'Strong',
   'Hinweis zum Passwort (optional)': 'Password hint (optional)',
   'z. B. „wie besprochen am Telefon“': 'e.g. “as discussed on the phone”',
-  'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar.':
-    'Text and attachments are encrypted with the password (AES-256). The recipient opens the attached file in any browser. Share the password on another channel – e.g. by SMS or phone. The subject stays readable.',
+  'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar, und automatisch gespeicherte Entwürfe liegen bis zum Senden unverschlüsselt in deinem Entwürfe-Ordner.':
+    'Text and attachments are encrypted with the password (AES-256). The recipient opens the attached file in any browser. Share the password on another channel, e.g. by SMS or phone. The subject stays readable, and automatically saved drafts stay unencrypted in your Drafts folder until you send.',
   'Geschützte Nachricht': 'Protected message',
   'Geschützte Nachricht – entschlüsselt': 'Protected message – decrypted',
   'Wieder sperren': 'Lock again',

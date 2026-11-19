@@ -10,6 +10,7 @@ import {
   FileText,
   LoaderCircle,
   Mail,
+  MessageCircle,
   MessageSquare,
   Plus,
   RefreshCcw,
@@ -40,7 +41,8 @@ import {
 } from './spaces-api';
 
 const NoteEditor = lazy(() => import('./SpaceNoteEditor'));
-type Tab = 'overview' | 'notes' | 'mails' | 'tasks' | 'events' | 'files' | 'members' | 'settings';
+const SpaceChat = lazy(() => import('./SpaceChat'));
+type Tab = 'overview' | 'chat' | 'notes' | 'mails' | 'tasks' | 'events' | 'files' | 'members' | 'settings';
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
@@ -188,6 +190,12 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
                             : t('{n} Mitglieder · {tasks} offen', { n: s.members, tasks: s.openTasks })}
                 </small>
               </span>
+              {s.unreadChat > 0 && (
+                <span className="space-unread" title={t('{n} ungelesene Chat-Nachrichten', { n: s.unreadChat })}>
+                  {s.unreadChat > 99 ? '99+' : s.unreadChat}
+                  <span className="sr-only">{t('{n} ungelesene Chat-Nachrichten', { n: s.unreadChat })}</span>
+                </span>
+              )}
               {s.sendError && (
                 <span className="space-dot warn" title={t('Versand wird wiederholt')}>
                   <span className="sr-only">{t('Versand wird wiederholt')}</span>
@@ -420,6 +428,11 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
     [reload, onChanged, ui]
   );
 
+  const onRead = useCallback(() => {
+    void reload();
+    onChanged();
+  }, [reload, onChanged]);
+
   if (error && !detail) return <p className="banner error space-pad">{error}</p>;
   if (!detail)
     return (
@@ -436,6 +449,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
   const op = (type: string, data: unknown, done?: string) => run(() => spaces.op(id, type, data), done);
   const tabs: { id: Tab; label: string; icon: typeof Mail; count?: number }[] = [
     { id: 'overview', label: t('Übersicht'), icon: ActivityIcon },
+    { id: 'chat', label: t('Chat'), icon: MessageCircle, count: detail.unreadChat },
     { id: 'notes', label: t('Notizen'), icon: StickyNote, count: detail.notes.length },
     { id: 'mails', label: t('Mails'), icon: Mail, count: detail.mails.length },
     {
@@ -531,6 +545,17 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
       </nav>
       <div className="space-body" id="space-tabpanel" role="tabpanel" aria-labelledby={`space-tab-${tab}`}>
         {tab === 'overview' && <Overview detail={detail} names={names} onTab={setTab} />}
+        {tab === 'chat' && (
+          <Suspense
+            fallback={
+              <div className="module-loading">
+                <LoaderCircle className="spin" size={18} />
+              </div>
+            }
+          >
+            <SpaceChat detail={detail} onRead={onRead} />
+          </Suspense>
+        )}
         {tab === 'notes' && <Notes detail={detail} canEdit={canEdit} run={run} op={op} />}
         {tab === 'mails' && <Mails detail={detail} names={names} canEdit={canEdit} op={op} />}
         {tab === 'tasks' && <Tasks detail={detail} names={names} canEdit={canEdit} op={op} />}
@@ -564,6 +589,10 @@ function Overview({
   return (
     <div className="space-overview">
       <div className="space-cards">
+        <button className="space-card" onClick={() => onTab('chat')}>
+          <strong>{detail.unreadChat}</strong>
+          <span>{t('ungelesene Nachrichten')}</span>
+        </button>
         <button className="space-card" onClick={() => onTab('tasks')}>
           <strong>{open.length}</strong>
           <span>{t('offene Aufgaben')}</span>
@@ -1438,8 +1467,32 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
   const [transferTo, setTransferTo] = useState('');
   const active = detail.status === 'active';
   const others = detail.members.filter(m => !m.removed && !m.me);
+  const canWrite = active && (detail.role === 'owner' || detail.role === 'editor');
   return (
     <div className="space-settings">
+      {canWrite && detail.ai.enabled && (
+        <>
+          <h4>{t('Assistent im Chat')}</h4>
+          <label className="space-check">
+            <input
+              type="checkbox"
+              checked={Boolean(detail.aiChatGrant)}
+              onChange={e =>
+                void run(
+                  () => spaces.post(`/${detail.id}/chat/grant`, { on: e.target.checked }),
+                  e.target.checked ? t('Erlaubt bis auf Widerruf.') : t('Zurückgenommen.')
+                )
+              }
+            />{' '}
+            {t(
+              'Der Assistent darf in diesem Raum ohne Rückfrage im Chat schreiben (bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten). Seine Nachrichten sind für alle als „KI-erstellt“ markiert.'
+            )}
+          </label>
+          {detail.aiChatGrant && (
+            <p className="muted small">{t('Erlaubt seit {date}', { date: fullDateLabel(detail.aiChatGrant.since) })}</p>
+          )}
+        </>
+      )}
       {detail.owner && active && (
         <>
           <form

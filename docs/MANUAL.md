@@ -337,7 +337,11 @@ A rewritten text stays marked with "Changed by the assistant · Undo".
 folder", click "Suggest rule", review, save.
 
 **Assistant panel (✦ on the left or Ctrl/⌘ + J):**
-- **Question:** "When does the delivery from Müller arrive?" – answer with clickable source emails.
+- **Question:** "What did Müller say about the offer?" – a short answer with the source emails to click,
+  each with sender, date and a quoted passage (only passages that literally appear in the email). The
+  search combines meaning and exact words, so names, invoice numbers and rare terms are found too, and it
+  reads PDF and text attachments of the best hits. Follow-ups like "and the price?" refer to the previous
+  answer; the bin icon starts a new conversation.
 - **Task:** "Arrange a meeting with Anna next week" – the assistant finds free times and creates a draft.
   Nothing is sent.
 - **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
@@ -377,11 +381,16 @@ nothing on the server. Tasks are stored encrypted on the device.
 
 A **space** (Alt+4) collects everything about a topic, project or customer: notes several people edit at
 the same time, pinned mails with internal comments, tasks and events with assignees, files with versions
-and an activity list. You invite members by email address (roles owner, editor, reader) and compare the
+a chat and an activity list. You invite members by email address (roles owner, editor, reader) and compare the
 safety code when they join. There is no Levuvo server: every member keeps an encrypted copy, and changes
 travel end-to-end encrypted as mails between the mailboxes. The tabs can be switched with the arrow keys,
-and files can be uploaded with the keyboard. The assistant and agents see a space only if its owner allows
-it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
+and files can be uploaded with the keyboard. In the **Chat** tab owners and editors write to all members
+(Enter sends, Shift+Enter starts a new line); readers follow along. Messages usually arrive within a few
+seconds because Levuvo watches the mailbox with IMAP IDLE. Reply, edit and delete with the buttons next
+to a message; deleting removes it for everyone. Only your device counts unread messages, and there are no
+read receipts. Messages written with the assistant are marked "AI-generated". When approving one you choose "Only this
+one" or "For this space until revoked"; revoke it in the space settings. The assistant and agents see
+a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving
 

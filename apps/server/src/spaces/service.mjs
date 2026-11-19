@@ -22,6 +22,7 @@ import {
 import {
   appendTextUpdate,
   applyOp,
+  CHAT_TYPES,
   compareOps,
   fold,
   noteText,
@@ -49,8 +50,12 @@ const DELETE_TYPES = new Set([
   'comment.delete',
   'task.delete',
   'event.delete',
-  'file.delete'
+  'file.delete',
+  'chat.delete'
 ]);
+// Chat changes skip the batch pause and go out right away (one mail per member).
+const URGENT_TYPES = new Set(CHAT_TYPES);
+const MAX_UNREAD = 2000;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const SPACE_ID = /^[a-f0-9]{32}$/;
 const now = () => new Date().toISOString();
@@ -73,7 +78,12 @@ export function createSpaceService({
   const keys = identityKeys(store.identity);
   const cache = new Map(); // space id → { state, docs, ids:Set, last }
   const listeners = new Set();
+  // Change counter per space (and one for the list), for clients that wait for the next change.
+  const revs = new Map();
+  const waiters = new Set();
   const changed = id => {
+    revs.set(id, (revs.get(id) || 0) + 1);
+    for (const w of [...waiters]) if (w.id === id || w.id === undefined) w.done();
     for (const fn of listeners) {
       try {
         fn(id);
@@ -122,6 +132,10 @@ export function createSpaceService({
     for (const op of fresh) {
       entry.ids.add(op.id);
       record.lc = Math.max(record.lc || 0, op.lc);
+      // Chat messages of others are unread on this device until the chat was shown.
+      if (op.type === 'chat.post' && op.author !== keys.id && typeof op.data?.id === 'string') {
+        record.chatUnread = [...(record.chatUnread || []), op.data.id].slice(-MAX_UNREAD);
+      }
       // Deleted content leaves every log with the next checkpoint (made by the owner).
       if (DELETE_TYPES.has(op.type)) record.compactAsked = true;
     }
@@ -212,25 +226,28 @@ export function createSpaceService({
     enqueue(r, member, { kind: 'need', vv });
   }
   /** Queues ops for every other active member, split into envelopes of reasonable size. */
-  function broadcastOps(r, ops, { include = [] } = {}) {
+  function broadcastOps(r, ops, { include = [], urgent = false } = {}) {
     if (!ops.length) return;
     for (const member of recipientsOf(r, { include }))
       sendOps(
         r,
         member,
-        ops.map(o => o.id)
+        ops.map(o => o.id),
+        { urgent }
       );
   }
   /**
    * Queues ops for one member. They join an ops mail to that member that is still waiting (same
    * key epoch, not being sent, never failed), so many small changes travel as one mail.
    */
-  function sendOps(r, member, ids) {
+  function sendOps(r, member, ids, { urgent = false } = {}) {
     const waiting = (r.outbox || []).find(
       i => i.kind === 'ops' && i.to === member.id && i.epoch === r.epoch && !i.tries && !i.sending
     );
-    if (waiting) waiting.ops = [...new Set([...waiting.ops, ...ids])];
-    else enqueue(r, member, { kind: 'ops', ops: ids });
+    if (waiting) {
+      waiting.ops = [...new Set([...waiting.ops, ...ids])];
+      if (urgent) waiting.urgent = true;
+    } else enqueue(r, member, { kind: 'ops', ops: ids, ...(urgent ? { urgent: true } : {}) });
   }
 
   function opsBatches(r, ids) {
@@ -330,6 +347,8 @@ export function createSpaceService({
               kind: item.kind,
               spaceName: state.name || r.name || '',
               inviterName: r.myName || account.name || '',
+              // A hint for transports: chat wants the fastest way (a relay could use it later).
+              urgent: Boolean(item.urgent),
               envelope
             });
             sent++;
@@ -535,6 +554,9 @@ export function createSpaceService({
         k => st[k] && typeof st[k] === 'object' && !Array.isArray(st[k])
       ) &&
       Array.isArray(st.activity) &&
+      ['chat', 'chatGone'].every(
+        k => st[k] === undefined || (st[k] && typeof st[k] === 'object' && !Array.isArray(st[k]))
+      ) &&
       body.notes &&
       typeof body.notes === 'object' &&
       Object.values(body.notes).every(v => typeof v === 'string');
@@ -590,10 +612,11 @@ export function createSpaceService({
       throw fail('Dafür fehlen in diesem Raum die Rechte oder der Eintrag existiert nicht.', 'spaces_forbidden', 403);
     }
     addOps(r, [op]);
-    broadcastOps(r, [op], { include });
+    broadcastOps(r, [op], { include, urgent: URGENT_TYPES.has(type) });
     await store.save(r);
     changed(r.id);
-    soon();
+    if (URGENT_TYPES.has(type)) void flush().catch(() => {});
+    else soon();
     return op;
   }
   const cloneDoc = doc => {
@@ -1079,6 +1102,11 @@ export function createSpaceService({
     me: m.id === keys.id,
     safetyCode: safetyCode(m.signPub, m.boxPub)
   });
+  const chatOrder = (a, b) => a.lc - b.lc || (a.by < b.by ? -1 : a.by > b.by ? 1 : a.seq - b.seq);
+  const chatList = state => Object.values(state.chat || {}).sort(chatOrder);
+  const lastChat = state => chatList(state).at(-1) || null;
+  const unreadOf = (r, state) => (r.chatUnread || []).filter(id => state.chat?.[id] && state.chat[id].by !== keys.id);
+
   function summary(r) {
     const state = stateOf(r);
     const openTasks = Object.values(state.tasks).filter(t => !t.deleted && t.status !== 'done').length;
@@ -1093,7 +1121,8 @@ export function createSpaceService({
       email: r.email,
       members: Object.values(state.members).filter(m => !m.removed).length,
       openTasks,
-      updatedAt: state.activity.at(-1)?.at || r.createdAt,
+      updatedAt: [state.activity.at(-1)?.at || r.createdAt, lastChat(state)?.at || ''].sort().at(-1),
+      unreadChat: unreadOf(r, state).length,
       pendingMails: (r.outbox || []).length,
       sendError: (r.outbox || []).find(i => i.error)?.error || null
     };
@@ -1128,6 +1157,7 @@ export function createSpaceService({
       mySafetyCode: keys.safetyCode,
       dissolved: state.dissolved,
       ai: state.ai,
+      aiChatGrant: r.aiChatGrant ? { since: r.aiChatGrant.since } : null,
       members: Object.values(state.members).map(publicMember),
       invites:
         state.owner === keys.id
@@ -1302,9 +1332,140 @@ export function createSpaceService({
     return flush();
   }
 
+  // ---------------------------------------------------------------- chat
+  /**
+   * Chat of a space, oldest first: the newest `limit` messages, or those before the message
+   * `before` (for scrolling back). Unread ones carry `unread: true`.
+   */
+  function chat(spaceId, { before = '', limit = 100 } = {}) {
+    const r = record(spaceId);
+    const state = stateOf(r);
+    let all = chatList(state);
+    if (before) {
+      const at = all.findIndex(m => m.id === before);
+      if (at >= 0) all = all.slice(0, at);
+    }
+    const max = Math.max(1, Math.min(Number(limit) || 100, 500));
+    const unread = new Set(unreadOf(r, state));
+    const messages = all.slice(-max).map(m => ({
+      id: m.id,
+      text: m.text,
+      at: m.at,
+      by: m.by,
+      mine: m.by === keys.id,
+      replyTo: m.replyTo || null,
+      ai: Boolean(m.ai),
+      editedAt: m.editedAt || null,
+      unread: unread.has(m.id)
+    }));
+    // Quoted messages that are not in this page (or were deleted): a short preview, or gone.
+    const quoted = {};
+    for (const m of messages)
+      if (m.replyTo && !quoted[m.replyTo] && !messages.some(x => x.id === m.replyTo)) {
+        const q = state.chat?.[m.replyTo];
+        quoted[m.replyTo] = q ? { by: q.by, text: q.text.slice(0, 200) } : null;
+      }
+    return {
+      messages,
+      quoted,
+      more: all.length > max,
+      unread: unread.size,
+      rev: revs.get(r.id) || 0,
+      canWrite: r.status === 'active' && ['owner', 'editor'].includes(state.members[keys.id]?.role),
+      pending: (r.outbox || []).some(i => i.kind === 'ops' && i.urgent)
+    };
+  }
+  async function postChat(spaceId, { text, replyTo = null, ai = false }) {
+    const id = randomId(16);
+    await apply(spaceId, 'chat.post', { id, text, replyTo: replyTo || undefined, ai: ai === true });
+    return id;
+  }
+  /** Everything in the chat counts as read on this device (no read receipts are sent). */
+  async function markChatRead(spaceId, ids = null) {
+    const r = record(spaceId);
+    if (!r.chatUnread?.length) return;
+    // With ids: only what the user actually saw; a message that arrived meanwhile stays unread.
+    const seen = Array.isArray(ids) ? new Set(ids.map(String)) : null;
+    const next = seen ? r.chatUnread.filter(id => !seen.has(id)) : [];
+    if (next.length === r.chatUnread.length) return;
+    r.chatUnread = next;
+    await store.save(r);
+    changed(r.id);
+  }
+  /**
+   * Resolves on the next change of the space (or of anything, without an id) after `rev`, or
+   * after `ms`. Lets the interface show a message the moment its sync mail was processed.
+   */
+  function waitForChange(spaceId, rev, ms = 25_000) {
+    if (spaceId !== undefined && (revs.get(spaceId) || 0) !== Number(rev)) return Promise.resolve(true);
+    return new Promise(resolve => {
+      const w = {
+        id: spaceId,
+        done: () => {
+          clearTimeout(timer);
+          waiters.delete(w);
+          resolve(true);
+        }
+      };
+      const timer = setTimeout(() => {
+        waiters.delete(w);
+        resolve(false);
+      }, ms);
+      waiters.add(w);
+    });
+  }
+
+  // Standing permission on this device: the assistant may write in this space's chat without
+  // asking, until the user revokes it. Its messages stay marked as AI-generated. At most
+  // GRANT_POSTS messages per GRANT_WINDOW go out that way; beyond that each one is asked again.
+  const GRANT_POSTS = 10;
+  const GRANT_WINDOW = 10 * 60_000;
+  const grantUse = new Map();
+  function chatGrant(spaceId) {
+    const r = record(spaceId);
+    return r.aiChatGrant ? { since: r.aiChatGrant.since } : null;
+  }
+  async function setChatGrant(spaceId, on) {
+    const r = record(spaceId);
+    if (on) {
+      writable(r);
+      if (!['owner', 'editor'].includes(stateOf(r).members[keys.id]?.role))
+        throw fail('Dafür fehlen in diesem Raum die Rechte oder der Eintrag existiert nicht.', 'spaces_forbidden', 403);
+      if (!r.aiChatGrant) r.aiChatGrant = { since: clock() };
+    } else delete r.aiChatGrant;
+    grantUse.delete(r.id);
+    await store.save(r);
+    changed(r.id);
+    return chatGrant(spaceId);
+  }
+  /** Whether one assistant message may go out without asking now (and counts it). */
+  function useChatGrant(spaceId) {
+    let r;
+    try {
+      r = record(spaceId);
+    } catch {
+      return false;
+    }
+    if (!r.aiChatGrant || r.status !== 'active') return false;
+    if (!['owner', 'editor'].includes(stateOf(r).members[keys.id]?.role)) return false;
+    const now = Date.now();
+    const recent = (grantUse.get(r.id) || []).filter(t => now - t < GRANT_WINDOW);
+    if (recent.length >= GRANT_POSTS) return false;
+    recent.push(now);
+    grantUse.set(r.id, recent);
+    return true;
+  }
+
   return {
     identity: { id: keys.id, safetyCode: keys.safetyCode },
     list,
+    chat,
+    chatGrant,
+    setChatGrant,
+    useChatGrant,
+    postChat,
+    markChatRead,
+    waitForChange,
     detail,
     create,
     invite,
