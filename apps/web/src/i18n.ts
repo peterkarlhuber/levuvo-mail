@@ -3,8 +3,9 @@ import { usePrefs } from './prefs';
 import { EN as BASE_EN } from './i18n-en';
 import { AI_EN } from './i18n-ai-en';
 import { TASKS_EN } from './i18n-tasks-en';
+import { DAY_EN } from './i18n-day-en';
 
-const EN: Record<string, string> = { ...BASE_EN, ...AI_EN, ...TASKS_EN };
+const EN: Record<string, string> = { ...BASE_EN, ...AI_EN, ...TASKS_EN, ...DAY_EN };
 
 // German is the source language: t('Neue Nachricht') returns the German text or its
 // English translation. Placeholders: t('{count} Nachrichten', { count: 3 }).

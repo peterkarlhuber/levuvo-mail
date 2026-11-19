@@ -1220,5 +1220,72 @@
         }
       ]
     }
+  },
+  "GET /api/briefing": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "from": "2026-11-19T23:00:00.000Z",
+      "to": "2026-11-20T23:00:00.000Z",
+      "generatedAt": "2026-11-20T07:00:00.000Z",
+      "events": [
+        {
+          "uid": "e1",
+          "summary": "Jour fixe Relaunch",
+          "location": "Büro Linz",
+          "start": "2026-11-20T09:00:00.000Z",
+          "end": "2026-11-20T10:00:00.000Z",
+          "allDay": false,
+          "color": null,
+          "attendees": 3
+        }
+      ],
+      "tasks": [
+        {
+          "id": "t1",
+          "title": "Angebot an Hofer IT schicken",
+          "due": "2026-11-19",
+          "priority": "high",
+          "overdue": true,
+          "mail": null
+        }
+      ],
+      "followups": [
+        {
+          "id": "f1",
+          "accountId": "primary",
+          "subject": "Vertragsentwurf",
+          "to": ["lukas@hofer-it.at"],
+          "due": "2026-11-19T08:00:00.000Z"
+        }
+      ],
+      "replies": [
+        {
+          "accountId": "primary",
+          "accountLabel": "Arbeit",
+          "folder": "INBOX",
+          "uid": 1,
+          "fromName": "Lukas Hofer",
+          "fromEmail": "lukas@hofer-it.at",
+          "subject": "Angebot Website-Relaunch",
+          "date": "2026-11-19T16:00:00.000Z",
+          "unread": true,
+          "flagged": false,
+          "preview": "Kannst du mir bis Freitag Bescheid geben?"
+        }
+      ],
+      "moreReplies": 0,
+      "spaces": {
+        "updated": [
+          {
+            "id": "sp1",
+            "name": "Projekt Relaunch",
+            "openTasks": 2
+          }
+        ],
+        "invitations": []
+      },
+      "unavailable": []
+    }
   }
 }

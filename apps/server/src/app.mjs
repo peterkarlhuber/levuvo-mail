@@ -51,6 +51,7 @@ import { createOllamaRuntime } from './ollama-runtime.mjs';
 import { createModelManager } from './ollama-models.mjs';
 import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
+import { registerBriefingRoutes } from './routes-briefing.mjs';
 
 const { ImapFlow } = imapflow;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -457,7 +458,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|briefing)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -703,6 +704,7 @@ export async function createMailServer({
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerBriefingRoutes(ctx);
 
   if (desktop) {
     api.get('/', async (_request, reply) => {

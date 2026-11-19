@@ -17,6 +17,7 @@ export function createInternalApi(request) {
       get(`/api/search/local?q=${q(query)}${account ? `&account=${q(account)}` : ''}`),
     events: (from, to) => get(`/api/calendar/events?from=${q(from)}&to=${q(to)}`),
     calendars: () => get('/api/calendar/calendars'),
+    spaces: () => get('/api/spaces'),
     contacts: () => get('/api/contacts/list'),
     saveDraft: (account, draft) => post(`/api/drafts/save?account=${q(account)}`, draft, 'draft-v1'),
     messageAction: (account, uid, body) =>

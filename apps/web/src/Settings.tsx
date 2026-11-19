@@ -192,6 +192,18 @@ function General() {
         </Row>
       </Section>
       <Section title={t('Lesen')}>
+        <Row
+          label={t('„Mein Tag“ beim ersten Öffnen am Tag zeigen')}
+          hint={t(
+            'Termine, fällige Aufgaben, Mails, die auf deine Antwort warten, und Neues aus den Räumen auf einen Blick.'
+          )}
+        >
+          <Toggle
+            label={t('„Mein Tag“ beim ersten Öffnen am Tag zeigen')}
+            checked={prefs.briefingOnStart}
+            onChange={v => setPrefs({ briefingOnStart: v })}
+          />
+        </Row>
         <Row label={t('Beim Öffnen als gelesen markieren')}>
           <Toggle
             label={t('Beim Öffnen als gelesen markieren')}

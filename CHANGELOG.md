@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### My day
+- **Morning briefing "My day":** the first time Levuvo Mail is opened on a day, one overview shows today's events, tasks due today or overdue, follow-ups without an answer, emails from people from the last three days that still wait for your answer, and new activity and invitations in your spaces. Every entry opens where it belongs; tasks can be ticked off right there. Also in the command palette ("My day"); switch the automatic start off in the overview or in Settings → General. It opens by itself only when there is something to show.
+- **Built locally, without AI:** the overview is put together from data on this computer. With the AI on, the existing "Prioritization" says which of the waiting emails really need an answer today, with a short reason; this runs by itself only with a local model, with a cloud model only when you click. The AI only changes the order, never hides an email, and its result is labelled.
+
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
 - **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).
