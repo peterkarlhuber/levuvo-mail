@@ -25,9 +25,41 @@ export type Task = {
   done: boolean;
   doneAt: string | null;
   mail: TaskMailRef | null;
+  /** Connected list the task is synced with (null: only on this device). */
+  list?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type TaskSyncProvider = 'caldav' | 'microsoft' | 'google';
+/** A connected list (CalDAV, Microsoft To Do, Google Tasks). */
+export type TaskLink = {
+  id: string;
+  provider: TaskSyncProvider;
+  accountId: string;
+  accountLabel: string;
+  listId: string;
+  name: string;
+  lastSync: string | null;
+  lastError: string | null;
+  lastErrorCode: string | null;
+};
+/** A list on a server that can be connected. */
+export type TaskListSource = {
+  provider: TaskSyncProvider;
+  accountId: string;
+  accountLabel: string;
+  listId: string;
+  name: string;
+  connected: boolean;
+};
+/** 'all', 'local' (this device only) or a connected list's id. */
+export type TaskListFilter = string;
+export function inList<T extends Pick<Task, 'list'>>(list: T[], filter: TaskListFilter) {
+  if (filter === 'all') return list;
+  if (filter === 'local') return list.filter(t => !t.list);
+  return list.filter(t => t.list === filter);
+}
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

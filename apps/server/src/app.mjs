@@ -3,6 +3,8 @@
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
+import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
+import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -204,8 +206,18 @@ export async function createMailServer({
     return null;
   });
   // Like the device calendar: a locked keychain must not stop the app, tasks are then unavailable.
+  // Sync with connected lists (CalDAV …) is optional; without connected lists nothing leaves the device.
+  let taskSync = null;
+  let taskSchedule = null;
   const tasks = await openTaskFile({ filename: path.join(dir, 'tasks-local.json'), vault: store })
-    .then(file => createTaskStore(file))
+    .then(file => {
+      taskSync = createTaskSync({
+        file,
+        adapters: { caldav: createCaldavTasks({ store: davStore, fetchImpl }) },
+        logger: line => logger(line)
+      });
+      return createTaskStore(file, { onChange: () => taskSchedule?.soon() });
+    })
     .catch(err => {
       logger(`tasks unavailable: ${err.code || err.message}`);
       return lockedTaskStore(err);
@@ -420,7 +432,7 @@ export async function createMailServer({
         retryable: err.retryable === true
       });
     }
-    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces)_/.test(err.code)) {
+    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
     }
@@ -540,6 +552,7 @@ export async function createMailServer({
     followups,
     templates,
     tasks,
+    taskSync,
     watchers,
     previewCache,
     listCache,
@@ -629,6 +642,7 @@ export async function createMailServer({
         // Shared spaces: fetch and send sync mails.
         setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
         timers.push(setInterval(() => void ctx.spaces.tick(), 60_000));
+        if (taskSync) taskSchedule = scheduleTaskSync(taskSync);
       }
       await mcp.start();
       return { address, port: activePort };
@@ -638,6 +652,7 @@ export async function createMailServer({
     },
     async close() {
       for (const t of timers) clearInterval(t);
+      taskSchedule?.stop();
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
       await mcp.stop().catch(() => {});

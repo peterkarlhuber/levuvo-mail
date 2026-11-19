@@ -2,8 +2,9 @@ import { useCallback } from 'react';
 import { usePrefs } from './prefs';
 import { EN as BASE_EN } from './i18n-en';
 import { AI_EN } from './i18n-ai-en';
+import { TASKS_EN } from './i18n-tasks-en';
 
-const EN: Record<string, string> = { ...BASE_EN, ...AI_EN };
+const EN: Record<string, string> = { ...BASE_EN, ...AI_EN, ...TASKS_EN };
 
 // German is the source language: t('Neue Nachricht') returns the German text or its
 // English translation. Placeholders: t('{count} Nachrichten', { count: 3 }).
