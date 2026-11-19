@@ -84,13 +84,13 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
       text = await file.text();
       createdAt = String(JSON.parse(text)?.createdAt || '');
     } catch {
-      setError(t('Das ist keine Levuvo-Sicherung.'));
+      setError(t('Das ist keine Sicherung von Levuvo Mail.'));
       return;
     }
     const ok = await confirm({
       title: t('Sicherung wiederherstellen?'),
       message: t(
-        'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo startet danach neu.',
+        'Einstellungen, Konten, lokale Kontakte und Kalender, Vorlagen, Wiedervorlagen, eigene Schlüssel, Räume und Assistent-Daten auf diesem Gerät werden durch die Sicherung vom {date} ersetzt. Die bisherigen Daten werden vorher als Sicherheitskopie aufbewahrt. Levuvo Mail startet danach neu.',
         { date: createdAt ? when(createdAt) : '–' }
       ),
       confirmLabel: t('Wiederherstellen'),
@@ -192,7 +192,7 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
             </ul>
           )}
           {status && !status.canRestart && (
-            <p className="managed-hint">{t('Bitte Levuvo jetzt beenden und neu starten.')}</p>
+            <p className="managed-hint">{t('Bitte Levuvo Mail jetzt beenden und neu starten.')}</p>
           )}
           <div className="settings-actions">
             {status?.canRestart && (
@@ -265,7 +265,7 @@ export function BackupSettings({ restoreOnly = false }: { restoreOnly?: boolean 
       <Section
         title={t('Wiederherstellen oder auf neuen Rechner umziehen')}
         description={t(
-          'Wähle eine Levuvo-Sicherung (.levuvo) und gib ihr Passwort ein. Die Daten werden geprüft und beim Neustart übernommen. Danach die Passwörter der Konten einmal neu eingeben.'
+          'Wähle eine Sicherung von Levuvo Mail (.levuvo) und gib ihr Passwort ein. Die Daten werden geprüft und beim Neustart übernommen. Danach die Passwörter der Konten einmal neu eingeben.'
         )}
       >
         <div className="settings-actions">
