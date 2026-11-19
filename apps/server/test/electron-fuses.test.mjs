@@ -44,6 +44,6 @@ test('SEC-LEV-003: fuse wire of the binary is compared with the configuration', 
 test('SEC-LEV-003: every desktop build verifies the fuses of the packaged binary', () => {
   const workflow = readFileSync(new URL('../../../.github/workflows/build-desktop.yml', import.meta.url), 'utf8');
   assert.match(workflow, /node scripts\/verify-fuses\.mjs \$\{\{ matrix\.os \}\} \$\{\{ matrix\.arch \}\}/);
-  assert.match(executablePath('mac', 'arm64', '/r'), /mac-arm64\/Levuvo Mail\.app$/);
-  assert.match(executablePath('win', 'x64', '/r'), /win-unpacked\/Levuvo Mail\.exe$/);
+  assert.match(executablePath('mac', 'arm64', '/r'), /mac-arm64[\\/]Levuvo Mail\.app$/);
+  assert.match(executablePath('win', 'x64', '/r'), /win-unpacked[\\/]Levuvo Mail\.exe$/);
 });
