@@ -3,6 +3,7 @@
 // untrusted-data frame, never into the search index and never to disk. Limits keep a hostile
 // or huge file from stalling the server: size, page count, characters and a time budget.
 import { attachmentBytes } from './message-utils.mjs';
+import { htmlToText } from './html-mail.mjs';
 
 export const ATTACHMENT_TEXT_LIMITS = Object.freeze({
   files: 4,
@@ -33,17 +34,6 @@ const squash = text =>
     .replace(/[ \t\f\v]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-
-function htmlToText(html) {
-  return String(html)
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<br\s*\/?>|<\/(p|div|tr|li|h\d)>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
-}
 
 function withTimeout(promise, ms) {
   let timer;
