@@ -11,6 +11,16 @@
 - **A card before every meeting with others:** ten minutes before an event with other people (5, 10 or 15 minutes, or off, in Settings → General), a card at the bottom right shows who takes part with their address book entry (title, company, accepted or not), the latest emails with them or about the topic, files (attachments of the event and of those emails), and open points: tasks, follow-ups without an answer and promises that involve them. Emails open with one click. Also from the command palette ("Prepare the next meeting"). Built from data on this computer; it does not cover the app and closes with Escape.
 - **What is it about?** With the AI on, one click summarizes those emails (who wants what, open questions, deadlines), labelled as AI output. The existing assistant routine "Prepare meeting" stays.
 
+### User manual
+- **Levuvo Mail user manual (German, English):** a task-oriented manual for first-time users, from installation and the first account to email, calendar, contacts, tasks, spaces, the AI assistant, settings, troubleshooting and a one-page shortcut reference. Built as an accessible PDF (PDF/UA-1, tagged, alt texts) with screenshots of the app in its default dark theme; the `Manual` workflow builds and checks it on every change.
+- **Manual in the app:** Settings → Help shows the manual with chapter list and search; the question mark in the rail opens it.
+- **The assistant answers app questions from the manual:** for "how do I …" questions it reads only the few matching sections (found with the same local search model as the mail search, by word match without one) and links to them as sources.
+
+### Fixes
+- **Alt shortcuts on the Mac:** Option + 1–5 and Option + , switch views again (they used the typed character, which is different on a Mac keyboard).
+- **"Allow access" button:** the Microsoft/Google permission button for calendars, contacts and tasks no longer showed "Approve" in English.
+- The product is called "Levuvo Mail" everywhere in the app, also in file names of calendar and contact exports.
+
 ### Window frame (macOS)
 - **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
 

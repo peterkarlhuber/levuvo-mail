@@ -628,3 +628,24 @@ test('ARC-LEV-002: internal requests use their own secret, not a copied browser 
     assert.ok([401, 403].includes(r.statusCode), `status ${r.statusCode} for "${value}"`);
   }
 });
+
+test('Help: the manual and its screenshots need the session and are rate-limited routes', async t => {
+  const { s } = await server(t);
+  assert.equal((await s.api.inject({ method: 'GET', url: '/api/manual', headers: { host: HOST } })).statusCode, 401);
+  const r = await s.api.inject({ method: 'GET', url: '/api/manual?lang=en', headers: GET });
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().lang, 'en');
+  assert.ok(r.json().chapters.length >= 8);
+  assert.ok(r.headers['x-ratelimit-limit']);
+  const img = await s.api.inject({ method: 'GET', url: '/api/manual/img/de/mail.png', headers: GET });
+  assert.equal(img.statusCode, 200);
+  assert.equal(img.headers['content-type'], 'image/png');
+  assert.equal(
+    (await s.api.inject({ method: 'GET', url: '/api/manual/img/de/..%2Faccounts.png', headers: GET })).statusCode,
+    404
+  );
+  assert.equal(
+    (await s.api.inject({ method: 'GET', url: '/api/manual/img/de/mail.png', headers: { host: HOST } })).statusCode,
+    401
+  );
+});

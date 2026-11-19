@@ -30,6 +30,7 @@ import { Segmented } from './ui';
 import { useT } from './i18n';
 import { usePrefs } from './prefs';
 import { ShortcutsDialog } from './Panels';
+import { ManualView } from './ManualView';
 import { FiltersSettings } from './SettingsFilters';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
@@ -627,7 +628,7 @@ function Help() {
     [
       t('Kalender & Kontakte'),
       t(
-        'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.'
+        'Microsoft 365 und Google sind über das angemeldete Konto automatisch dabei (einmalig „Zugriff freigeben“). Andere Anbieter verbindest du per CalDAV/CardDAV (z. B. Nextcloud, mailbox.org, iCloud mit App-Passwort, Fastmail). Einladungen in E-Mails beantwortest du direkt in der Nachricht; Termine lassen sich per Drag & Drop verschieben.'
       )
     ],
     [
@@ -646,11 +647,14 @@ function Help() {
   return (
     <>
       <Section
-        title={t('Hilfe')}
+        title={t('Handbuch')}
         description={t(
-          'Das ausführliche Handbuch liegt dem Release-Kit als HANDBUCH.md (Deutsch) und MANUAL.md (English) bei.'
+          'Schritt für Schritt erklärt: Einrichtung, E-Mail, Kalender, Kontakte, Aufgaben, Räume, Assistent und Einstellungen. Fragen dazu beantwortet auch der Assistent.'
         )}
       >
+        <ManualView />
+      </Section>
+      <Section title={t('Kurzhilfe')}>
         {topics.map(([title, text]) => (
           <details key={title} className="help-topic">
             <summary>{title}</summary>
@@ -674,7 +678,7 @@ function About({ runtime }: { runtime: Runtime }) {
     <>
       <Section title="Levuvo Mail">
         <div className="about-card">
-          <img src="/levuvo-header-logo.png" alt="Levuvo" className="brand-image" />
+          <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="brand-image" />
           <div>
             <strong>Levuvo Mail {runtime.version}</strong>
             <small>

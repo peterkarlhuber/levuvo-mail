@@ -210,8 +210,8 @@ export const AI_EN: Record<string, string> = {
   Du: 'Informal (du)',
   Sie: 'Formal (Sie)',
   Grußformel: 'Closing line',
-  'Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.':
-    'For example “Best regards”. Levuvo adds your signature itself.',
+  'Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo Mail selbst an.':
+    'For example “Best regards”. Levuvo Mail adds your signature itself.',
   'Eigene Anweisungen': 'Own instructions',
   'Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.':
     'For example “No exclamation marks, always give the weekday with dates”.',
@@ -320,8 +320,8 @@ export const AI_EN: Record<string, string> = {
   'Aufgabe für den Assistenten': 'Task for the assistant',
   'Verlauf des Assistenten': 'Assistant history',
   'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})',
-  // Levuvo's own Ollama and its model list
-  'Levuvos eigenes Ollama startet beim ersten Gebrauch.': "Levuvo's own Ollama starts on first use.",
+  // Levuvo Mail's own Ollama and its model list
+  'Das eigene Ollama von Levuvo Mail startet beim ersten Gebrauch.': "Levuvo Mail's own Ollama starts on first use.",
   'Modell zu groß für diesen Computer?': 'Model too large for this computer?',
   '{name} braucht mehr Arbeitsspeicher, als dieser Computer hat. Es kann sehr langsam laufen oder gar nicht starten.':
     '{name} needs more memory than this computer has. It may run very slowly or not start at all.',
@@ -337,8 +337,8 @@ export const AI_EN: Record<string, string> = {
   'zu groß': 'too large',
   knapp: 'tight',
   'Lokale KI': 'Local AI',
-  'Levuvo bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.':
-    'Levuvo comes with its own Ollama {version}. It runs only on this computer, separate from any other Ollama installed. For this computer ({ram} GB memory) the size “{tier}” fits.',
+  'Levuvo Mail bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.':
+    'Levuvo Mail comes with its own Ollama {version}. It runs only on this computer, separate from any other Ollama installed. For this computer ({ram} GB memory) the size “{tier}” fits.',
   Bereit: 'Ready',
   'Startet …': 'Starting …',
   'Bitte ein Modell aus der Liste wählen.': 'Please choose a model from the list.',
@@ -365,7 +365,7 @@ export const AI_EN: Record<string, string> = {
   Fortsetzen: 'Resume',
   'Dieses Modell steht nicht in der Liste.': 'This model is not in the list.',
   'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.':
-    "Levuvo's own Ollama is not included in this installation.",
+    "Levuvo Mail's own Ollama is not included in this installation.",
   'Klein, ab 8 GB Arbeitsspeicher': 'Small, from 8 GB memory',
   'Standard, ab 16 GB Arbeitsspeicher': 'Standard, from 16 GB memory',
   'Groß, ab 32 GB Arbeitsspeicher': 'Large, from 32 GB memory',
@@ -375,9 +375,9 @@ export const AI_EN: Record<string, string> = {
   'Prüfsumme stimmt nicht. Das Modell wurde entfernt. Bitte erneut herunterladen.':
     'The checksum does not match. The model was removed. Please download it again.',
   'Der Download ist fehlgeschlagen. Bitte erneut versuchen.': 'The download failed. Please try again.',
-  'Dieses Modell steht nicht in Levuvos Modellliste.': "This model is not in Levuvo's model list.",
+  'Dieses Modell steht nicht in der Modellliste von Levuvo Mail.': "This model is not in Levuvo Mail's model list.",
   'Gerade läuft ein Download. Bitte warten, bis er fertig ist.':
     'A download is running. Please wait until it is finished.',
-  'Das lokale Modell ist nicht erreichbar. Bitte Levuvo neu starten.':
-    'The local model cannot be reached. Please restart Levuvo.'
+  'Das lokale Modell ist nicht erreichbar. Bitte Levuvo Mail neu starten.':
+    'The local model cannot be reached. Please restart Levuvo Mail.'
 };
