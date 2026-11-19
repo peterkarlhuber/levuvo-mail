@@ -8,25 +8,33 @@
 
 | Bereich | Was du dort einstellst |
 |---|---|
-| Allgemein | Sprache, helles oder dunkles Design, Dichte der Liste, Senden rückgängig, neue Absender zuerst prüfen |
-| Konten | Konten hinzufügen und entfernen, Signaturen, weitere Absenderadressen |
-| Vorlagen | Textbausteine für wiederkehrende Mails |
-| Filter & Abwesenheit | Regeln auf dem Mailserver und Abwesenheitsnotiz |
-| Kalender & Kontakte | Kalender anderer Anbieter verbinden, Farben, Import und Export |
-| Sicherheit | Schlüssel und Zertifikate für verschlüsselte Mails |
+| Allgemein | **Darstellung** (Sprache, Design, Dichte), **Lesen** (Bündeln, neue Absender prüfen), **Schreiben** (Senden rückgängig), **Kalender** |
+| Konten | Konten, Signaturen, Absenderadressen, **Verbindungsstatus** |
+| Vorlagen | **Textbausteine und Vorlagen** |
+| Filter & Abwesenheit | **Filterregeln** auf dem Mailserver und **Abwesenheitsnotiz** |
+| Automatisierungen | **Automatisierungen**: Regeln für neue Mails, auch mit Aufgaben, mit **Protokoll** |
+| Kalender & Kontakte | **Server-Konten** anderer Anbieter, Farben, Import und Export |
+| Buchungslinks | **Buchungslinks**, über die andere einen Termin bei dir buchen |
+| Sicherheit | Schlüssel und Zertifikate (OpenPGP, S/MIME) |
 | Suche & Offline | Stand des Suchindex, neu aufbauen |
-| KI & Agenten | Assistent, Sprachmodelle, Cloud-Einwilligung, Agenten |
+| KI & Agenten | **KI-Assistent**, **Funktionen**, **Schreibstil**, **KI-Protokoll**, Agenten und **Freigaben** |
 | Mitteilungen | Benachrichtigungen erlauben und testen |
-| Datenschutz | Absturzberichte (freiwillig), Diagnosebericht |
-| Sicherung | Sicherung erstellen und wiederherstellen |
-| Hilfe | Dieses Handbuch mit Suche, Kurzhilfe, Tastenkürzel |
-| Über | Version, Impressum, Lizenzen |
+| Datenschutz | Datenschutz-Cockpit, **Deine Daten**, Absturzberichte, Diagnosebericht, **Gespeicherte Daten auf diesem Gerät** |
+| Sicherung | **Sicherung erstellen**, **Wiederherstellen oder auf neuen Rechner umziehen** |
+| Hilfe | Dieses **Handbuch** mit Suche, **Kurzhilfe**, Tastenkürzel |
+| Über | Version, **Sicherheit und Support**, **Impressum**, Open-Source-Lizenzen |
 
 ### Signatur und weitere Absenderadressen
 
 Unter **Einstellungen → Konten** klickst du auf ein Konto, um es zu bearbeiten. Dort legst du eine **Signatur** an, auch mit Links und kleinem Logo. Unter **Weitere Absenderadressen (Aliase)** trägst du zusätzliche Adressen ein, etwa office@ und rechnung@, jeweils mit eigener Signatur. Trag nur Adressen ein, mit denen dein Mailserver dich senden lässt.
 
 ![Konten und Signaturen](settings-accounts.png)
+
+### Automatisierungen
+
+Unter **Einstellungen → Automatisierungen** legst du mit **Neue Automatisierung** Regeln für neue Mails im Posteingang an: zum Beispiel Mails eines Absenders in einen Ordner verschieben, als gelesen markieren, mit Stern markieren oder eine **Aufgabe anlegen**. Ist der Assistent eingeschaltet, beschreibst du die Regel **in einfachen Worten** und wählst **Regel vorschlagen**. Die lokale KI füllt dann den Editor, und der Vorschlag ist als KI-Vorschlag gekennzeichnet. Prüfe ihn, denn die KI kann sich irren.
+
+Unter **So läuft die Regel** steht die Regel in Worten. Mit **Probelauf** siehst du, welche der 50 neuesten Mails sie behandeln würde, ohne dass sich etwas ändert. Eine Regel läuft erst, wenn du sie einschaltest, und nur für Mails, die danach ankommen. Sie löscht nie, antwortet nie und verschiebt nie in den Papierkorb. Im **Protokoll** siehst du, was die Regeln getan haben.
 
 ## So schützt Levuvo Mail deine Daten
 
@@ -36,6 +44,16 @@ Unter **Einstellungen → Konten** klickst du auf ein Konto, um es zu bearbeiten
 - **Sichere Anzeige.** Mails werden ohne Skripte angezeigt, externe Bilder sind blockiert, Links fragen vorher nach.
 - **Nur von deinem Gerät erreichbar.** Die App nimmt keine Verbindungen von anderen Computern an.
 - **Absturzberichte nur freiwillig.** Unter **Einstellungen → Datenschutz** entscheidest du, ob bei einem Absturz ein technischer Bericht geschickt wird. Er kann Teile gerade geöffneter Mails oder Adressen enthalten. Deshalb ist er standardmäßig aus.
+
+### Deine Daten exportieren oder löschen
+
+Unter **Einstellungen → Datenschutz** zeigt das **Datenschutz-Cockpit** die letzten 30 Tage: blockierte Tracker, KI-Aufrufe und was das Gerät verlassen hat. Darunter, bei **Deine Daten**:
+
+- **Meine Daten exportieren** speichert eine lesbare Kopie (JSON) der Daten, die nur auf diesem Gerät liegen., ohne Passwörter und private Schlüssel.
+- **Alle Daten auf diesem Gerät löschen** entfernt beim nächsten Start alles, was Levuvo Mail hier gespeichert hat, auch die Einträge im Schlüsselbund. Bis dahin kannst du abbrechen; Mails auf den Servern bleiben.
+- **Updates automatisch installieren** ist eingeschaltet. Schaltest du es aus, fragt Levuvo Mail vor jedem Update. Installiere Sicherheitsupdates dann bitte zügig.
+
+Unter **Einstellungen → Über** steht bei **Sicherheit und Support**, bis wann diese Version kostenlose Sicherheitsupdates bekommt und wie du eine Sicherheitslücke meldest. **Open-Source-Lizenzen** zeigt die Lizenztexte aller mitgelieferten Bausteine.
 
 ![Sicherheit: Schlüssel und Zertifikate](settings-security.png)
 
@@ -57,7 +75,9 @@ Unter **Einstellungen → Konten** klickst du auf ein Konto, um es zu bearbeiten
 
 ## Hilfe bekommen
 
-1. Öffne **Einstellungen → Datenschutz** und klicke beim **Diagnosebericht** auf **Herunterladen**.
-2. Schick den Bericht zusammen mit einer kurzen Beschreibung an deinen Support oder deine IT.
+Dieses Handbuch steckt mit Suche auch in der App: **Einstellungen → Hilfe** oder das Fragezeichen links. Oder frag den Assistenten, etwa „Wie lege ich eine Sicherung an?“; er antwortet aus dem Handbuch.
 
-Der Diagnosebericht enthält keine Mailinhalte und keine Adressen. Gib niemals dein Passwort weiter, auch nicht an den Support.
+Kommst du nicht weiter:
+
+1. Öffne **Einstellungen → Datenschutz** und klicke beim **Diagnosebericht** auf **Herunterladen**. Er enthält keine Mailinhalte und keine Adressen.
+2. Schick ihn mit einer kurzen Beschreibung an deinen Support oder deine IT. Dein Passwort gibst du nie weiter, auch nicht an den Support.

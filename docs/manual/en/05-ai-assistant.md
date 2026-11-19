@@ -55,9 +55,7 @@ In the editor, the **Assistant** button opens these helpers:
 - **Bullet points to email** turns notes into a complete text.
 - **Rewrite:** **Shorter**, **More polite**, **More formal**, **More casual**, **Fix spelling**, **In English** or **In German**. **Undo** takes you back to the original.
 
-Before sending, the assistant checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data. You decide whether to send anyway.
-
-Under **Writing style** you set how the assistant writes for you: tone, formal or informal address, sign-off and your own instructions.
+Under **Writing style** you set tone, formal or informal address, sign-off and your own instructions. With **Learn style per contact** the assistant adopts how you greet each recipient, encrypted on this device. Before sending, it checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data; you decide.
 
 ### The assistant window
 
@@ -65,7 +63,7 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 
 ![The assistant window](assistant.png)
 
-- **Question:** "When is the delivery from Müller arriving?" The assistant decides itself whether to search your emails or the manual. To "Hello" or "Who are you?" it answers directly and names the model it is using. Cards below the answer show the emails or manual sections it comes from. One click opens them. If nothing fits, it says so instead of guessing.
+- **Question:** "When is the delivery from Müller arriving?" The assistant decides itself whether to search your emails or the manual. To "Hello" or "Who are you?" it answers directly and names the model it is using. Cards below the answer show the emails or manual sections it comes from. Each source shows sender, date and a literal quote; one click opens it. Follow-ups such as "And the price?" refer to the previous answer, **Clear history** starts afresh. If nothing fits, it says so instead of guessing.
 - **Long answers:** If an answer is longer than the maximum response length, it shows **Answer cut off**. **Continue** gets you the full answer.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters. The routine bar stays visible at the top of the window.
@@ -84,7 +82,7 @@ Empty fields mean "Automatic". **Reset** restores the defaults.
 
 ## Connect external agents
 
-Advanced users can connect AI programs such as Claude Desktop to Levuvo Mail. For this, Levuvo Mail provides an interface called the MCP server. It can only be reached from this computer. Under **Settings → AI & agents → Agent interface (MCP)** you switch it on and use **New agent** to create an access with fixed rights: read only, create drafts, organize, or everything. Sending, events with attendees and deleting wait for your approval. Only if you tick **send without approval** at the level "Everything incl. sending" does the agent send directly. Passwords, keys and accounts are never reachable for agents.
+Advanced users can connect AI programs such as Claude Desktop to Levuvo Mail through an interface, the MCP server. It can only be reached from this computer. Under **Settings → AI & agents → Agent interface (MCP)** you switch it on and use **New agent** to create an access with fixed rights: read only, create drafts, organize, or everything. Sending, events with attendees and deleting wait for your approval. Only if you tick **send without approval** at the level "Everything incl. sending" does the agent send directly. Passwords, keys and accounts are never reachable for agents.
 
 ## Privacy and AI rules
 
@@ -93,5 +91,5 @@ Advanced users can connect AI programs such as Claude Desktop to Levuvo Mail. Fo
 - **Lock accounts.** Under **No cloud AI for these accounts** you exclude single mailboxes, such as your work one, from cloud AI entirely.
 - **Other people's data.** Emails also contain names and details of your contacts. Use cloud AI for work email only if your organization allows it.
 - **Labelling and control.** AI results are always labelled. AI can be wrong: check summaries and suggestions, especially amounts, deadlines and names. You make the final decision; the European AI regulation (EU AI Act) asks for exactly that.
-- **AI log.** The **AI log** shows what AI and agents did, without email content, for 30 days and only on this device.
-- **Delete everything.** **Delete all AI data** removes settings, consents, keys, the log and agents. Your emails stay unchanged.
+- **Marking when sending.** Emails the AI wrote carry an invisible note (can be switched off: **Mark AI-written mails**). The assistant does not rate people, such as applicants.
+- **Log and deleting.** The **AI log** shows for 30 days what AI and agents did, without email content. **Delete all AI data** removes settings, consents, keys, the log and agents.

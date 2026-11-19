@@ -102,6 +102,18 @@ export function hasRemoteContent(html) {
   );
 }
 
+/** RFC 3834: an automatic message (out-of-office, bounce, mailing list) that must not be answered automatically. */
+export function isAutoSubmitted(headers) {
+  const get = key => {
+    const v = headers?.get?.(key);
+    return v === undefined || v === null ? '' : String(typeof v === 'object' ? (v.value ?? v.text ?? 'x') : v);
+  };
+  const auto = get('auto-submitted').trim();
+  if (auto && !/^no$/i.test(auto)) return true;
+  if (/^(bulk|list|junk|auto_reply)$/i.test(get('precedence').trim())) return true;
+  return Boolean(get('list-id') || get('x-autoreply') || get('x-autorespond'));
+}
+
 export function publicMessage(parsed, uid, folder) {
   const rawHtml = (parsed.html || '').slice(0, MAX_HTML_CHARS);
   const { html, inlined } = inlineCidImages(rawHtml, parsed.attachments || []);
@@ -120,6 +132,7 @@ export function publicMessage(parsed, uid, folder) {
     html,
     remoteContent: hasRemoteContent(rawHtml),
     unsubscribe: publicUnsubscribe(parseUnsubscribe(parsed.headers)),
+    automatic: isAutoSubmitted(parsed.headers),
     textTruncated: (parsed.text?.length || 0) > MAX_TEXT_CHARS,
     htmlTruncated: (parsed.html?.length || 0) > MAX_HTML_CHARS,
     attachments: (parsed.attachments || []).map((att, index) => ({

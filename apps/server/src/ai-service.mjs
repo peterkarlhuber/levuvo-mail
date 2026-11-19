@@ -52,6 +52,7 @@ const TASK_FEATURE = {
   attachment_check: 'attachmentCheck',
   presend: 'attachmentCheck',
   filter_rule: 'classify',
+  automation_rule: 'classify',
   prioritize: 'prioritize',
   classify: 'classify',
   extract: 'extract',

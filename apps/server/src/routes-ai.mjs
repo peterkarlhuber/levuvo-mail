@@ -388,6 +388,7 @@ export function registerAiRoutes(ctx) {
         };
       }
       case 'filter_rule':
+      case 'automation_rule':
         return {
           lang,
           text: clientText(input.text, 1000),
