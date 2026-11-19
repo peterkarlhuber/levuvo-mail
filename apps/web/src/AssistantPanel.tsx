@@ -2,11 +2,12 @@
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from './ui/focus';
-import { CircleCheck, LoaderCircle, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { CircleCheck, LoaderCircle, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { dateLabel } from './format';
 import { Button, Field, IconButton, Segmented } from './ui';
 import { ApprovalList } from './SettingsMcp';
 
@@ -18,7 +19,17 @@ type Skill = {
   builtin: boolean;
   param?: { name: string; label: string };
 };
-type Source = { accountId: string; folder: string; uid: number; subject: string };
+type Source = {
+  accountId: string;
+  folder: string;
+  uid: number;
+  subject: string;
+  fromName?: string;
+  fromEmail?: string;
+  date?: string;
+  quote?: string;
+  attachment?: string;
+};
 type Entry =
   | {
       id: number;
@@ -81,10 +92,15 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
 
   async function ask(question: string) {
     const id = ++seq.current;
+    // The last answered questions go along, so a follow-up like "and the price?" is understood.
+    const history = entries
+      .filter(e => e.kind === 'ask' && e.answer)
+      .slice(-2)
+      .map(e => ({ question: e.prompt, answer: e.kind === 'ask' ? e.answer : '' }));
     setEntries(list => [...list, { id, kind: 'ask', prompt: question, busy: true }]);
     try {
       const r = await runAi<{ answer: string; found: boolean; sources: Source[] }>('ask', {
-        input: { question },
+        input: { question, history },
         lang
       });
       update(id, {
@@ -205,7 +221,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
               {entries.length === 0 && (
                 <p className="ai-hint">
                   {t(
-                    'Frag zum Beispiel „Wann kommt die Lieferung von Müller?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesendet wird nichts ohne deine Freigabe.'
+                    'Frag zum Beispiel „Was hat Müller zum Angebot gesagt?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesucht wird auch in PDF- und Textanhängen, Rückfragen beziehen sich auf die vorige Antwort. Gesendet wird nichts ohne deine Freigabe.'
                   )}
                 </p>
               )}
@@ -232,7 +248,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                     )}
                     {e.kind === 'ask' && e.answer && (
                       <div className="assistant-answer">
-                        <p>{e.answer}</p>
+                        <p className={e.found === false ? 'ai-hint' : undefined}>{e.answer}</p>
                         {e.sources && e.sources.length > 0 && (
                           <ul className="assistant-sources">
                             {e.sources.map(s => (
@@ -246,6 +262,21 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                                 >
                                   {s.subject || t('(ohne Betreff)')}
                                 </button>
+                                <span className="assistant-source-meta">
+                                  {[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </span>
+                                {s.quote && (
+                                  <blockquote className="assistant-quote">
+                                    {s.attachment && (
+                                      <span className="assistant-quote-file">
+                                        <Paperclip size={11} aria-hidden="true" /> {s.attachment}
+                                      </span>
+                                    )}
+                                    „{s.quote}“
+                                  </blockquote>
+                                )}
                               </li>
                             ))}
                           </ul>

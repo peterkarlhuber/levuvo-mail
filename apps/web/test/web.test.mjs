@@ -1145,3 +1145,10 @@ test('Contact history: one timeline of mails, appointments, tasks and notes, new
   );
   assert.deepEqual(countKinds(items), { mail: 1, event: 1, task: 1, note: 1 });
 });
+
+test('Protect with password: the composer refuses the same weak passwords as the server', async () => {
+  const { weakPassword } = await import('../src/password-rules.ts');
+  const server = await import('../../server/src/protected-message.mjs');
+  for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
+    assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
+});

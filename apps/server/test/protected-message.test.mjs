@@ -8,6 +8,7 @@ import {
   MAX_OPEN_ITERATIONS,
   protectedNotice,
   readPasswordProtection,
+  weakPassword,
   sealPayload,
   PROTECTED_FILENAME
 } from '../src/protected-message.mjs';
@@ -131,4 +132,24 @@ test('Protect with password: hostile boxes are refused early and never block the
   await sealPayload({ a: 1 }, 'Ein langes Passwort');
   clearInterval(sealTimer);
   assert.ok(sealTicks > 0, 'event loop stayed responsive while sealing');
+});
+
+test('Protect with password: easily guessed passwords are refused (offline attack has no rate limit)', () => {
+  for (const pw of [
+    'aaaaaaaaaa',
+    '1212121212',
+    '1234567890',
+    '0987654321',
+    'abcdefghijk',
+    'Passwort123',
+    'password2026!',
+    'Qwertzuiop1',
+    '!!Geheim2026',
+    '12345678901234'
+  ])
+    assert.equal(weakPassword(pw), true, pw);
+  for (const pw of ['Sommer-2026!', 'Ein langes Passwort', 'k7Qm-9XpT-a2Hc-ZrW4', '3141592653589793'])
+    assert.equal(weakPassword(pw), false, pw);
+  assert.throws(() => readPasswordProtection({ password: 'Passwort2026' }), /zu leicht zu erraten/);
+  assert.throws(() => readSecurity({ method: 'password', password: '1234567890' }), /zu leicht zu erraten/);
 });

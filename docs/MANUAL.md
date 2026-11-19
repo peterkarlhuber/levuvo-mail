@@ -356,7 +356,11 @@ A rewritten text stays marked with "Changed by the assistant · Undo".
 folder", click "Suggest rule", review, save.
 
 **Assistant panel (✦ on the left or Ctrl/⌘ + J):**
-- **Question:** "When does the delivery from Müller arrive?" – answer with clickable source emails.
+- **Question:** "What did Müller say about the offer?" – a short answer with the source emails to click,
+  each with sender, date and a quoted passage (only passages that literally appear in the email). The
+  search combines meaning and exact words, so names, invoice numbers and rare terms are found too, and it
+  reads PDF and text attachments of the best hits. Follow-ups like "and the price?" refer to the previous
+  answer; the bin icon starts a new conversation.
 - **Task:** "Arrange a meeting with Anna next week" – the assistant finds free times and creates a draft.
   Nothing is sent.
 - **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
