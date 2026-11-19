@@ -25,6 +25,7 @@ import { plainToHtml, SIGNATURE_SEPARATOR } from './editor';
 import MessageList, { DRAG_TYPE } from './MessageList';
 import MailSidebar from './mail/MailSidebar';
 import { useBundleSuggestions, useScreening } from './mail/useInboxOrder';
+import { useFollowupsDue, useSnoozedEntries } from './mail/useFollowups';
 import Reader, { printMessage, type ReaderAction } from './Reader';
 import { ShortcutsDialog } from './Panels';
 import { useUi } from './ConfirmDialog';
@@ -158,10 +159,6 @@ export default function MailInstance({
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
   const resizeAnchor = useRef<{ x: number; width: number } | null>(null);
   const [listWidth, setListWidth] = useState(prefs.listWidth);
-  const [snoozed, setSnoozed] = useState<
-    { id: string; messageId: string | null; snoozeUid?: string | null; until: string }[]
-  >([]);
-  const [followupsDue, setFollowupsDue] = useState(0);
   const [bulkSnooze, setBulkSnooze] = useState(false);
 
   const unified = folder === UNIFIED;
@@ -648,40 +645,8 @@ export default function MailInstance({
   };
 
   // ------------------------------------------------------------------ snooze & follow-up
-  useEffect(() => {
-    if (!inSnoozeFolder) {
-      setSnoozed([]);
-      return;
-    }
-    let active = true;
-    getJson<{ items: { id: string; messageId: string | null; snoozeUid?: string | null; until: string }[] }>(
-      '/api/snoozed',
-      accountId
-    )
-      .then(d => {
-        if (active) setSnoozed(d.items);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [inSnoozeFolder, accountId, messages.length]);
-
-  useEffect(() => {
-    let active = true;
-    const load = () =>
-      getJson<{ items: { state: string }[] }>('/api/followups')
-        .then(d => {
-          if (active) setFollowupsDue(d.items.filter(i => i.state === 'due').length);
-        })
-        .catch(() => {});
-    void load();
-    const timer = window.setInterval(load, 60_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
+  const snoozed = useSnoozedEntries(inSnoozeFolder, accountId, messages.length);
+  const [followupsDue, setFollowupsDue] = useFollowupsDue();
 
   async function snooze(uids: number[], until: Date) {
     if (!writeEnabled || !uids.length) return;
