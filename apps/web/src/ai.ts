@@ -105,32 +105,5 @@ export function forgetAiCache() {
   cached = { at: 0, value: null };
 }
 
-/** Readable reason for an AI error code (ai_*). */
-export function aiErrorText(code: string | undefined, t: (s: string) => string) {
-  switch (code) {
-    case 'ai_disabled':
-      return t('KI ist ausgeschaltet. In den Einstellungen unter „KI & Agenten“ einschalten.');
-    case 'ai_unreachable':
-      return t('Das KI-Modell ist nicht erreichbar. Läuft Ollama?');
-    case 'ai_model_missing':
-      return t('Das gewählte Modell ist nicht installiert. In den Einstellungen herunterladen.');
-    case 'ai_runtime_missing':
-      return t('Die KI-Komponente fehlt in dieser Installation.');
-    case 'ai_consent_missing':
-      return t('Für Cloud-KI fehlt die Einwilligung.');
-    case 'ai_cloud_blocked':
-      return t('Für dieses Konto ist Cloud-KI gesperrt.');
-    case 'ai_not_configured':
-      return t('Der KI-Anbieter ließ sich nicht umstellen. Bitte die KI-Einstellungen prüfen.');
-    case 'ai_auth':
-      return t('API-Schlüssel fehlt oder ist ungültig.');
-    case 'ai_timeout':
-      return t('Das Modell hat zu lange gebraucht.');
-    case 'ai_feature_disabled':
-      return t('Diese KI-Funktion ist ausgeschaltet.');
-    default:
-      return t('KI-Funktion fehlgeschlagen.');
-  }
-}
-
+export { aiErrorText } from './ai-errors';
 export { defaultEnd, ownPart } from './ai-utils';

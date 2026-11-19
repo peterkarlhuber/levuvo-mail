@@ -1006,6 +1006,7 @@ export const EN: Record<string, string> = {
   'Kontakt konnte nicht gespeichert werden.': 'Contact could not be saved.',
   'Kontakt konnte nicht gelöscht werden.': 'Contact could not be deleted.',
   'Ungültiger Entwurf.': 'Invalid draft.',
+  'Ungültige KI-Kennzeichnung.': 'Invalid AI label.',
   'Ungültige Entwurfskennung.': 'Invalid draft ID.',
   'Maximal 30 Empfänger.': 'A maximum of 30 recipients.',
   'Ungültiger Betreff.': 'Invalid subject.',

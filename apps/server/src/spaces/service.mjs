@@ -5,6 +5,7 @@
 import * as Y from 'yjs';
 import {
   b64u,
+  canonical,
   identityKeys,
   memberIdOf,
   newSymmetricKey,
@@ -25,6 +26,7 @@ import {
   fold,
   noteText,
   OP_TYPES,
+  purgeState,
   validCard,
   validateOpData
 } from './model.mjs';
@@ -35,6 +37,20 @@ const MAX_ENVELOPE_OPS_BYTES = 4 * 1024 * 1024;
 const INVITE_DAYS = 14;
 const AUTO_FETCH_LIMIT = 25 * 1024 * 1024;
 const NEED_PAUSE = 60 * 60_000;
+// Checkpoints (owner): after something was deleted, at most every COMPACT_PAUSE, and whenever the
+// log has COMPACT_OPS operations past the last checkpoint.
+const COMPACT_PAUSE = 30_000;
+const COMPACT_OPS = 500;
+const CHECKPOINT_PART = 4 * 1024 * 1024;
+const MAX_CHECKPOINT_BYTES = 200 * 1024 * 1024;
+const DELETE_TYPES = new Set([
+  'note.delete',
+  'mail.remove',
+  'comment.delete',
+  'task.delete',
+  'event.delete',
+  'file.delete'
+]);
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const SPACE_ID = /^[a-f0-9]{32}$/;
 const now = () => new Date().toISOString();
@@ -45,7 +61,15 @@ const now = () => new Date().toISOString();
  * @param {{ send(msg: {accountId:string, from:string, to:string, kind:string, spaceName:string, inviterName?:string, envelope:object}): Promise<void> }} o.transport
  * @param {() => {id:string,address:string,name:string,addresses:string[]}[]} o.accounts  own sending identities
  */
-export function createSpaceService({ store, transport, accounts, logger = () => {}, clock = now }) {
+export function createSpaceService({
+  store,
+  transport,
+  accounts,
+  logger = () => {},
+  clock = now,
+  batchDelay = 0,
+  compactPause = COMPACT_PAUSE
+}) {
   const keys = identityKeys(store.identity);
   const cache = new Map(); // space id → { state, docs, ids:Set, last }
   const listeners = new Set();
@@ -76,7 +100,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
   function view(record) {
     let entry = cache.get(record.id);
     if (!entry || entry.count !== record.ops.length) {
-      const { state, docs } = fold(record.id, record.ops);
+      const { state, docs } = fold(record.id, record.ops, record.base);
       entry = {
         state,
         docs,
@@ -98,6 +122,8 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     for (const op of fresh) {
       entry.ids.add(op.id);
       record.lc = Math.max(record.lc || 0, op.lc);
+      // Deleted content leaves every log with the next checkpoint (made by the owner).
+      if (DELETE_TYPES.has(op.type)) record.compactAsked = true;
     }
     if (!entry.last || compareOps(fresh[0], entry.last) > 0) {
       for (const op of fresh) applyOp(entry.state, op, entry.docs);
@@ -121,21 +147,23 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     return k ? unb64u(k) : null;
   };
 
-  /** Version vector: highest contiguous sequence number held per author. */
+  /** Version vector: highest contiguous sequence number held per author (checkpoint included). */
   function versionVector(r) {
     const seqs = new Map();
     for (const op of r.ops) {
       if (!seqs.has(op.author)) seqs.set(op.author, new Set());
       seqs.get(op.author).add(op.seq);
     }
-    const vv = {};
+    const vv = { ...(r.base?.header.vv || {}) };
     for (const [author, set] of seqs) {
-      let n = 0;
+      let n = vv[author] || 0;
       while (set.has(n + 1)) n++;
       vv[author] = n;
     }
     return vv;
   }
+  /** Ops already contained in the checkpoint: never stored or applied again. */
+  const covered = (r, op) => op.seq <= (r.base?.header.vv[op.author] || 0);
 
   // ---------------------------------------------------------------- envelopes
   function sealedEnvelope(r, inner, epoch = r.epoch) {
@@ -186,11 +214,28 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
   /** Queues ops for every other active member, split into envelopes of reasonable size. */
   function broadcastOps(r, ops, { include = [] } = {}) {
     if (!ops.length) return;
-    for (const member of recipientsOf(r, { include })) enqueue(r, member, { kind: 'ops', ops: ops.map(o => o.id) });
+    for (const member of recipientsOf(r, { include }))
+      sendOps(
+        r,
+        member,
+        ops.map(o => o.id)
+      );
+  }
+  /**
+   * Queues ops for one member. They join an ops mail to that member that is still waiting (same
+   * key epoch, not being sent, never failed), so many small changes travel as one mail.
+   */
+  function sendOps(r, member, ids) {
+    const waiting = (r.outbox || []).find(
+      i => i.kind === 'ops' && i.to === member.id && i.epoch === r.epoch && !i.tries && !i.sending
+    );
+    if (waiting) waiting.ops = [...new Set([...waiting.ops, ...ids])];
+    else enqueue(r, member, { kind: 'ops', ops: ids });
   }
 
   function opsBatches(r, ids) {
-    const byId = new Map(r.ops.map(o => [o.id, o]));
+    // Ops moved into a checkpoint stay in `held` until every mail that names them has gone out.
+    const byId = new Map([...Object.entries(r.held || {}), ...r.ops.map(o => [o.id, o])]);
     const ops = ids.map(id => byId.get(id)).filter(Boolean);
     const batches = [];
     let current = [];
@@ -223,6 +268,22 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       }
       case 'need':
         return [sealedEnvelope(r, { t: 'need', vv: item.vv || null, blobs: item.blobs || [] })];
+      case 'checkpoint': {
+        if (!r.base) return [];
+        const { header } = r.base;
+        if (!item.full) return [sealedEnvelope(r, { t: 'checkpoint', header })];
+        const body = JSON.stringify({ state: r.base.state, notes: r.base.notes });
+        const parts = Math.max(1, Math.ceil(body.length / CHECKPOINT_PART));
+        return Array.from({ length: parts }, (_, n) =>
+          sealedEnvelope(r, {
+            t: 'checkpoint',
+            header,
+            part: n,
+            parts,
+            data: body.slice(n * CHECKPOINT_PART, (n + 1) * CHECKPOINT_PART)
+          })
+        );
+      }
       case 'blob': {
         const data = await store.getChunk(item.blob, item.n);
         if (!data) return [];
@@ -239,6 +300,10 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
   async function flushPass() {
     let sent = 0;
     for (const r of store.all()) {
+      if (compactDue(r)) {
+        await compact(r).catch(err => logger(`spaces: checkpoint failed: ${err.message}`));
+        await store.save(r);
+      }
       if (!r.outbox?.length) continue;
       let account;
       try {
@@ -249,10 +314,13 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       // The items stay in the outbox while they are sent and leave it one by one after success,
       // so a save by another operation meanwhile (or a crash) never loses a pending sync mail.
       // Items queued while this pass runs stay for the next pass.
+      for (const item of r.outbox) delete item.sending;
       const items = [...r.outbox];
       const state = stateOf(r);
       for (const item of items) {
         if (item.nextAt > Date.now()) continue;
+        // Nothing joins a mail while it is being sent.
+        item.sending = true;
         try {
           for (const envelope of await buildEnvelopes(r, item)) {
             await transport.send({
@@ -268,6 +336,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
           }
           r.outbox = r.outbox.filter(i => i !== item);
         } catch (err) {
+          delete item.sending;
           item.tries++;
           item.error = String(err.code || err.message || 'send_failed').slice(0, 100);
           item.nextAt = Date.now() + Math.min(6 * 3600_000, 30_000 * 2 ** Math.min(item.tries, 10));
@@ -277,9 +346,24 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
           }
         }
       }
+      releaseHeld(r);
       await store.save(r);
     }
     return sent;
+  }
+  /**
+   * Sends soon: changes made within `batchDelay` travel together (one mail per member instead of
+   * one per change). Without a delay, right away.
+   */
+  let soonTimer = null;
+  function soon() {
+    if (!batchDelay) return void flush().catch(() => {});
+    if (soonTimer) return;
+    soonTimer = setTimeout(() => {
+      soonTimer = null;
+      void flush().catch(() => {});
+    }, batchDelay);
+    soonTimer.unref?.();
   }
   /** Sends what is waiting. Failed mails are retried later with growing pauses. */
   async function flush() {
@@ -298,6 +382,169 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       flushing = null;
     });
     return flushing;
+  }
+
+  // ---------------------------------------------------------------- checkpoints
+  // The owner regularly folds everything up to a version vector into a checkpoint: the state
+  // without the content of deleted things (see purgeState) plus the notes. Every member checks the
+  // signed header against their own ops and then drops those ops; new members and members who
+  // fell behind get the checkpoint itself instead of the history. So deleted mails, comments,
+  // tasks and files leave every copy and are never sent to someone who joins later, and the log
+  // only holds what happened since the last checkpoint.
+  const notesOf = docs =>
+    Object.fromEntries([...docs].map(([k, d]) => [k, Buffer.from(Y.encodeStateAsUpdate(d)).toString('base64')]));
+  const digestOf = (state, notes) => sha256(Buffer.from(canonical({ state: { ...state, ignored: 0 }, notes })));
+  const dominates = (a, b) => Object.entries(b || {}).every(([k, n]) => (a[k] || 0) >= n);
+
+  /** The checkpoint for `vv`, folded from this device's own ops; null while some of them are missing. */
+  function foldTo(r, vv) {
+    if (!dominates(versionVector(r), vv)) return null;
+    const ops = r.ops.filter(op => op.seq <= (vv[op.author] || 0));
+    const { state, docs } = fold(r.id, ops, r.base);
+    const purged = purgeState(state, docs);
+    const notes = notesOf(purged.docs);
+    return { state: purged.state, notes, digest: digestOf(purged.state, notes) };
+  }
+
+  /** Replaces everything up to `header.vv` by the checkpoint. */
+  async function adopt(r, header, body) {
+    const before = stateOf(r);
+    const named = new Set((r.outbox || []).flatMap(i => (i.kind === 'ops' ? i.ops : [])));
+    r.held ||= {};
+    const keep = [];
+    for (const op of r.ops) {
+      if (op.seq > (header.vv[op.author] || 0)) keep.push(op);
+      else if (named.has(op.id)) r.held[op.id] = op;
+    }
+    r.ops = keep;
+    r.base = { header, state: body.state, notes: body.notes };
+    r.pendingCheckpoint = null;
+    r.incoming = null;
+    r.lc = Math.max(r.lc || 0, Number(header.lc) || 0);
+    cache.delete(r.id);
+    // File parts of deleted versions are removed from this device.
+    const live = new Set(Object.values(stateOf(r).files).flatMap(f => f.versions.map(v => v.blob)));
+    const gone = Object.values(before.files)
+      .flatMap(f => f.versions)
+      .filter(v => !live.has(v.blob));
+    if (gone.length) await store.removeBlobs(gone.map(v => ({ blob: v.blob, chunks: v.chunks })));
+    changed(r.id);
+  }
+  /** Ops that went into a checkpoint are kept only while a waiting mail still names them. */
+  function releaseHeld(r) {
+    if (!r.held) return;
+    const named = new Set((r.outbox || []).flatMap(i => (i.kind === 'ops' ? i.ops : [])));
+    for (const id of Object.keys(r.held)) if (!named.has(id)) delete r.held[id];
+    if (!Object.keys(r.held).length) delete r.held;
+  }
+  function compactDue(r) {
+    if (r.status !== 'active' || stateOf(r).owner !== keys.id) return false;
+    // Spaces from before checkpoints get their first one right away.
+    const first = !r.base && r.ops.length > 0;
+    if (!first && !r.compactAsked && r.ops.length < COMPACT_OPS) return false;
+    return Date.now() - (r.compactedAt || 0) >= compactPause;
+  }
+  /** Owner: makes a checkpoint of everything held and tells the other members. */
+  async function compact(r) {
+    const vv = versionVector(r);
+    r.compactAsked = false;
+    r.compactedAt = Date.now();
+    if (r.base && canonical(vv) === canonical(r.base.header.vv)) return false;
+    const target = foldTo(r, vv);
+    const header = signed(keys, {
+      v: 1,
+      t: 'checkpoint',
+      space: r.id,
+      by: keys.id,
+      vv,
+      lc: r.lc || 0,
+      digest: target.digest,
+      at: clock()
+    });
+    await adopt(r, header, target);
+    for (const m of recipientsOf(r)) queueCheckpoint(r, m, false);
+    return true;
+  }
+  function queueCheckpoint(r, member, full) {
+    const waiting = (r.outbox || []).find(i => i.kind === 'checkpoint' && i.to === member.id && !i.sending && !i.tries);
+    if (waiting) waiting.full ||= full;
+    else enqueue(r, member, { kind: 'checkpoint', full });
+  }
+  /** A checkpoint header: taken over once this device's own ops give the same digest. */
+  async function tryCheckpoint(r, header) {
+    if (r.base && !dominates(header.vv, r.base.header.vv)) return;
+    const own = foldTo(r, header.vv);
+    if (!own) {
+      // Ops are missing: ask the owner, and check again when they are here.
+      r.pendingCheckpoint = header;
+      const owner = stateOf(r).members[header.by];
+      if (owner && owner.id !== keys.id) askFor(r, owner, versionVector(r));
+      return;
+    }
+    r.pendingCheckpoint = null;
+    if (own.digest !== header.digest) {
+      logger('spaces: a checkpoint does not match the local operations; the full log is kept');
+      return;
+    }
+    await adopt(r, header, own);
+  }
+  function validHeader(r, header) {
+    if (!header || header.v !== 1 || header.t !== 'checkpoint' || header.space !== r.id) return false;
+    if (!/^[a-f0-9]{64}$/.test(String(header.digest)) || !header.vv || typeof header.vv !== 'object') return false;
+    if (!Object.entries(header.vv).every(([a, n]) => /^[a-f0-9]{32}$/.test(a) && Number.isSafeInteger(n) && n >= 0))
+      return false;
+    // Only the owner makes checkpoints; any member may pass one on.
+    const state = stateOf(r);
+    const ownerId = state.owner || r.ownerId;
+    const owner = state.members[ownerId] || (ownerId === r.ownerId ? r.ownerCard : null);
+    return header.by === ownerId && Boolean(owner) && signatureValid(header, owner.signPub);
+  }
+  async function receiveCheckpoint(r, inner) {
+    const { header } = inner;
+    if (!validHeader(r, header)) return;
+    if (r.base && (header.digest === r.base.header.digest || !dominates(header.vv, r.base.header.vv))) return;
+    if (inner.parts === undefined) return tryCheckpoint(r, header);
+    // The checkpoint itself, in parts (for new members and members who fell behind).
+    const { part, parts, data } = inner;
+    if (!Number.isInteger(parts) || parts < 1 || parts > MAX_CHECKPOINT_BYTES / CHECKPOINT_PART) return;
+    if (!Number.isInteger(part) || part < 0 || part >= parts || typeof data !== 'string') return;
+    if (r.incoming?.digest !== header.digest) r.incoming = { digest: header.digest, parts: [] };
+    r.incoming.parts[part] = data;
+    if (r.incoming.parts.filter(x => typeof x === 'string').length < parts) return;
+    const text = r.incoming.parts.join('');
+    r.incoming = null;
+    // A member who has all the ops checks against their own fold and never takes anything else.
+    const own = foldTo(r, header.vv);
+    if (own) {
+      if (own.digest === header.digest) await adopt(r, header, own);
+      else logger('spaces: a checkpoint does not match the local operations; the full log is kept');
+      return;
+    }
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      return;
+    }
+    const st = body?.state;
+    const shapeOk =
+      st &&
+      typeof st === 'object' &&
+      st.id === r.id &&
+      ['members', 'notes', 'mails', 'comments', 'tasks', 'events', 'files', 'folders'].every(
+        k => st[k] && typeof st[k] === 'object' && !Array.isArray(st[k])
+      ) &&
+      Array.isArray(st.activity) &&
+      body.notes &&
+      typeof body.notes === 'object' &&
+      Object.values(body.notes).every(v => typeof v === 'string');
+    if (!shapeOk || digestOf(st, body.notes) !== header.digest) return;
+    try {
+      fold(r.id, [], { state: st, notes: body.notes });
+    } catch {
+      return;
+    }
+    await adopt(r, header, { state: st, notes: body.notes });
   }
 
   // ---------------------------------------------------------------- local changes
@@ -346,7 +593,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     broadcastOps(r, [op], { include });
     await store.save(r);
     changed(r.id);
-    void flush().catch(() => {});
+    soon();
     return op;
   }
   const cloneDoc = doc => {
@@ -590,7 +837,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       const ok = [];
       const later = [];
       for (const op of pending) {
-        if (view(r).ids.has(op?.id)) continue;
+        if (view(r).ids.has(op?.id) || (op && covered(r, op))) continue;
         const v = verifiedOp(r, op, state);
         if (v) ok.push(v);
         else if (v === undefined) later.push(op);
@@ -637,6 +884,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
           const behind = Object.entries(inner.vv).some(([a, n]) => Number.isInteger(n) && n > (mine[a] || 0));
           if (behind && after.members[sender.id]) askFor(r, after.members[sender.id], mine);
         }
+        if (added && r.pendingCheckpoint) await tryCheckpoint(r, r.pendingCheckpoint);
         // Fetch file contents of small, current versions automatically.
         if (added && r.status === 'active') {
           const blobs = [];
@@ -650,10 +898,17 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
         const member = state.members[sender.id];
         if (!member || member.removed) return;
         if (inner.vv && typeof inner.vv === 'object') {
+          // Behind the last checkpoint: they get the checkpoint, then what came after it.
+          const base = r.base?.header.vv || {};
+          if (Object.entries(base).some(([a, n]) => (Number(inner.vv[a]) || 0) < n)) queueCheckpoint(r, member, true);
           const ids = r.ops.filter(op => op.seq > (Number(inner.vv[op.author]) || 0)).map(op => op.id);
-          if (ids.length) enqueue(r, member, { kind: 'ops', ops: ids });
+          if (ids.length) sendOps(r, member, ids);
         }
-        const known = new Set(Object.values(state.files).flatMap(f => f.versions.map(v => v.blob)));
+        const known = new Set(
+          Object.values(state.files)
+            .filter(f => !f.deleted)
+            .flatMap(f => f.versions.map(v => v.blob))
+        );
         for (const b of Array.isArray(inner.blobs) ? inner.blobs.slice(0, 500) : []) {
           if (!known.has(b?.blob) || !Number.isInteger(b.n)) continue;
           if (await store.hasChunk(b.blob, b.n)) enqueue(r, member, { kind: 'blob', blob: b.blob, n: b.n });
@@ -662,6 +917,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       }
       case 'blob': {
         const version = Object.values(state.files)
+          .filter(f => !f.deleted)
           .flatMap(f => f.versions)
           .find(v => v.blob === inner.blob);
         if (!version || !Number.isInteger(inner.n) || inner.n < 0 || inner.n >= version.chunks) return;
@@ -675,6 +931,10 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
         await store.putChunk(version.blob, inner.n, data);
         return;
       }
+      case 'checkpoint':
+        if (boxed) return;
+        await receiveCheckpoint(r, inner);
+        return;
       case 'keys': {
         if (!boxed) return;
         const ownerId = state.owner || r.ownerId;
@@ -710,9 +970,11 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
         inv.member = card.id;
         await apply(r.id, 'member.add', { member: card, role: inv.role });
         const joined = stateOf(r).members[card.id];
-        // Welcome: the current key, then everything that happened so far.
+        // Welcome: the current key, then a fresh checkpoint instead of the history, so nothing
+        // deleted before they joined ever reaches them.
         sendKeys(r, [joined], { only: [r.epoch] });
-        enqueue(r, joined, { kind: 'ops', ops: r.ops.map(o => o.id) });
+        await compact(r);
+        queueCheckpoint(r, joined, true);
         return;
       }
       default:
@@ -801,7 +1063,7 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
     await handleInner(r, { ...sender, id: env.from }, inner, { boxed: env.t === 'boxed' });
     await store.save(r);
     changed(r.id);
-    if (!replay) void flush().catch(() => {});
+    if (!replay) soon();
     return 'ok';
   }
 

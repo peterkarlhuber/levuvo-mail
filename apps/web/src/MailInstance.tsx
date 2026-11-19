@@ -1225,6 +1225,7 @@ export default function MailInstance({
           ? { html: DOMPurify.sanitize(detail.html), format: 'html' as const }
           : { text: detail.text, format: 'text' as const }),
         draftId: detail.draftId,
+        ...(detail.aiGenerated ? { aiGenerated: detail.aiGenerated } : {}),
         draftUid: selectedUid,
         draftUidValidity: detail.uidValidity,
         attachments: files.filter(f => !detail.attachments.find(a => a.filename === f.name)?.embedded),

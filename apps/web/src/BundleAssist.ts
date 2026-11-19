@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { aiEnabled, aiLocal, runAi } from './ai';
 import { bundleFromClassification } from './ai-utils';
+import { createClassifyCache } from './bundle-cache';
 import { registerBundleSuggester, type BundleSuggestion } from './bundle-suggest';
 import { useT } from './i18n';
 import type { Message } from './types';
@@ -17,16 +18,15 @@ const MAX_CACHE = 5000;
 export function useBundleAssist() {
   const { t, lang } = useT();
   useEffect(() => {
-    const cache = new Map<string, BundleSuggestion>();
+    const cache = createClassifyCache<BundleSuggestion>({ max: MAX_CACHE });
     const running = new Set<string>();
     const reason = t('Vom Assistenten einsortiert');
     registerBundleSuggester(async (messages: Message[], accountId: string) => {
       // Background sorting sends sender, subject and preview of every new message: only with a
       // local model (a cloud provider is used only for what the user starts).
       if (!(await aiEnabled('classify')) || !(await aiLocal())) return new Map();
-      const key = (uid: number) => `${accountId}:${uid}`;
-      const fresh = messages.filter(m => !cache.has(key(m.uid))).slice(0, BATCH);
-      if (fresh.length && !running.has(accountId)) {
+      const fresh = messages.filter(m => !cache.known(accountId, m)).slice(0, BATCH);
+      if (fresh.length && !running.has(accountId) && cache.ready(accountId)) {
         running.add(accountId);
         try {
           const res = await runAi<{ items: { id: string; bundle: string; from_person: boolean }[] }>('classify', {
@@ -41,16 +41,20 @@ export function useBundleAssist() {
               }))
             }
           });
+          const results = new Map<number, BundleSuggestion>();
           for (const [uid, bundle] of bundleFromClassification(res.result?.items || []))
-            cache.set(key(uid), { bundle, reason, source: 'ai' });
-          if (cache.size > MAX_CACHE) cache.clear();
+            results.set(uid, { bundle, reason, source: 'ai' });
+          // Messages the model skipped are remembered too: they are not sent again.
+          cache.settle(accountId, fresh, results);
+        } catch {
+          cache.fail(accountId); // local rules stay; retried after a growing pause
         } finally {
           running.delete(accountId);
         }
       }
       const found = new Map<number, BundleSuggestion>();
       for (const m of messages) {
-        const s = cache.get(key(m.uid));
+        const s = cache.get(accountId, m);
         if (s) found.set(m.uid, s);
       }
       return found;

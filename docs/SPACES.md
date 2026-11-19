@@ -33,8 +33,8 @@ existing mailboxes. This works across providers (for example Hetzner and Microso
   removed person keeps what they already had but cannot read anything added afterwards.
 - **Invitation:** the owner's app sends an invitation mail with a one-time token (valid 14 days).
   The invitee chooses „Beitreten“; their app sends a join request encrypted to the owner, the
-  owner's app checks the token and the address, adds the member and sends the key and the full
-  history.
+  owner's app checks the token and the address, adds the member and sends the key and a fresh
+  checkpoint (never the history, so nothing deleted before they joined reaches them).
 - **Transport:** sync mails carry the header `X-Levuvo-Space`, a short explanatory text and one
   attachment with the encrypted envelope. They are not saved to „Sent“. On arrival (also from the
   junk folder) Levuvo processes them and moves them into the folder „Levuvo Spaces“, which other
@@ -52,6 +52,17 @@ existing mailboxes. This works across providers (for example Hetzner and Microso
   Correctly signed operations of a newer format, an unknown type or with data this version
   considers invalid are stored unchanged and passed on to others, but never applied, so version
   vectors stay in step between members on different versions.
+- **Checkpoints and deleting:** the owner's app regularly folds the log into a signed checkpoint:
+  the state up to a version vector, without the content of deleted things (deleted notes, tasks,
+  events and files become empty tombstones, removed mails and deleted comments go, comments on
+  them go, activity entries about them lose their titles), plus the notes as Yjs updates. It
+  happens after every deletion (at most every 30 seconds), when 500 operations have piled up, and
+  whenever someone joins. Members check the header against their own operations (same SHA-256
+  digest of the state) and then drop the covered operations and the file parts of deleted files;
+  a checkpoint that does not match is not taken over and the full log stays. New members and
+  members who fell behind receive the checkpoint itself (in parts of 4 MB) instead of the history;
+  they rely on the owner's signature and the digest. Only the current owner makes checkpoints.
+- **Fewer mails:** changes made within 20 seconds travel together, one mail per member.
 - **Files** are encrypted with a fresh key per version and sent in parts of 5 MB, so mail size
   limits (usually 20–25 MB) are no problem. Files up to 25 MB are sent to everyone right away;
   larger ones are fetched from the uploader when someone opens them. Maximum 250 MB per file.

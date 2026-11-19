@@ -627,3 +627,63 @@ test('SEC-LEV-006/007: remote CSS images are removed, data: images and other CSS
   assert.equal(isRemoteSrc('data:image/png;base64,AA'), false);
   assert.equal(isRemoteSrc(null), false);
 });
+
+test('API-LEV-003: every AI error kind of the sidecar and server has its own text', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { AI_ERROR_CODES, aiErrorText } = await import('../src/ai-errors.ts');
+  const kinds = JSON.parse(readFileSync(join(root, 'apps/ai/levuvo_ai/error_kinds.json'), 'utf8'));
+  const generic = aiErrorText(undefined, s => s);
+  for (const kind of [...kinds.sidecar, ...kinds.server].filter(k => k !== 'internal')) {
+    assert.ok(AI_ERROR_CODES.includes(`ai_${kind}`), `no text for ai_${kind}`);
+    assert.notEqual(
+      aiErrorText(`ai_${kind}`, s => s),
+      generic
+    );
+  }
+  assert.equal(
+    aiErrorText('ai_internal', s => s),
+    generic
+  );
+  assert.equal(
+    aiErrorText('ai_unknown_future', s => s),
+    generic
+  );
+});
+
+test('PERF-LEV-009: bundle suggestions remember skipped messages, back off after errors, evict oldest first', async () => {
+  const { createClassifyCache } = await import('../src/bundle-cache.ts');
+  let clock = 0;
+  const cache = createClassifyCache({ max: 3, baseDelayMs: 1000, maxDelayMs: 4000, now: () => clock });
+  const m = uid => ({ uid, folder: 'INBOX' });
+  cache.settle('a', [m(1), m(2)], new Map([[1, 'invoice']]));
+  assert.equal(cache.get('a', m(1)), 'invoice');
+  assert.equal(cache.get('a', m(2)), undefined);
+  assert.ok(cache.known('a', m(2)), 'a message the model skipped is not sent again');
+  assert.ok(!cache.known('b', m(2)), 'per account');
+  assert.ok(!cache.known('a', { uid: 2, folder: 'Archiv' }), 'per folder');
+  // LRU: reading 1 keeps it, the oldest unread entry goes.
+  cache.get('a', m(1));
+  cache.settle('a', [m(3), m(4)], new Map());
+  assert.equal(cache.size, 3);
+  assert.ok(cache.known('a', m(1)) && !cache.known('a', m(2)));
+  // Backoff doubles up to the limit and ends with the next success.
+  assert.ok(cache.ready('a'));
+  cache.fail('a');
+  assert.ok(!cache.ready('a'));
+  clock = 1000;
+  assert.ok(cache.ready('a'));
+  cache.fail('a');
+  clock = 2999;
+  assert.ok(!cache.ready('a'));
+  clock = 3000;
+  cache.fail('a');
+  cache.fail('a');
+  clock = 3000 + 3999;
+  assert.ok(!cache.ready('a'), 'capped at maxDelayMs');
+  clock = 3000 + 4000;
+  assert.ok(cache.ready('a'));
+  cache.settle('a', [m(5)], new Map());
+  cache.fail('a');
+  clock += 1000;
+  assert.ok(cache.ready('a'), 'a success resets the backoff');
+});
