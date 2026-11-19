@@ -5,6 +5,7 @@ import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Section } from './Settings';
 import { FilterAssist } from './FilterAssist';
+import { RichTextField } from './editor';
 import type { AccountItem, Folder } from './types';
 
 type Condition = { field: 'from' | 'to' | 'subject' | 'any'; op: 'contains' | 'is' | 'not_contains'; value: string };
@@ -20,7 +21,10 @@ type Rule = {
 type Vacation = {
   enabled: boolean;
   subject: string;
-  body: string;
+  /** Formatted text (same editor as the signature). */
+  bodyHtml: string;
+  /** Appends the account signature (with logo) when the reply is saved. */
+  includeSignature: boolean;
   days: number;
   start: string;
   end: string;
@@ -82,10 +86,24 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
     setBusy(true);
     setError('');
     try {
-      await postJson('/api/sieve', { config: state.config, replaceForeign }, 'mail-v1', accountId);
+      const result = await postJson<{ format?: string }>(
+        '/api/sieve',
+        { config: state.config, replaceForeign },
+        'mail-v1',
+        accountId
+      );
       setDirty(false);
       setState({ ...state, foreignActive: null });
-      toast({ text: t('Filter und Abwesenheitsnotiz sind auf dem Mailserver aktiv.'), kind: 'success' });
+      toast(
+        result?.format === 'text'
+          ? {
+              text: t(
+                'Gespeichert. Dein Mailserver kann Abwesenheitsnotizen nur als reinen Text senden – Formatierung und Bilder entfallen dort.'
+              ),
+              kind: 'info'
+            }
+          : { text: t('Filter und Abwesenheitsnotiz sind auf dem Mailserver aktiv.'), kind: 'success' }
+      );
     } catch (e) {
       if (e instanceof ApiError && e.code === 'sieve_foreign_active') {
         if (
@@ -208,16 +226,28 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
                 />
               </label>
             </div>
-            <label>
-              {t('Text')}
-              <textarea
-                rows={5}
-                maxLength={4000}
-                value={vacation.body}
-                placeholder={t('Danke für deine Nachricht. Ich bin bis … nicht erreichbar. In dringenden Fällen …')}
-                onChange={e => setVacation({ body: e.target.value })}
+            <fieldset className="identity-section">
+              <legend>{t('Text')}</legend>
+              <RichTextField
+                key={accountId}
+                label={t('Text der Abwesenheitsnotiz')}
+                value={vacation.bodyHtml}
+                onChange={html => setVacation({ bodyHtml: html })}
               />
+            </fieldset>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={vacation.includeSignature}
+                onChange={e => setVacation({ includeSignature: e.target.checked })}
+              />{' '}
+              {t('Signatur des Kontos anhängen (mit Logo)')}
             </label>
+            <p className="managed-hint">
+              {t(
+                'Formatierung und Bilder werden mit einer Textversion gespeichert. Die Signatur wird beim Speichern übernommen – nach einer Änderung an der Signatur bitte hier erneut speichern.'
+              )}
+            </p>
           </Section>
           <Section
             title={t('Filterregeln')}

@@ -1222,7 +1222,8 @@ export function registerMailRoutes(ctx) {
       return errorResponse(reply, err);
     }
   });
-  api.post('/api/sieve', { bodyLimit: 64 * 1024 }, async (request, reply) => {
+  // Room for the formatted out-of-office text with its images.
+  api.post('/api/sieve', { bodyLimit: 1536 * 1024 }, async (request, reply) => {
     if (!requireAction(request, reply, 'mail-v1')) return;
     const account = request.mailAccount;
     try {
@@ -1230,7 +1231,11 @@ export function registerMailRoutes(ctx) {
       const config = validateSieveConfig(request.body?.config, { folderExists: p => folders.some(f => f.path === p) });
       const trash = findSpecialFolder(folders, '\\Trash')?.path || '';
       return await withSieve(account, client =>
-        saveSieve(client, config, { trashFolder: trash, replaceForeign: request.body?.replaceForeign === true })
+        saveSieve(client, config, {
+          trashFolder: trash,
+          replaceForeign: request.body?.replaceForeign === true,
+          signatureHtml: account.signatureHtml || ''
+        })
       );
     } catch (err) {
       return errorResponse(reply, err);
