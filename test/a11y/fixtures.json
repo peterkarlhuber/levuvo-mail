@@ -4,7 +4,7 @@
     "contentType": "application/json; charset=utf-8",
     "body": {
       "desktop": true,
-      "version": "2.4.0",
+      "version": "2.5.0",
       "platform": "linux"
     }
   },
@@ -970,7 +970,8 @@
           "openTasks": 1,
           "updatedAt": "2026-11-19T09:00:00.000Z",
           "pendingMails": 0,
-          "sendError": "x"
+          "sendError": "x",
+          "unreadChat": 1
         }
       ],
       "invitations": []
@@ -1218,7 +1219,62 @@
           },
           "label": "Texte liefern"
         }
-      ]
+      ],
+      "unreadChat": 1
+    }
+  },
+  "GET /api/spaces/sp1/chat": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "messages": [
+        {
+          "id": "c100000000000000",
+          "text": "Hallo Lukas, passt der Termin am Freitag?",
+          "at": "2026-11-19T09:10:00.000Z",
+          "by": "id-alex",
+          "mine": true,
+          "replyTo": null,
+          "ai": false,
+          "editedAt": null,
+          "unread": false
+        },
+        {
+          "id": "c200000000000000",
+          "text": "Ja, Freitag 10 Uhr passt.",
+          "at": "2026-11-19T09:12:00.000Z",
+          "by": "id-lukas",
+          "mine": false,
+          "replyTo": "c100000000000000",
+          "ai": false,
+          "editedAt": null,
+          "unread": true
+        },
+        {
+          "id": "c300000000000000",
+          "text": "Zusammenfassung: Abnahme am Freitag um 10 Uhr.",
+          "at": "2026-11-19T09:13:00.000Z",
+          "by": "id-alex",
+          "mine": true,
+          "replyTo": null,
+          "ai": true,
+          "editedAt": null,
+          "unread": false
+        }
+      ],
+      "quoted": {},
+      "more": false,
+      "unread": 1,
+      "rev": 3,
+      "canWrite": true,
+      "pending": false
+    }
+  },
+  "GET /api/spaces/sp1/chat/wait": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "changed": false
     }
   }
 }

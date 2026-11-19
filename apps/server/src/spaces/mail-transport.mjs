@@ -50,6 +50,26 @@ export function mailText(kind, { spaceName = '', inviterName = '' } = {}) {
   };
 }
 
+const SYNC_SUBJECTS = [mailText('sync').subject, 'Einladung in den Raum'];
+/**
+ * Whether a fresh inbox snapshot (from the IMAP IDLE watcher) may hold new sync mails since the
+ * previous one: a new message with a sync subject, or new UIDs that are already gone again (moved
+ * by another device of the same person). Normal mail never triggers an extra IMAP login.
+ */
+export function snapshotHasSyncMail(prev, next) {
+  if (!prev || !next || prev.uidValidity !== next.uidValidity) return false;
+  const from = Number(prev.highestUid) || 0;
+  const to = Number(next.highestUid) || 0;
+  if (to <= from) return false;
+  const fresh = (next.messages || []).filter(m => m.uid > from && m.uid <= to);
+  if (fresh.some(m => SYNC_SUBJECTS.some(subject => String(m.subject || '').includes(subject)))) return true;
+  // The snapshot lists only the newest messages; when all new UIDs fit into it but some are
+  // missing, they vanished again.
+  const listed = (next.messages || []).length;
+  const covers = listed > 0 && Math.min(...next.messages.map(m => m.uid)) <= from + 1;
+  return covers && fresh.length < to - from;
+}
+
 export async function buildSyncMail({ from, fromName = '', to, kind, spaceName, inviterName, envelope }) {
   const { subject, text } = mailText(kind, { spaceName, inviterName });
   const headers = { [SPACES_HEADER]: `v1; ${kind === 'invite' ? 'invite' : 'sync'}` };

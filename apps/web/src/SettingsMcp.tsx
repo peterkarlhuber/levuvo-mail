@@ -64,6 +64,7 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
         update_task: t('Aufgabe „{subject}“ ändern', v),
         add_event: t('Termin „{subject}“ eintragen', v),
         comment: t('Kommentar schreiben'),
+        chat_post: t('Nachricht im Chat senden'),
         add_mail: t('Mail in den Raum legen'),
         invite: t('{subject} einladen', v),
         remove_member: t('{subject} entfernen', v),

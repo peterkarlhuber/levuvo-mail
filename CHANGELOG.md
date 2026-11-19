@@ -2,12 +2,25 @@
 
 ## Unreleased
 
+### Spaces
+- **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
+- **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
+- **Unread messages** are counted on the rail, in the list of spaces and on the tab, on this device only: there are no read receipts and no typing indicators.
+- **Assistant:** it can read and search the chat and, after your approval, write a message; such messages are marked "AI-generated" for every member.
+
+## 2.5.0 – 19 November 2026
+
+> **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
+
+### Vacation reply
+- **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving.
+
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
 - **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).
 
-### Levuvo's own Ollama
-- **Ollama in the installer, only for Levuvo:** the app ships a pinned Ollama build (0.40.16) and starts it itself when a local model is needed: own models folder and key pair in the app data folder, a free port on 127.0.0.1 only, Ollama's cloud features off, none of your own Ollama settings. An Ollama you installed yourself is never used, started or stopped. It stops after 30 idle minutes and when Levuvo closes.
+### Levuvo Mail's own Ollama
+- **Ollama in the installer, only for Levuvo Mail:** the app ships a pinned Ollama build (0.40.16) and starts it itself when a local model is needed: own models folder and key pair in the app data folder, a free port on 127.0.0.1 only, Ollama's cloud features off, none of your own Ollama settings. An Ollama you installed yourself is never used, started or stopped. It stops after 30 idle minutes and when Levuvo Mail closes.
 - **Choose a model, it downloads:** Settings → AI & agents lists a fixed choice of language models in three sizes (small from 8 GB RAM, standard from 16 GB, large from 32 GB, with EU models of Mistral AI in each) and three search models. Choosing one that is missing downloads it with a progress bar; cancel, resume later, delete, and remove interrupted downloads. The size that fits the computer's memory is suggested on the first start; too large models ask first. No model ships in the installer.
 - **Checksums:** every model is pinned to its manifest digest on Ollama's registry; a download with other content is deleted again. CI checks the pins, the Ollama release (size, SHA-256, code signature, architecture) and known security advisories.
 - **BGE-M3 is the new default search model:** on German test mails it finds the right message first in 29 of 30 queries (Qwen3-Embedding 0.6B: 26 of 30) at the same speed. Changing the search model asks first and rebuilds the index in the background with progress. Details in docs/ai/MODELS.md.
@@ -22,7 +35,7 @@
 
 ### Fixes
 - **Tasks open again on macOS and Windows:** the builds for macOS and Windows (case-insensitive disks) loaded the task helpers (`tasks.ts`) instead of the Tasks view (`Tasks.tsx`), so opening Tasks failed and the whole window went black. The view is now `TasksModule.tsx`, and a test rejects source files that differ only in case.
-- **No more black window when an area fails:** an error while loading or showing one area now stays in that area, with "Try again", "Reload app" and technical details; the rail and the other areas keep working. A part of the app that is missing because Levuvo was updated while its window was only hidden reloads the page once by itself. A crashed window process is reloaded instead of leaving an empty window. Unreadable due or reminder dates in tasks are shown as text instead of breaking the view.
+- **No more black window when an area fails:** an error while loading or showing one area now stays in that area, with "Try again", "Reload app" and technical details; the rail and the other areas keep working. A part of the app that is missing because Levuvo Mail was updated while its window was only hidden reloads the page once by itself. A crashed window process is reloaded instead of leaving an empty window. Unreadable due or reminder dates in tasks are shown as text instead of breaking the view.
 - **Desktop UI test on every platform:** CI starts the real desktop app on macOS ARM64, Windows ARM64, Windows x64 and Linux and opens every area, including an area that fails and a missing part after an update.
 
 ## 2.4.0 – 19 November 2026
