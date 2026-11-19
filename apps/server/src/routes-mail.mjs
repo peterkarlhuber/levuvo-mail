@@ -2,6 +2,7 @@
 // filters (Sieve), local index and background jobs.
 import { attachmentQuery, listAttachments } from './attachment-overview.mjs';
 import { SPACES_FOLDER } from './spaces/mail-transport.mjs';
+import { checkInput, knownSenders, unknownSenders } from './screening.mjs';
 import { folderName, cleanLimit, cleanBeforeUid } from './config.mjs';
 import { publicAccounts, accountScopedRequestKey } from './accounts.mjs';
 import { validFolder, validUid, validAttachmentIndex, downloadHeaders, attachmentBytes } from './message-utils.mjs';
@@ -59,6 +60,7 @@ export function registerMailRoutes(ctx) {
     detailCache,
     localIndex,
     followups,
+    screening,
     diagnostics
   } = ctx;
   const contactsCache = new Map();
@@ -880,6 +882,67 @@ export function registerMailRoutes(ctx) {
           size: Math.floor((String(a.data || '').length * 3) / 4),
           data: String(a.data || '')
         }))
+      };
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
+
+  // ------------------------------------------------------------ sender screening
+  // Known senders from the mailbox (Sent folder, inbox before the start), cached for 5 minutes.
+  const screeningCache = new Map();
+  ctx.onAccountChange?.(id => {
+    for (const key of screeningCache.keys()) if (key.startsWith(`${id}|`)) screeningCache.delete(key);
+  });
+  function screeningHistory(account, since) {
+    const key = `${account.id}|${since}`;
+    let entry = screeningCache.get(key);
+    if (!entry || Date.now() - entry.at > 5 * 60_000) {
+      entry = {
+        at: Date.now(),
+        promise: withImap(async client => {
+          const sent = findSentFolder(await client.list(), account.sentFolder);
+          return knownSenders(client, { sentFolder: sent?.path || null, since });
+        }, account)
+      };
+      screeningCache.set(key, entry);
+      entry.promise.catch(() => screeningCache.delete(key));
+    }
+    return entry.promise;
+  }
+  api.get('/api/screening', async request => screening.get(request.mailAccount.id));
+  api.post('/api/screening/start', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, 'mail-v1')) return;
+    return screening.start(request.mailAccount.id);
+  });
+  api.post('/api/screening/decide', { bodyLimit: 2048 }, async (request, reply) => {
+    if (!requireAction(request, reply, 'mail-v1')) return;
+    try {
+      return await screening.decide(request.mailAccount.id, request.body?.email, request.body?.decision);
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
+  // Which senders are new: not in an address book and never written to (Sent folder).
+  api.post('/api/screening/check', { bodyLimit: 32 * 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, 'mail-v1')) return;
+    const account = request.mailAccount;
+    try {
+      const emails = checkInput(request.body);
+      const entry = screening.get(account.id);
+      if (!emails.length || !entry.since) return { unknown: [] };
+      const history = await Promise.race([
+        screeningHistory(account, entry.since).catch(() => null),
+        new Promise(resolve => setTimeout(() => resolve(null), 8000))
+      ]);
+      const known = history ? new Set([...history, ...(await davContactEmails()), ...localContactEmails()]) : null;
+      return {
+        unknown: unknownSenders(emails, {
+          own: ctx.accountAddresses(account),
+          allowed: entry.allowed,
+          blocked: entry.blocked,
+          known
+        })
       };
     } catch (err) {
       return errorResponse(reply, err);

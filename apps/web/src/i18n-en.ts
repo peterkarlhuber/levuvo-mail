@@ -476,6 +476,19 @@ export const EN: Record<string, string> = {
   'Teilweise von der KI einsortiert: {reason}': 'Partly sorted by the AI: {reason}',
   'Vorschlag des Assistenten': 'Suggested by the assistant',
   KI: 'AI',
+  '{email} angenommen.': '{email} accepted.',
+  'Neue Absender': 'New senders',
+  '{count} prüfen': '{count} to review',
+  'Diese Absender schreiben dir zum ersten Mal. Annehmen zeigt ihre Mails im Posteingang, Blockieren verschiebt sie in den Spam-Ordner.':
+    'These senders are writing to you for the first time. Accept shows their mail in the inbox, Block moves it to the spam folder.',
+  'Alle Absender geprüft.': 'All senders reviewed.',
+  Annehmen: 'Accept',
+  'Nur mit Schreibzugriff auf das Postfach': 'Only with write access to the mailbox',
+  Blockieren: 'Block',
+  'Ungültige Entscheidung.': 'Invalid decision.',
+  'Neue Absender zuerst prüfen': 'Review new senders first',
+  'Mails von Absendern, die nicht in deinen Kontakten stehen und denen du nie geschrieben hast, warten unter „Neue Absender“, bis du sie annimmst oder blockierst. Gilt für Mails ab dem Einschalten.':
+    'Mail from senders who are not in your contacts and whom you have never written to waits under “New senders” until you accept or block them. Applies to mail from the moment you turn this on.',
   'Posteingang bündeln': 'Bundle the inbox',
   'Newsletter, Rechnungen und Benachrichtigungen erscheinen gesammelt oben im Posteingang.':
     'Newsletters, invoices and notifications are collected at the top of the inbox.',

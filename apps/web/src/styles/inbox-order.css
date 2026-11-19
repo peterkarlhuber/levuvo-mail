@@ -120,3 +120,52 @@
   color: var(--muted);
   border: 1px solid var(--border);
 }
+
+/* Sender screening (Welle 2): review mail from new senders first. */
+.bundle-icon.bundle-screener {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.screener {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+.screener-hint {
+  margin: var(--space-1-5) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.screener-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.screener-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.screener-subject {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.screener-subject:hover {
+  text-decoration: underline;
+}
+.screener-subject:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

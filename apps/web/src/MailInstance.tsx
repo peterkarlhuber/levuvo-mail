@@ -43,6 +43,7 @@ import FollowupList from './FollowupList';
 import AttachmentOverview from './AttachmentOverview';
 import { BundleHeader, BundleRows } from './Bundles';
 import { applySuggestions, bundleSuggester, type BundleSuggestion } from './bundle-suggest';
+import { ScreenerRow, ScreenerView, type ScreeningState } from './Screening';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
@@ -150,6 +151,11 @@ export default function MailInstance({
   const [filter, setFilter] = useState<Filter>('all');
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [suggestions, setSuggestions] = useState<Map<number, BundleSuggestion>>(() => new Map());
+  const [screening, setScreening] = useState<ScreeningState | null>(null);
+  const [screener, setScreener] = useState(false);
+  const [unknownSenders, setUnknownSenders] = useState<Set<string>>(() => new Set());
+  const checkedSenders = useRef(new Set<string>());
+  const spamMoved = useRef(new Set<number>());
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   // Paging cursor of the local index search ("everywhere"); null when there is no further page.
   const [localCursor, setLocalCursor] = useState<string | null>(null);
@@ -224,14 +230,16 @@ export default function MailInstance({
     return names[special(f)] || f.name;
   };
 
-  // Inbox bundles: only in the inbox itself, not while searching.
-  const bundling =
-    prefs.bundles &&
-    Boolean(currentFolder && isInbox(currentFolder)) &&
-    !unified &&
-    !everywhere &&
-    !searching &&
-    !query.trim();
+  // Inbox bundles and sender screening: only in the inbox itself, not while searching.
+  const plainInbox =
+    Boolean(currentFolder && isInbox(currentFolder)) && !unified && !everywhere && !searching && !query.trim();
+  const bundling = prefs.bundles && plainInbox;
+  const screeningOn = prefs.screening && plainInbox && Boolean(screening?.since);
+  const blockedSenders = useMemo(() => new Set(screening?.blocked || []), [screening]);
+  const screened = useMemo(
+    () => (screeningOn ? messages.filter(m => unknownSenders.has(m.fromEmail.toLowerCase())) : []),
+    [screeningOn, messages, unknownSenders]
+  );
   // Optional second opinion on bundles (AI); the local rules stay the default.
   const bundled = useMemo(
     () => (bundling ? applySuggestions(messages, suggestions) : messages),
@@ -257,13 +265,103 @@ export default function MailInstance({
       const q = query.trim().toLowerCase();
       list = list.filter(m => `${m.subject} ${m.fromName} ${m.fromEmail}`.toLowerCase().includes(q));
     }
-    if (bundling) list = bundle ? list.filter(m => m.bundle === bundle) : list.filter(m => !m.bundle);
+    if (screeningOn) {
+      const held = (m: Message) => unknownSenders.has(m.fromEmail.toLowerCase());
+      list = screener
+        ? list.filter(held)
+        : list.filter(m => !held(m) && !blockedSenders.has(m.fromEmail.toLowerCase()));
+    }
+    if (bundling && !screener) list = bundle ? list.filter(m => m.bundle === bundle) : list.filter(m => !m.bundle);
     if (filter === 'unread') list = list.filter(m => m.unread);
     if (filter === 'flagged') list = list.filter(m => m.flagged);
     if (filter === 'attachments') list = list.filter(m => m.hasAttachments);
     return list;
-  }, [bundled, query, searching, unified, filter, bundling, bundle]);
+  }, [
+    bundled,
+    query,
+    searching,
+    unified,
+    filter,
+    bundling,
+    bundle,
+    screeningOn,
+    screener,
+    unknownSenders,
+    blockedSenders
+  ]);
   const visibleUids = useMemo(() => visibleMessages.map(m => m.uid), [visibleMessages]);
+
+  // Sender screening: load (and on first use start) the decisions of this account.
+  useEffect(() => {
+    checkedSenders.current = new Set();
+    spamMoved.current = new Set();
+    setUnknownSenders(new Set());
+    setScreening(null);
+    if (!prefs.screening || !accountReady) return;
+    let active = true;
+    getJson<ScreeningState>('/api/screening', accountId)
+      .then(s => (s.since ? s : postAction<ScreeningState>('/api/screening/start', {}, accountId)))
+      .then(s => active && setScreening(s))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [prefs.screening, accountReady, accountId]);
+  // Ask the server which senders of newly arrived mail are new (not in contacts, never written to).
+  useEffect(() => {
+    if (!screeningOn || !screening?.since) return;
+    const since = Date.parse(screening.since);
+    const decided = new Set([...screening.allowed, ...screening.blocked]);
+    const candidates = [
+      ...new Set(
+        messages
+          .filter(m => !m.bundle && m.date && Date.parse(m.date) >= since)
+          .map(m => m.fromEmail.toLowerCase())
+          .filter(e => e && !decided.has(e) && !checkedSenders.current.has(e))
+      )
+    ].slice(0, 300);
+    if (!candidates.length) return;
+    for (const e of candidates) checkedSenders.current.add(e);
+    postAction<{ unknown: string[] }>('/api/screening/check', { emails: candidates }, accountId)
+      .then(r => {
+        if (r.unknown.length) setUnknownSenders(old => new Set([...old, ...r.unknown]));
+      })
+      .catch(() => {
+        for (const e of candidates) checkedSenders.current.delete(e);
+      });
+  }, [screeningOn, screening, messages, accountId]);
+  // Mail from blocked senders goes to the spam folder as soon as it shows up.
+  useEffect(() => {
+    if (!screeningOn || !writeEnabled || actionBusy || !blockedSenders.size) return;
+    const uids = messages
+      .filter(m => blockedSenders.has(m.fromEmail.toLowerCase()) && !spamMoved.current.has(m.uid))
+      .map(m => m.uid);
+    if (!uids.length) return;
+    for (const uid of uids) spamMoved.current.add(uid);
+    void runAction('spam', uids).then(ok => {
+      if (!ok) for (const uid of uids) spamMoved.current.delete(uid);
+    });
+    // runAction is recreated on every render; the effect runs again when the inputs change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screeningOn, writeEnabled, actionBusy, blockedSenders, messages]);
+
+  async function decideSender(email: string, decision: 'allow' | 'block', uids: number[]) {
+    try {
+      const next = await postAction<ScreeningState>('/api/screening/decide', { email, decision }, accountId);
+      setScreening(next);
+      setUnknownSenders(old => {
+        const copy = new Set(old);
+        copy.delete(email);
+        return copy;
+      });
+      if (decision === 'block') {
+        for (const uid of uids) spamMoved.current.add(uid);
+        await runAction('spam', uids);
+      } else toast({ text: t('{email} angenommen.', { email }), kind: 'success' });
+    } catch (e) {
+      toast({ text: (e as Error).message, kind: 'error' });
+    }
+  }
   const selected =
     unified || everywhere
       ? visibleMessages.find(m => `${m.accountId}:${m.uid}` === selectedKey) || null
@@ -586,6 +684,7 @@ export default function MailInstance({
     selectUid(null, false);
     setFolder(path);
     setBundle(null);
+    setScreener(false);
     setQuery('');
     setScope('folder');
     setSearchTotal(null);
@@ -1699,7 +1798,21 @@ export default function MailInstance({
             />
           ) : (
             <>
+              {screeningOn && !screener && !bundle && (
+                <ScreenerRow messages={screened} onOpen={() => setScreener(true)} />
+              )}
+              {screener && screeningOn ? (
+                <ScreenerView
+                  messages={screened}
+                  writeEnabled={writeEnabled}
+                  busy={actionBusy}
+                  onBack={() => setScreener(false)}
+                  onDecide={(email, decision, uids) => void decideSender(email, decision, uids)}
+                  onOpenMessage={openMessage}
+                />
+              ) : null}
               {bundling &&
+                !screener &&
                 (bundle ? (
                   <BundleHeader
                     bundle={bundle}
@@ -1713,46 +1826,48 @@ export default function MailInstance({
                 ) : (
                   <BundleRows messages={bundled} onOpen={setBundle} />
                 ))}
-              <MessageList
-                messages={visibleMessages}
-                selectedUid={selectedUid}
-                selectedKey={selectedKey}
-                checkedUids={checkedUids}
-                busy={busy || searchBusy}
-                bulkBusy={actionBusy}
-                conversations={prefs.conversations && !everywhere}
-                unified={unified || everywhere}
-                hasMore={hasMore && (!query.trim() || searching || everywhere)}
-                loadingMore={loadingMore}
-                draggable={writeEnabled}
-                folder={folder}
-                accountId={accountId}
-                emptyText={
-                  everywhere
-                    ? t(
-                        'Keine Treffer im lokalen Suchindex. Der Index wird im Hintergrund aufgebaut (Einstellungen → Suche & Offline).'
-                      )
-                    : filter !== 'all'
-                      ? t('Keine passenden Nachrichten unter den geladenen.')
+              {!(screener && screeningOn) && (
+                <MessageList
+                  messages={visibleMessages}
+                  selectedUid={selectedUid}
+                  selectedKey={selectedKey}
+                  checkedUids={checkedUids}
+                  busy={busy || searchBusy}
+                  bulkBusy={actionBusy}
+                  conversations={prefs.conversations && !everywhere}
+                  unified={unified || everywhere}
+                  hasMore={hasMore && (!query.trim() || searching || everywhere)}
+                  loadingMore={loadingMore}
+                  draggable={writeEnabled}
+                  folder={folder}
+                  accountId={accountId}
+                  emptyText={
+                    everywhere
+                      ? t(
+                          'Keine Treffer im lokalen Suchindex. Der Index wird im Hintergrund aufgebaut (Einstellungen → Suche & Offline).'
+                        )
+                      : filter !== 'all'
+                        ? t('Keine passenden Nachrichten unter den geladenen.')
+                        : undefined
+                  }
+                  onSelect={openMessage}
+                  onToggleChecked={(uid, checked) =>
+                    setCheckedUids(old => (checked ? Array.from(new Set([...old, uid])) : old.filter(x => x !== uid)))
+                  }
+                  onToggleFlag={writeEnabled ? m => void runAction(m.flagged ? 'unflag' : 'flag', [m.uid]) : undefined}
+                  quick={
+                    writeEnabled && !isDraftFolder
+                      ? {
+                          archive: archiveExists && currentFolder?.specialUse !== '\\Archive',
+                          trash: !isTrash,
+                          onAction: (m, action) => void runAction(action, [m.uid]),
+                          onSnooze: (m, until) => void snooze([m.uid], until)
+                        }
                       : undefined
-                }
-                onSelect={openMessage}
-                onToggleChecked={(uid, checked) =>
-                  setCheckedUids(old => (checked ? Array.from(new Set([...old, uid])) : old.filter(x => x !== uid)))
-                }
-                onToggleFlag={writeEnabled ? m => void runAction(m.flagged ? 'unflag' : 'flag', [m.uid]) : undefined}
-                quick={
-                  writeEnabled && !isDraftFolder
-                    ? {
-                        archive: archiveExists && currentFolder?.specialUse !== '\\Archive',
-                        trash: !isTrash,
-                        onAction: (m, action) => void runAction(action, [m.uid]),
-                        onSnooze: (m, until) => void snooze([m.uid], until)
-                      }
-                    : undefined
-                }
-                onLoadMore={() => void loadMore()}
-              />
+                  }
+                  onLoadMore={() => void loadMore()}
+                />
+              )}
             </>
           )}
           <div
