@@ -7,6 +7,7 @@
 | `supply-chain.yml` | weekly, manual | `npm audit` (runtime, from moderate), Electron support window (`check-electron-support.mjs`), `pip-audit` of the Python locks, bundled CPython is the newest patch release (`check-python-runtime.mjs --strict`) |
 | `release.yml` | tag `vX.Y.Z`, manual | version/tag check, commit must be on `master` (also for manual and signed runs), **gate: the `CI` and `CodeQL` runs of exactly this SHA (push to `master`) must have succeeded** (`scripts/release-gate.mjs`, waits up to 90 min), quality, builds, assembly, draft release |
 | `codeql.yml` | PR, push, weekly | CodeQL JavaScript/TypeScript |
+| `integration.yml` | nightly, manual, `workflow_call` | integration and UI end-to-end suites against real test servers from `test/servers/` |
 
 Helper scripts in `scripts/`: `verify-app-arch.mjs` (PE/Mach-O architecture), `verify-fuses.mjs` (Electron fuses of the packaged binary), `check-release-version.mjs` (part of `release:check`: CHANGELOG section for the version, nothing left under “Unreleased”), `smoke-packaged.mjs` (startup test), `assemble-release.mjs` (assembly, SHA-256, manifest, notes), `secret-scan.mjs`, `check-workflows.mjs`.
 
@@ -17,9 +18,9 @@ Helper scripts in `scripts/`: `verify-app-arch.mjs` (PE/Mach-O architecture), `v
 - Enable secret scanning + push protection, Dependabot alerts, private vulnerability reporting.
 - Settings → Actions → Workflow permissions: _Read repository contents_ as the default.
 
-## Not in CI
+## Integration and UI end-to-end tests
 
-`npm run test:integration` and `npm run test:e2e` need test servers (Dovecot, Radicale, OAuth test provider, Playwright) whose configuration is not in the repository. They are skipped there (opt-in) and must be run separately.
+`integration.yml` (nightly, manual, callable via `workflow_call`) starts real test servers from `test/servers/` (docker-mailserver with Dovecot, Postfix and ManageSieve; Radicale for CalDAV/CardDAV; a throwaway CA trusted through `NODE_EXTRA_CA_CERTS`) and runs `npm run test:integration` (mail, calendar, contacts, task sync with CalDAV/VTODO, shared spaces between two computers, backup → restore → restart, MCP server) plus `npm run test:e2e` and `npm run test:e2e:live`. Locally: `npm run test:servers`, then `source test/servers/.state/env` and the same commands. Not covered there: the OAuth test provider (`LEVUVO_IT_OAUTH_URL`) and Microsoft To Do / Google Tasks, which need real cloud accounts.
 
 ## Open security findings
 

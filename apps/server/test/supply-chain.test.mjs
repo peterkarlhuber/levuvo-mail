@@ -140,3 +140,28 @@ test('API-LEV-010: a release needs its own CHANGELOG section and nothing left un
   assert.match(releaseVersionProblems('2.3', ok).join(), /not X\.Y\.Z/);
   assert.match(read('package.json'), /"release:check": "npm run check:release-version/);
 });
+
+test('QA-LEV-010: integration and UI suites run nightly against test servers from the repository', () => {
+  const wf = read('.github/workflows/integration.yml');
+  assert.match(wf, /schedule:\n\s+- cron:/);
+  assert.match(wf, /workflow_call:/);
+  for (const cmd of ['test/servers/start.sh', 'npm run test:integration', 'npm run test:e2e', 'npm run test:e2e:live'])
+    assert.ok(wf.includes(cmd), cmd);
+  const start = read('test/servers/start.sh');
+  for (const name of [
+    'NODE_EXTRA_CA_CERTS',
+    'LEVUVO_IT_ALLOW_WRITES',
+    'LEVUVO_IT_USER2',
+    'LEVUVO_IT_DAV_URL',
+    'LEVUVO_IT_DAV_USER2'
+  ])
+    assert.ok(start.includes(`${name}=`), name);
+  assert.match(read('test/servers/compose.yml'), /ENABLE_MANAGESIEVE: '1'/);
+  // Every published port stays on the loopback interface.
+  for (const line of read('test/servers/compose.yml').match(/^\s+- [\d.:]+:\d+$/gm) || [])
+    assert.match(line, /- 127\.0\.0\.1:/);
+  // The 2.3 areas have real-server scenarios.
+  const suite = read('apps/server/test/integration/v23.test.mjs');
+  for (const area of ['/api/tasks/sync/link', '/api/spaces/create', '/api/backup/restore', 'tools/call'])
+    assert.ok(suite.includes(area), area);
+});

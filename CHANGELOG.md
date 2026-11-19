@@ -10,6 +10,7 @@
 - **Reproducible AI runtime:** Tabrion, Orkexa and the sidecar are built against hash-locked build backends instead of whatever PyPI serves at build time; the backends are removed from the runtime afterwards.
 - **Signed builds (prepared, no certificates yet):** macOS and Windows each receive only their own certificate (`CSC_LINK` / `WIN_CSC_LINK`); the Windows publisher name keeps its spaces (no shell), and the build stops if `app-update.yml` would carry another name, which would make installed apps reject every update. The local signed path refuses to build without the AI runtime for the target and checks architectures and fuses.
 - **Tests in the real runtime:** CI also runs all tests in the Node of Electron (24.x), in which the server actually runs.
+- **Integration tests against real servers, nightly:** `test/servers/` starts Dovecot/Postfix (with ManageSieve) and Radicale with a throwaway CA and two test accounts; `integration.yml` runs the integration and UI end-to-end suites every night. New real-server scenarios cover the 2.3 areas: CalDAV task sync in both directions, shared spaces between two computers over real mail, backup → restore on a new computer → restart, and an external agent on the MCP server.
 - **Release gate:** `release:check` fails when CHANGELOG entries are still under "Unreleased" or the version has no CHANGELOG section of its own.
 
 ### Security and reliability (external audits of 2.3.0)
