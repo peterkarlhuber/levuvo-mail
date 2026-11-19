@@ -1,0 +1,66 @@
+name: Ollama research (temporary)
+on:
+  push:
+    branches: [claude/project-thread-r10vyl]
+    paths: ['scripts/ollama/**', '.github/workflows/ollama-research.yml']
+permissions:
+  contents: read
+jobs:
+  registry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - run: node scripts/ollama/probe.mjs
+      - name: Ollama releases and assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api 'repos/ollama/ollama/releases?per_page=6' --jq '.[] | "\(.tag_name) prerelease=\(.prerelease) \(.published_at)"'
+          TAG=$(gh api repos/ollama/ollama/releases/latest --jq .tag_name)
+          echo "LATEST $TAG"
+          gh api "repos/ollama/ollama/releases/latest" --jq '.assets[] | "ASSET \(.name) \(.size) \(.digest)"'
+          curl -fsSL "https://raw.githubusercontent.com/ollama/ollama/$TAG/envconfig/config.go" -o config.go
+          grep -n 'Getenv\|"OLLAMA_' config.go | head -80
+          curl -fsSL "https://raw.githubusercontent.com/ollama/ollama/$TAG/LICENSE" | head -5
+  isolation-and-embeddings:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Install Ollama (research only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh api repos/ollama/ollama/releases/latest --jq .tag_name)
+          gh release download "$TAG" -R ollama/ollama -p 'ollama-linux-amd64.t*' -D dl
+          ls -la dl
+          mkdir -p ollama && for f in dl/*; do case "$f" in *.zst) tar --zstd -xf "$f" -C ollama;; *) tar -xzf "$f" -C ollama;; esac; done
+          find ollama -maxdepth 3 | head -30
+          ./ollama/bin/ollama --version || true
+      - name: Isolated serve
+        run: |
+          mkdir -p "$RUNNER_TEMP/home" "$RUNNER_TEMP/models"
+          env -i PATH=/usr/bin:/bin HOME="$RUNNER_TEMP/home" OLLAMA_HOST=127.0.0.1:47811 OLLAMA_MODELS="$RUNNER_TEMP/models" OLLAMA_NO_CLOUD=1 \
+            ./ollama/bin/ollama serve > serve.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://127.0.0.1:47811/api/version && break; sleep 1; done
+          echo; ss -ltnp | grep 47811 || true
+          for m in qwen3-embedding:0.6b qwen3-embedding:4b bge-m3; do
+            curl -sN http://127.0.0.1:47811/api/pull -d "{\"model\":\"$m\"}" | tail -n 2
+          done
+          curl -s http://127.0.0.1:47811/api/tags
+          echo; echo "--- HOME after serve:"; find "$RUNNER_TEMP/home" | head -20
+          echo "--- models dir:"; find "$RUNNER_TEMP/models" -maxdepth 3 | head -20
+          echo "--- cloud model attempt:"; curl -s http://127.0.0.1:47811/api/chat -d '{"model":"gpt-oss:120b-cloud","messages":[{"role":"user","content":"hi"}],"stream":false}' | head -c 400; echo
+          node scripts/ollama/eval-embeddings.mjs --url http://127.0.0.1:47811 qwen3-embedding:0.6b qwen3-embedding:0.6b,noprefix qwen3-embedding:4b bge-m3 bge-m3,noprefix
+          echo "--- serve log"; head -60 serve.log
