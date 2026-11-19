@@ -17,7 +17,9 @@ import {
 } from './ai-model-catalog.mjs';
 
 // Raised whenever the consent text changes: every cloud consent has to be given again.
-export const CONSENT_VERSION = '2026-11-19';
+// Bumped when the consent text lists new content (2026-11-19b: attachment text and history in
+// questions, habits per contact in reply suggestions): everyone is asked again.
+export const CONSENT_VERSION = '2026-11-19b';
 export const AI_PROVIDERS = ['ollama', 'anthropic', 'openai'];
 export const CLOUD_PROVIDERS = ['anthropic', 'openai'];
 /**
@@ -70,7 +72,7 @@ export const DEFAULT_AI_SETTINGS = {
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
   noCloudAccounts: [],
-  profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '' }
+  profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '', learnStyle: false }
 };
 export const AI_TONES = ['auto', 'friendly', 'formal', 'casual', 'brief'];
 export const AI_ADDRESS = ['auto', 'du', 'sie'];
@@ -135,6 +137,7 @@ export function validateAiSettings(input, current, { managed = false } = {}) {
       String(v ?? '')
         .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
         .slice(0, n);
+    if (p.learnStyle !== undefined) next.profile.learnStyle = p.learnStyle === true;
     if (p.signoff !== undefined) next.profile.signoff = clean(p.signoff, 200);
     if (p.instructions !== undefined) next.profile.instructions = clean(p.instructions, 1000);
   }
