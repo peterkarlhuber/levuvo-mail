@@ -314,3 +314,47 @@ test('Spaces chat: the assistant reads the chat and writes only after approval, 
     /reply_to/
   );
 });
+
+test('Spaces chat: "for this space until revoked" lets the assistant write without asking', async t => {
+  const { office, anna, cara, all, space } = await team(t);
+  const tools = new Map();
+  const approvals = new Map();
+  const registry = {
+    register: defs => defs.forEach(d => tools.set(d.name, d)),
+    registerApproval: (type, def) => approvals.set(type, def)
+  };
+  const frame = text => text;
+  registerSpaceTools({ accounts: () => [], spaces: {} }, { service: async () => anna.service, registry, frame });
+  const room = approvals.get('room_change');
+  const payload = await tools.get('room_chat_post').run({ room: space.id, text: 'Hallo' }, { cloud: false });
+  // Without the permission every message asks.
+  assert.equal(await room.auto(payload), false);
+  assert.equal(anna.service.detail(space.id).aiChatGrant, null);
+  await anna.service.setChatGrant(space.id, true);
+  assert.ok(anna.service.detail(space.id).aiChatGrant.since);
+  assert.equal(await room.auto(payload), true);
+  // Only chat messages, never other changes.
+  const task = await tools.get('room_add_task').run({ room: space.id, title: 'T' }, { cloud: false });
+  assert.equal(await room.auto(task), false);
+  // At most 10 in 10 minutes, then it asks again.
+  for (let i = 0; i < 9; i++) assert.equal(await room.auto(payload), true);
+  assert.equal(await room.auto(payload), false);
+  // Revoked: asks again.
+  await anna.service.setChatGrant(space.id, false);
+  assert.equal(await room.auto(payload), false);
+  // Readers cannot grant it; it is local and never sent to others.
+  await assert.rejects(cara.service.setChatGrant(space.id, true), { code: 'spaces_forbidden' });
+  const before = office.sent.length;
+  await anna.service.setChatGrant(space.id, true);
+  await office.deliver(all);
+  assert.equal(office.sent.length, before);
+});
+
+test('MCP registry keeps the "granted in advance" check of an approval type', async () => {
+  const { createToolRegistry } = await import('../src/mcp-server.mjs');
+  const reg = createToolRegistry();
+  reg.registerApproval('demo_change', { summary: () => ({}), execute: async () => ({}), auto: () => true });
+  reg.registerApproval('demo_other', { summary: () => ({}), execute: async () => ({}) });
+  assert.equal(reg.approval('demo_change').auto(), true);
+  assert.equal(reg.approval('demo_other').auto, null);
+});

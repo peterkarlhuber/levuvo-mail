@@ -136,6 +136,7 @@ export type SpaceDetail = SpaceSummary & {
   mySafetyCode: string;
   dissolved: boolean;
   ai: { enabled: boolean; cloudAllowed: boolean; instructions: string };
+  aiChatGrant: { since: string } | null;
   members: Member[];
   invites: { email: string; role: 'editor' | 'reader'; expires: string; expired: boolean }[];
   notes: Note[];

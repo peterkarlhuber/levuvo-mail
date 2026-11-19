@@ -421,7 +421,8 @@ Im Reiter **Chat** schreiben Eigentümer und Bearbeiter allen Mitgliedern (Enter
 macht eine neue Zeile); Leser lesen mit. Nachrichten kommen meist in wenigen Sekunden an, weil Levuvo das
 Postfach per IMAP IDLE beobachtet. Antworten, Bearbeiten und Löschen gehen über die Knöpfe neben einer
 Nachricht; gelöscht wird für alle. Ungelesene Nachrichten zählt nur dein Gerät, es gibt keine
-Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-erstellt“ markiert.
+Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-erstellt“ markiert. Bei der Freigabe wählst du
+„Nur diese“ oder „Für diesen Raum bis auf Widerruf“; zurücknehmen kannst du das in den Einstellungen des Raums.
 Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
 Erlaubnis. Details: `docs/SPACES.md`.
 

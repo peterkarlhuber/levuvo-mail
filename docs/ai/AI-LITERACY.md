@@ -39,3 +39,12 @@ predicts plausible text. It does not "know" facts and can be wrong in a confiden
 - Settings → AI & agents: switch features on and off, choose the model, writing style, AI log.
 - The ✦ button in the left bar (Ctrl/⌘+J): questions, tasks, routines and approvals.
 - In a message and in the composer: the "Assistant" buttons.
+
+## Training record (for the organization)
+
+Art. 4 AI Act asks providers and deployers to ensure a sufficient level of AI literacy. Keep a
+short record:
+
+| Name / group | Date | Content (this guide, usage policy, live demo) | Trainer |
+| --- | --- | --- | --- |
+| [ ] | [ ] | [ ] | [ ] |

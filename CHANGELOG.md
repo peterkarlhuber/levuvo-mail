@@ -12,7 +12,10 @@
 - **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
 - **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
 - **Unread messages** are counted on the rail, in the list of spaces and on the tab, on this device only: there are no read receipts and no typing indicators.
-- **Assistant:** it can read and search the chat and, after your approval, write a message; such messages are marked "AI-generated" for every member.
+- **Assistant:** it can read and search the chat and, after your approval, write a message; such messages are marked "AI-generated" for every member. Approve "Only this one" or "For this space until revoked" (then it writes there without asking, at most 10 messages in 10 minutes, until you revoke it in the space settings).
+
+### Compliance
+- Compliance: gap analyses and templates for the Cyber Resilience Act, the AI Act, the GDPR, accessibility and other rules in `docs/compliance/` (vulnerability handling, 24 h/72 h reporting, support period, risk assessment, technical documentation, EU declaration of conformity template, record of processing, DPIA template, options for DOC-LEV-009, AI system inventory, licensing policy, user information); coordinated vulnerability disclosure policy in `SECURITY.md`; compliance section in the release checklist. Not legal advice.
 
 ## 2.5.0 – 19 November 2026
 
