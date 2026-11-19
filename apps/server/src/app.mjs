@@ -42,6 +42,7 @@ import { registerAccountRoutes } from './routes-accounts.mjs';
 import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
+import { registerPrivacyRoutes } from './routes-privacy.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
@@ -459,7 +460,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|manual)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|privacy|manual)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -718,6 +719,8 @@ export async function createMailServer({
     });
   });
   registerAccountRoutes(ctx);
+  // Before the mail routes: unsubscribing counts into the cockpit (ctx.privacy).
+  await registerPrivacyRoutes(ctx, { createJsonFile, file: path.join(dir, 'privacy-stats.json') });
   registerMailRoutes(ctx);
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
