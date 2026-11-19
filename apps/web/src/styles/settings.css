@@ -124,6 +124,30 @@
 .settings-row-control {
   flex: none;
 }
+/* Single-line text fields beside the label get a usable width instead of the browser default. */
+.settings-row-control
+  > input:is(:not([type]), [type='text'], [type='url'], [type='email'], [type='password'], [type='search']) {
+  width: var(--field-w);
+  max-width: 100%;
+}
+/* Free text (closing line, own instructions …): the field sits below the label at full row width. */
+.settings-row--wide {
+  flex-direction: column;
+  align-items: stretch;
+}
+.settings-row--wide .settings-row-label {
+  flex: none;
+}
+.settings-row--wide .settings-row-control {
+  margin-left: 0;
+  width: 100%;
+}
+.settings-row--wide .settings-row-control > :is(input, textarea) {
+  width: 100%;
+}
+.settings-row--wide textarea {
+  min-height: calc(var(--control-h) * 3);
+}
 .settings-actions {
   display: flex;
   flex-wrap: wrap;

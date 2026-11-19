@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Settings
+- **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
+
 ## 2.4.0 – 19 November 2026
 
 > **After updating:** the consent for cloud AI is asked again, because its text now lists every kind of content that is sent. Backups made with 2.4.0 cannot be restored in 2.3; to keep a way back, save a backup in 2.3 (Settings → Backup) before installing.
