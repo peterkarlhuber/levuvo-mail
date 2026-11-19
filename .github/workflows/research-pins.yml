@@ -15,8 +15,12 @@ jobs:
         with: { node-version: '22' }
       - run: node scripts/ollama/check-catalog.mjs --print
   mac-live:
+    strategy:
+      fail-fast: false
+      matrix:
+        models: ['qwen3.5:9b,gemma4:12b,ministral-3:8b', 'qwen3.8:27b,bge-m3,qwen3-embedding:0.6b', 'mistral-small3.2:24b,ministral-3:14b,qwen3-embedding:4b']
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
@@ -25,7 +29,7 @@ jobs:
       - run: npm ci --no-fund --ignore-scripts
       - run: node scripts/fetch-ollama.mjs --arch arm64 --out "$RUNNER_TEMP/ollama"
       - env:
-          LEVUVO_LIVE_MODELS: qwen3.5:4b,gemma4:e2b,ministral-3:3b
+          LEVUVO_LIVE_MODELS: ${{ matrix.models }}
         run: |
           export LEVUVO_OLLAMA_BIN="$(find "$RUNNER_TEMP/ollama" -name ollama -type f -perm -u+x | head -1)"
           node --test test/ollama-live/*.test.mjs
