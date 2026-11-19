@@ -19,6 +19,8 @@
 - **AI activity log:** entries older than 30 days are removed at the start and twice a day, also when the AI is not used.
 - **Accessibility:** the folder actions menu can be used with the keyboard (focus moves in, arrows/Home/End, Escape returns to the button). In CI, the accessibility test fails instead of being skipped when the browser does not start.
 - **Crash reports:** the settings and the privacy notice now say that a memory dump may contain parts of open mails.
+- **Long mailboxes:** the message list only renders the rows near the visible area, so it stays fast with tens of thousands of loaded messages. Arrow keys, Home/End and Page Up/Down move between rows, screen readers announce the position (“9,999 of 20,000”), and `j`/`k` keep the selected message visible.
+- **Releases:** a draft release is only built from a commit on `master` (also manual and signed runs) whose CI and CodeQL runs passed for exactly this commit. `VALIDATION-REPORT.md` now covers 2.3.0.
 
 ## 2.3.0 – 19 November 2026
 

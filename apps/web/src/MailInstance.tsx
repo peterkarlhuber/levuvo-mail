@@ -1275,7 +1275,7 @@ export default function MailInstance({
         const m = visibleMessages[next];
         if (keyed) setSelectedKey(`${m.accountId}:${m.uid}`);
         else selectUid(m.uid);
-        document.querySelectorAll<HTMLElement>('.message-row')[next]?.scrollIntoView({ block: 'nearest' });
+        // MessageList scrolls the selected row into view (it is virtualized).
       });
     }
     if (!detail || detailBusy) return;

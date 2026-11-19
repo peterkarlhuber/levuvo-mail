@@ -1,4 +1,4 @@
-/* global document */
+/* global document, HTMLElement */
 // Accessibility check of every main view with axe-core in Chromium (WCAG 2.0/2.1/2.2 A + AA and
 // axe best practices), dark and light, desktop and phone, plus keyboard checks for dialogs.
 // The built app is served by the real server; /api is answered from test/a11y/fixtures.json
@@ -266,6 +266,80 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     await page.locator('.screener-rows .bundle-row').click();
     await page.locator('.screener-item').first().waitFor();
     await axe(page, 'screener view');
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  await t.test('large mailbox: 20,000 rows stay windowed, keyboard reaches every row', async () => {
+    const COUNT = 20_000;
+    const template = fixtures['GET /api/messages'].body.messages[0];
+    const messages = Array.from({ length: COUNT }, (_, i) => ({
+      ...template,
+      uid: COUNT - i,
+      seq: COUNT - i,
+      subject: `Massentest ${i + 1}`,
+      messageId: `<bulk-${i}@levuvo.test>`,
+      inReplyTo: null,
+      date: new Date(Date.UTC(2026, 10, 18) - i * 60_000).toISOString()
+    }));
+    const body = { ...fixtures['GET /api/messages'].body, total: COUNT, messages, hasMore: false, nextBeforeUid: null };
+    const monitor = { ...fixtures['GET /api/inbox/monitor'].body, ...body, highestUid: COUNT };
+    const { page, context, errors } = await open({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: 'dark',
+      setup: async context => {
+        const json = b => ({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+        await context.route(
+          url => url.pathname === '/api/messages',
+          route => route.fulfill(json(body))
+        );
+        await context.route(
+          url => url.pathname === '/api/inbox/monitor',
+          route => route.fulfill(json(monitor))
+        );
+        await context.route(
+          url => /^\/api\/messages\/\d+$/.test(url.pathname),
+          route => {
+            const uid = Number(new URL(route.request().url()).pathname.split('/').pop());
+            const m = messages[COUNT - uid];
+            return route.fulfill(json({ ...fixtures['GET /api/messages/1'].body, uid, subject: m.subject }));
+          }
+        );
+      }
+    });
+    await page.locator('.message-row', { hasText: 'Massentest 1' }).first().waitFor({ timeout: 30_000 });
+    const rendered = () => page.locator('.message-row').count();
+    assert.ok((await rendered()) < 80, `only the visible rows are in the DOM (${await rendered()})`);
+    await axe(page, 'large list');
+    const active = () =>
+      page.evaluate(() => {
+        const row = document.activeElement?.closest('[role="listitem"]');
+        return row ? { pos: row.getAttribute('aria-posinset'), size: row.getAttribute('aria-setsize') } : null;
+      });
+    await page.locator('.message-row', { hasText: 'Massentest 1' }).first().locator('.message-item').focus();
+    const started = Date.now();
+    await page.keyboard.press('End');
+    assert.deepEqual(await active(), { pos: String(COUNT), size: String(COUNT) }, 'End focuses the last row');
+    await page.keyboard.press('ArrowUp');
+    assert.equal((await active())?.pos, String(COUNT - 1));
+    await page.keyboard.press('Home');
+    assert.equal((await active())?.pos, '1');
+    await page.keyboard.press('PageDown');
+    assert.ok(Number((await active())?.pos) > 2, 'PageDown moves by a page');
+    assert.ok(Date.now() - started < 5_000, `keyboard navigation is fast (${Date.now() - started} ms)`);
+    // Scrolling far down renders the rows there and still keeps the DOM small.
+    await page.locator('.message-list').evaluate(el => {
+      el.scrollTop = el.scrollHeight / 2;
+    });
+    await page.waitForFunction(() => document.querySelector('.message-row[aria-posinset="10000"]') !== null, null, {
+      timeout: 5_000
+    });
+    assert.ok((await rendered()) < 100, `DOM stays small after scrolling (${await rendered()})`);
+    // j selects the next message; the selected row stays visible.
+    await page.locator('.message-row', { hasText: 'Massentest 10000' }).first().locator('.message-item').click();
+    await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await page.keyboard.press('j');
+    await page.locator('.message-row.selected', { hasText: 'Massentest 10001' }).waitFor();
     assert.deepEqual(errors, []);
     await context.close();
   });

@@ -499,3 +499,49 @@ test('M-03 (audit 2.3.0): "load images" is bound to one message, not to its UID'
   assert.notEqual(remoteImageKey('acc1', { ...a, uidValidity: '2' }), key, 'folder recreated');
   assert.equal(remoteImageKey('acc1', null), null);
 });
+
+test('Message list windowing: 50,000 rows, measured heights, keyboard targets', async () => {
+  const { navigateIndex, renderIndices, rowAt, rowOffsets, scrollToShow, visibleRange } =
+    await import('../src/list-window.ts');
+  const COUNT = 50_000;
+  const keys = Array.from({ length: COUNT }, (_, i) => `k${i}`);
+  const measured = new Map([
+    ['k0', 100],
+    ['k1', 50]
+  ]);
+  const started = performance.now();
+  const offsets = rowOffsets(keys, measured, 70);
+  assert.equal(offsets.length, COUNT + 1);
+  assert.equal(offsets[1], 100);
+  assert.equal(offsets[2], 150);
+  assert.equal(offsets[COUNT], 150 + (COUNT - 2) * 70);
+  assert.equal(rowAt(offsets, 0), 0);
+  assert.equal(rowAt(offsets, 99), 0);
+  assert.equal(rowAt(offsets, 100), 1);
+  assert.equal(rowAt(offsets, offsets[COUNT] + 500), COUNT - 1);
+  // The rendered window stays small wherever the list is scrolled.
+  for (const top of [0, offsets[COUNT] / 2, offsets[COUNT] - 900]) {
+    const range = visibleRange(offsets, top, 900, 8);
+    assert.ok(range.end - range.start <= 900 / 50 + 2 + 16, `window size at ${top}`);
+    assert.ok(offsets[range.start] <= top && offsets[range.end] >= Math.min(offsets[COUNT], top + 900));
+  }
+  assert.deepEqual(visibleRange(rowOffsets([], measured, 70), 0, 900, 8), { start: 0, end: 0 });
+  // Focused/selected rows outside the window are kept, sorted and without duplicates.
+  assert.deepEqual(renderIndices({ start: 10, end: 13 }, [11, 40_000, -1, 2], COUNT), [2, 10, 11, 12, 40_000]);
+  assert.deepEqual(renderIndices({ start: 0, end: 2 }, [COUNT + 5], COUNT), [0, 1]);
+  // Scrolling to a row: only when it is not already fully visible.
+  assert.equal(scrollToShow(offsets, 0, 0, 900), null);
+  assert.equal(scrollToShow(offsets, COUNT - 1, 0, 900), offsets[COUNT] - 900);
+  assert.equal(scrollToShow(offsets, 1, 500, 900), 100);
+  assert.equal(scrollToShow(offsets, COUNT, 0, 900), null);
+  // Keyboard targets.
+  assert.equal(navigateIndex('ArrowDown', 0, COUNT, 10), 1);
+  assert.equal(navigateIndex('ArrowUp', 0, COUNT, 10), 0);
+  assert.equal(navigateIndex('End', 3, COUNT, 10), COUNT - 1);
+  assert.equal(navigateIndex('Home', 3, COUNT, 10), 0);
+  assert.equal(navigateIndex('PageDown', COUNT - 3, COUNT, 10), COUNT - 1);
+  assert.equal(navigateIndex('PageUp', 5, COUNT, 10), 0);
+  assert.equal(navigateIndex('x', 5, COUNT, 10), -1);
+  assert.equal(navigateIndex('ArrowDown', 0, 0, 10), -1);
+  assert.ok(performance.now() - started < 1_000, 'offsets for 50,000 rows are cheap');
+});
