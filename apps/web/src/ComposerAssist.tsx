@@ -11,7 +11,7 @@ import { Button } from './ui';
 import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
 
 type Draft = { subject: string; body: string; styleContact?: string };
-type Issue = { kind: 'attachment' | 'tone' | 'recipient' | 'sensitive'; message: string };
+type Issue = { kind: 'attachment' | 'tone' | 'recipient' | 'sensitive' | 'legal'; message: string };
 
 const REWRITES: { mode: string; label: string }[] = [
   { mode: 'shorter', label: 'Kürzer' },
@@ -34,9 +34,20 @@ type Props = {
   setSubject: (s: string) => void;
   /** The first recipient typed in "To": a new mail then follows the style learned for that person. */
   recipient?: string;
+  /** Model that wrote the current text, or null after undo (machine-readable marking on send). */
+  onAssisted?: (model: string | null) => void;
 };
 
-export function ComposerAssist({ accountId, source, getDraft, setDraft, subject, setSubject, recipient }: Props) {
+export function ComposerAssist({
+  accountId,
+  source,
+  getDraft,
+  setDraft,
+  subject,
+  setSubject,
+  recipient,
+  onAssisted
+}: Props) {
   const { t, lang } = useT();
   const { toast } = useUi();
   const [features, setFeatures] = useState<Partial<Record<AiFeature, boolean>> | null>(null);
@@ -82,6 +93,7 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
       setDraft(r.result.body);
       if (r.result.subject && !subject.trim()) setSubject(r.result.subject);
       setChanged({ model: r.model, contact: r.result.styleContact || '' });
+      onAssisted?.(r.model);
       toast({
         text: t('Vom Assistenten geschrieben ({model}). Bitte vor dem Senden prüfen.', { model: r.model }),
         kind: 'info',
@@ -98,6 +110,7 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
     if (undo.current !== null) setDraft(undo.current);
     undo.current = null;
     setChanged(null);
+    onAssisted?.(null);
   }
   const closeMenu = (refocus: boolean) => {
     setOpen(false);
