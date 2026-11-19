@@ -379,5 +379,8 @@ export const AI_EN: Record<string, string> = {
   'Gerade läuft ein Download. Bitte warten, bis er fertig ist.':
     'A download is running. Please wait until it is finished.',
   'Das lokale Modell ist nicht erreichbar. Bitte Levuvo neu starten.':
-    'The local model cannot be reached. Please restart Levuvo.'
+    'The local model cannot be reached. Please restart Levuvo.',
+  // Width of the assistant panel
+  'Breite des Assistenten ändern': 'Change width of the assistant',
+  '{n} Pixel breit': '{n} pixels wide'
 };
