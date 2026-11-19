@@ -1026,6 +1026,35 @@ export function createLocalIndex({
       }
     },
 
+    /**
+     * Mails the user wrote (sender is one of `addresses`), newest first: recipients, date, subject
+     * and text. For the local writing-style profile; `to` narrows to mails to one recipient.
+     */
+    async sentBy(id, addresses, { limit = 200, to = null } = {}) {
+      const entry = await open(id);
+      const own = [...new Set((addresses || []).map(a => String(a).toLowerCase()).filter(Boolean))];
+      if (!entry || !own.length) return [];
+      const size = Math.max(1, Math.min(1000, Number(limit) || 200));
+      const rows = to
+        ? stmt(
+            entry,
+            `SELECT folder, uid, d, t, s, x FROM messages WHERE lower(fe) IN (SELECT value FROM json_each(?))
+             AND (' ' || lower(t) || ' ') LIKE ? ESCAPE '\\' ORDER BY d DESC LIMIT ?`
+          ).all(
+            JSON.stringify(own),
+            `% ${String(to)
+              .toLowerCase()
+              .replace(/[\\%_]/g, c => `\\${c}`)} %`,
+            size
+          )
+        : stmt(
+            entry,
+            `SELECT folder, uid, d, t, s, x FROM messages WHERE lower(fe) IN (SELECT value FROM json_each(?))
+             ORDER BY d DESC LIMIT ?`
+          ).all(JSON.stringify(own), size);
+      return rows.map(r => ({ folder: r.folder, uid: r.uid, date: r.d, to: r.t, subject: r.s, text: r.x }));
+    },
+
     async text(id, folderPath, uid) {
       const entry = await open(id);
       const r = entry

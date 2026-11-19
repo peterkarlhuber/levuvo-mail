@@ -107,6 +107,18 @@ permission-checked and delivered exactly like other content, and they work acros
   one more sender and one more wake-up source; the envelopes stay end-to-end encrypted and signed,
   so the relay would see no content.
 
+## Tasks in the main task area
+
+Space tasks assigned to me appear in the main "Aufgaben" area too (`apps/server/src/space-tasks.mjs`).
+They are read live from the space state (`service.myTasks()`), never copied into `tasks-local.json`: no
+duplicates, and the task sync with CalDAV, Microsoft To Do and Google Tasks never sees them. Changes from
+the main area (done, title, note, due, priority) are ordinary `task.upsert`/`task.delete` ops, so roles,
+signatures and end-to-end encryption apply as in the space; a reader sees the task read-only. A task from
+the main area can be put into a space where I am owner or editor: it becomes a space task assigned to me
+and the local task is removed (a synced one is deleted from its connected list on the next sync).
+Reminder, repetition and mail link do not exist on space tasks and are dropped. The assistant's task tools
+(`ctx.tasks`) still see only the local list; for spaces it has the room tools below.
+
 ## Local storage
 
 ```
