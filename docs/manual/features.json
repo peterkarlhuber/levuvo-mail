@@ -19,9 +19,17 @@
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
       "en": "06-settings.md#The settings at a glance"
     },
+    "settings-tab:automations": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
     "settings-tab:dav": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
       "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:booking": {
+      "de": "03-kalender-kontakte-aufgaben.md#Buchungslinks",
+      "en": "03-calendar-contacts-tasks.md#Booking links"
     },
     "settings-tab:security": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
@@ -173,6 +181,14 @@
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
       "en": "06-settings.md#The settings at a glance"
     },
+    "settings-section:Automatisierungen": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
+    "settings-section:Protokoll": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
     "settings-section:Wiederherstellung bereit": {
       "de": "01-erste-schritte.md#Eine Sicherung anlegen",
       "en": "01-getting-started.md#Make a backup",
@@ -187,6 +203,10 @@
     "settings-section:Wiederherstellen oder auf neuen Rechner umziehen": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
       "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Buchungslinks": {
+      "de": "03-kalender-kontakte-aufgaben.md#Buchungslinks",
+      "en": "03-calendar-contacts-tasks.md#Booking links"
     },
     "settings-section:Server-Konten": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",

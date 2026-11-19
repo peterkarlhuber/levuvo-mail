@@ -651,6 +651,79 @@ def filter_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# ---- automations in words -------------------------------------------------------------------
+
+
+class AutomationCondition(BaseModel):
+    field: Literal["from", "to", "subject", "text", "any", "attachment"]
+    op: Literal["contains", "not_contains", "is", "ends_with", "yes", "no"]
+    value: str = ""
+
+
+class AutomationAction(BaseModel):
+    type: Literal["move", "markRead", "flag", "task"]
+    folder: str = Field(default="", description="Exact folder path from the list, only for move")
+    title: str = Field(default="", description="Task title, may use {subject} and {from}; only for task")
+    dueDays: int | None = Field(default=None, description="Task due in this many days, only for task")
+
+
+class AutomationRule(BaseModel):
+    name: str
+    match: Literal["all", "any"] = "all"
+    conditions: list[AutomationCondition] = Field(min_length=1, max_length=10)
+    actions: list[AutomationAction] = Field(min_length=1, max_length=5)
+    unclear: str = Field(default="", description="What could not be expressed, empty if everything fits")
+
+
+def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """Turns a description in words into an automation rule that the user checks before it runs."""
+    folders = [_text(f, 200) for f in (params.get("folders") or [])[:200] if isinstance(f, str)]
+    result = _ask(
+        engine,
+        f"Turn the user's description into one automation rule for incoming email. Rule name in {_lang(params)}, "
+        "short. Conditions test the sender (from: name or address), recipients (to), subject, the start of the "
+        "text (text), anything (any), or whether the mail has attachments (field attachment, op yes or no). "
+        "Operators: contains, not_contains, is (exact), ends_with (e.g. a domain like @example.com). "
+        "Actions: move to a folder, mark as read (markRead), flag, create a task (task, with a title in "
+        f"{_lang(params)} that may use {{subject}} and {{from}}, and dueDays if a deadline is mentioned). Each action "
+        "at most once. Never delete, forward, reply or send: if asked, explain it in `unclear`. For move, use "
+        "exactly one folder path from this list: "
+        + ", ".join(folders or ["INBOX"])
+        + ". If something cannot be expressed with these options, explain it in `unclear`.",
+        f"Description from the user (trusted): {_text(params.get('text'), 1000)}",
+        AutomationRule,
+        max_tokens=700,
+    )
+    known = set(folders)
+    actions = []
+    seen: set[str] = set()
+    for a in result.get("actions", []):
+        kind = a.get("type")
+        if kind in seen or (kind == "move" and a.get("folder") not in known):
+            continue
+        seen.add(kind)
+        due = a.get("dueDays")
+        actions.append(
+            {
+                "type": kind,
+                "folder": a.get("folder", "") if kind == "move" else "",
+                "title": _text(a.get("title"), 300) if kind == "task" else "",
+                "dueDays": due if kind == "task" and isinstance(due, int) and 0 <= due <= 365 else None,
+            }
+        )
+    result["actions"] = actions or [{"type": "flag", "folder": "", "title": "", "dueDays": None}]
+    conditions = []
+    for c in result.get("conditions", []):
+        if c.get("field") == "attachment":
+            conditions.append({"field": "attachment", "op": "no" if c.get("op") == "no" else "yes", "value": ""})
+        elif c.get("op") in ("contains", "not_contains", "is", "ends_with") and str(c.get("value") or "").strip():
+            conditions.append({"field": c["field"], "op": c["op"], "value": _text(c["value"], 200).strip()})
+    if not conditions:
+        raise RpcError("invalid_output", "no usable condition")
+    result["conditions"] = conditions
+    return result
+
+
 TASKS = {
     "digest": digest,
     "newsletters": newsletters,
@@ -661,6 +734,7 @@ TASKS = {
     "attachment_check": attachment_check,
     "presend": presend,
     "filter_rule": filter_rule,
+    "automation_rule": automation_rule,
     "prioritize": prioritize,
     "classify": classify,
     "extract": extract,

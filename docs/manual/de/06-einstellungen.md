@@ -12,7 +12,9 @@
 | Konten | Konten, Signaturen, Absenderadressen, **Verbindungsstatus** |
 | Vorlagen | **Textbausteine und Vorlagen** |
 | Filter & Abwesenheit | **Filterregeln** auf dem Mailserver und **Abwesenheitsnotiz** |
+| Automatisierungen | **Automatisierungen**: Regeln für neue Mails, auch mit Aufgaben, mit **Protokoll** |
 | Kalender & Kontakte | **Server-Konten** anderer Anbieter, Farben, Import und Export |
+| Buchungslinks | **Buchungslinks**, über die andere einen Termin bei dir buchen |
 | Sicherheit | Schlüssel und Zertifikate (OpenPGP, S/MIME) |
 | Suche & Offline | Stand des Suchindex, neu aufbauen |
 | KI & Agenten | **KI-Assistent**, **Funktionen**, **Schreibstil**, **KI-Protokoll**, Agenten und **Freigaben** |
@@ -27,6 +29,12 @@
 Unter **Einstellungen → Konten** klickst du auf ein Konto, um es zu bearbeiten. Dort legst du eine **Signatur** an, auch mit Links und kleinem Logo. Unter **Weitere Absenderadressen (Aliase)** trägst du zusätzliche Adressen ein, etwa office@ und rechnung@, jeweils mit eigener Signatur. Trag nur Adressen ein, mit denen dein Mailserver dich senden lässt.
 
 ![Konten und Signaturen](settings-accounts.png)
+
+### Automatisierungen
+
+Unter **Einstellungen → Automatisierungen** legst du mit **Neue Automatisierung** Regeln für neue Mails im Posteingang an: zum Beispiel Mails eines Absenders in einen Ordner verschieben, als gelesen markieren, mit Stern markieren oder eine **Aufgabe anlegen**. Ist der Assistent eingeschaltet, beschreibst du die Regel **in einfachen Worten** und wählst **Regel vorschlagen**. Die lokale KI füllt dann den Editor, und der Vorschlag ist als KI-Vorschlag gekennzeichnet. Prüfe ihn, denn die KI kann sich irren.
+
+Unter **So läuft die Regel** steht die Regel in Worten. Mit **Probelauf** siehst du, welche der 50 neuesten Mails sie behandeln würde, ohne dass sich etwas ändert. Eine Regel läuft erst, wenn du sie einschaltest, und nur für Mails, die danach ankommen. Sie löscht nie, antwortet nie und verschiebt nie in den Papierkorb. Im **Protokoll** siehst du, was die Regeln getan haben.
 
 ## So schützt Levuvo Mail deine Daten
 
