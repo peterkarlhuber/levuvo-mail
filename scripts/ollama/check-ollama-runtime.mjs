@@ -38,7 +38,9 @@ export function inRange(version, range) {
 
 async function getJson(url, init = {}) {
   const headers = { Accept: 'application/vnd.github+json', ...(init.headers || {}) };
-  if (process.env.GITHUB_TOKEN && url.startsWith('https://api.github.com'))
+  const { protocol, host } = new URL(url);
+  // The token goes only to the GitHub API itself, never to another host.
+  if (process.env.GITHUB_TOKEN && protocol === 'https:' && host === 'api.github.com')
     headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const res = await fetch(url, { ...init, headers });
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
