@@ -610,11 +610,16 @@ function Shell() {
               </span>
             )}
             {item.id === 'tasks' && tasksDue > 0 && (
-              <span className="rail-badge">{tasksDue > 99 ? '99+' : tasksDue}</span>
+              <span className="rail-badge" aria-hidden="true">
+                {tasksDue > 99 ? '99+' : tasksDue}
+              </span>
             )}
             <span className="rail-label">{item.label}</span>
             {item.id === 'mail' && unseenTotal > 0 && (
               <span className="sr-only">, {t('{n} ungelesen', { n: unseenTotal })}</span>
+            )}
+            {item.id === 'tasks' && tasksDue > 0 && (
+              <span className="sr-only">, {t('{n} heute fällig', { n: tasksDue })}</span>
             )}
           </button>
         ))}

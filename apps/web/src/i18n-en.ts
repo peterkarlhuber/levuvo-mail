@@ -567,6 +567,7 @@ export const EN: Record<string, string> = {
   'Aufgabe angelegt.': 'Task created.',
   'Aufgabe bearbeiten': 'Edit task',
   'Neue Aufgabe': 'New task',
+  '{n} heute fällig': '{n} due today',
   Fällig: 'Due',
   Morgen: 'Tomorrow',
   Montag: 'Monday',
