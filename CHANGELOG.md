@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Spaces storage (internal audit of 19 November 2026, ARC-LEV-003)
+- **Spaces use the shared storage layer** of the other local files (`local-store.mjs`): one encryption format, one atomic write and one write queue. Each file stays bound to its own name, so a space file copied over another one does not open.
+- **Migration:** space and index files of versions up to 2.3 are read and rewritten in the shared format on the first start, one atomic write per file and only after every file opened with the key. A start that is cut off in between leaves readable files; nothing is lost. Without a working keychain key spaces stay locked and files are not touched. Older backups are migrated the same way after a restore. Leftovers of cut-off writes are removed on start.
+
 ### AI core and search index (internal audit of 19 November 2026)
 - **Semantic search on large mailboxes:** the first embedding run continues where it stopped after a restart, sleep or an Ollama outage instead of starting over; it reads texts batch by batch instead of all at once. New messages written during a long index sync are never skipped. The vector set in memory follows changes instead of being reloaded after every batch and is released after ten idle minutes.
 - **Search index format:** the stored schema version is read; older files are migrated, files of a newer version (after rolling back an update) are rebuilt.
