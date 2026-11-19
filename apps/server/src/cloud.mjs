@@ -76,7 +76,9 @@ export function toGraphRecurrence(rrule, startDate) {
         ? {
             type: 'weekly',
             interval: rrule.interval,
-            daysOfWeek: rrule.byday?.length ? rrule.byday.map(d => DAY_NAMES[d]) : [weekday],
+            daysOfWeek: rrule.byday?.length
+              ? rrule.byday.map(d => DAY_NAMES[d.replace(/^[-+\d]+/, '')]).filter(Boolean)
+              : [weekday],
             firstDayOfWeek: 'monday'
           }
         : rrule.freq === 'MONTHLY'
