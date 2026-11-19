@@ -9,6 +9,11 @@ Email, calendar and contacts for **macOS (Apple Silicon)** and **Windows (ARM64,
 - **Password-protected messages** for any recipient (AES-256, opened in the browser) · **Security:** passwords, tokens and private keys only in the keychain · phishing warnings (SPF/DKIM/DMARC, links, attachments) · OpenPGP and S/MIME · protected HTML view
 - **Server filters and vacation reply** (Sieve) · **Sign-in with Microsoft 365 and Google** (OAuth 2.0)
 - **Encrypted local search index** – search across all folders and accounts, even offline
+- **Tasks** from mails with due times, reminders and repetition, synced with CalDAV lists, Microsoft To Do or Google Tasks
+- **Shared spaces** for working together on a topic: notes, pinned mails, tasks, events and files, end-to-end encrypted between the members' own mailboxes, without a Levuvo server
+- **Inbox order:** sender screening, bundles, attachment overview, phishing check
+- **Levuvo Mail Assistant** (optional, off by default): summaries, replies, rewriting, questions to the mailbox and routines with a **local model (Ollama)** or, after consent, a cloud model; an **MCP server** for your own AI agents with approvals
+- **Encrypted backup** and moving to a new device
 - German and English, light and dark theme
 
 What's new: [CHANGELOG.md](./CHANGELOG.md) · Manual (DE): [docs/HANDBUCH.md](./docs/HANDBUCH.md) · Manual (EN): [docs/MANUAL.md](./docs/MANUAL.md) · Privacy: [PRIVACY.md](./PRIVACY.md) · Imprint template: [docs/IMPRESSUM.md](./docs/IMPRESSUM.md)
@@ -72,9 +77,31 @@ The test operates the app like a human (composing with formatting, undo, replyin
 | `apps/server/src/sieve.mjs` | ManageSieve client, rules, vacation reply |
 | `apps/server/src/local-index.mjs` | encrypted search index |
 | `apps/server/src/security-analysis.mjs` | phishing detection |
+| `apps/server/src/tasks.mjs`, `task-sync*.mjs` | tasks and sync with CalDAV, Microsoft To Do, Google Tasks |
+| `apps/server/src/spaces/` | shared spaces (model, encryption, sync by mail, assistant tools) |
+| `apps/server/src/backup.mjs` | encrypted backup and restore |
+| `apps/server/src/ai-*.mjs`, `routes-ai.mjs` | AI service, sidecar process, semantic search, routines |
+| `apps/server/src/mcp-server.mjs`, `routes-mcp.mjs` | MCP server for agents, permission levels, approvals |
+| `apps/ai/` | AI sidecar (Python, based on Orkexa): prompts, schemas, Ollama/Anthropic/OpenAI clients |
 | `apps/desktop/main.mjs` | Electron main process, tray, notifications, reminders, updates |
 | `apps/web/src/` | React UI (`App`, `MailInstance`, `Reader`, `Composer`, `Calendar`, `Contacts`, `Settings`, `CommandPalette` …) |
 | `apps/web/src/i18n-en.ts` | English texts (key = German source text) |
+
+### AI sidecar (Python)
+
+The AI features run in a separate Python process (`apps/ai`, package `levuvo_ai`) that the server starts
+on demand and talks to over stdin/stdout. For development:
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r apps/ai/requirements.txt pytest ruff
+(cd apps/ai && python -m pytest -q && ruff check . && ruff format --check .)
+export LEVUVO_AI_PYTHON=$PWD/.venv/bin/python   # otherwise python3 from PATH is used
+```
+
+Installers ship their own runtime: run `npm run ai:runtime -- --arch <arm64|x64>` before building one
+(see [build/ai-runtime/README.md](./build/ai-runtime/README.md)). The local model needs
+[Ollama](https://ollama.com) on the same computer.
 
 ## Building installers
 

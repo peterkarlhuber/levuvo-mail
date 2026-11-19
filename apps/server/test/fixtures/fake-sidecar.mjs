@@ -7,6 +7,8 @@ rl.on('line', line => {
   if (msg.method === 'shutdown') process.exit(0);
   if (msg.method === 'crash') process.exit(3);
   if (msg.method === 'slow') return;
+  if (msg.method === 'delay')
+    return void setTimeout(() => send({ jsonrpc: '2.0', id: msg.id, result: { method: 'delay' } }), msg.params.ms);
   if (msg.method === 'fail')
     return send({ jsonrpc: '2.0', id: msg.id, error: { code: -32000, message: 'x', data: { kind: 'unreachable' } } });
   send({

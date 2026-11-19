@@ -3,8 +3,8 @@
 export const AI_EN: Record<string, string> = {
   'KI & Agenten': 'AI & agents',
   'Cloud-KI von {provider} verwenden?': 'Use cloud AI from {provider}?',
-  'Für jede KI-Funktion, die du aufrufst, wird der Inhalt der betroffenen Nachrichten an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU. Für Konten, die du unten sperrst, wird nichts übertragen. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.':
-    'For every AI function you use, the content of the messages involved is sent to {provider} and processed there, possibly outside the EU. Nothing is sent for accounts you block below. Without this consent everything stays local. You can withdraw it at any time.',
+  'Für jede KI-Funktion, die du aufrufst, werden die dafür nötigen Inhalte an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU: die betroffenen Nachrichten; bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ zusätzlich bis zu fünf deiner zuletzt gesendeten Mails als Stilprobe; bei Fragen an das Postfach die gefundenen Mails aller nicht gesperrten Konten; bei Aufgaben und Routinen des Assistenten die Mails, Termine, Kontakte und Aufgaben, die er dafür liest, und Inhalte von Räumen, die Cloud-KI erlauben. Für Konten, die du unten sperrst, wird nichts übertragen. Das Einsortieren im Hintergrund läuft nur mit einem lokalen Modell. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.':
+    'For every AI function you use, the content it needs is sent to {provider} and processed there, possibly outside the EU: the messages concerned; for reply suggestions and “Bullet points to email” also up to five of your most recently sent emails as a style sample; for questions to the mailbox the emails found in all accounts that are not blocked; for tasks and routines of the assistant the emails, events, contacts and tasks it reads for them, and the content of spaces that allow cloud AI. Nothing is sent for accounts you block below. Sorting in the background only runs with a local model. Without this consent everything stays local. You can withdraw it at any time.',
   Einwilligen: 'I consent',
   '{model} wird heruntergeladen. Das kann einige Minuten dauern.': 'Downloading {model}. This can take a few minutes.',
   '{model} ist bereit.': '{model} is ready.',
@@ -286,5 +286,7 @@ export const AI_EN: Record<string, string> = {
   'Regel vorschlagen': 'Suggest rule',
   'Vom Assistenten einsortiert': 'Sorted by the assistant',
   'Frage an das Postfach': 'Question to the mailbox',
-  'Aufgabe für den Assistenten': 'Task for the assistant'
+  'Aufgabe für den Assistenten': 'Task for the assistant',
+  'Verlauf des Assistenten': 'Assistant history',
+  'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})'
 };

@@ -134,12 +134,13 @@
   background: var(--surface-3);
   color: var(--muted);
   border-radius: var(--radius-sm);
-  width: 22px;
-  height: 22px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
   display: grid;
   place-items: center;
 }
 .folder-row:hover .folder-more,
+.folder-row:focus-within .folder-more,
 .folder-more:focus-visible {
   opacity: 1;
 }

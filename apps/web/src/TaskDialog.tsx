@@ -35,7 +35,7 @@ export default function TaskDialog({
   onSaved?: (task: Task) => void;
 }) {
   const { t } = useT();
-  const { toast } = useUi();
+  const { toast, confirm } = useUi();
   const initial = formFromDue(draft.due ?? null);
   const [title, setTitle] = useState(draft.title || '');
   const [date, setDate] = useState(initial.date);
@@ -57,6 +57,21 @@ export default function TaskDialog({
     titleInput.current?.focus();
     titleInput.current?.select();
   }, []);
+  const dirty =
+    title !== (draft.title || '') ||
+    date !== initial.date ||
+    time !== initial.time ||
+    notes !== (draft.notes || '') ||
+    priority !== (draft.priority || 'none') ||
+    remind !== reminderChoice(draft.remindAt ?? null, draft.due ?? null) ||
+    repeat !== (draft.repeat ? `${draft.repeat.freq}:${draft.repeat.interval}` : '') ||
+    listTouched;
+  // Backdrop and Escape must not silently throw away what was typed.
+  async function requestClose() {
+    if (dirty && !(await confirm({ title: t('Änderungen verwerfen?'), confirmLabel: t('Verwerfen'), danger: true })))
+      return;
+    onClose();
+  }
   const presets = duePresets();
   const due = dueFromForm(date, time);
   const timed = Boolean(due && time);
@@ -124,7 +139,7 @@ export default function TaskDialog({
       className="modal-scrim confirm-scrim"
       role="presentation"
       onMouseDown={e => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) void requestClose();
       }}
     >
       <div
@@ -136,7 +151,7 @@ export default function TaskDialog({
         onKeyDown={e => {
           if (e.key === 'Escape') {
             e.stopPropagation();
-            onClose();
+            void requestClose();
           }
         }}
       >

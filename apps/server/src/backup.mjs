@@ -58,9 +58,10 @@ const MAX_SPACE_FILES = 50_000;
 export const BACKUP_FILES = {
   'accounts.json': { kind: 'json' },
   'app-settings.json': { kind: 'json' },
-  'followups.json': { kind: 'json' },
+  // Snoozed mails and follow-ups (subjects, sender addresses), encrypted like the other stores.
+  'followups.json': { kind: 'json', encrypted: 'followups-key' },
   // Sender screening decisions (allowed / blocked addresses per account).
-  'screening.json': { kind: 'json' },
+  'screening.json': { kind: 'json', encrypted: 'screening-key' },
   'templates.json': { kind: 'json' },
   'dav.json': { kind: 'json' },
   'cloud.json': { kind: 'json' },
@@ -586,6 +587,22 @@ function accountsOf(text) {
   }
 }
 
+/** Search index files and key of accounts that are gone after a restore. */
+export async function dropOrphanIndexes(dir, vault, before, after) {
+  const keep = new Set(after.map(a => a?.id).filter(id => typeof id === 'string'));
+  for (const old of before) {
+    if (typeof old?.id !== 'string' || keep.has(old.id)) continue;
+    const base = path.join(dir, 'index', old.id.replace(/[^a-z0-9-]/gi, ''));
+    for (const suffix of ['.lvdb', '.lvdb-wal', '.lvdb-shm', '.lvdb-journal', '.lvx'])
+      await rm(`${base}${suffix}`, { force: true }).catch(() => {});
+    try {
+      if (vault?.available) vault.delete?.(old.id, 'index-key');
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
 /**
  * Passwords in the keychain belong to an account ID. When the restored file gives an ID to a
  * different mailbox (other server or login), the old password must not be sent to it.
@@ -641,7 +658,15 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
     ['imap', 'smtp', 'oauth']
   );
   dropStaleSecrets(vault, beforeDav, (await readIfExists(path.join(dir, 'dav.json'))) || '', davIdentity, ['dav']);
-  // The search index stays: it is bound to the mailbox identity and checks it on load.
+  // The search index of an account that still exists stays: it is bound to the mailbox identity
+  // and checks it on load. An account the backup does not have loses its index and index key,
+  // like a removed account (otherwise readable personal data would stay without any way to delete it).
+  await dropOrphanIndexes(
+    dir,
+    vault,
+    accountsOf(beforeAccounts),
+    accountsOf((await readIfExists(fileLocation(dir, 'accounts.json', accountsPath))) || '')
+  );
   await rm(pending, { recursive: true, force: true });
   await pruneSafetyCopies(dir);
   logger(`restore applied (backup from ${manifest.createdAt}); previous data kept in ${SAFETY_DIR}/${stamp}`);

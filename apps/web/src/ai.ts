@@ -92,6 +92,15 @@ export async function aiEnabled(feature: AiFeature): Promise<boolean> {
   }
   return Boolean(cached.value?.enabled && cached.value.features[feature] !== false);
 }
+/**
+ * Whether the configured model runs on this device. Work the user did not start (sorting the
+ * inbox in the background) only runs with a local model, never by sending every new message to a
+ * cloud provider.
+ */
+export async function aiLocal(): Promise<boolean> {
+  await aiEnabled('classify');
+  return cached.value?.provider === 'ollama';
+}
 export function forgetAiCache() {
   cached = { at: 0, value: null };
 }

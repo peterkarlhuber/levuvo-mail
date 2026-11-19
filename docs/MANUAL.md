@@ -1,4 +1,4 @@
-# Levuvo Mail 2.2 – Manual
+# Levuvo Mail 2.3 – Manual
 
 *Less effort. More impact.*
 
@@ -8,7 +8,7 @@ runs on your device; Levuvo never sees your messages or credentials.
 **Contents:** 1 Installation · 2 Adding an account · 3 The interface · 4 Reading · 5 Writing ·
 6 Staying organized · 7 Search & offline · 8 Filters & vacation reply · 9 Calendar · 10 Contacts ·
 11 Encryption · 12 Security & phishing · 13 Settings · 14 Keyboard shortcuts · 15 Troubleshooting ·
-16 Privacy
+16 Privacy · 17 Levuvo Mail Assistant (AI) · 18 Tasks · 19 Spaces · 20 Backup & moving · 21 New senders & bundles
 
 ---
 
@@ -51,7 +51,8 @@ Up to five accounts. “Remove” only deletes the setup on this device, never e
 
 ## 3 The interface
 
-On the left, the **navigation bar**: Email, Calendar, Contacts, Help, Settings (Alt+1, Alt+2, Alt+3, Alt+,).
+On the left, the **navigation bar**: Email, Calendar, Contacts, Spaces, Tasks, Assistant, Help, Settings
+(Alt+1 to Alt+5, Ctrl/⌘+J for the assistant, Alt+, for settings).
 
 In Email: **folder list** – **message list** – **reading pane**. Drag the divider (or use the arrow keys
 on it) to resize the list; double-click resets. The indicator at the top shows the connection: **Live**
@@ -270,7 +271,8 @@ passwords/tokens/keys only in the keychain, the app is only reachable from your 
 | P | print / PDF |
 | / | search |
 | Ctrl/⌘ + Enter | send (in the editor) |
-| Alt + 1 · 2 · 3 | Email · Calendar · Contacts |
+| Alt + 1 · 2 · 3 · 4 · 5 | Email · Calendar · Contacts · Spaces · Tasks |
+| Ctrl/⌘ + J | Assistant |
 | Alt + , | Settings |
 | Esc | close / clear selection |
 | ? | overview |
@@ -301,7 +303,10 @@ The assistant is **off by default**. Switch it on under **Settings → AI & agen
 model on this computer (Ollama; recommended **qwen3.5:9b**, with 8 GB RAM **qwen3.5:4b**), and
 **Qwen3-Embedding 0.6B** for search by meaning. "Download" fetches a missing model. Cloud models
 (Anthropic, OpenAI) are used only after consent and never for accounts marked "No cloud AI". All
-results are labelled **AI-generated**; nothing is sent, saved or moved without your click.
+results are labelled **AI-generated**; in the reading pane and the composer nothing is sent, saved or
+moved without your click. What a cloud model receives is listed in the consent dialog and in PRIVACY.md
+(including style samples, search hits and what routines read). Sorting into bundles in the background uses
+the local model only.
 
 **In a message:** summarize (who wants what by when, deadlines, amounts, open questions), translate, find
 events, tasks and contacts and save them with "Add", check authenticity (pressure, payment requests,
@@ -312,8 +317,10 @@ rewrite (shorter, more polite, more formal, more casual, spelling, English, Germ
 sending, the assistant checks for a forgotten attachment, a harsh tone, a wrong recipient and sensitive
 data; you decide whether to send anyway.
 
-**Writing style:** tone, form of address (du/Sie), closing line and your own instructions. Without them
-the assistant follows your sent emails (as a style example only, no training).
+**Writing style:** tone, form of address (du/Sie), closing line and your own instructions. In addition,
+for reply suggestions and "Bullet points to email" the assistant gets up to five of your most recently sent
+emails as a style sample (only your own text, no training); with a cloud model they go to the provider too.
+A rewritten text stays marked with "Changed by the assistant · Undo".
 
 **Filters in words:** under Settings → Filters type e.g. "invoices from suppliers to the Accounting
 folder", click "Suggest rule", review, save.
@@ -324,12 +331,16 @@ folder", click "Suggest rule", review, save.
   Nothing is sent.
 - **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
   meeting, prepare reply drafts.
-- **Approvals:** what agents prepared (send an email, event with attendees, contact, trash) – "Approve" or
+- **Approvals:** what agents prepared (send an email, event with attendees, contact, task, trash) – "Approve" or
   "Reject".
 
 **Agents (MCP server):** under Settings → AI & agents switch on the MCP server, create an agent (level
 read, drafts, organize or everything incl. sending) and enter the token shown once, or the ready-made
 configuration, in Claude Desktop or Claude Code. The server is reachable only from this computer.
+At the **organize** level an agent may move, archive, mark and snooze mails and create events
+without attendees, contacts and tasks without asking (all in the AI log). Sending, events with attendees
+and the trash always wait for your approval, which shows the sending account, all recipients and the full
+text. External agents do not see accounts marked "No cloud AI".
 Permanent deletion, accounts, passwords, keys and AI settings are never available to agents.
 
 **AI log:** shows what the AI and agents did (no message content, 30 days, only on this device). "Delete
@@ -337,3 +348,42 @@ all AI data" removes settings, consents, keys, log, routines, approvals and agen
 
 For organizations: templates for a usage policy, the record of processing activities, a security
 concept and a short AI guide are in `docs/ai/`.
+
+## 18 Tasks
+
+**Tasks** in the navigation bar (Alt+5). Views: Today, Upcoming, Overdue, All open, Done. "New task" or the
+quick entry at the top of the list creates a task; from a mail via "As task" (the link to the mail is
+kept). A task has a due date (day or time), a reminder as a notification, priority, note and repetition; a
+repeating task keeps its time across daylight saving changes. In narrow windows and on a phone, views,
+lists and "New task" sit above the list.
+
+**Connecting lists:** Tasks → Lists → "Connect a list": a CalDAV list, Microsoft To Do or Google Tasks.
+Title, note, due date, reminder, priority, repetition and status are synced (Google Tasks: title, note,
+day and status only); the link to the mail stays on this device. Disconnecting stops syncing and deletes
+nothing on the server. Tasks are stored encrypted on the device.
+
+## 19 Spaces
+
+A **space** (Alt+4) collects everything about a topic, project or customer: notes several people edit at
+the same time, pinned mails with internal comments, tasks and events with assignees, files with versions
+and an activity list. You invite members by email address (roles owner, editor, reader) and compare the
+safety code when they join. There is no Levuvo server: every member keeps an encrypted copy, and changes
+travel end-to-end encrypted as mails between the mailboxes. The tabs can be switched with the arrow keys,
+and files can be uploaded with the keyboard. The assistant and agents see a space only if its owner allows
+it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
+
+## 20 Backup & moving
+
+**Settings → Backup → Create backup** saves everything that exists only on this device (settings,
+accounts without passwords, local calendar, contacts, tasks, templates, sender decisions, own keys, spaces,
+AI settings, routines and agents without tokens) in a file encrypted with your password. **Restore**
+checks the file and replaces the data at the next start; the previous data stays in `before-restore/`.
+Enter the account passwords once afterwards. Keep the backup as carefully as the computer itself.
+
+## 21 New senders & bundles
+
+**Review new senders first** (Settings → General): mails from senders who are not in your contacts and whom
+you have never written to wait under "New senders" until you accept or block them. **Bundles** group
+newsletters, invoices, notifications and similar mails into one row each; with the local model switched on,
+the assistant helps sorting. The **attachment overview** shows all attachments of a folder, and the
+**phishing check** warns about suspicious mails (chapter 12).

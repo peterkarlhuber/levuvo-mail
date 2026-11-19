@@ -7,6 +7,7 @@
 import ICAL from 'ical.js';
 import { randomUUID } from 'node:crypto';
 import { ensureTimezone } from './calendar-model.mjs';
+import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 const MAX_ITEMS = 5000;
 const MAX_BODY = 20 * 1024 * 1024;
@@ -227,7 +228,8 @@ export function allowedUrl(url, serverUrl) {
   return site(u.hostname) === site(s.hostname) && u.hostname.includes('.');
 }
 
-export function createCaldavTasks({ store, fetchImpl = globalThis.fetch, now = () => new Date() }) {
+export function createCaldavTasks({ store, fetchImpl: rawFetch = globalThis.fetch, now = () => new Date() }) {
+  const fetchImpl = withTimeout(rawFetch, TIMEOUTS.dav);
   const accountOf = id => {
     const a = store.get(id);
     if (!a) throw fail('Das Kalenderkonto gibt es nicht mehr.', 'task_sync_account_missing', 404);

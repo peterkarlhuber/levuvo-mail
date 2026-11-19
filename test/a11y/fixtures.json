@@ -956,7 +956,23 @@
         "id": "id-alex",
         "safetyCode": "4821 9930 1177"
       },
-      "spaces": [],
+      "spaces": [
+        {
+          "id": "sp1",
+          "name": "Projekt Relaunch",
+          "description": "Website-Relaunch mit Hofer IT",
+          "status": "active",
+          "role": "owner",
+          "owner": true,
+          "accountId": "acc",
+          "email": "alex@example.test",
+          "members": 2,
+          "openTasks": 1,
+          "updatedAt": "2026-11-19T09:00:00.000Z",
+          "pendingMails": 0,
+          "sendError": "x"
+        }
+      ],
       "invitations": []
     }
   },
@@ -1021,6 +1037,188 @@
       "agents": [],
       "pending": 0,
       "bridge": null
+    }
+  },
+  "GET /api/tasks": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "tasks": [
+        {
+          "id": "t1",
+          "title": "Angebot an Hofer IT schicken",
+          "notes": "Preise aus der Kalkulation übernehmen",
+          "due": "2020-01-01",
+          "remindAt": null,
+          "priority": "high",
+          "repeat": null,
+          "source": "ai",
+          "done": false,
+          "doneAt": null,
+          "mail": null,
+          "list": null,
+          "createdAt": "2026-11-19T09:00:00.000Z",
+          "updatedAt": "2026-11-19T09:00:00.000Z"
+        },
+        {
+          "id": "t2",
+          "title": "Rückruf Lukas",
+          "notes": "",
+          "due": null,
+          "remindAt": null,
+          "priority": "none",
+          "repeat": {
+            "freq": "WEEKLY",
+            "interval": 1
+          },
+          "source": "manual",
+          "done": false,
+          "doneAt": null,
+          "mail": null,
+          "list": null,
+          "createdAt": "2026-11-19T09:00:00.000Z",
+          "updatedAt": "2026-11-19T09:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "GET /api/spaces/sp1": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "id": "sp1",
+      "name": "Projekt Relaunch",
+      "description": "Website-Relaunch mit Hofer IT",
+      "status": "active",
+      "role": "owner",
+      "owner": true,
+      "accountId": "acc",
+      "email": "alex@example.test",
+      "members": [
+        {
+          "id": "id-alex",
+          "email": "alex@example.test",
+          "name": "Alex",
+          "role": "owner",
+          "joinedAt": "2026-11-19T09:00:00.000Z",
+          "removed": null,
+          "left": false,
+          "me": true,
+          "safetyCode": "4821 9930 1177"
+        },
+        {
+          "id": "id-lukas",
+          "email": "lukas@hofer-it.at",
+          "name": "Lukas Hofer",
+          "role": "editor",
+          "joinedAt": "2026-11-19T09:00:00.000Z",
+          "removed": null,
+          "left": false,
+          "me": false,
+          "safetyCode": "1234 5678 9012"
+        }
+      ],
+      "openTasks": 1,
+      "updatedAt": "2026-11-19T09:00:00.000Z",
+      "pendingMails": 0,
+      "sendError": "x",
+      "me": "id-alex",
+      "mySafetyCode": "4821 9930 1177",
+      "dissolved": false,
+      "ai": {
+        "enabled": false,
+        "cloudAllowed": false,
+        "instructions": ""
+      },
+      "invites": [],
+      "notes": [
+        {
+          "id": "n1",
+          "title": "Ablaufplan",
+          "text": "Erst Inhalte, dann Design.",
+          "pinned": true,
+          "updatedAt": "2026-11-19T09:00:00.000Z",
+          "updatedBy": "id-alex",
+          "createdBy": "id-alex"
+        }
+      ],
+      "mails": [],
+      "comments": [],
+      "tasks": [
+        {
+          "id": "st1",
+          "title": "Texte liefern",
+          "notes": "",
+          "status": "open",
+          "priority": "high",
+          "due": "2026-11-19",
+          "assignee": "id-lukas",
+          "createdBy": "id-alex",
+          "updatedAt": "2026-11-19T09:00:00.000Z"
+        },
+        {
+          "id": "st2",
+          "title": "Logo freigeben",
+          "notes": "",
+          "status": "done",
+          "priority": "normal",
+          "due": null,
+          "assignee": null,
+          "createdBy": "id-alex",
+          "updatedAt": "2026-11-19T09:00:00.000Z"
+        }
+      ],
+      "events": [
+        {
+          "id": "e1",
+          "title": "Abnahme",
+          "start": "2026-11-27",
+          "end": null,
+          "allDay": true,
+          "location": "",
+          "notes": "",
+          "attendees": []
+        }
+      ],
+      "files": [
+        {
+          "id": "f1",
+          "name": "Kalkulation.pdf",
+          "folder": "",
+          "createdAt": "2026-11-19T09:00:00.000Z",
+          "createdBy": "id-alex",
+          "versions": [
+            {
+              "n": 1,
+              "size": 120000,
+              "mime": "application/pdf",
+              "at": "2026-11-19T09:00:00.000Z",
+              "by": "id-alex"
+            },
+            {
+              "n": 2,
+              "size": 130000,
+              "mime": "application/pdf",
+              "at": "2026-11-19T09:00:00.000Z",
+              "by": "id-lukas"
+            }
+          ]
+        }
+      ],
+      "folders": [],
+      "activity": [
+        {
+          "op": "o1",
+          "at": "2026-11-19T09:00:00.000Z",
+          "by": "id-lukas",
+          "type": "task.upsert",
+          "target": {
+            "kind": "task",
+            "id": "st1"
+          },
+          "label": "Texte liefern"
+        }
+      ]
     }
   }
 }

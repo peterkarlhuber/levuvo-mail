@@ -21,6 +21,16 @@ import { createSealedJsonFile } from './sealed-json.mjs';
 const ACTION = 'ai-v1';
 const q = s => encodeURIComponent(String(s));
 
+/**
+ * External agents (Claude Desktop, other MCP clients) run on models Levuvo does not control: they
+ * are treated as cloud models and never see accounts marked "No cloud AI", whatever provider the
+ * built-in assistant uses.
+ */
+export function externalAgent(agent, settings) {
+  if (!agent) return null;
+  return { ...agent, hiddenAccounts: [...(settings?.noCloudAccounts || [])], cloud: true };
+}
+
 export async function setupMcp(ctx, { createJsonFile, dir }) {
   const file = await createJsonFile(path.join(dir, 'mcp.json'), { enabled: false, port: DEFAULT_MCP_PORT, agents: [] });
   // Approvals hold message text until decided: encrypted on disk (key in the keychain), or in
@@ -40,7 +50,7 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
     byToken(token) {
       const hit = ephemeral.get(hashToken(String(token || '')));
       if (hit && hit.expires > Date.now()) return hit.agent;
-      return persistent.byToken(token);
+      return externalAgent(persistent.byToken(token), ctx.ai.get());
     },
     touch: id => persistent.touch(id)
   };
@@ -192,11 +202,18 @@ export async function setupMcp(ctx, { createJsonFile, dir }) {
     return { ...created, state: publicState() };
   });
   guard('/api/mcp/agents/update', async b => {
-    await persistent.update(String(b.id || ''), { level: b.level, autoSend: b.autoSend });
+    const id = String(b.id || '');
+    const before = persistent.list().find(a => a.id === id);
+    await persistent.update(id, { level: b.level, autoSend: b.autoSend });
+    const after = persistent.list().find(a => a.id === id);
+    // Lowering the level withdraws what the agent proposed with the old one.
+    if (before && after && LEVELS.indexOf(after.level) < LEVELS.indexOf(before.level)) await approvals.withdraw(id);
     return publicState();
   });
   guard('/api/mcp/agents/remove', async b => {
     await persistent.remove(String(b.id || ''));
+    // A removed agent's open proposals cannot be approved any more.
+    await approvals.withdraw(String(b.id || ''));
     void ctx.ai.log.add({ type: 'agent_access', kind: 'removed' });
     return publicState();
   });
