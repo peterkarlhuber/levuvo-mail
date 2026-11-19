@@ -1,2 +1,2 @@
 # Build tool for scripts/build-ai-runtime.mjs (pip install --require-hashes -r apps/ai/requirements-build.txt).
-uv==0.13.7
+uv==0.13.8
