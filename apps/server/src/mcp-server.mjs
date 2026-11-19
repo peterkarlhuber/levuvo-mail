@@ -10,6 +10,7 @@
 // Moving to the trash always needs approval; nothing is ever deleted permanently. Accounts, keys,
 // encryption and the AI settings are not reachable at all. Content from mail, events and contacts is
 // returned inside an <untrusted_data> frame. Every call is written to the AI log (no content).
+import { createInternalApi, internalApi } from './internal-api.mjs';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createServer } from 'node:http';
@@ -50,7 +51,6 @@ const emails = v =>
     .map(x => String(x).trim())
     .filter(Boolean)
     .slice(0, 30);
-const q = s => encodeURIComponent(String(s));
 
 const ACCOUNT = { type: 'string', description: 'Account id from list_accounts (default: first account)' };
 const FOLDER = { type: 'string', description: 'Folder path, e.g. INBOX' };
@@ -89,7 +89,7 @@ const visibleAccounts = ctx => ctx.accounts().filter(a => !hidden().has(a.id));
 const visible = list => list.filter(x => !x?.accountId || !hidden().has(x.accountId));
 
 export function buildTools(ctx) {
-  const call = (method, url, body, action) => ctx.internalRequest(method, url, body, action);
+  const api = internalApi(ctx);
   const accountId = a => {
     const list = visibleAccounts(ctx);
     const id = a ? String(a) : list[0]?.id;
@@ -128,7 +128,7 @@ export function buildTools(ctx) {
       description: 'List the folders of an account with unread counts.',
       inputSchema: obj({ account: ACCOUNT }),
       run: async a => {
-        const r = await call('GET', `/api/folders?account=${q(accountId(a.account))}`);
+        const r = await api.folders(accountId(a.account));
         return JSON.stringify(
           r.folders.map(f => ({ path: f.path, name: f.name, specialUse: f.specialUse, unseen: f.unseen }))
         );
@@ -141,10 +141,10 @@ export function buildTools(ctx) {
       description: 'Newest messages of a folder (headers and a short preview).',
       inputSchema: obj({ account: ACCOUNT, folder: FOLDER, limit: { type: 'integer', minimum: 1, maximum: 50 } }),
       run: async a => {
-        const r = await call(
-          'GET',
-          `/api/messages?folder=${q(str(a.folder) || 'INBOX')}&limit=${int(a.limit, 1, 50, 20)}&account=${q(accountId(a.account))}`
-        );
+        const r = await api.messages(accountId(a.account), {
+          folder: str(a.folder) || 'INBOX',
+          limit: int(a.limit, 1, 50, 20)
+        });
         return untrustedJson((r.messages || []).map(brief), 'levuvo:message list');
       }
     },
@@ -158,10 +158,7 @@ export function buildTools(ctx) {
       run: async a => {
         const query = str(a.query, 120);
         if (query.trim().length < 2) throw toolError('The query needs at least 2 characters.');
-        const r = await call(
-          'GET',
-          `/api/search/local?q=${q(query)}${a.account ? `&account=${q(accountId(a.account))}` : ''}`
-        );
+        const r = await api.searchLocal(query, a.account ? accountId(a.account) : '');
         return untrustedJson(
           visible(r.messages || [])
             .slice(0, 30)
@@ -204,10 +201,7 @@ export function buildTools(ctx) {
       inputSchema: obj({ account: ACCOUNT, folder: FOLDER, uid: UID }, ['uid']),
       run: async a => {
         const ref = messageRef(a);
-        const d = await call(
-          'GET',
-          `/api/messages/${ref.uid}?folder=${q(ref.folder)}&account=${q(accountId(a.account))}`
-        );
+        const d = await api.message(accountId(a.account), ref.folder, ref.uid);
         const m = messageForAi(d);
         return untrustedJson(
           { ...m, uid: ref.uid, folder: ref.folder, messageId: d.messageId, securityRating: d.security?.level || null },
@@ -223,7 +217,7 @@ export function buildTools(ctx) {
       inputSchema: obj({ from: ISO_DATE, to: ISO_DATE }, ['from', 'to']),
       run: async a => {
         const { from, to } = calendarRange(a);
-        const r = await call('GET', `/api/calendar/events?from=${q(from)}&to=${q(to)}`);
+        const r = await api.events(from, to);
         const events = visible(r.events || [])
           .slice(0, 200)
           .map(e => ({
@@ -254,7 +248,7 @@ export function buildTools(ctx) {
       ),
       run: async a => {
         const { from, to } = calendarRange(a);
-        const r = await call('GET', `/api/calendar/events?from=${q(from)}&to=${q(to)}`);
+        const r = await api.events(from, to);
         return JSON.stringify(
           freeSlots(visible(r.events || []), {
             from: Date.parse(from),
@@ -273,7 +267,7 @@ export function buildTools(ctx) {
       description: 'The calendars events can be created in (accountId and url for create_event).',
       inputSchema: obj({}),
       run: async () => {
-        const r = await call('GET', '/api/calendar/calendars');
+        const r = await api.calendars();
         return JSON.stringify(
           visible(r.calendars || [])
             .filter(c => !c.readOnly)
@@ -289,7 +283,7 @@ export function buildTools(ctx) {
       inputSchema: obj({ query: { type: 'string', maxLength: 120 } }, ['query']),
       run: async a => {
         const needle = str(a.query, 120).toLowerCase();
-        const r = await call('GET', '/api/contacts/list');
+        const r = await api.contacts();
         const hits = visible(r.contacts || [])
           .filter(c => JSON.stringify([c.name, c.emails, c.organization]).toLowerCase().includes(needle))
           .slice(0, 25)
@@ -321,23 +315,18 @@ export function buildTools(ctx) {
       ),
       run: async (a, agent) => {
         const id = accountId(a.account);
-        const r = await call(
-          'POST',
-          `/api/drafts/save?account=${q(id)}`,
-          {
-            draftId: randomUUID(),
-            to: emails(a.to),
-            cc: emails(a.cc),
-            bcc: [],
-            subject: str(a.subject, 300).replace(/[\r\n]/g, ' '),
-            text: str(a.body, 50000),
-            inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined,
-            previousUid: null,
-            // Machine-readable label in the draft; the composer shows it until the user sends.
-            aiGenerated: agentOrigin(agent)
-          },
-          'draft-v1'
-        );
+        const r = await api.saveDraft(id, {
+          draftId: randomUUID(),
+          to: emails(a.to),
+          cc: emails(a.cc),
+          bcc: [],
+          subject: str(a.subject, 300).replace(/[\r\n]/g, ' '),
+          text: str(a.body, 50000),
+          inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined,
+          previousUid: null,
+          // Machine-readable label in the draft; the composer shows it until the user sends.
+          aiGenerated: agentOrigin(agent)
+        });
         return JSON.stringify({ saved: true, folder: r.folder, uid: r.uid });
       }
     },
@@ -394,12 +383,7 @@ export function buildTools(ctx) {
       inputSchema: obj({ account: ACCOUNT, folder: FOLDER, uid: UID }, ['uid']),
       run: async a => {
         const ref = messageRef(a);
-        await call(
-          'POST',
-          `/api/messages/${ref.uid}/action?account=${q(accountId(a.account))}`,
-          { folder: ref.folder, action },
-          'mail-v1'
-        );
+        await api.messageAction(accountId(a.account), ref.uid, { folder: ref.folder, action });
         return JSON.stringify({ ok: true });
       }
     })),
@@ -412,12 +396,12 @@ export function buildTools(ctx) {
         const ref = messageRef(a);
         const destination = str(a.destination, 500);
         if (/trash|papierkorb|deleted|gelöscht/i.test(destination)) throw toolError('Use move_to_trash for the trash.');
-        await call(
-          'POST',
-          `/api/messages/${ref.uid}/action?account=${q(accountId(a.account))}`,
-          { folder: ref.folder, action: 'move', destination, notToTrash: true },
-          'mail-v1'
-        );
+        await api.messageAction(accountId(a.account), ref.uid, {
+          folder: ref.folder,
+          action: 'move',
+          destination,
+          notToTrash: true
+        });
         return JSON.stringify({ ok: true });
       }
     },
@@ -436,12 +420,11 @@ export function buildTools(ctx) {
       inputSchema: obj({ account: ACCOUNT, folder: FOLDER, uid: UID, until: { type: 'string' } }, ['uid', 'until']),
       run: async a => {
         const ref = messageRef(a);
-        await call(
-          'POST',
-          `/api/messages/snooze?account=${q(accountId(a.account))}`,
-          { folder: ref.folder, uids: [String(ref.uid)], until: str(a.until, 40) },
-          'mail-v1'
-        );
+        await api.snooze(accountId(a.account), {
+          folder: ref.folder,
+          uids: [String(ref.uid)],
+          until: str(a.until, 40)
+        });
         return JSON.stringify({ ok: true });
       }
     },
@@ -454,7 +437,7 @@ export function buildTools(ctx) {
       run: async (a, agent) => {
         const payload = eventPayload(a, { origin: agentOrigin(agent) });
         if (payload.event.attendees.length) throw toolError('Events with attendees need propose_event.');
-        await call('POST', '/api/calendar/events/save', payload, 'calendar-v1');
+        await api.saveEvent(payload);
         return JSON.stringify({ created: true });
       }
     },
@@ -464,7 +447,7 @@ export function buildTools(ctx) {
       description: 'Save a new contact in the address book on this device.',
       inputSchema: contactSchema(),
       run: async (a, agent) => {
-        await call('POST', '/api/contacts/save', contactPayload(a, { origin: agentOrigin(agent) }), 'contacts-v1');
+        await api.saveContact(contactPayload(a, { origin: agentOrigin(agent) }));
         return JSON.stringify({ created: true });
       }
     },
@@ -682,28 +665,23 @@ export function createApprovals(file, { execute, log }) {
 /**
  * The approval types of the MCP server itself (ARC-LEV-008): registered in the shared registry like
  * the ones of other modules, so one table says what the user sees (summary) and what happens after
- * the approval (execute). `call` is the app's internal API (ctx.internalRequest).
+ * the approval (execute). `api` is the app's internal API (internal-api.mjs).
  */
 const BUILTIN_APPROVALS = {
   send: {
     summary: p => ({ account: p.account, to: p.to, cc: p.cc || [], subject: p.subject, text: p.text }),
-    execute: (call, p) =>
-      call(
-        'POST',
-        `/api/messages/send?account=${q(p.account)}`,
-        {
-          requestId: randomUUID(),
-          confirm: 'SEND',
-          to: p.to,
-          cc: p.cc || [],
-          bcc: [],
-          subject: p.subject,
-          text: p.text,
-          inReplyTo: p.inReplyTo,
-          references: p.inReplyTo
-        },
-        'send-v1'
-      )
+    execute: (api, p) =>
+      api.send(p.account, {
+        requestId: randomUUID(),
+        confirm: 'SEND',
+        to: p.to,
+        cc: p.cc || [],
+        bcc: [],
+        subject: p.subject,
+        text: p.text,
+        inReplyTo: p.inReplyTo,
+        references: p.inReplyTo
+      })
   },
   event: {
     summary: p => ({
@@ -716,7 +694,7 @@ const BUILTIN_APPROVALS = {
       attendees: p.event.attendees.map(a => a.email),
       calendar: p.calendarUrl ? `${p.accountId}` : p.accountId || 'local'
     }),
-    execute: (call, p) => call('POST', '/api/calendar/events/save', p, 'calendar-v1')
+    execute: (api, p) => api.saveEvent(p)
   },
   contact: {
     summary: p => ({
@@ -724,17 +702,11 @@ const BUILTIN_APPROVALS = {
       emails: p.contact.emails.map(e => e.value),
       phones: (p.contact.phones || []).map(x => x.value)
     }),
-    execute: (call, p) => call('POST', '/api/contacts/save', p, 'contacts-v1')
+    execute: (api, p) => api.saveContact(p)
   },
   trash: {
     summary: p => ({ account: p.account, folder: p.folder, uid: p.uid }),
-    execute: (call, p) =>
-      call(
-        'POST',
-        `/api/messages/${Number(p.uid)}/action?account=${q(p.account)}`,
-        { folder: p.folder, action: 'trash' },
-        'mail-v1'
-      )
+    execute: (api, p) => api.messageAction(p.account, p.uid, { folder: p.folder, action: 'trash' })
   }
 };
 /** Adds what the user needs to recognise: the sender address and the message to be deleted. */
@@ -778,14 +750,15 @@ const TOOL_NAME = /^[a-z][a-z0-9_]{2,48}$/;
  * `registerApproval(type, { summary: payload => object, execute: async payload => result })`.
  */
 export function createToolRegistry({ call = null } = {}) {
+  const api = call ? createInternalApi(call) : null;
   const tools = new Map();
   const approvalTypes = new Map();
   for (const [type, def] of Object.entries(BUILTIN_APPROVALS))
     approvalTypes.set(type, {
       summary: def.summary,
       execute: p => {
-        if (!call) throw new Error('Unbekannte Freigabe.');
-        return def.execute(call, p);
+        if (!api) throw new Error('Unbekannte Freigabe.');
+        return def.execute(api, p);
       }
     });
   return {
