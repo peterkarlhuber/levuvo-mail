@@ -29,7 +29,7 @@ export function registerBackupRoutes(ctx) {
     const pathname = new URL(request.url, 'http://127.0.0.1').pathname;
     if (!pathname.startsWith('/api/') || pathname.startsWith('/api/backup/')) return;
     return reply.code(409).send({
-      error: 'Eine Wiederherstellung wartet auf den Neustart von Levuvo. Bis dahin sind keine Änderungen möglich.',
+      error: 'Eine Wiederherstellung wartet auf den Neustart von Levuvo Mail. Bis dahin sind keine Änderungen möglich.',
       code: 'backup_restart_pending'
     });
   });
@@ -116,7 +116,7 @@ export function registerBackupRoutes(ctx) {
     guard('/api/backup/restart', async () => {
       if (!(await pendingRestore(ctx.dataDir))) throw fail('Es wartet keine Wiederherstellung.', 'backup_none', 409);
       if (typeof ctx.requestRestart !== 'function')
-        throw fail('Bitte Levuvo jetzt beenden und neu starten.', 'backup_manual_restart', 409);
+        throw fail('Bitte Levuvo Mail jetzt beenden und neu starten.', 'backup_manual_restart', 409);
       // Answer first; the app restarts right after.
       setTimeout(() => ctx.requestRestart(), 200).unref?.();
       return { restarting: true };

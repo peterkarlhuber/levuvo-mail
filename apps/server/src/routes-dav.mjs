@@ -215,7 +215,7 @@ export function registerDavRoutes(ctx) {
       const url = typeof request.query?.url === 'string' && request.query.url ? request.query.url : null;
       reply.headers({
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="Levuvo-Kalender.ics"',
+        'Content-Disposition': 'attachment; filename="Levuvo-Mail-Kalender.ics"',
         'Cache-Control': 'no-store'
       });
       return local.exportIcs(url);
@@ -771,7 +771,7 @@ export function registerDavRoutes(ctx) {
       const { contacts } = await allContacts();
       reply.headers({
         'Content-Type': 'text/vcard; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="Levuvo-Kontakte.vcf"'
+        'Content-Disposition': 'attachment; filename="Levuvo-Mail-Kontakte.vcf"'
       });
       return contacts.map(c => buildVCard(c, c.uid || randomUUID())).join('');
     } catch (err) {

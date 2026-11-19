@@ -2,7 +2,7 @@
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from './ui/focus';
-import { CircleCheck, LoaderCircle, Mail, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { BookOpen, CircleCheck, LoaderCircle, Mail, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
@@ -12,6 +12,7 @@ import { Button, Field, IconButton, Segmented } from './ui';
 import { ApprovalList } from './SettingsMcp';
 import { Markdown } from './Markdown';
 import { uniqueSources } from './assistant-sources';
+import { openManualAt } from './ManualView';
 
 type Skill = {
   id: string;
@@ -21,7 +22,7 @@ type Skill = {
   builtin: boolean;
   param?: { name: string; label: string };
 };
-type Source = {
+type MailSource = {
   accountId: string;
   folder: string;
   uid: number;
@@ -32,6 +33,8 @@ type Source = {
   quote?: string;
   attachment?: string;
 };
+type ManualSource = { manual: true; chapterId: string; section: string; title: string };
+type Source = MailSource | ManualSource;
 type Entry =
   | {
       id: number;
@@ -64,7 +67,7 @@ type Entry =
 type Props = {
   open: boolean;
   onClose: () => void;
-  onOpenMessage: (s: Source) => void;
+  onOpenMessage: (s: MailSource) => void;
   onOpenSettings: () => void;
   onPending: (n: number) => void;
 };
@@ -284,38 +287,55 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                         <Markdown text={e.answer} className={e.found === false ? 'ai-hint' : undefined} />
                         {e.sources && e.sources.length > 0 && (
                           <ul className="assistant-sources" aria-label={t('Quellen')}>
-                            {e.sources.map(s => (
-                              <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
-                                <button
-                                  className="chip source-chip"
-                                  title={[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                  onClick={() => {
-                                    onClose();
-                                    onOpenMessage(s);
-                                  }}
-                                >
-                                  <Mail size={12} aria-hidden="true" />
-                                  <span className="source-chip-subject">{s.subject || t('(ohne Betreff)')}</span>
-                                  <span className="assistant-source-meta">
-                                    {[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
+                            {e.sources.map(s =>
+                              'manual' in s ? (
+                                <li key={`manual:${s.chapterId}:${s.section}`}>
+                                  <button
+                                    className="chip source-chip"
+                                    onClick={() => {
+                                      onClose();
+                                      openManualAt({ chapterId: s.chapterId, section: s.section });
+                                    }}
+                                  >
+                                    <BookOpen size={12} aria-hidden="true" />
+                                    <span className="source-chip-subject">
+                                      {t('Handbuch')}: {[s.section, s.title].filter(Boolean).join(' ')}
+                                    </span>
+                                  </button>
+                                </li>
+                              ) : (
+                                <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
+                                  <button
+                                    className="chip source-chip"
+                                    title={[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
                                       .filter(Boolean)
                                       .join(' · ')}
-                                  </span>
-                                </button>
-                                {s.quote && (
-                                  <blockquote className="assistant-quote">
-                                    {s.attachment && (
-                                      <span className="assistant-quote-file">
-                                        <Paperclip size={11} aria-hidden="true" /> {s.attachment}
-                                      </span>
-                                    )}
-                                    „{s.quote}“
-                                  </blockquote>
-                                )}
-                              </li>
-                            ))}
+                                    onClick={() => {
+                                      onClose();
+                                      onOpenMessage(s);
+                                    }}
+                                  >
+                                    <Mail size={12} aria-hidden="true" />
+                                    <span className="source-chip-subject">{s.subject || t('(ohne Betreff)')}</span>
+                                    <span className="assistant-source-meta">
+                                      {[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    </span>
+                                  </button>
+                                  {s.quote && (
+                                    <blockquote className="assistant-quote">
+                                      {s.attachment && (
+                                        <span className="assistant-quote-file">
+                                          <Paperclip size={11} aria-hidden="true" /> {s.attachment}
+                                        </span>
+                                      )}
+                                      „{s.quote}“
+                                    </blockquote>
+                                  )}
+                                </li>
+                              )
+                            )}
                           </ul>
                         )}
                         {e.generated !== false && (

@@ -12,10 +12,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { createMailServer } from '../../apps/server/src/app.mjs';
+import { createManual } from '../../apps/server/src/manual.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(import.meta.url);
 const fixtures = JSON.parse(readFileSync(join(root, 'test/a11y/fixtures.json'), 'utf8'));
+// Settings → Help shows the real manual (docs/manual) with its screenshots.
+const manual = createManual();
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const SECRET = 'a1'.repeat(32);
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
@@ -97,6 +100,24 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     await context.route('**/api/**', route => {
       const req = route.request();
       const path = new URL(req.url()).pathname;
+      if (path === '/api/manual') {
+        const lang = new URL(req.url()).searchParams.get('lang') === 'en' ? 'en' : 'de';
+        const chapters = manual
+          .chapters(lang)
+          .map(({ id, number, title, markdown }) => ({ id, number, title, markdown }));
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ lang, chapters })
+        });
+      }
+      const img = /^\/api\/manual\/img\/(\w+)\/([^/]+)$/.exec(path);
+      if (img && manual.imagePath(img[1], img[2]))
+        return route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: readFileSync(manual.imagePath(img[1], img[2]))
+        });
       const hit = fixtures[`${req.method()} ${path}`];
       if (hit)
         return route.fulfill({ status: hit.status, contentType: hit.contentType, body: JSON.stringify(hit.body) });

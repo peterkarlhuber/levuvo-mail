@@ -378,7 +378,7 @@ def test_ask_greeting_is_answered_without_a_search() -> None:
             "quotes": [],
         }
         chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
-        assert [t["function"]["name"] for t in chat["tools"]] == ["search_mailbox"]
+        assert [t["function"]["name"] for t in chat["tools"]] == ["search_mailbox", "search_manual"]
         system = chat["messages"][0]["content"]
         assert "Levuvo Mail Assistant" in system and "ministral-3:3b" in system and "locally" in system
         assert "never about you" in system and "German" in system
@@ -407,7 +407,7 @@ def test_ask_question_suspends_on_the_search_tool_call() -> None:
         out = tasks.ask_mailbox(
             engine, {"lang": "en", "question": "What did Müller say about the offer?", "assistant": ASSISTANT}
         )
-        assert out == {"search": "Müller Angebot"}
+        assert out == {"search": "Müller Angebot", "tool": "search_mailbox"}
         chats = [body for path, body in fake.requests if path == "/v1/chat/completions"]
         assert len(chats) == 1, "the turn stops at the tool call"
         assert chats[0]["reasoning_effort"] == "none", "thinking off for a short decision"
@@ -418,7 +418,7 @@ def test_ask_without_tool_support_always_searches() -> None:
         fake.capabilities = ["completion"]
         engine = configured(url)
         out = tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
-        assert out == {"search": "hi"}
+        assert out == {"search": "hi", "tool": "search_mailbox"}
         assert not [p for p, _ in fake.requests if p == "/v1/chat/completions"]
 
 

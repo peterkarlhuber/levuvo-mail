@@ -37,12 +37,19 @@ function clientText(value, limit = MAX_CLIENT_TEXT) {
 /**
  * The sources of an answer for the UI: only mails that were really given to the model, each with
  * its metadata and a quote that literally occurs in it (or none). Mail text stays on the server.
+ * Manual sections ("m1" …) the model cited come from manualMap and link to the Help.
  */
-export function askSources(result, sourceMap) {
+export function askSources(result, sourceMap, manualMap = []) {
   const quotes = new Map((result.quotes || []).map(q => [String(q?.id), String(q?.quote || '')]));
   const out = [];
   for (const id of result.sources || []) {
-    const s = sourceMap[Number(String(id).slice(1)) - 1];
+    const n = Number(String(id).slice(1)) - 1;
+    if (String(id).startsWith('m')) {
+      const m = manualMap[n];
+      if (m && !out.includes(m)) out.push(m);
+      continue;
+    }
+    const s = sourceMap[n];
     if (!s || out.some(o => o.accountId === s.accountId && o.folder === s.folder && o.uid === s.uid)) continue;
     const quote = verifiedQuote(quotes.get(String(id)), s);
     const attachment = quote ? (s.attachments || []).find(a => verifiedQuote(quote, { text: a.text })) : null;
@@ -134,24 +141,52 @@ export function registerAiRoutes(ctx) {
    * relevant mails and let the model answer from them. With no relevant mail the model is not asked
    * again: "nothing found" is the honest answer, not the nearest unrelated mail.
    */
-  async function askWithMail(body, first, query) {
+  async function askWithMail(body, first, query, tool = 'search_mailbox') {
     const lang = first.lang;
     const accountId = body.account ? String(body.account) : null;
+    // "How do I …": the best matching sections of the user manual (no personal data). The manual
+    // tool searches only there; the mailbox search adds matching sections too.
+    const manualHits = ctx.manual
+      ? await ctx.manual.search(`${query} ${first.question}`, { lang, limit: 3 }).catch(() => [])
+      : [];
+    const manualMap = manualHits.map(h => ({
+      manual: true,
+      chapterId: h.chapterId,
+      section: h.number,
+      title: h.title
+    }));
+    const manual = manualHits.map((h, i) => ({
+      id: `m${i + 1}`,
+      title: [h.number, h.title].filter(Boolean).join(' '),
+      chapter: h.chapter,
+      text: h.text.slice(0, 2500)
+    }));
     // Accounts marked "No cloud AI" are left out before the search when a cloud model answers,
     // so none of their text is ever part of the input.
     const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
-    const hits = await retrieve({
-      semantic,
-      localIndex: ctx.localIndex,
-      ids,
-      question: query,
-      context: [first.question, ...first.history.map(h => h.question)].join(' '),
-      limit: 8
-    });
+    const hits =
+      tool === 'search_manual'
+        ? []
+        : await retrieve({
+            semantic,
+            localIndex: ctx.localIndex,
+            ids,
+            question: query,
+            context: [first.question, ...first.history.map(h => h.question)].join(' '),
+            limit: 8
+          });
     const useful = hits.filter(h => relevant(h));
     // A fixed text of the app, not written by the model (`fixed`).
-    if (!useful.length)
-      return { result: { answer: notFound(lang), found: false, sources: [], fixed: true }, sourceMap: [] };
+    if (!useful.length && !manual.length)
+      return {
+        result: { answer: notFound(lang), found: false, sources: [], fixed: true },
+        sourceMap: [],
+        manualMap: []
+      };
+    if (!useful.length) {
+      const result = await ai.run('ask', { ...first, sources: [], manual }, { accountId });
+      return { result, sourceMap: [], manualMap };
+    }
     const read = await readSources(useful, {
       mapLimit,
       load: async h => messageForAi(await loadDetail(h.accountId, h)),
@@ -192,8 +227,12 @@ export function registerAiRoutes(ctx) {
         attachments
       };
     });
-    const result = await ai.run('ask', { ...first, sources }, { accountId, sources: sourceMap.map(s => s.accountId) });
-    return { result, sourceMap };
+    const result = await ai.run(
+      'ask',
+      { ...first, sources, manual },
+      { accountId, sources: sourceMap.map(s => s.accountId) }
+    );
+    return { result, sourceMap, manualMap };
   }
 
   /** Builds the sidecar input for one AI function from references and client text. */
@@ -380,7 +419,7 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
+  // Levuvo Mail's own Ollama: the fixed model list, downloads with progress, cancel and delete.
   const localModels = ai.localModels;
   const noRuntime = reply =>
     reply.code(409).send({
@@ -440,14 +479,16 @@ export function registerAiRoutes(ctx) {
       let result = await ai.run(kind, input, { accountId });
       if (kind === 'ask') {
         let sourceMap = [];
+        let manualMap = [];
         if (typeof result.search === 'string')
-          ({ result, sourceMap } = await askWithMail(
+          ({ result, sourceMap, manualMap } = await askWithMail(
             body,
             input,
-            clientText(result.search, 300).trim() || input.question
+            clientText(result.search, 300).trim() || input.question,
+            result.tool === 'search_manual' ? 'search_manual' : 'search_mailbox'
           ));
-        // Without an answer in the mails there is no source to show.
-        result.sources = result.found === false ? [] : askSources(result, sourceMap);
+        // Without an answer in the mails or the manual there is no source to show.
+        result.sources = result.found === false ? [] : askSources(result, sourceMap, manualMap);
         delete result.quotes;
       }
       const generated = !result.fixed;

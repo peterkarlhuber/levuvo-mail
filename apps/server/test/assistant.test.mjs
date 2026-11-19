@@ -220,3 +220,67 @@ test('advanced settings are saved per model and reach the sidecar and the own Ol
   );
   assert.equal(ollamaEnv({ env: {}, home: '/h', models: '/m', port: 1 }).OLLAMA_CONTEXT_LENGTH, undefined);
 });
+
+test('"how do I …": the model calls search_manual, only manual sections reach the answer, no mail search', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-assistant-manual-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const calls = [];
+  const ai = createAiService({
+    settingsFile: await createJsonFile(join(dir, 'ai.json'), DEFAULT_AI_SETTINGS),
+    vault: { available: false },
+    sidecar: {
+      running: true,
+      async call(method, params) {
+        calls.push({ method, params });
+        if (method !== 'task') return { ok: true };
+        if (!params.input.manual) return { search: 'Abwesenheitsnotiz', tool: 'search_manual' };
+        return { answer: 'Unter **Einstellungen → Konten**.', found: true, sources: ['m1'] };
+      },
+      async stop() {},
+      diagnostics: () => ({})
+    },
+    log: createAiLog(join(dir, 'log.jsonl')),
+    totalmem: () => 16 * GIB
+  });
+  await ai.save({ enabled: true, provider: 'ollama', model: 'ministral-3:3b' });
+  const handlers = {};
+  let mailSearched = false;
+  registerAiRoutes({
+    api: { get: () => {}, post: (p, ...rest) => (handlers[p] = rest.at(-1)) },
+    ai,
+    manual: {
+      search: async () => [
+        {
+          chapterId: 'settings',
+          number: '6.2',
+          title: 'Abwesenheitsnotiz',
+          chapter: 'Einstellungen',
+          text: 'So geht es.'
+        }
+      ]
+    },
+    requireAction: () => true,
+    accounts: () => [{ id: 'a1' }],
+    ownAddresses: () => [],
+    aiForgetHooks: [],
+    semantic: {
+      search: async () => {
+        mailSearched = true;
+        return [];
+      },
+      sync: async () => null,
+      forget: async () => {}
+    }
+  });
+  const reply = { code: () => reply, send: x => x };
+  const out = await handlers['/api/ai/run'](
+    { body: { kind: 'ask', lang: 'de', input: { question: 'Wie stelle ich eine Abwesenheitsnotiz ein?' } } },
+    reply
+  );
+  assert.equal(mailSearched, false);
+  const last = tasks(calls).at(-1);
+  assert.deepEqual(last.sources, []);
+  assert.equal(last.manual[0].id, 'm1');
+  assert.equal(out.result.sources[0].manual, true);
+  assert.equal(out.result.sources[0].section, '6.2');
+});

@@ -37,7 +37,7 @@ export type AiSettings = {
   keys: Partial<Record<AiProvider, boolean>>;
   consentVersion: string;
   vaultAvailable: boolean;
-  /** 'bundled': Levuvo's own Ollama with the fixed model list; 'external': an address (development). */
+  /** 'bundled': Levuvo Mail's own Ollama with the fixed model list; 'external': an address (development). */
   localRuntime?: 'bundled' | 'external';
   /** Advanced settings per model (Settings → KI & Agenten → Erweitert). */
   modelOptions?: Record<string, ModelOptions>;
