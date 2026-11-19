@@ -267,6 +267,12 @@ test('Cloud: Microsoft 365 – calendars, events, saving, answering invitations,
   assert.deepEqual(created[3].contact.businessPhones, ['1']);
   assert.equal(created[3].contact.birthday, '1990-02-03T00:00:00Z');
 
+  // Audit 2026-11-19, AIS-LEV-002: without notify, Graph must not get attendees (it would always
+  // send invitations, e.g. for an event an AI agent proposed).
+  const quiet = await cloud.saveEvent({ accountId: 'm1', calendarUrl: 'cloud:CAL1', model, notify: false });
+  assert.equal(quiet.invited, 0);
+  assert.deepEqual(created.at(-1).attendees, []);
+
   // Hidden calendars are skipped, colors kept per account.
   await cloud.setCalendarPrefs('m1', 'cloud:CAL1', { hidden: true, color: '#ff0000' });
   assert.equal((await cloud.listCalendars()).calendars[0].color, '#ff0000');

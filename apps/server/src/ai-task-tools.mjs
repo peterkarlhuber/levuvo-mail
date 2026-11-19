@@ -44,7 +44,8 @@ const view = t => ({
 
 export function registerTaskTools(ctx, { registry, frame }) {
   registry.registerApproval('task', {
-    summary: p => ({ title: `Aufgabe: ${p.title}`, due: p.due, priority: p.priority, notes: p.notes }),
+    // Structured fields only: the app builds the localised title (approvalTitle, case 'task').
+    summary: p => ({ title: p.title, due: p.due, priority: p.priority, notes: p.notes }),
     execute: async p => {
       const task = await store(ctx).save(taskInput(p));
       return { id: task.id };

@@ -190,6 +190,23 @@ test('Spaces tools: reads are framed, changes wait for approval, cloud agents se
   assert.match(approvals.get('room_change').summary(payload).title, /Kunde Müller.*Angebot schicken/);
   await approvals.get('room_change').execute(payload);
   assert.equal(anna.service.detail(space.id).tasks[0].title, 'Angebot schicken');
+  // The approval shows the content that will be written, not only its title (audit 2026-11-19, UX-LEV-003).
+  const noted = await tools.get('room_add_task').run({ room: space.id, title: 'T', notes: 'Inhalt der Notiz' }, local);
+  assert.equal(approvals.get('room_change').summary(noted).content.notes, 'Inhalt der Notiz');
+
+  // Audit 2026-11-19, AIS-LEV-004: a mail of an account hidden from the agent ("No cloud AI")
+  // cannot be shared into a space.
+  const hiddenAgent = { cloud: true, hiddenAccounts: [anna.account.id] };
+  await assert.rejects(
+    tools.get('room_add_mail').run({ room: space.id, account: anna.account.id, folder: 'INBOX', uid: 1 }, hiddenAgent),
+    /Unknown account/
+  );
+  await assert.rejects(
+    tools.get('room_add_mail').run({ room: space.id, folder: 'INBOX', uid: 1 }, hiddenAgent),
+    /Unknown account/
+  );
+  const shared = await tools.get('room_add_mail').run({ room: space.id, folder: 'INBOX', uid: 1 }, cloud);
+  assert.equal(shared.data.account, anna.account.id);
 
   // The owner can switch the assistant off for a space.
   await anna.service.apply(space.id, 'ai.settings', { enabled: false });

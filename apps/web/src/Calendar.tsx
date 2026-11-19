@@ -100,7 +100,8 @@ function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calend
       byday: e.rrule?.byday || [],
       endMode: e.rrule?.count ? 'count' : e.rrule?.until ? 'until' : 'never',
       count: e.rrule?.count || 10,
-      until: e.rrule?.until || '',
+      // The stored end is a date-time (UNTIL in UTC); the date field needs the date only.
+      until: (e.rrule?.until || '').slice(0, 10),
       alarms: e.alarms,
       attendees: e.attendees
         .map(a => a.email)
@@ -427,6 +428,20 @@ function EventEditor({
   );
   const readOnly = Boolean(cal?.readOnly) || invitedByOther;
   const set = (patch: Partial<Draft>) => setD(old => ({ ...old, ...patch }));
+  // Loading the Microsoft attachment list is not an edit; everything else the user typed is.
+  const dirty =
+    JSON.stringify({ ...d, attachments: d.attachmentsChanged ? d.attachments : null }) !==
+    JSON.stringify({ ...initial, attachments: null });
+  // Backdrop and Escape must not silently throw away what was typed (WCAG 3.3.4 spirit).
+  async function requestClose() {
+    if (
+      dirty &&
+      !readOnly &&
+      !(await confirm({ title: t('Änderungen verwerfen?'), confirmLabel: t('Verwerfen'), danger: true }))
+    )
+      return;
+    onClose();
+  }
   const attendeeList = d.attendees
     .split(/[\s,;]+/)
     .map(s => s.trim().toLowerCase())
@@ -435,6 +450,7 @@ function EventEditor({
   function model() {
     const endDate = d.allDay ? ymd(addDays(parseYmd(d.endDate), 1)) : d.endDate;
     const timed = editorTimes(e, { start: `${d.startDate}T${d.startTime}`, end: `${endDate}T${d.endTime}` });
+    const sameFreq = Boolean(e?.rrule && e.rrule.freq === d.repeat);
     return {
       summary: d.summary.trim(),
       location: d.location,
@@ -447,7 +463,16 @@ function EventEditor({
         ? {
             freq: d.repeat,
             interval: d.interval,
-            byday: d.repeat === 'WEEKLY' ? d.byday : [],
+            // Parts the editor cannot show (1MO, BYMONTHDAY, BYSETPOS, BYMONTH) stay as they were
+            // while the frequency is unchanged, so editing a series from another app keeps its rule.
+            ...(sameFreq && e?.rrule
+              ? {
+                  bymonthday: e.rrule.bymonthday || [],
+                  bysetpos: e.rrule.bysetpos || [],
+                  bymonth: e.rrule.bymonth || []
+                }
+              : {}),
+            byday: d.repeat === 'WEEKLY' ? d.byday : sameFreq ? e?.rrule?.byday || [] : [],
             count: d.endMode === 'count' ? d.count : null,
             until: d.endMode === 'until' ? d.until : null
           }
@@ -585,7 +610,7 @@ function EventEditor({
       className="modal-scrim"
       role="presentation"
       onMouseDown={ev => {
-        if (ev.target === ev.currentTarget) onClose();
+        if (ev.target === ev.currentTarget) void requestClose();
       }}
     >
       <form
@@ -602,7 +627,7 @@ function EventEditor({
           // An open attachment preview closes first (it listens for Escape itself).
           if (ev.key === 'Escape' && !scopeFor && !document.querySelector('.preview-panel')) {
             ev.stopPropagation();
-            onClose();
+            void requestClose();
           }
         }}
       >

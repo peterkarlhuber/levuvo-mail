@@ -106,7 +106,11 @@ function rruleOf(comp) {
     interval: r.interval || 1,
     count: r.count || null,
     until: r.until ? (r.until.isDate ? dateOnly(r.until) : r.until.toJSDate().toISOString()) : null,
-    byday: r.parts?.BYDAY || []
+    byday: r.parts?.BYDAY || [],
+    // Kept so that editing a series from another app does not drop parts of its rule.
+    bymonthday: r.parts?.BYMONTHDAY || [],
+    bysetpos: r.parts?.BYSETPOS || [],
+    bymonth: r.parts?.BYMONTH || []
   };
 }
 function details(comp) {
@@ -315,7 +319,10 @@ export function expandObject(ics, from, to, meta = {}) {
 const LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FREQS = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
-const DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+// BYDAY with an optional ordinal (1MO, -1FR) as used by monthly and yearly rules.
+const BYDAY = /^([+-]?(?:[1-9]|[1-4]\d|5[0-3]))?(MO|TU|WE|TH|FR|SA|SU)$/;
+const intList = (v, min, max) =>
+  (Array.isArray(v) ? v : []).filter(n => Number.isInteger(n) && n !== 0 && n >= min && n <= max).slice(0, 31);
 
 export function validateEventInput(input) {
   if (!input || typeof input !== 'object') throw fail('Ungültiger Termin.');
@@ -339,9 +346,21 @@ export function validateEventInput(input) {
     if (!FREQS.includes(r.freq)) throw fail('Ungültige Wiederholung.');
     const interval = Number.isInteger(r.interval) && r.interval >= 1 && r.interval <= 99 ? r.interval : 1;
     const count = Number.isInteger(r.count) && r.count >= 1 && r.count <= 999 ? r.count : null;
-    const until = r.until && DATE.test(r.until) ? r.until : null;
-    const byday = Array.isArray(r.byday) ? r.byday.filter(d => DAYS.includes(d)) : [];
-    rrule = { freq: r.freq, interval, count, until: count ? null : until, byday };
+    // The end date comes back from a stored series as a date-time (UNTIL in UTC); only its date
+    // counts. Dropping it silently turned a series with an end into an endless one.
+    const untilRaw = typeof r.until === 'string' ? r.until.slice(0, 10) : '';
+    const until = DATE.test(untilRaw) ? untilRaw : null;
+    const byday = Array.isArray(r.byday) ? r.byday.filter(d => typeof d === 'string' && BYDAY.test(d)) : [];
+    rrule = {
+      freq: r.freq,
+      interval,
+      count,
+      until: count ? null : until,
+      byday,
+      bymonthday: intList(r.bymonthday, -31, 31),
+      bysetpos: intList(r.bysetpos, -366, 366),
+      bymonth: intList(r.bymonth, 1, 12)
+    };
   }
   const attendees = (Array.isArray(input.attendees) ? input.attendees : []).slice(0, 50).map(a => {
     const email = text(a?.email, 254, 'Teilnehmer').trim().toLowerCase();
@@ -472,6 +491,9 @@ function setRrule(vevent, rrule) {
   }
   const recur = new ICAL.Recur(data);
   if (rrule.byday.length) recur.setComponent('BYDAY', rrule.byday);
+  if (rrule.bymonthday?.length) recur.setComponent('BYMONTHDAY', rrule.bymonthday);
+  if (rrule.bymonth?.length) recur.setComponent('BYMONTH', rrule.bymonth);
+  if (rrule.bysetpos?.length) recur.setComponent('BYSETPOS', rrule.bysetpos);
   vevent.addPropertyWithValue('rrule', recur);
 }
 function ensureVtimezone(vcal, tzid) {
@@ -593,8 +615,11 @@ function recurrenceIdTime(recurrenceId, master) {
     : utc;
 }
 
-/** Removes a single occurrence (EXDATE) from a series. */
-export function excludeOccurrence(ics, recurrenceId) {
+/**
+ * Removes a single occurrence (EXDATE) from a series. `bump: false` for an attendee's copy: its
+ * SEQUENCE belongs to the organizer and is compared with later iTIP messages.
+ */
+export function excludeOccurrence(ics, recurrenceId, { bump = true } = {}) {
   const vcal = parseIcs(ics);
   const vevents = vcal.getAllSubcomponents('vevent');
   const master = vevents.find(v => !v.hasProperty('recurrence-id'));
@@ -609,7 +634,7 @@ export function excludeOccurrence(ics, recurrenceId) {
   prop.setValue(rid);
   if (!rid.isDate && tzid) prop.setParameter('tzid', tzid);
   master.addProperty(prop);
-  bumpSequence(master);
+  if (bump) bumpSequence(master);
   stamp(master);
   return vcal.toString();
 }
@@ -634,6 +659,8 @@ export function parseItip(ics) {
     start: event.startDate ? timeOut(event.startDate) : null,
     end: event.endDate ? timeOut(event.endDate) : null,
     recurring: event.isRecurring(),
+    rrule: rruleOf(vevent),
+    tzid: vevent.getFirstProperty('dtstart')?.getParameter('tzid') || null,
     organizer: organizerOf(vevent),
     attendees: people(vevent)
   };
@@ -705,7 +732,92 @@ export function buildOrganizerMessage(ics, method) {
   return vcal.toString();
 }
 
-/** Applies an attendee's REPLY to the organizer's stored event. */
+const ridOf = vevent =>
+  vevent.hasProperty('recurrence-id') ? timeOut(vevent.getFirstPropertyValue('recurrence-id')) : null;
+const sameInstant = (a, b) => {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  return Number.isFinite(ta) && ta === tb;
+};
+function seriesParts(vcal) {
+  const vevents = vcal.getAllSubcomponents('vevent');
+  return { vevents, master: vevents.find(v => !v.hasProperty('recurrence-id')) || null };
+}
+
+/**
+ * Attendee receives an iTIP CANCEL for a stored event (RFC 5546 §3.2.5). Returns what to do with
+ * the stored copy: { action: 'delete' } for the whole event, { action: 'update', ics } when only
+ * one occurrence of a series is cancelled, or { action: 'ignore', reason } when the message does
+ * not come from the event's organizer or is older than the stored state (SEQUENCE).
+ */
+export function applyCancel(storedIcs, cancelIcs, senderEmail) {
+  const cancel = parseItip(cancelIcs);
+  if (!cancel || cancel.method !== 'CANCEL')
+    throw fail('Diese Kalendernachricht kann nicht übernommen werden.', 'ics_invalid');
+  const vcal = parseIcs(storedIcs);
+  const { vevents, master } = seriesParts(vcal);
+  const head = master || vevents[0];
+  if (!head) return { action: 'ignore', reason: 'not_in_calendar' };
+  // Only the organizer may cancel: an event without organizer is the user's own, and a CANCEL
+  // from anyone else (any mail with a calendar part) must not delete it.
+  const organizer = organizerOf(head)?.email || '';
+  const sender = String(senderEmail || '').toLowerCase();
+  if (!organizer || sender !== organizer || (cancel.organizer?.email || '') !== organizer)
+    return { action: 'ignore', reason: 'not_organizer' };
+  const target = cancel.recurrenceId ? vevents.find(v => sameInstant(ridOf(v), cancel.recurrenceId)) || head : head;
+  if (cancel.sequence < Number(target.getFirstPropertyValue('sequence') || 0))
+    return { action: 'ignore', reason: 'outdated' };
+  if (!cancel.recurrenceId || !master?.hasProperty('rrule')) {
+    // A single occurrence stored on its own (only that instance was ever received).
+    if (cancel.recurrenceId && !master && !vevents.some(v => !sameInstant(ridOf(v), cancel.recurrenceId)))
+      return { action: 'delete' };
+    if (cancel.recurrenceId && !master) {
+      for (const v of vevents) if (sameInstant(ridOf(v), cancel.recurrenceId)) vcal.removeSubcomponent(v);
+      return { action: 'update', ics: vcal.toString() };
+    }
+    return { action: 'delete' };
+  }
+  return { action: 'update', ics: excludeOccurrence(storedIcs, cancel.recurrenceId, { bump: false }) };
+}
+
+/**
+ * Attendee answers a REQUEST and already has the event stored. An invitation for one occurrence
+ * (RECURRENCE-ID) only changes that occurrence of the stored series instead of replacing it;
+ * declining it removes just that occurrence. A REQUEST older than the stored state (SEQUENCE)
+ * changes nothing. Returns { action: 'delete' | 'update' | 'ignore', ics? }.
+ */
+export function mergeInvitation(storedIcs, invitationIcs, ownEmail, partstat) {
+  const inv = parseItip(invitationIcs);
+  if (!inv) throw fail('Einladung enthält keinen Termin.', 'ics_invalid');
+  const stored = parseIcs(storedIcs);
+  const { vevents, master } = seriesParts(stored);
+  const head = master || vevents[0];
+  const target = inv.recurrenceId ? vevents.find(v => sameInstant(ridOf(v), inv.recurrenceId)) || head : head;
+  if (target && inv.sequence < Number(target.getFirstPropertyValue('sequence') || 0))
+    return { action: 'ignore', reason: 'outdated' };
+  const instanceOfSeries = Boolean(inv.recurrenceId && master?.hasProperty('rrule'));
+  if (!instanceOfSeries) {
+    if (partstat === 'DECLINED') return { action: 'delete' };
+    return { action: 'update', ics: invitationToStoredIcs(invitationIcs, ownEmail, partstat) };
+  }
+  if (partstat === 'DECLINED')
+    return { action: 'update', ics: excludeOccurrence(storedIcs, inv.recurrenceId, { bump: false }) };
+  const incoming = parseIcs(invitationToStoredIcs(invitationIcs, ownEmail, partstat));
+  for (const v of vevents) if (sameInstant(ridOf(v), inv.recurrenceId)) stored.removeSubcomponent(v);
+  const zones = new Set(stored.getAllSubcomponents('vtimezone').map(z => z.getFirstPropertyValue('tzid')));
+  for (const tz of incoming.getAllSubcomponents('vtimezone'))
+    if (!zones.has(tz.getFirstPropertyValue('tzid'))) stored.addSubcomponent(new ICAL.Component(tz.toJSON()));
+  for (const v of incoming.getAllSubcomponents('vevent'))
+    if (v.hasProperty('recurrence-id')) stored.addSubcomponent(new ICAL.Component(v.toJSON()));
+  return { action: 'update', ics: stored.toString() };
+}
+
+/**
+ * Applies an attendee's REPLY to the organizer's stored event. A reply for one occurrence
+ * (RECURRENCE-ID) only changes that occurrence, never the whole series.
+ */
 export function applyReply(storedIcs, replyIcs) {
   const reply = parseItip(replyIcs);
   if (!reply || reply.method !== 'REPLY' || !reply.attendees[0])
@@ -713,6 +825,7 @@ export function applyReply(storedIcs, replyIcs) {
   const vcal = parseIcs(storedIcs);
   let changed = false;
   for (const vevent of vcal.getAllSubcomponents('vevent')) {
+    if (reply.recurrenceId && !sameInstant(ridOf(vevent), reply.recurrenceId)) continue;
     for (const p of vevent.getAllProperties('attendee')) {
       if (
         String(p.getFirstValue())

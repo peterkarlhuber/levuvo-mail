@@ -235,7 +235,16 @@ export type CalendarEvent = {
   /** Microsoft 365 / Google: id of the series an occurrence belongs to. */
   seriesId?: string | null;
   source?: 'microsoft' | 'google';
-  rrule: { freq: string; interval: number; count: number | null; until: string | null; byday: string[] } | null;
+  rrule: {
+    freq: string;
+    interval: number;
+    count: number | null;
+    until: string | null;
+    byday: string[];
+    bymonthday?: number[];
+    bysetpos?: number[];
+    bymonth?: number[];
+  } | null;
   organizer: { email: string; name: string } | null;
   attendees: Attendee[];
   alarms: number[];

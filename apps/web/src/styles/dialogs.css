@@ -126,6 +126,8 @@
   white-space: nowrap;
 }
 .toast-close {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
   border: 0;
   background: transparent;
   color: inherit;
@@ -167,4 +169,8 @@
   margin: 0;
   color: var(--text-2);
   font-size: var(--text-md);
+}
+/* The confirm card is the alertdialog; its inner form must not change the card's layout. */
+.confirm-form {
+  display: contents;
 }

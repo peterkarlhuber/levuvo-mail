@@ -1,6 +1,7 @@
 // Levuvo Mail local API. Created by the Electron main process (desktop mode) or by
 // server.mjs for browser-based development. Binds to 127.0.0.1 only.
 import { createScreeningStore } from './screening.mjs';
+import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
@@ -220,10 +221,22 @@ export async function createMailServer({
   const diagnostics = createDiagnostics({ version: APP_VERSION });
   const cryptoMeta = await createJsonFile(path.join(dir, 'crypto.json'), {});
   const settings = await createJsonFile(path.join(dir, 'app-settings.json'), { crashReports: false, localIndex: true });
+  // Subjects and addresses of other people: encrypted with a keychain key like calendar and
+  // contacts (older plain files are encrypted on the first start).
   const followups = createFollowupStore(
-    await createJsonFile(path.join(dir, 'followups.json'), { snoozed: [], followups: [] })
+    await createSealedJsonFile(
+      path.join(dir, 'followups.json'),
+      { snoozed: [], followups: [] },
+      { vault: store, keyName: 'followups-key' }
+    )
   );
-  const screening = createScreeningStore(await createJsonFile(path.join(dir, 'screening.json'), { accounts: {} }));
+  const screening = createScreeningStore(
+    await createSealedJsonFile(
+      path.join(dir, 'screening.json'),
+      { accounts: {} },
+      { vault: store, keyName: 'screening-key' }
+    )
+  );
   const templates = createTemplateStore(await createJsonFile(path.join(dir, 'templates.json'), { templates: [] }));
   const davStore = await createDavStore({ filename: path.join(dir, 'dav.json'), vault: store });
   const davService = createDavService({ store: davStore, fetchImpl });

@@ -22,7 +22,11 @@ import { completeFetchResults } from './mailbox.mjs';
 
 const require = createRequire(import.meta.url);
 
+// Version of the table layout. Raise it together with a new entry in MIGRATIONS; an index file
+// written by a newer version (e.g. after rolling back an update) is emptied and rebuilt.
 const SCHEMA = 1;
+/** MIGRATIONS[n] upgrades a database from schema n to n + 1 (runs inside one transaction). */
+const MIGRATIONS = [];
 const MAGIC = Buffer.from('LVX1');
 const TEXT_CHARS = 3000;
 const BATCH = 50;
@@ -31,6 +35,8 @@ const MAX_TOMBSTONES = 20_000;
 export const SEARCH_MAX_LIMIT = 200;
 export const MAX_VECTOR_DIM = 4096;
 const SCAN_CHUNK = 5000;
+// The in-memory vector set of an account is released after this long without a search.
+const VECTOR_IDLE_MS = 10 * 60_000;
 
 /** Stable key of one indexed message; changes when the folder's UIDVALIDITY changes. */
 export function entryKey(folderPath, uidValidity, uid) {
@@ -155,7 +161,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
  * `getIdentity` names the mailbox an account ID currently points to. An index built for
  * another mailbox (server or login changed) is discarded instead of being searched.
  */
-export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPerAccount = 250_000 }) {
+export function createLocalIndex({
+  dir,
+  getKey,
+  getIdentity = () => null,
+  maxPerAccount = 250_000,
+  // Overridable for tests of the upgrade path only.
+  schema = SCHEMA,
+  migrations = MIGRATIONS,
+  vectorIdleMs = VECTOR_IDLE_MS
+}) {
   const loaded = new Map(); // accountId -> entry
   const base = id => path.join(dir, id.replace(/[^a-z0-9-]/gi, ''));
   const dbFile = id => `${base(id)}.lvdb`;
@@ -235,14 +250,30 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       // Same account ID, another mailbox: never search the old data. Wiped inside the database,
       // so it also holds when the file cannot be deleted (open elsewhere on Windows).
       wipe(db);
-    }
-    const entry = { db, statements: new Map(), vectorCache: new Map() };
+    } else if (!fresh && !upgrade(db, Number(meta.schema) || 1)) wipe(db);
+    const entry = {
+      db,
+      statements: new Map(),
+      vectorCache: new Map(),
+      vectorLoading: new Map(),
+      vectorTimer: null,
+      lastTick: 0
+    };
+    entry.lastTick = Math.max(
+      0,
+      Number(db.prepare('SELECT max(u) FROM messages').pluck().get()) || 0,
+      Number(db.prepare('SELECT max(at) FROM removed').pluck().get()) || 0
+    );
+    // Change stamps (`u` of a message, `at` of a removal) come from one strictly increasing clock,
+    // taken when the row is written: a consumer that reads changes after time T never misses a
+    // row written later, however long a sync takes.
+    entry.clock = () => (entry.lastTick = Math.max(Date.now(), entry.lastTick + 1));
     const setMeta = db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v');
     entry.meta = (k, v) =>
       v === undefined ? db.prepare('SELECT v FROM meta WHERE k = ?').pluck().get(k) : setMeta.run(k, String(v));
     if (!entry.meta('generation')) {
       db.transaction(() => {
-        entry.meta('schema', SCHEMA);
+        entry.meta('schema', schema);
         entry.meta('generation', randomBytes(8).toString('hex'));
         entry.meta('removedFrom', Date.now());
         if (identity) entry.meta('identity', identity);
@@ -251,6 +282,30 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     } else if (identity && !entry.meta('identity')) entry.meta('identity', identity);
     loaded.set(id, entry);
     return entry;
+  }
+
+  /**
+   * Brings an existing database to the current schema. False when it cannot be used as it is
+   * (written by a newer version, or a migration failed): the caller empties it and it is rebuilt
+   * from the server. The index only holds data that can be fetched again.
+   */
+  function upgrade(db, version) {
+    if (version === schema) return true;
+    if (version > schema) return false;
+    try {
+      db.transaction(() => {
+        for (let v = version; v < schema; v++) {
+          if (typeof migrations[v] !== 'function') throw new Error(`No migration from schema ${v}.`);
+          migrations[v](db);
+        }
+        db.prepare("INSERT INTO meta (k, v) VALUES ('schema', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v").run(
+          String(schema)
+        );
+      })();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Removes every row, including FTS data and vectors. */
@@ -320,8 +375,9 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       a: m.a ? 1 : 0,
       r: m.r ? 1 : 0,
       x: String(m.x || '').slice(0, TEXT_CHARS),
-      u: Number.isFinite(m.u) ? m.u : Date.now()
+      u: Number.isFinite(m.u) ? m.u : entry.clock()
     };
+    if (row.u > entry.lastTick) entry.lastTick = row.u;
     const info = stmt(
       entry,
       `INSERT INTO messages (folder, uid, d, f, fe, fn, t, s, a, r, x, u) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -337,17 +393,20 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     return true;
   }
 
-  function deleteMessage(entry, rowid, key, at) {
+  function deleteMessage(entry, rowid, key) {
     stmt(entry, 'DELETE FROM words WHERE rowid = ?').run(rowid);
     stmt(entry, 'DELETE FROM heads WHERE rowid = ?').run(rowid);
     stmt(entry, 'DELETE FROM messages WHERE id = ?').run(rowid);
-    if (stmt(entry, 'DELETE FROM vectors WHERE key = ?').run(key).changes) entry.vectorCache.clear();
-    stmt(entry, 'INSERT INTO removed (key, at) VALUES (?, ?)').run(key, at);
+    if (stmt(entry, 'DELETE FROM vectors WHERE key = ?').run(key).changes) {
+      for (const set of [...entry.vectorCache.values()]) removeFromSet(entry, set, key);
+      vectorsChanged(entry);
+    }
+    stmt(entry, 'INSERT INTO removed (key, at) VALUES (?, ?)').run(key, entry.clock());
   }
 
-  function deleteFolder(entry, folderPath, uidValidity, at) {
+  function deleteFolder(entry, folderPath, uidValidity) {
     const rows = stmt(entry, 'SELECT id, uid FROM messages WHERE folder = ?').all(folderPath);
-    for (const r of rows) deleteMessage(entry, r.id, entryKey(folderPath, uidValidity, r.uid), at);
+    for (const r of rows) deleteMessage(entry, r.id, entryKey(folderPath, uidValidity, r.uid));
     return rows.length;
   }
 
@@ -359,6 +418,18 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     // Anyone asking for changes from before the oldest kept tombstone must rebuild.
     entry.meta('removedFrom', Math.max(Number(entry.meta('removedFrom')) || 0, cut.at));
   }
+
+  const entryOf = r => ({
+    key: entryKey(r.folder, r.uid_validity, r.uid),
+    folder: r.folder,
+    uid: r.uid,
+    date: r.d,
+    fromName: r.fn,
+    fromEmail: r.fe,
+    subject: r.s,
+    text: r.x,
+    updatedAt: r.u
+  });
 
   const countAll = entry => stmt(entry, 'SELECT count(*) FROM messages').pluck().get();
 
@@ -404,7 +475,6 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const uidValidity = String(client.mailbox?.uidValidity || '');
       const exists = Number(client.mailbox?.exists || 0);
       const uidNext = String(client.mailbox?.uidNext || '');
-      const now = Date.now();
       const row = stmt(entry, 'SELECT uid_validity, modseq, seen FROM folders WHERE path = ?').get(folderPath);
       const reset = !row || row.uid_validity !== uidValidity;
       let removed = 0;
@@ -416,7 +486,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
         last = null;
       }
       if (reset) {
-        if (row) entry.db.transaction(() => (removed += deleteFolder(entry, folderPath, row.uid_validity, now)))();
+        if (row) entry.db.transaction(() => (removed += deleteFolder(entry, folderPath, row.uid_validity)))();
         modseq = client.mailbox?.highestModseq ? String(client.mailbox.highestModseq) : null;
         last = null;
         upsertFolder(entry, folderPath, uidValidity, modseq, null);
@@ -444,7 +514,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const gone = indexed.filter(r => !present.has(r.uid));
       if (gone.length)
         entry.db.transaction(() => {
-          for (const r of gone) deleteMessage(entry, r.id, entryKey(folderPath, uidValidity, r.uid), now);
+          for (const r of gone) deleteMessage(entry, r.id, entryKey(folderPath, uidValidity, r.uid));
         })();
       removed += gone.length;
       let flagsChanged = 0;
@@ -491,8 +561,8 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
             s: env.subject || '',
             a: hasAttachments(m.bodyStructure),
             r: !m.flags?.has('\\Seen'),
-            x: '',
-            u: now
+            x: ''
+            // `u` is stamped when the row is written (see entry.clock), not when the folder started.
           });
           const part = findPreviewPart(m.bodyStructure);
           if (part) {
@@ -641,21 +711,19 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     return { messages, total, nextCursor: next < total && messages.length ? String(next) : null };
   }
 
-  /** All vectors of one model as one contiguous int8 block (cached until they change). */
+  /**
+   * All vectors of one model as one contiguous int8 block. Loaded on the first search and then
+   * kept up to date in place: new vectors are appended (or overwrite their slot), removed ones
+   * leave a gap that searches skip. Released after `vectorIdleMs` without a search.
+   */
   async function vectorSet(entry, model) {
+    touchVectors(entry);
     if (entry.vectorCache.has(model)) return entry.vectorCache.get(model);
     const count = stmt(entry, 'SELECT count(*) FROM vectors WHERE model = ?').pluck().get(model);
     const dim = stmt(entry, 'SELECT dim FROM vectors WHERE model = ? LIMIT 1').pluck().get(model);
     if (!count || !dim) return null;
-    const set = {
-      dim,
-      count: 0,
-      data: new Int8Array(count * dim),
-      scales: new Float32Array(count),
-      keys: new Array(count),
-      folders: new Array(count),
-      uids: new Array(count)
-    };
+    const set = newVectorSet(dim, count);
+    entry.vectorLoading.set(model, false);
     const read = stmt(
       entry,
       `SELECT id, key, folder, uid, dim, scale, embedding FROM vectors WHERE model = ? AND id > ? ORDER BY id LIMIT ${SCAN_CHUNK}`
@@ -665,19 +733,80 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const rows = read.all(model, lastId);
       if (!rows.length) break;
       lastId = rows.at(-1).id;
-      for (const r of rows) {
-        if (r.dim !== dim || set.count >= count) continue;
-        const n = set.count++;
-        set.data.set(new Int8Array(r.embedding.buffer, r.embedding.byteOffset, dim), n * dim);
-        set.scales[n] = r.scale;
-        set.keys[n] = r.key;
-        set.folders[n] = r.folder;
-        set.uids[n] = r.uid;
-      }
+      for (const r of rows) addToSet(set, r.key, r.folder, r.uid, r.dim, r.scale, r.embedding);
       await tick();
     }
-    entry.vectorCache.set(model, set);
+    // Writes during the load (it yields between chunks) went to the database only: if anything
+    // changed meanwhile, this set is not cached and the next search loads again.
+    if (entry.vectorLoading.get(model) === false) entry.vectorCache.set(model, set);
+    entry.vectorLoading.delete(model);
     return set;
+  }
+
+  function newVectorSet(dim, capacity) {
+    const cap = Math.max(16, capacity);
+    return {
+      dim,
+      count: 0,
+      live: 0,
+      data: new Int8Array(cap * dim),
+      scales: new Float32Array(cap),
+      keys: new Array(cap),
+      folders: new Array(cap),
+      uids: new Array(cap),
+      slot: new Map() // key -> position
+    };
+  }
+
+  function addToSet(set, key, folder, uid, dim, scale, embedding) {
+    if (dim !== set.dim) return;
+    let n = set.slot.get(key);
+    if (n === undefined) {
+      if (set.count === set.scales.length) {
+        const cap = set.scales.length * 2;
+        const data = new Int8Array(cap * set.dim);
+        data.set(set.data);
+        set.data = data;
+        const scales = new Float32Array(cap);
+        scales.set(set.scales);
+        set.scales = scales;
+        set.keys.length = set.folders.length = set.uids.length = cap;
+      }
+      n = set.count++;
+      set.slot.set(key, n);
+      set.live++;
+    }
+    set.data.set(new Int8Array(embedding.buffer, embedding.byteOffset, set.dim), n * set.dim);
+    set.scales[n] = scale;
+    set.keys[n] = key;
+    set.folders[n] = folder;
+    set.uids[n] = uid;
+  }
+
+  function removeFromSet(entry, set, key) {
+    const n = set.slot.get(key);
+    if (n === undefined) return;
+    set.slot.delete(key);
+    set.keys[n] = null;
+    set.scales[n] = 0;
+    set.live--;
+    // Mostly gaps: loading again is cheaper than scanning them on every search.
+    if (set.count > 64 && set.live < set.count / 2)
+      for (const [model, cached] of entry.vectorCache) if (cached === set) entry.vectorCache.delete(model);
+  }
+
+  function touchVectors(entry) {
+    if (entry.vectorTimer) clearTimeout(entry.vectorTimer);
+    entry.vectorTimer = setTimeout(() => {
+      entry.vectorTimer = null;
+      entry.vectorCache.clear();
+    }, vectorIdleMs);
+    entry.vectorTimer.unref?.();
+  }
+
+  /** A load of these vectors that is under way must not be cached: it may have missed the change. */
+  function vectorsChanged(entry, model = null) {
+    for (const m of entry.vectorLoading.keys()) if (model === null || m === model) entry.vectorLoading.set(m, true);
   }
 
   return {
@@ -686,13 +815,12 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const entry = await open(id);
       if (!entry) return { enabled: false };
       const valid = indexableFolders(folders);
-      const now = Date.now();
       let changed = false;
       let removed = 0;
       for (const f of stmt(entry, 'SELECT path, uid_validity FROM folders').all())
         if (!valid.some(v => v.path === f.path)) {
           entry.db.transaction(() => {
-            removed += deleteFolder(entry, f.path, f.uid_validity, now);
+            removed += deleteFolder(entry, f.path, f.uid_validity);
             stmt(entry, 'DELETE FROM folders WHERE path = ?').run(f.path);
           })();
           changed = true;
@@ -745,18 +873,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
         ).all(lastId, after);
         if (!rows.length) return;
         lastId = rows.at(-1).id;
-        for (const r of rows)
-          yield {
-            key: entryKey(r.folder, r.uid_validity, r.uid),
-            folder: r.folder,
-            uid: r.uid,
-            date: r.d,
-            fromName: r.fn,
-            fromEmail: r.fe,
-            subject: r.s,
-            text: r.x,
-            updatedAt: r.u
-          };
+        for (const r of rows) yield entryOf(r);
       }
     },
 
@@ -793,6 +910,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       let expected = stmt(entry, 'SELECT dim FROM vectors WHERE model = ? LIMIT 1').pluck().get(model) || null;
       let stored = 0;
       let skipped = 0;
+      const written = [];
       entry.db.transaction(() => {
         for (const item of Array.isArray(items) ? items : []) {
           const parts = typeof item?.key === 'string' ? item.key.split('\u0000') : [];
@@ -806,10 +924,14 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
           expected = vector.length;
           const { scale, bytes } = quantize(vector);
           write.run(model, item.key, hit.folder, hit.uid, vector.length, scale, bytes);
+          written.push([item.key, hit.folder, hit.uid, vector.length, scale, bytes]);
           stored++;
         }
       })();
-      if (stored) entry.vectorCache.delete(model);
+      // Taken over into the loaded set instead of dropping it: no full reload after every batch.
+      const set = entry.vectorCache.get(model);
+      if (set) for (const w of written) addToSet(set, ...w);
+      if (stored) vectorsChanged(entry, model);
       return { stored, skipped };
     },
 
@@ -826,10 +948,10 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const size = Math.max(1, Math.min(SEARCH_MAX_LIMIT, Number.isInteger(limit) ? limit : 20));
       const set = await vectorSet(entry, model);
       if (!set || set.dim !== query.length) return [];
-      const { dim, data, scales, folders, count } = set;
+      const { dim, data, scales, folders, keys, count } = set;
       const best = []; // ascending by score, at most `size`
       for (let n = 0; n < count; n++) {
-        if (folder && folders[n] !== folder) continue;
+        if (keys[n] === null || (folder && folders[n] !== folder)) continue;
         let dot = 0;
         const offset = n * dim;
         for (let i = 0; i < dim; i++) dot += data[offset + i] * query[i];
@@ -854,7 +976,54 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const entry = await open(id);
       if (!entry || !validModel(model)) return { removed: 0 };
       entry.vectorCache.delete(model);
+      vectorsChanged(entry, model);
       return { removed: stmt(entry, 'DELETE FROM vectors WHERE model = ?').run(model).changes };
+    },
+
+    /** Removes the vectors of every model except `model` (after the embedding model changed). */
+    async dropOtherVectors(id, model) {
+      const entry = await open(id);
+      if (!entry || !validModel(model)) return { removed: 0 };
+      for (const m of [...entry.vectorCache.keys()]) if (m !== model) entry.vectorCache.delete(m);
+      vectorsChanged(entry);
+      return { removed: stmt(entry, 'DELETE FROM vectors WHERE model != ?').run(model).changes };
+    },
+
+    /**
+     * Indexed messages without a vector of `model`, newest first, in batches of `batch`. Only the
+     * row IDs are collected up front; texts are read batch by batch. Because it asks what is
+     * missing instead of what changed since a time, an interrupted run continues where it stopped
+     * and nothing written meanwhile is skipped.
+     */
+    async *missingVectors(id, model, { batch = 32 } = {}) {
+      const entry = await open(id);
+      if (!entry || !validModel(model)) return;
+      const ids = stmt(
+        entry,
+        `SELECT m.id FROM messages m JOIN folders f ON f.path = m.folder
+         WHERE NOT EXISTS (SELECT 1 FROM vectors v WHERE v.model = ?
+           AND v.key = m.folder || char(0) || f.uid_validity || char(0) || m.uid)
+         ORDER BY m.d DESC, m.uid DESC`
+      )
+        .pluck()
+        .all(model);
+      const read = stmt(
+        entry,
+        `SELECT m.id, m.folder, m.uid, m.d, m.fn, m.fe, m.s, m.x, m.u, f.uid_validity FROM messages m
+         JOIN folders f ON f.path = m.folder WHERE m.id IN (SELECT value FROM json_each(?))`
+      );
+      const size = Math.max(1, Math.min(500, Number.isInteger(batch) ? batch : 32));
+      for (let i = 0; i < ids.length; i += size) {
+        if (loaded.get(id) !== entry) return; // closed or cleared meanwhile
+        const chunk = ids.slice(i, i + size);
+        const rows = new Map(read.all(JSON.stringify(chunk)).map(r => [r.id, r]));
+        const out = [];
+        for (const rowid of chunk) {
+          const r = rows.get(rowid);
+          if (r) out.push(entryOf(r));
+        }
+        if (out.length) yield out;
+      }
     },
 
     async text(id, folderPath, uid) {
@@ -889,6 +1058,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     async clear(id) {
       const entry = loaded.get(id);
       loaded.delete(id);
+      if (entry?.vectorTimer) clearTimeout(entry.vectorTimer);
       try {
         // Emptied first: if the file cannot be deleted (Windows: open elsewhere), nothing remains in it.
         if (entry) wipe(entry.db);
@@ -906,6 +1076,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     unload(id) {
       const entry = loaded.get(id);
       loaded.delete(id);
+      if (entry?.vectorTimer) clearTimeout(entry.vectorTimer);
       try {
         entry?.db.close();
       } catch {

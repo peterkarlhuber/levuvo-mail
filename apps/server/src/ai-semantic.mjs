@@ -6,6 +6,9 @@
 // encrypted SQLite store of the index replaces the in-memory store below without changes here.
 
 const BATCH = 32;
+// A run stops after this many failed batches in a row (model gone, Ollama stopped); what is
+// embedded so far stays and the next run continues with the rest.
+const MAX_FAILED_BATCHES = 3;
 const TEXT_CHARS = 1500;
 const MAX_MEMORY_ENTRIES = 5000;
 const QUERY_PREFIX = 'Instruct: Given a search query, retrieve relevant emails that answer it\nQuery: ';
@@ -63,6 +66,8 @@ function dot(a, b) {
   return s;
 }
 
+const byDateDesc = (a, b) => String(b.date || '').localeCompare(String(a.date || ''));
+
 const passage = e =>
   `${e.subject || ''}\n${e.fromName || ''} <${e.fromEmail || ''}>\n${String(e.text || '').slice(0, TEXT_CHARS)}`;
 
@@ -79,7 +84,10 @@ export function vectorStoreFor(localIndex) {
     persistent: true,
     putVectors: (id, model, items) => localIndex.putVectors(id, model, items),
     searchVectors: (id, model, vector, opts) => localIndex.searchVectors(id, model, vector, opts),
-    dropVectors: (id, model) => localIndex.dropVectors(id, model)
+    dropVectors: (id, model) => localIndex.dropVectors(id, model),
+    dropOtherVectors: (id, model) => localIndex.dropOtherVectors?.(id, model),
+    missing:
+      typeof localIndex.missingVectors === 'function' ? (id, model, o) => localIndex.missingVectors(id, model, o) : null
     // Removed messages: the index deletes their vectors itself (tombstones).
   };
 }
@@ -121,49 +129,9 @@ export function createSemanticIndex({
       const status = await localIndex.status(id);
       if (!status?.enabled) return { skipped: true };
       const m = model();
-      let since = current.syncedAt;
-      if (current.model !== m || current.generation !== status.generation) {
-        if (current.model) await vectors.dropVectors(id, current.model);
-        await vectors.dropVectors(id, m);
-        since = null;
-      } else if (since !== null) {
-        const removed = await localIndex.removedKeys(id, since);
-        if (removed === null) {
-          await vectors.dropVectors(id, m);
-          since = null;
-        } else if (removed.length && vectors.deleteVectors) await vectors.deleteVectors(id, m, removed);
-      }
-      const started = Date.now();
-      let batch = [];
-      let count = 0;
-      const flush = async () => {
-        if (!batch.length) return;
-        const r = await ai.run('embed', { texts: batch.map(passage) }, { accountId: id, source: 'index' });
-        await vectors.putVectors(
-          id,
-          m,
-          batch.map((e, i) => ({ key: e.key, folder: e.folder, uid: e.uid, vector: r.vectors[i] }))
-        );
-        count += batch.length;
-        batch = [];
-      };
-      // Newest first, so search is useful early; the memory store keeps only the newest entries.
-      const all = [];
-      for await (const e of localIndex.entries(id, { since })) all.push(e);
-      all.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-      const limit = vectors.persistent ? all.length : Math.min(all.length, MAX_MEMORY_ENTRIES);
-      for (const e of all.slice(0, limit)) {
-        batch.push(e);
-        if (batch.length >= BATCH) await flush();
-      }
-      await flush();
-      state.set(id, { model: m, generation: status.generation, syncedAt: started, running: null });
-      await saveState();
-      if (count) {
-        logger(`Semantic index ${id}: ${count} messages embedded`);
-        void ai.log?.add({ type: 'index', kind: 'embed', accountId: id, count, model: m });
-      }
-      return { embedded: count };
+      return vectors.persistent && vectors.missing
+        ? fillMissing(id, m, status, current)
+        : syncChanges(id, m, status, current);
     })();
     state.set(id, { ...current, running: run });
     try {
@@ -172,6 +140,100 @@ export function createSemanticIndex({
       state.set(id, { ...current, running: null });
       throw err;
     }
+  }
+
+  async function embedBatch(id, m, batch) {
+    const r = await ai.run('embed', { texts: batch.map(passage) }, { accountId: id, source: 'index' });
+    await vectors.putVectors(
+      id,
+      m,
+      batch.map((e, i) => ({ key: e.key, folder: e.folder, uid: e.uid, vector: r.vectors?.[i] }))
+    );
+    return batch.length;
+  }
+
+  function finished(id, m, count) {
+    if (count) {
+      logger(`Semantic index ${id}: ${count} messages embedded`);
+      void ai.log?.add({ type: 'index', kind: 'embed', accountId: id, count, model: m });
+    }
+  }
+
+  /**
+   * Persistent store (the encrypted index): embeds every message that has no vector of the current
+   * model yet, newest first. Each batch is stored as soon as it is computed, so a restart, sleep or
+   * a failed batch never throws away finished work (PERF-LEV-001): the next run asks the index
+   * again what is missing. Removed messages take their vectors with them inside the index.
+   */
+  async function fillMissing(id, m, status, current) {
+    // Only vectors of the current model are kept; also covers a model switch whose state was lost.
+    if (vectors.dropOtherVectors) await vectors.dropOtherVectors(id, m);
+    else if (current.model && current.model !== m) await vectors.dropVectors(id, current.model);
+    state.set(id, {
+      model: m,
+      generation: status.generation,
+      syncedAt: current.syncedAt,
+      running: state.get(id)?.running
+    });
+    await saveState();
+    let count = 0;
+    let failedInRow = 0;
+    let lastError = null;
+    for await (const batch of vectors.missing(id, m, { batch: BATCH })) {
+      if (model() !== m || !usable()) break; // settings changed: the next run starts over cleanly
+      try {
+        count += await embedBatch(id, m, batch);
+        failedInRow = 0;
+      } catch (err) {
+        lastError = err;
+        if (++failedInRow >= MAX_FAILED_BATCHES) break;
+      }
+    }
+    state.set(id, { model: m, generation: status.generation, syncedAt: Date.now(), running: null });
+    await saveState();
+    finished(id, m, count);
+    if (failedInRow >= MAX_FAILED_BATCHES && !count) throw lastError;
+    return { embedded: count };
+  }
+
+  /**
+   * In-memory store (no encrypted index available): follows the index by change time and keeps
+   * only the newest entries.
+   */
+  async function syncChanges(id, m, status, current) {
+    let since = current.syncedAt;
+    if (current.model !== m || current.generation !== status.generation) {
+      if (current.model) await vectors.dropVectors(id, current.model);
+      await vectors.dropVectors(id, m);
+      since = null;
+    } else if (since !== null) {
+      const removed = await localIndex.removedKeys(id, since);
+      if (removed === null) {
+        await vectors.dropVectors(id, m);
+        since = null;
+      } else if (removed.length && vectors.deleteVectors) await vectors.deleteVectors(id, m, removed);
+    }
+    // One millisecond back: rows stamped in the same millisecond as the start are read again
+    // next time instead of being missed (re-embedding the same key only overwrites it).
+    const started = Date.now() - 1;
+    // Newest first, so search is useful early; only key and date are sorted, texts are kept for
+    // the newest MAX_MEMORY_ENTRIES only.
+    const all = [];
+    for await (const e of localIndex.entries(id, { since })) {
+      all.push(e);
+      if (all.length > MAX_MEMORY_ENTRIES * 2) {
+        all.sort(byDateDesc);
+        all.length = MAX_MEMORY_ENTRIES;
+      }
+    }
+    all.sort(byDateDesc);
+    let count = 0;
+    for (let i = 0; i < Math.min(all.length, MAX_MEMORY_ENTRIES); i += BATCH)
+      count += await embedBatch(id, m, all.slice(i, Math.min(i + BATCH, MAX_MEMORY_ENTRIES)));
+    state.set(id, { model: m, generation: status.generation, syncedAt: started, running: null });
+    await saveState();
+    finished(id, m, count);
+    return { embedded: count };
   }
 
   /** Messages closest in meaning to `query`, across accounts. */

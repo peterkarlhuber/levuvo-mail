@@ -8,6 +8,7 @@ export { ownPart } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Button } from './ui';
+import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
 
 type Draft = { subject: string; body: string };
 type Issue = { kind: 'attachment' | 'tone' | 'recipient' | 'sensitive'; message: string };
@@ -40,7 +41,12 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
   const [busy, setBusy] = useState('');
   const [open, setOpen] = useState(false);
   const undo = useRef<string | null>(null);
+  // The last change by the assistant stays marked with an undo until the next run, not only in a
+  // 5-second toast (EU AI Act Art. 50 marking, WCAG 2.2.1).
+  const [changed, setChanged] = useState<string | null>(null);
   const menu = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -56,6 +62,7 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
     if (!open) return;
     const onDown = (e: MouseEvent) => !menu.current?.contains(e.target as Node) && setOpen(false);
     document.addEventListener('mousedown', onDown);
+    focusFirstItem(list.current);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
@@ -71,16 +78,11 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
       undo.current = before;
       setDraft(r.result.body);
       if (r.result.subject && !subject.trim()) setSubject(r.result.subject);
+      setChanged(r.model);
       toast({
         text: t('Vom Assistenten geschrieben ({model}). Bitte vor dem Senden prüfen.', { model: r.model }),
         kind: 'info',
-        action: {
-          label: t('Rückgängig'),
-          run: () => {
-            if (undo.current !== null) setDraft(undo.current);
-            undo.current = null;
-          }
-        }
+        action: { label: t('Rückgängig'), run: revert }
       });
     } catch (err) {
       toast({ text: aiErrorText(err instanceof ApiError ? err.code : undefined, t), kind: 'error' });
@@ -89,10 +91,21 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
     }
   }
 
+  function revert() {
+    if (undo.current !== null) setDraft(undo.current);
+    undo.current = null;
+    setChanged(null);
+  }
+  const closeMenu = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) trigger.current?.focus();
+  };
+
   const draft = () => getDraft().trim();
   return (
     <div className="menu-anchor compose-ai" ref={menu}>
       <Button
+        ref={trigger}
         size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -104,8 +117,22 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
       >
         {busy || t('Assistent')}
       </Button>
+      {changed && !busy && (
+        <span className="ai-label compose-ai-changed">
+          <Sparkles size={11} aria-hidden="true" /> {t('Vom Assistenten geändert ({model})', { model: changed })}{' '}
+          <button type="button" className="text-button" onClick={revert}>
+            {t('Rückgängig')}
+          </button>
+        </span>
+      )}
       {open && (
-        <div className="menu template-menu left" role="menu">
+        <div
+          ref={list}
+          className="menu template-menu left"
+          role="menu"
+          aria-label={t('Levuvo Mail Assistant')}
+          onKeyDown={e => menuKeyDown(e, closeMenu)}
+        >
           {features.reply && source && (
             <button
               role="menuitem"

@@ -10,6 +10,7 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] `npm run release:check` green (audit, syntax, lint, format, tests, typecheck, build, license notices)
 - [ ] Optionally with test servers: `npm run test:integration` and `npm run test:e2e`
 - [ ] Installer starts; no Gatekeeper/SmartScreen warning for signed builds
+- [ ] The installed app contains the AI runtime (`resources/ai-runtime/python`); Settings → AI & agents shows the AI component as available
 - [ ] Settings → About shows 2.3.0, legal notice (Impressum) filled in
 
 ## First setup (fresh user profile)
@@ -52,6 +53,30 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] Invitation to an Outlook/Gmail address → accept there → apply the status in Levuvo
 - [ ] Receive an invitation from Outlook/Google → accept → event in the calendar, organizer receives the reply
 - [ ] Create contacts, vCard import from Outlook/Apple, export, “Write email”
+
+## Tasks
+- [ ] Create a task from a mail, with due time, reminder (system notification) and repetition; complete it → next date at the same local time, also across a DST change
+- [ ] Connect a list (CalDAV, Microsoft To Do, Google Tasks) → tasks appear on both sides; restart → still connected; change and complete on both sides
+- [ ] At 900px and on a phone: views, lists and “New task” (Neue Aufgabe) are reachable
+
+## Shared spaces
+- [ ] Create a space, invite a second account (another provider), accept with the safety code
+- [ ] Note edited by both at the same time, task with assignee, event, pinned mail with comment, file upload (also by keyboard) with a second version
+- [ ] Remove the member → they keep old content, cannot read new content; dissolve the space
+
+## Backup and moving to a new device
+- [ ] Create a backup with a password, restore it in a fresh profile → accounts (password asked again), local calendar, contacts, tasks, templates, spaces, AI settings are back
+- [ ] Cancel a restore before the restart → nothing changed
+
+## AI and agents
+- [ ] Local model (Ollama): summary, reply suggestion, rewrite (marked “Changed by the assistant” with Undo), question to the mailbox, routine
+- [ ] Cloud model: consent dialog lists style samples, search hits and what routines read; an account marked “No cloud AI” is never used
+- [ ] MCP: connect Claude Desktop with a token; a send approval shows sender account, all recipients and the full text; removing the agent withdraws its approvals
+
+## Accessibility and mobile
+- [ ] Keyboard only: mail, composer, calendar, tasks, spaces (tabs with arrow keys), settings; focus always visible
+- [ ] Screen reader (VoiceOver / Narrator): assistant answers are announced; a delete confirmation starts on “Cancel”
+- [ ] Phone width (390px): mail, calendar, tasks, spaces usable, no horizontal scrolling at 320px
 
 ## Encryption
 - [ ] Password-protected message to Gmail, Outlook.com and a company mailbox → file arrives, opens in Chrome/Edge/Safari (desktop) and Safari/Chrome (phone, “Open in Safari”); a wrong password is rejected

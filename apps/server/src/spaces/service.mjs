@@ -246,15 +246,13 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
       } catch {
         continue;
       }
-      const items = r.outbox;
-      r.outbox = [];
-      const keep = [];
+      // The items stay in the outbox while they are sent and leave it one by one after success,
+      // so a save by another operation meanwhile (or a crash) never loses a pending sync mail.
+      // Items queued while this pass runs stay for the next pass.
+      const items = [...r.outbox];
       const state = stateOf(r);
       for (const item of items) {
-        if (item.nextAt > Date.now()) {
-          keep.push(item);
-          continue;
-        }
+        if (item.nextAt > Date.now()) continue;
         try {
           for (const envelope of await buildEnvelopes(r, item)) {
             await transport.send({
@@ -268,16 +266,17 @@ export function createSpaceService({ store, transport, accounts, logger = () => 
             });
             sent++;
           }
+          r.outbox = r.outbox.filter(i => i !== item);
         } catch (err) {
           item.tries++;
           item.error = String(err.code || err.message || 'send_failed').slice(0, 100);
           item.nextAt = Date.now() + Math.min(6 * 3600_000, 30_000 * 2 ** Math.min(item.tries, 10));
-          if (item.tries < 30) keep.push(item);
-          else logger(`spaces: giving up on a ${item.kind} mail after ${item.tries} attempts`);
+          if (item.tries >= 30) {
+            r.outbox = r.outbox.filter(i => i !== item);
+            logger(`spaces: giving up on a ${item.kind} mail after ${item.tries} attempts`);
+          }
         }
       }
-      // Anything queued while this pass was sending comes after the retries.
-      r.outbox = [...keep, ...r.outbox];
       await store.save(r);
     }
     return sent;
