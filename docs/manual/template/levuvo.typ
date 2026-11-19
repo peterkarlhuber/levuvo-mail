@@ -312,7 +312,7 @@
       v(10mm)
       logo(height: 9mm, light: dark)
       v(7mm)
-      text(size: 11pt, fill: if dark { night-muted } else { muted }, hyphenate: false, back)
+      text(size: 17pt, weight: "semibold", tracking: -0.2pt, hyphenate: false, back)
     })))
     place(bottom + center, dy: -20mm, {
       text(size: 9pt, weight: "semibold", motto)
