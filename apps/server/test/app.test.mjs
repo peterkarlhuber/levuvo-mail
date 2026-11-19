@@ -602,3 +602,28 @@ test('REL-LEV-007: the background monitor never opens a login while the IDLE wat
   const live = await s.api.inject({ method: 'GET', url: `/api/inbox/monitor?account=${id}`, headers: GET });
   assert.equal(live.statusCode, 200);
 });
+
+test('ARC-LEV-002: internal requests use their own secret, not a copied browser session', async t => {
+  const { s } = await server(t);
+  // The internal entry point works without cookie or origin …
+  const accounts = await s.internalRequest('GET', '/api/accounts');
+  assert.ok(Array.isArray(accounts.accounts));
+  // … still enforces the action header on changes …
+  await assert.rejects(
+    s.internalRequest('POST', '/api/tasks/save', { task: { title: 'x' } }),
+    e => e.statusCode === 403
+  );
+  assert.equal(
+    (await s.internalRequest('POST', '/api/tasks/save', { task: { title: 'x' } }, 'mail-v1')).task.title,
+    'x'
+  );
+  // … and a guessed internal header gets no access.
+  for (const value of ['', 'x', 'a'.repeat(64)]) {
+    const r = await s.api.inject({
+      method: 'GET',
+      url: '/api/accounts',
+      headers: { host: '127.0.0.1', 'x-levuvo-internal': value }
+    });
+    assert.ok([401, 403].includes(r.statusCode), `status ${r.statusCode} for "${value}"`);
+  }
+});

@@ -13,7 +13,7 @@ import { readFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import imapflow from 'imapflow';
 import { validDesktopCookie, safeStaticFile, contentTypeForAsset, APP_CSP } from './desktop-runtime.mjs';
@@ -412,12 +412,24 @@ export async function createMailServer({
   // OAuth redirect from the system browser carries no session cookie; it is protected
   // by the single-use, unguessable `state` value instead.
   const COOKIE_FREE = new Set(['/oauth/callback']);
+  // Requests from inside the process (AI, MCP tools, approvals, desktop shell) carry this secret
+  // instead of imitating the browser session (ARC-LEV-002). It never leaves the process memory;
+  // inject() requests do not touch a socket.
+  const internalSecret = randomBytes(32).toString('hex');
+  const isInternal = request => {
+    const given = Buffer.from(String(request.headers['x-levuvo-internal'] || ''));
+    const expected = Buffer.from(internalSecret);
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  };
   api.addHook('onRequest', async (request, reply) => {
+    const internal = isInternal(request);
     const host = String(request.headers.host || '').toLowerCase();
     const origin = request.headers.origin;
     const fetchSite = request.headers['sec-fetch-site'];
     const pathname = new URL(request.url, 'http://127.0.0.1').pathname;
-    if (desktop) {
+    if (internal) {
+      // Same account resolution and action checks as the app, without the browser checks.
+    } else if (desktop) {
       const expectedOrigin = `http://127.0.0.1:${activePort}`;
       if (
         host !== `127.0.0.1:${activePort}` ||
@@ -561,13 +573,14 @@ export async function createMailServer({
     [a.imap.user, ...(a.identities || []).map(i => i.email)].filter(Boolean).map(e => e.toLowerCase());
   const ownAddresses = () => accounts.flatMap(accountAddresses);
 
-  /** A request to this API from inside the server (same checks as a request from the app). */
+  /**
+   * A request to this API from inside the process: the AI routes, MCP tools, approvals and the
+   * desktop shell all use this one way in. It runs the same handlers, account resolution and
+   * action checks as a request from the app.
+   */
   async function internalRequest(method, url, body, action) {
-    const host = `127.0.0.1:${desktop ? activePort : browserPort}`;
-    const headers = { host };
-    if (desktop) headers.cookie = `levuvo_desktop_session=${sessionSecret}`;
+    const headers = { host: '127.0.0.1', 'x-levuvo-internal': internalSecret };
     if (method !== 'GET') {
-      headers.origin = desktop ? `http://${host}` : 'http://127.0.0.1:5173';
       headers['content-type'] = 'application/json';
       if (action) headers['x-levuvo-action'] = action;
     }
@@ -705,6 +718,8 @@ export async function createMailServer({
   const timers = [];
   return {
     api,
+    /** The one way into the API from inside the process (desktop shell, tests). */
+    internalRequest,
     accountManager,
     watchers,
     settings,
