@@ -8,7 +8,7 @@ import { publicAccounts, accountScopedRequestKey } from './accounts.mjs';
 import { validFolder, validUid, validAttachmentIndex, downloadHeaders, attachmentBytes } from './message-utils.mjs';
 import { loadParsedMessage } from './message-service.mjs';
 import { attachmentTexts } from './attachment-text.mjs';
-import { validateSendPayload, publicSendStatus, findSentFolder } from './send-utils.mjs';
+import { AI_ASSISTED_HEADER, validateSendPayload, publicSendStatus, findSentFolder } from './send-utils.mjs';
 import { composeRawEmail, submitEmail, appendToSent } from './send-service.mjs';
 import {
   validateActionInput,
@@ -150,8 +150,14 @@ export function registerMailRoutes(ctx) {
   }
 
   /** Builds the final MIME (identity, HTML, optional PGP/S/MIME). */
-  async function buildOutgoing(account, input, { keepBcc = false, headers = {} } = {}) {
+  async function buildOutgoing(account, input, { keepBcc = false, headers: extra = {} } = {}) {
     const from = ctx.fromFor(account, input.from);
+    // AI Act Art. 50(2): text written by the assistant or an agent is marked machine-readably,
+    // unless the user switched it off (Settings → AI & agents).
+    const headers =
+      input.aiAssisted && ctx.settings?.get?.().markAiAssisted !== false
+        ? { ...extra, [AI_ASSISTED_HEADER]: input.aiAssisted }
+        : extra;
     const security = input.security || {};
     if (security.method === 'password') {
       // The real message travels encrypted inside an HTML file; the visible mail only explains it.
@@ -1013,6 +1019,7 @@ export function registerMailRoutes(ctx) {
       if (info.oneClick) {
         await oneClickUnsubscribe(info.http, ctx.unsubscribeOptions || {});
         diagnostics.record('unsubscribe', 'one-click');
+        void ctx.privacy?.add({ unsubscribeOneClick: 1 });
         return { done: true, method: 'one-click' };
       }
       if (info.mailto) {
@@ -1030,6 +1037,7 @@ export function registerMailRoutes(ctx) {
         const smtp = await ctx.smtpConfigFor(account);
         await submitEmail(smtp, input, raw, ctx.smtpFactory(smtp));
         diagnostics.record('unsubscribe', 'mail');
+        void ctx.privacy?.add({ unsubscribeMail: 1 });
         return { done: true, method: 'mail', to: info.mailto.to };
       }
       return { done: false, method: 'web', url: info.http };

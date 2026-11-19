@@ -359,11 +359,17 @@ async function boot() {
     env: process.env,
     packaged: app.isPackaged,
     // After a restore was staged: start again so the restored data is loaded from the beginning.
-    onRestartRequested: () => {
-      void shutdown().finally(() => {
-        app.relaunch();
-        app.quit();
-      });
+    // "Delete all data on this device": also clear the window's own storage (view preferences).
+    onRestartRequested: ({ clearBrowserData = false } = {}) => {
+      const clear = clearBrowserData
+        ? Promise.allSettled([session.defaultSession.clearStorageData(), session.defaultSession.clearCache()])
+        : Promise.resolve();
+      void clear
+        .then(() => shutdown())
+        .finally(() => {
+          app.relaunch();
+          app.quit();
+        });
     },
     logger: msg => console.log(`[Levuvo Mail] ${msg}`)
   });
@@ -527,6 +533,7 @@ async function boot() {
     dialog,
     getWindow: () => windowRef,
     beforeInstall: shutdown,
+    autoInstall: async () => (await localGet('/api/app-settings'))?.autoUpdates !== false,
     logger: msg => console.warn('[Levuvo Mail]', msg),
     t
   });

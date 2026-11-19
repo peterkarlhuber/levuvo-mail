@@ -10,6 +10,7 @@ import { isTrackingImage, remoteImageKey, trackerHost } from '../src/trackers.ts
 import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 import { detectWindowFrame } from '../src/window-frame.ts';
+import { COMPLIANCE_TEXTS, austrianSvnr, complianceIssues, luhn } from '../src/compliance-checks.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -1067,9 +1068,87 @@ test('Window frame: only the desktop app on macOS and Windows draws its own titl
   assert.equal(detectWindowFrame('Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0 Electron/45.3.1 Safari/537.36'), null);
 });
 
+test('Guardrails before sending: open circulars, sensitive data unencrypted, health data; all translated', () => {
+  const base = {
+    from: 'Peter <peter@firma.at>',
+    to: [],
+    cc: [],
+    bcc: [],
+    subject: 'Info',
+    text: 'Hallo',
+    encrypted: false
+  };
+  const many = n => Array.from({ length: n }, (_, i) => `p${i}@d${i % 4}.example`);
+  assert.deepEqual(complianceIssues({ ...base, to: many(9) }), []);
+  assert.deepEqual(
+    complianceIssues({ ...base, to: many(10) }).map(i => [i.kind, i.vars?.count]),
+    [['open-recipients', 10]]
+  );
+  assert.deepEqual(complianceIssues({ ...base, bcc: many(20) }), [], 'Bcc is fine');
+  // Ten colleagues and one firm: a meeting, not a circular.
+  const oneFirm = Array.from({ length: 12 }, (_, i) => `k${i}@kunde.at`);
+  assert.deepEqual(complianceIssues({ ...base, to: oneFirm }), []);
+  const internal = Array.from({ length: 12 }, (_, i) => `k${i}@firma.at`);
+  assert.deepEqual(complianceIssues({ ...base, to: internal }), []);
+
+  assert.ok(luhn('4111111111111111'));
+  assert.ok(!luhn('4111111111111112'));
+  assert.ok(austrianSvnr('1237010180'));
+  assert.ok(!austrianSvnr('1234010180'));
+  const ext = { ...base, to: ['kunde@kunde.at'] };
+  const card = complianceIssues({ ...ext, text: 'Karte 4111 1111 1111 1111 bitte belasten' });
+  assert.deepEqual(
+    card.map(i => [i.kind, i.items]),
+    [['sensitive-unencrypted', ['eine Kartennummer']]]
+  );
+  assert.deepEqual(complianceIssues({ ...ext, text: 'Meine SV-Nummer: 1237 010180' })[0].items, [
+    'eine Sozialversicherungsnummer'
+  ]);
+  assert.equal(complianceIssues({ ...ext, text: 'Passwort: Xk7!pq92' }).length, 1);
+  assert.deepEqual(complianceIssues({ ...ext, text: 'Passwort vergessen? Rechnung 2026-0001234567' }), []);
+  assert.deepEqual(
+    complianceIssues({ ...ext, text: 'Unsere IBAN AT61 1904 3002 3457 3201' }),
+    [],
+    'own IBAN is normal'
+  );
+  assert.deepEqual(
+    complianceIssues({ ...ext, text: 'Anbei der Befund von Frau M.' }).map(i => i.kind),
+    ['special-category']
+  );
+  assert.deepEqual(complianceIssues({ ...ext, text: 'Anbei der Befund', encrypted: true }), [], 'encrypted is fine');
+  assert.deepEqual(
+    complianceIssues({ ...base, to: ['kollegin@firma.at'], text: 'Krankmeldung, Passwort: abcd1234' }),
+    [],
+    'internal mail stays inside the organisation'
+  );
+
+  const en = loadDictionary(root);
+  for (const text of COMPLIANCE_TEXTS) assert.ok(en[text], `missing English: ${text}`);
+});
+
 test('Protect with password: the composer refuses the same weak passwords as the server', async () => {
   const { weakPassword } = await import('../src/password-rules.ts');
   const server = await import('../../server/src/protected-message.mjs');
   for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
     assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
+});
+
+test('Newsletter hub: the weekly overview reads the newest 20 newsletters of the last seven days', async () => {
+  const { weekOfNewsletters } = await import('../src/newsletter-week.ts');
+  const now = Date.parse('2026-11-19T12:00:00Z');
+  const mail = (uid, daysAgo, bundle = 'newsletter') => ({
+    uid,
+    bundle,
+    date: new Date(now - daysAgo * 86400_000).toISOString()
+  });
+  const list = [
+    mail(1, 8),
+    mail(2, 1),
+    mail(3, 0.5, 'invoice'),
+    ...Array.from({ length: 25 }, (_, i) => mail(10 + i, i / 10))
+  ];
+  const week = weekOfNewsletters(list, now);
+  assert.equal(week.length, 20);
+  assert.equal(week[0].uid, 10, 'newest first');
+  assert.ok(week.every(m => m.bundle === 'newsletter' && m.uid !== 1));
 });

@@ -1,0 +1,123 @@
+/* Privacy cockpit (Settings → Privacy) and newsletter hub. */
+.privacy-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+.privacy-tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+.privacy-tile strong {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text);
+  line-height: var(--leading-tight);
+}
+.privacy-tile span {
+  font-size: var(--text-sm);
+}
+.privacy-tile--out {
+  border-color: var(--warn);
+}
+.privacy-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-0-5);
+  height: 48px;
+  margin: var(--space-2) 0 var(--space-4);
+}
+.privacy-bars span {
+  flex: 1;
+  min-width: 2px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--ok);
+}
+.privacy-bars span.empty {
+  background: var(--border);
+}
+.privacy-cockpit h3 {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.privacy-table th,
+.privacy-table td {
+  text-align: left;
+  padding: var(--space-1-5) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.privacy-table thead th {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+.privacy-table tbody th {
+  font-weight: var(--weight-regular);
+}
+.privacy-table td.out {
+  color: var(--warn-text);
+  font-weight: var(--weight-semibold);
+}
+.privacy-recent {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+.privacy-out {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.privacy-out li {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.privacy-out li svg {
+  flex: none;
+  margin-top: var(--space-0-5);
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .privacy-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Newsletter hub (newsletter bundle): all senders, weekly overview. */
+.bundle-more {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+.newsletter-digest {
+  margin-top: var(--space-2);
+}
+.newsletter-digest-items {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: grid;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+}
+.newsletter-digest-items li {
+  display: grid;
+  gap: var(--space-0-5);
+}
+.newsletter-digest-items .text-button {
+  justify-self: start;
+  font-weight: var(--weight-semibold);
+}
