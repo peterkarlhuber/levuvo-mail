@@ -970,3 +970,67 @@ test('Mail reader: selection, open state, detail loading and j/k steps', async (
   assert.equal(step('down', { keyed: true, selectedKey: 'b:2' }), 3);
   assert.equal(stepSelection([], 'down', { keyed: false, selectedKey: null, selectedUid: null }), null);
 });
+
+test('Stale module chunk (app updated while open): one reload, then the error boundary', async () => {
+  const { CHUNK_RELOAD_KEY, isChunkLoadError, loadWithRecovery } = await import('../src/chunk-recovery.ts');
+  const store = new Map();
+  let reloads = 0;
+  let now = 1_000_000;
+  const env = {
+    read: k => store.get(k) ?? null,
+    write: (k, v) => store.set(k, v),
+    reload: () => reloads++,
+    now: () => now
+  };
+  const chromium = new TypeError('Failed to fetch dynamically imported module: http://127.0.0.1/assets/Tasks-old.js');
+  const safari = new TypeError('Importing a module script failed.');
+  const firefox = new TypeError('error loading dynamically imported module');
+  for (const e of [chromium, safari, firefox]) assert.equal(isChunkLoadError(e), true, e.message);
+  assert.equal(isChunkLoadError(new TypeError("Cannot read properties of undefined (reading 'filter')")), false);
+  assert.equal(isChunkLoadError(null), false);
+
+  assert.deepEqual(await loadWithRecovery(async () => ({ default: 1 }), env), { default: 1 });
+  assert.equal(reloads, 0);
+
+  // First failure: reload, and the promise stays pending (loading state, no error screen).
+  const pending = loadWithRecovery(() => Promise.reject(chromium), env);
+  const raced = await Promise.race([
+    pending.then(() => 'settled'),
+    new Promise(r => setTimeout(() => r('pending'), 20))
+  ]);
+  assert.equal(raced, 'pending');
+  assert.equal(reloads, 1);
+  assert.equal(store.get(CHUNK_RELOAD_KEY), String(now));
+
+  // Still failing right after the reload: no loop, the error goes to the boundary.
+  now += 5_000;
+  await assert.rejects(
+    loadWithRecovery(() => Promise.reject(chromium), env),
+    /dynamically imported/
+  );
+  assert.equal(reloads, 1);
+
+  // Later (a new update): reload again.
+  now += 120_000;
+  void loadWithRecovery(() => Promise.reject(safari), env);
+  await new Promise(r => setTimeout(r, 0));
+  assert.equal(reloads, 2);
+
+  // Other errors are never swallowed.
+  await assert.rejects(
+    loadWithRecovery(() => Promise.reject(new RangeError('x')), env),
+    RangeError
+  );
+  assert.equal(reloads, 2);
+});
+
+test('Tasks: an unreadable due or reminder value is shown as text instead of crashing the view', async () => {
+  const { formatTaskDate, reminderChoice } = await import('../src/tasks.ts');
+  assert.equal(formatTaskDate('de-AT', null), '');
+  assert.equal(formatTaskDate('de-AT', '2026-13-45'), '2026-13-45');
+  assert.equal(formatTaskDate('de-AT', 'not a date'), 'not a date');
+  assert.match(formatTaskDate('de-AT', '2026-11-19', { weekday: 'short' }), /19/);
+  assert.doesNotMatch(formatTaskDate('de-AT', '2026-11-19'), /:/, 'a date has no time');
+  assert.match(formatTaskDate('de-AT', '2026-11-19T15:30:00.000Z'), /\d{2}:\d{2}/);
+  assert.equal(reminderChoice('garbage', '2026-11-19'), 'custom');
+});

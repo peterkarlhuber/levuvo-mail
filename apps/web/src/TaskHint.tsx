@@ -5,7 +5,7 @@ import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { tasksChanged } from './TaskDialog';
 import { useTasks } from './task-reminders';
-import { dueState, tasksForMail } from './tasks';
+import { dueState, formatTaskDate, tasksForMail } from './tasks';
 import type { Detail } from './types';
 
 export function TaskHint({ accountId, detail }: { accountId: string; detail: Detail }) {
@@ -19,18 +19,7 @@ export function TaskHint({ accountId, detail }: { accountId: string; detail: Det
     messageId: detail.messageId || null
   });
   if (!linked.length) return null;
-  const when = (due: string) =>
-    /^\d{4}-\d{2}-\d{2}$/.test(due)
-      ? new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(
-          new Date(`${due}T12:00:00`)
-        )
-      : new Intl.DateTimeFormat(locale, {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit'
-        }).format(new Date(due));
+  const when = (due: string) => formatTaskDate(locale, due, { weekday: 'short' });
   return (
     <div className="task-hint" role="note">
       {linked.map(task => (

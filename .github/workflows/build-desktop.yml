@@ -107,6 +107,10 @@ jobs:
         run: node scripts/fetch-ollama.mjs --arch ${{ matrix.arch }}
       - name: Tests on the target platform (incl. native keychain module)
         run: npm test
+      - name: Desktop UI on the target platform (every module opens, error boundaries, stale chunk)
+        run: |
+          npm run build
+          npm run test:desktop-ui
       - name: Unsigned test installer
         if: ${{ !inputs.signed }}
         run: npm run ${{ matrix.unsigned }}

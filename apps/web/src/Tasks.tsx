@@ -30,6 +30,7 @@ import { TaskListsNav, useTaskLinks } from './TaskLists';
 import {
   dueState,
   filterView,
+  formatTaskDate,
   inList,
   localDate,
   viewCounts,
@@ -133,18 +134,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
     }
   }
   function dueLabel(task: Task) {
-    if (!task.due) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(task.due))
-      return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(
-        new Date(`${task.due}T12:00:00`)
-      );
-    return new Intl.DateTimeFormat(locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(task.due));
+    return formatTaskDate(locale, task.due, { weekday: 'short' });
   }
   const repeatLabel: Record<string, string> = {
     'DAILY:1': t('Täglich'),
@@ -209,13 +199,7 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
             )}
             {task.remindAt && !task.done && (
               <span title={t('Erinnerung')}>
-                <AlarmClock size={11} />{' '}
-                {new Intl.DateTimeFormat(locale, {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }).format(new Date(task.remindAt))}
+                <AlarmClock size={11} /> {formatTaskDate(locale, task.remindAt)}
               </span>
             )}
             {task.source === 'ai' && (

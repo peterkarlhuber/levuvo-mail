@@ -17,7 +17,8 @@ export type Prefs = {
   composeMode: 'html' | 'text';
 };
 
-const KEY = 'levuvo-mail-prefs-v2';
+export const PREFS_KEY = 'levuvo-mail-prefs-v2';
+const KEY = PREFS_KEY;
 export const DEFAULT_PREFS: Prefs = {
   density: 'comfortable',
   theme: 'system',

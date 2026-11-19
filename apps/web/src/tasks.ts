@@ -101,6 +101,28 @@ export function dueState(task: Pick<Task, 'due' | 'done'>, now = new Date()) {
   const week = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
   return day <= localDate(week) ? 'soon' : 'later';
 }
+/**
+ * Due or reminder value for display: a date (YYYY-MM-DD, shown as that calendar day) or an
+ * instant (shown with its local time). An unreadable value is shown as it is instead of
+ * throwing (Intl throws a RangeError for an invalid date, which would take the view down).
+ */
+export function formatTaskDate(
+  locale: string,
+  value: string | null | undefined,
+  options: Intl.DateTimeFormatOptions & { withTime?: boolean } = {}
+) {
+  if (!value) return '';
+  const { withTime, ...rest } = options;
+  const dated = DATE.test(value);
+  const at = new Date(dated ? `${value}T12:00:00` : value);
+  if (!Number.isFinite(at.getTime())) return String(value).slice(0, 40);
+  const time: Intl.DateTimeFormatOptions = !dated && withTime !== false ? { hour: '2-digit', minute: '2-digit' } : {};
+  try {
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', ...rest, ...time }).format(at);
+  } catch {
+    return String(value).slice(0, 40);
+  }
+}
 /** Quick due choices: today, tomorrow, next Monday, in a week. */
 export function duePresets(now = new Date()) {
   const at = (n: number) => localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + n));
@@ -134,6 +156,7 @@ export function reminderFor(choice: ReminderChoice, due: string | null, custom =
 /** Which choice describes a stored reminder (for editing). */
 export function reminderChoice(remindAt: string | null, due: string | null): ReminderChoice {
   if (!remindAt) return 'none';
+  if (!Number.isFinite(Date.parse(remindAt))) return 'custom';
   for (const c of ['atDue', 'before15', 'before60', 'morning', 'dayBefore'] as const)
     if (reminderFor(c, due) === new Date(remindAt).toISOString()) return c;
   return 'custom';

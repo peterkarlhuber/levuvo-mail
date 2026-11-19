@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
   CircleHelp,
@@ -25,16 +25,18 @@ import { useT } from './i18n';
 import { accountMarkerKey, detectArrivals, type NotificationCursor } from './notification-tracker';
 import { useDocumentPrefs, usePrefs } from './prefs';
 import { useTaskBadge } from './task-reminders';
+import { lazyModule, ModuleBoundary } from './ModuleBoundary';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
-const CalendarModule = lazy(() => import('./Calendar'));
-const ContactsModule = lazy(() => import('./Contacts'));
-const TasksModule = lazy(() => import('./Tasks'));
-const SettingsModule = lazy(() => import('./Settings'));
-const RestoreOnWelcome = lazy(() =>
+// Lazy modules reload the page once when their chunk is gone (app updated while it ran).
+const CalendarModule = lazyModule(() => import('./Calendar'));
+const ContactsModule = lazyModule(() => import('./Contacts'));
+const TasksModule = lazyModule(() => import('./Tasks'));
+const SettingsModule = lazyModule(() => import('./Settings'));
+const RestoreOnWelcome = lazyModule(() =>
   import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
 );
-const SpacesModule = lazy(() => import('./Spaces'));
+const SpacesModule = lazyModule(() => import('./Spaces'));
 
 type NotificationState = NotificationPermission | 'unsupported';
 export type Module = 'mail' | 'calendar' | 'contacts' | 'spaces' | 'tasks' | 'settings';
@@ -669,69 +671,81 @@ function Shell() {
       </nav>
       <div className="module-host">
         <div className="module" hidden={module !== 'mail'}>
-          <MailInstance
-            key={`${active.id}:${active.openUid ?? ''}:${active.openFolder ?? ''}`}
-            accountId={active.id}
-            accounts={accounts}
-            visible={module === 'mail'}
-            inboxSnapshot={snapshots[active.id]}
-            onLocalChange={() => pollNow.current()}
-            pollState={pollState}
-            initialOpen={active.openUid !== null ? { uid: active.openUid, folder: active.openFolder || null } : null}
-            pendingCompose={pendingCompose?.accountId === active.id ? pendingCompose : null}
-            onPendingComposeTaken={() => setPendingCompose(null)}
-            onSelectAccount={(id, open) =>
-              setActive({ id, openUid: open?.uid ?? null, openFolder: open?.folder || undefined })
-            }
-            onSubmitCompose={submitCompose}
-            onOpenSettings={openSettings}
-          />
+          <ModuleBoundary name="mail">
+            <MailInstance
+              key={`${active.id}:${active.openUid ?? ''}:${active.openFolder ?? ''}`}
+              accountId={active.id}
+              accounts={accounts}
+              visible={module === 'mail'}
+              inboxSnapshot={snapshots[active.id]}
+              onLocalChange={() => pollNow.current()}
+              pollState={pollState}
+              initialOpen={active.openUid !== null ? { uid: active.openUid, folder: active.openFolder || null } : null}
+              pendingCompose={pendingCompose?.accountId === active.id ? pendingCompose : null}
+              onPendingComposeTaken={() => setPendingCompose(null)}
+              onSelectAccount={(id, open) =>
+                setActive({ id, openUid: open?.uid ?? null, openFolder: open?.folder || undefined })
+              }
+              onSubmitCompose={submitCompose}
+              onOpenSettings={openSettings}
+            />
+          </ModuleBoundary>
         </div>
         {module === 'calendar' && (
-          <Suspense fallback={fallback}>
-            <CalendarModule accounts={accounts} onOpenSettings={() => openSettings('dav')} />
-          </Suspense>
+          <ModuleBoundary name="calendar">
+            <Suspense fallback={fallback}>
+              <CalendarModule accounts={accounts} onOpenSettings={() => openSettings('dav')} />
+            </Suspense>
+          </ModuleBoundary>
         )}
         {module === 'contacts' && (
-          <Suspense fallback={fallback}>
-            <ContactsModule
-              onCompose={to => {
-                composeTo(to);
-              }}
-              onOpenSettings={() => openSettings('dav')}
-            />
-          </Suspense>
+          <ModuleBoundary name="contacts">
+            <Suspense fallback={fallback}>
+              <ContactsModule
+                onCompose={to => {
+                  composeTo(to);
+                }}
+                onOpenSettings={() => openSettings('dav')}
+              />
+            </Suspense>
+          </ModuleBoundary>
         )}
         {module === 'spaces' && (
-          <Suspense fallback={fallback}>
-            <SpacesModule accounts={accounts} />
-          </Suspense>
+          <ModuleBoundary name="spaces">
+            <Suspense fallback={fallback}>
+              <SpacesModule accounts={accounts} />
+            </Suspense>
+          </ModuleBoundary>
         )}
         {module === 'tasks' && (
-          <Suspense fallback={fallback}>
-            <TasksModule
-              onOpenMail={mail => {
-                setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
-                setModule('mail');
-              }}
-            />
-          </Suspense>
+          <ModuleBoundary name="tasks">
+            <Suspense fallback={fallback}>
+              <TasksModule
+                onOpenMail={mail => {
+                  setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                  setModule('mail');
+                }}
+              />
+            </Suspense>
+          </ModuleBoundary>
         )}
         {module === 'settings' && (
-          <Suspense fallback={fallback}>
-            <SettingsModule
-              tab={settingsTab}
-              onTab={setSettingsTab}
-              runtime={runtime}
-              accounts={accounts}
-              pollState={pollState}
-              notificationState={notify}
-              onRequestNotifications={() => void requestNotifications()}
-              onAccountsChanged={reloadAccounts}
-              onCheckNow={() => pollNow.current()}
-              onClose={() => setModule('mail')}
-            />
-          </Suspense>
+          <ModuleBoundary name="settings">
+            <Suspense fallback={fallback}>
+              <SettingsModule
+                tab={settingsTab}
+                onTab={setSettingsTab}
+                runtime={runtime}
+                accounts={accounts}
+                pollState={pollState}
+                notificationState={notify}
+                onRequestNotifications={() => void requestNotifications()}
+                onAccountsChanged={reloadAccounts}
+                onCheckNow={() => pollNow.current()}
+                onClose={() => setModule('mail')}
+              />
+            </Suspense>
+          </ModuleBoundary>
         )}
       </div>
       <AssistantPanel
