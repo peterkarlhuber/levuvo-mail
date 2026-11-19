@@ -25,5 +25,16 @@ export const CHAT_EN: Record<string, string> = {
   'Dieser Raum ist nicht mehr aktiv.': 'This space is no longer active.',
   '{n} ungelesene Chat-Nachrichten': '{n} unread chat messages',
   'ungelesene Nachrichten': 'unread messages',
-  'Nachricht im Chat senden': 'Send a chat message'
+  'Nachricht im Chat senden': 'Send a chat message',
+  'Nur diese': 'Only this one',
+  'Für diesen Raum bis auf Widerruf': 'For this space until revoked',
+  'Für diesen Raum bis auf Widerruf freigeben: {title}': 'Approve for this space until revoked: {title}',
+  'Der Assistent darf in diesem Raum ab jetzt ohne Rückfrage im Chat schreiben. Zurücknehmen in den Einstellungen des Raums.':
+    'From now on the assistant may write in the chat of this space without asking. Revoke it in the space settings.',
+  'Assistent im Chat': 'Assistant in the chat',
+  'Erlaubt bis auf Widerruf.': 'Allowed until revoked.',
+  'Zurückgenommen.': 'Revoked.',
+  'Der Assistent darf in diesem Raum ohne Rückfrage im Chat schreiben (bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten). Seine Nachrichten sind für alle als „KI-erstellt“ markiert.':
+    'The assistant may write in the chat of this space without asking (until revoked, on this device only, at most 10 messages in 10 minutes). Its messages are marked “AI-generated” for everyone.',
+  'Erlaubt seit {date}': 'Allowed since {date}'
 };

@@ -363,7 +363,7 @@ export function buildTools(ctx) {
         },
         ['to', 'subject', 'body']
       ),
-      run: async a => {
+      run: async (a, agent) => {
         const to = emails(a.to);
         if (!to.length) throw toolError('At least one recipient is required.');
         return {
@@ -372,7 +372,9 @@ export function buildTools(ctx) {
           cc: emails(a.cc),
           subject: str(a.subject, 300).replace(/[\r\n]/g, ' '),
           text: str(a.body, 50000),
-          inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined
+          inReplyTo: /^<[^<>\s]+>$/.test(str(a.inReplyTo, 254)) ? a.inReplyTo : undefined,
+          // AI Act Art. 50(2): the sent mail says machine-readably that an agent wrote it.
+          aiAssisted: `agent; ${String(agent?.name || 'unknown')}`.replace(/[^\x20-\x7e]/g, '').slice(0, 150)
         };
       }
     },
@@ -680,7 +682,8 @@ const BUILTIN_APPROVALS = {
         subject: p.subject,
         text: p.text,
         inReplyTo: p.inReplyTo,
-        references: p.inReplyTo
+        references: p.inReplyTo,
+        ...(p.aiAssisted ? { aiAssisted: p.aiAssisted } : {})
       })
   },
   event: {
@@ -774,11 +777,12 @@ export function createToolRegistry({ call = null } = {}) {
         tools.set(d.name, { ...d, readOnly: Boolean(d.readOnly) && !d.approval });
       }
     },
-    registerApproval(type, { summary, execute }) {
+    registerApproval(type, { summary, execute, auto = null }) {
       if (!TOOL_NAME.test(type) || approvalTypes.has(type)) throw new TypeError(`invalid approval type ${type}`);
       if (typeof summary !== 'function' || typeof execute !== 'function')
         throw new TypeError(`approval ${type}: summary and execute are required`);
-      approvalTypes.set(type, { summary, execute });
+      // `auto(payload, agent)`: true when the user granted this kind of change in advance.
+      approvalTypes.set(type, { summary, execute, auto: typeof auto === 'function' ? auto : null });
     },
     list: () => [...tools.values()],
     approval: type => approvalTypes.get(type) || null
@@ -825,11 +829,13 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
     try {
       const result = await currentAgent.run(agent, () => tool.run(args && typeof args === 'object' ? args : {}, agent));
       if (tool.approval) {
-        const direct = tool.approval === 'send' && agent.autoSend;
+        const granted = registry.approval(tool.approval)?.auto;
+        const direct = (tool.approval === 'send' && agent.autoSend) || (granted ? await granted(result, agent) : false);
         if (direct) {
-          const out = await ctx.executeApproved('send', result);
+          const out = await ctx.executeApproved(tool.approval, result);
           void log.add({ type: 'tool', agent: agent.name, tool: name, ok: true, direct: true });
-          return { content: [{ type: 'text', text: JSON.stringify({ status: 'sent', ...out }) }] };
+          const status = tool.approval === 'send' ? 'sent' : 'done';
+          return { content: [{ type: 'text', text: JSON.stringify({ status, ...out }) }] };
         }
         const item = await approvals.add({
           agent,

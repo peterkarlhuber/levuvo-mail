@@ -15,6 +15,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, 
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { detectArchitectures } from './verify-app-arch.mjs';
+import { licenseProblems, parsePythonNotices } from './check-licenses.mjs';
 
 export const PYTHON_VERSION = '3.13.18';
 const root = resolve(import.meta.dirname, '..');
@@ -169,6 +170,9 @@ async function main() {
     const smoke = smokeTest(python, out);
     const notices = spawnSync(python, ['-I', '-c', NOTICES], { encoding: 'utf8' });
     if (notices.status !== 0) throw new Error(notices.stderr);
+    // Licence policy (docs/compliance/LICENSING.md) for every Python package that ships.
+    const licenseIssues = licenseProblems(parsePythonNotices(notices.stdout));
+    if (licenseIssues.length) throw new Error(`licence policy:\n${licenseIssues.join('\n')}`);
     writeFileSync(
       join(out, 'THIRD-PARTY-PYTHON.txt'),
       `Components of the bundled AI runtime (resources/ai-runtime) and their licenses.\n` +

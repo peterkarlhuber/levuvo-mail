@@ -4,10 +4,12 @@
 // --titlebar-h-mac, --titlebar-h-win and --window-controls-w (apps/web/src/styles/tokens.css).
 // Linux keeps the normal system frame.
 
-export const MAC_TITLEBAR_HEIGHT = 28;
+export const MAC_TITLEBAR_HEIGHT = 40;
 export const WIN_TITLEBAR_HEIGHT = 32;
-// Centred in the 72 px rail, in the middle of the 28 px strip.
-export const MAC_TRAFFIC_LIGHTS = { x: 10, y: 8 };
+// macOS look: the 12 px buttons sit 16 px from the left edge and vertically centred in the 40 px
+// strip (14 + 6 = 20). The strip has no rail border (styles/window-frame.css), so the buttons do not
+// crowd a line on their right.
+export const MAC_TRAFFIC_LIGHTS = { x: 16, y: 14 };
 
 const THEME = {
   dark: { color: '#0b0b0b', symbolColor: '#f2f2f2' },

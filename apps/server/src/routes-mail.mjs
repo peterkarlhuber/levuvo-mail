@@ -7,7 +7,8 @@ import { folderName, cleanLimit, cleanBeforeUid } from './config.mjs';
 import { publicAccounts, accountScopedRequestKey } from './accounts.mjs';
 import { validFolder, validUid, validAttachmentIndex, downloadHeaders, attachmentBytes } from './message-utils.mjs';
 import { loadParsedMessage } from './message-service.mjs';
-import { validateSendPayload, publicSendStatus, findSentFolder } from './send-utils.mjs';
+import { attachmentTexts } from './attachment-text.mjs';
+import { AI_ASSISTED_HEADER, validateSendPayload, publicSendStatus, findSentFolder } from './send-utils.mjs';
 import { composeRawEmail, submitEmail, appendToSent } from './send-service.mjs';
 import {
   validateActionInput,
@@ -149,8 +150,14 @@ export function registerMailRoutes(ctx) {
   }
 
   /** Builds the final MIME (identity, HTML, optional PGP/S/MIME). */
-  async function buildOutgoing(account, input, { keepBcc = false, headers = {} } = {}) {
+  async function buildOutgoing(account, input, { keepBcc = false, headers: extra = {} } = {}) {
     const from = ctx.fromFor(account, input.from);
+    // AI Act Art. 50(2): text written by the assistant or an agent is marked machine-readably,
+    // unless the user switched it off (Settings → AI & agents).
+    const headers =
+      input.aiAssisted && ctx.settings?.get?.().markAiAssisted !== false
+        ? { ...extra, [AI_ASSISTED_HEADER]: input.aiAssisted }
+        : extra;
     const security = input.security || {};
     if (security.method === 'password') {
       // The real message travels encrypted inside an HTML file; the visible mail only explains it.
@@ -489,6 +496,22 @@ export function registerMailRoutes(ctx) {
   api.get('/api/messages/:uid/attachments/:index', (request, reply) =>
     attachment(request, reply, request.query?.inline === '1')
   );
+  // Readable text of the attachments (PDF, plain text, CSV, HTML), for "Ask your mailbox". Like a
+  // download of the attachment, but limited in size and time; the text is never stored.
+  api.get('/api/messages/:uid/attachment-text', async (request, reply) => {
+    const folder = typeof request.query?.folder === 'string' ? request.query.folder : 'INBOX';
+    if (!validFolder(folder) || !validUid(request.params.uid))
+      return reply.code(400).send({ error: 'Ungültiger Ordner oder Nachrichten-ID.' });
+    try {
+      return await withImap(async client => {
+        const loaded = await loadParsedMessage(client, folder, Number(request.params.uid), { crypto: cryptoFor() });
+        if (!loaded) return reply.code(404).send({ error: 'Nachricht nicht gefunden.' });
+        return { files: await attachmentTexts(loaded.detail, loaded.parsed) };
+      }, request.mailAccount);
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
   // Attachment overview: all files of a folder, optionally only those exchanged with one contact.
   api.get('/api/attachments', async (request, reply) => {
     const folder = typeof request.query?.folder === 'string' ? request.query.folder : 'INBOX';
@@ -996,6 +1019,7 @@ export function registerMailRoutes(ctx) {
       if (info.oneClick) {
         await oneClickUnsubscribe(info.http, ctx.unsubscribeOptions || {});
         diagnostics.record('unsubscribe', 'one-click');
+        void ctx.privacy?.add({ unsubscribeOneClick: 1 });
         return { done: true, method: 'one-click' };
       }
       if (info.mailto) {
@@ -1013,6 +1037,7 @@ export function registerMailRoutes(ctx) {
         const smtp = await ctx.smtpConfigFor(account);
         await submitEmail(smtp, input, raw, ctx.smtpFactory(smtp));
         diagnostics.record('unsubscribe', 'mail');
+        void ctx.privacy?.add({ unsubscribeMail: 1 });
         return { done: true, method: 'mail', to: info.mailto.to };
       }
       return { done: false, method: 'web', url: info.http };
