@@ -12,7 +12,9 @@
 | Konten | Konten hinzufügen und entfernen, Signaturen, weitere Absenderadressen |
 | Vorlagen | Textbausteine für wiederkehrende Mails |
 | Filter & Abwesenheit | Regeln auf dem Mailserver und Abwesenheitsnotiz |
+| Automatisierungen | Regeln, die Levuvo Mail auf neue Mails anwendet, auch mit Aufgaben |
 | Kalender & Kontakte | Kalender anderer Anbieter verbinden, Farben, Import und Export |
+| Buchungslinks | Links, über die andere einen Termin bei dir buchen |
 | Sicherheit | Schlüssel und Zertifikate für verschlüsselte Mails |
 | Suche & Offline | Stand der letzten Prüfung, aktualisieren, neu aufbauen, Index für die Suche nach Bedeutung |
 | KI & Agenten | Assistent, Sprachmodelle, Cloud-Einwilligung, Agenten |
@@ -27,6 +29,12 @@
 Unter **Einstellungen → Konten** klickst du auf ein Konto, um es zu bearbeiten. Dort legst du eine **Signatur** an, auch mit Links und kleinem Logo. Unter **Weitere Absenderadressen (Aliase)** trägst du zusätzliche Adressen ein, etwa office@ und rechnung@, jeweils mit eigener Signatur. Trag nur Adressen ein, mit denen dein Mailserver dich senden lässt.
 
 ![Konten und Signaturen](settings-accounts.png)
+
+### Automatisierungen
+
+Unter **Einstellungen → Automatisierungen** legst du mit **Neue Automatisierung** Regeln für neue Mails im Posteingang an: zum Beispiel Mails eines Absenders in einen Ordner verschieben, als gelesen markieren, mit Stern markieren oder eine **Aufgabe anlegen**. Ist der Assistent eingeschaltet, beschreibst du die Regel **in einfachen Worten** und wählst **Regel vorschlagen**. Die lokale KI füllt dann den Editor, und der Vorschlag ist als KI-Vorschlag gekennzeichnet. Prüfe ihn, denn die KI kann sich irren.
+
+Unter **So läuft die Regel** steht die Regel in Worten. Mit **Probelauf** siehst du, welche der 50 neuesten Mails sie behandeln würde, ohne dass sich etwas ändert. Eine Regel läuft erst, wenn du sie einschaltest, und nur für Mails, die danach ankommen. Sie löscht nie, antwortet nie und verschiebt nie in den Papierkorb. Im **Protokoll** siehst du, was die Regeln getan haben.
 
 ## So schützt Levuvo Mail deine Daten
 

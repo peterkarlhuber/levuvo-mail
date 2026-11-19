@@ -719,8 +719,66 @@ export function createCloudService({
     return { account, cal };
   }
 
+  /**
+   * Busy times of other people (colleagues in the same Microsoft 365 / Google Workspace
+   * organisation, or anyone who shares free/busy). Only start and end are asked for, never
+   * titles. Returns `{ [email]: { busy: [[startMs, endMs]], source } }` for the addresses the
+   * provider knows; the others are left out.
+   */
+  async function freeBusyOf(account, emails, from, to) {
+    const call = caller(account);
+    const out = {};
+    if (account.oauthProvider === 'microsoft') {
+      const r = await call('POST', '/me/calendar/getSchedule', {
+        schedules: emails,
+        startTime: { dateTime: new Date(from).toISOString().slice(0, 19), timeZone: 'UTC' },
+        endTime: { dateTime: new Date(to).toISOString().slice(0, 19), timeZone: 'UTC' },
+        availabilityViewInterval: 15
+      });
+      for (const s of r.value || []) {
+        const email = String(s.scheduleId || '').toLowerCase();
+        if (!emails.includes(email) || s.error) continue;
+        out[email] = {
+          source: 'microsoft',
+          busy: (s.scheduleItems || [])
+            .filter(i => ['busy', 'tentative', 'oof', 'workingElsewhere'].includes(i.status))
+            .map(i => [Date.parse(utcIso(i.start?.dateTime)), Date.parse(utcIso(i.end?.dateTime))])
+        };
+      }
+      return out;
+    }
+    const r = await call('POST', `${endpoints.googleCalendar}/freeBusy`, {
+      timeMin: new Date(from).toISOString(),
+      timeMax: new Date(to).toISOString(),
+      items: emails.map(id => ({ id }))
+    });
+    for (const [key, value] of Object.entries(r.calendars || {})) {
+      const email = key.toLowerCase();
+      if (!emails.includes(email) || value?.errors?.length) continue;
+      out[email] = {
+        source: 'google',
+        busy: (value.busy || []).map(b => [Date.parse(b.start), Date.parse(b.end)])
+      };
+    }
+    return out;
+  }
+
   return {
     accounts: () => cloudAccounts().map(a => ({ id: a.id, label: a.label, provider: a.oauthProvider })),
+    async freeBusy(emails, from, to) {
+      const found = {};
+      const errors = [];
+      for (const account of cloudAccounts()) {
+        const open = emails.filter(e => !found[e]);
+        if (!open.length) break;
+        try {
+          Object.assign(found, await freeBusyOf(account, open.slice(0, 20), from, to));
+        } catch (err) {
+          errors.push(errInfo(account, err));
+        }
+      }
+      return { people: found, errors };
+    },
     reset(accountId) {
       calendarCache.delete(accountId);
     },

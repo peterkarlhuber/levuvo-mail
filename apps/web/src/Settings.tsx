@@ -21,7 +21,9 @@ import {
   SlidersHorizontal,
   Sun,
   Trash2,
-  X
+  Workflow,
+  X,
+  CalendarClock
 } from 'lucide-react';
 import AccountSettings from './AccountSettings';
 import { download, getJson, postJson } from './api';
@@ -32,6 +34,8 @@ import { usePrefs } from './prefs';
 import { ShortcutsDialog } from './Panels';
 import { ManualView } from './ManualView';
 import { FiltersSettings } from './SettingsFilters';
+import { AutomationSettings } from './SettingsAutomations';
+import { BookingSettings } from './SettingsBooking';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
@@ -751,7 +755,9 @@ export default function Settings(props: Props) {
     { id: 'accounts', label: t('Konten'), icon: Mail },
     { id: 'templates', label: t('Vorlagen'), icon: FileStack },
     { id: 'filters', label: t('Filter & Abwesenheit'), icon: Filter },
+    { id: 'automations', label: t('Automatisierungen'), icon: Workflow },
     { id: 'dav', label: t('Kalender & Kontakte'), icon: CalendarDays },
+    { id: 'booking', label: t('Buchungslinks'), icon: CalendarClock },
     { id: 'security', label: t('Sicherheit'), icon: KeyRound },
     { id: 'search', label: t('Suche & Offline'), icon: Search },
     { id: 'ai', label: t('KI & Agenten'), icon: Bot },
@@ -802,6 +808,8 @@ export default function Settings(props: Props) {
         )}
         {props.tab === 'templates' && <TemplateSettings />}
         {props.tab === 'filters' && <FiltersSettings accounts={props.accounts} />}
+        {props.tab === 'automations' && <AutomationSettings accounts={props.accounts} />}
+        {props.tab === 'booking' && <BookingSettings accounts={props.accounts} />}
         {props.tab === 'dav' && <DavSettings />}
         {props.tab === 'security' && <SecuritySettings />}
         {props.tab === 'search' && <SearchIndex />}

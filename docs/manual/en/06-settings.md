@@ -12,7 +12,9 @@ Open the settings with the slider icon at the bottom left or with `Alt` + `,`.
 | Accounts | Add and remove accounts, signatures, additional sender addresses |
 | Templates | Text snippets for recurring emails |
 | Filters & vacation | Rules on the mail server and vacation reply |
+| Automations | Rules Levuvo Mail applies to new email, also creating tasks |
 | Calendar & contacts | Connect other providers' calendars, colours, import and export |
+| Booking links | Links others use to book a meeting with you |
 | Security | Keys and certificates for encrypted email |
 | Search & offline | Time of the last check, update, rebuild, index for search by meaning |
 | AI & agents | Assistant, language models, cloud consent, agents |
@@ -27,6 +29,12 @@ Open the settings with the slider icon at the bottom left or with `Alt` + `,`.
 Under **Settings → Accounts**, click an account to edit it. There you create a **Signature**, also with links and a small logo. Under **Additional sender addresses (aliases)** you add more addresses, such as office@ and invoices@, each with its own signature. Only add addresses your mail server lets you send from.
 
 ![Accounts and signatures](settings-accounts.png)
+
+### Automations
+
+Under **Settings → Automations**, **New automation** creates rules for new email in the inbox: for example move a sender's emails to a folder, mark them as read, star them or **create a task**. With the assistant on, you **describe the rule in plain words** and choose **Suggest rule**. The local AI then fills in the editor, and the proposal is marked as an AI proposal. Check it, because the AI can be wrong.
+
+**How the rule runs** shows the rule in words. **Dry run** shows which of the 50 newest emails it would handle, without changing anything. A rule only runs once you switch it on, and only for email that arrives afterwards. It never deletes, never replies and never moves to the trash. The **Log** shows what the rules did.
 
 ## How Levuvo Mail protects your data
 
