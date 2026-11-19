@@ -5,7 +5,7 @@ Releases are created **exclusively in GitHub Actions** from a verified commit on
 ## Procedure
 
 1. Feature branch → pull request → CI (`CI` workflow) must be green → merge into `master`.
-2. Release PR: bump `version` in `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`), add `## X.Y.Z` to `CHANGELOG.md`, merge.
+2. Release PR: bump `version` in `package.json` and `package-lock.json` (`npm version X.Y.Z --no-git-tag-version`), add `## X.Y.Z` to `CHANGELOG.md` (rename `## Unreleased` to `## X.Y.Z – <date>` so these entries reach the release notes), merge.
 3. Start the release – one of two variants:
    - **Tag:** `git tag vX.Y.Z <commit-on-master> && git push origin vX.Y.Z` (the tag must match `package.json` exactly).
    - **Manual:** Actions → _Release_ → _Run workflow_ (branch `master`; option `signed` only with certificates).

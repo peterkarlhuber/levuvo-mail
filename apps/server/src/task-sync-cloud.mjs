@@ -9,6 +9,7 @@
 // The task scopes (Tasks.ReadWrite, auth/tasks) are asked for separately from mail and calendar,
 // so accounts signed in before keep working; they get a one-time consent for tasks.
 import { stripTags } from './html-mail.mjs';
+import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 export const TASK_ENDPOINTS = {
   graph: 'https://graph.microsoft.com/v1.0',
@@ -64,7 +65,8 @@ export function zonedToUtc(local, timeZone) {
   return new Date(asUtc - offset).toISOString();
 }
 
-function caller(account, { token, fetchImpl, allowed }) {
+function caller(account, { token, fetchImpl: rawFetch, allowed }) {
+  const fetchImpl = withTimeout(rawFetch, TIMEOUTS.api);
   return async (method, url, body, extraHeaders = {}) => {
     if (!allowed(url)) throw fail('Der Anbieter verweist auf eine fremde Adresse.', 'task_sync_foreign_url');
     let res;

@@ -20,6 +20,24 @@ export function dateLabel(date: string | null, now = new Date()) {
   ).format(d);
 }
 
+/**
+ * A due date or all-day date. "YYYY-MM-DD" has no time and is read as a local day (new Date() would
+ * read it as UTC midnight and show "today" as a clock time or the day before west of UTC).
+ */
+export function dueDateLabel(date: string | null, now = new Date()) {
+  if (!date) return '–';
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const d = new Date(day ? `${date}T12:00:00` : date);
+  if (Number.isNaN(d.getTime())) return '–';
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat(LOCALE, {
+    day: '2-digit',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    ...(day ? {} : { hour: '2-digit', minute: '2-digit' })
+  }).format(d);
+}
+
 export function fullDateLabel(date: string | null) {
   if (!date) return '–';
   const d = new Date(date);

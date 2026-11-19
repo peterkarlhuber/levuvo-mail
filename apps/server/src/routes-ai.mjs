@@ -34,23 +34,37 @@ export function messageForAi(detail) {
   };
 }
 
+const AUTH_VALUES = /^(pass|fail|softfail|neutral|none|temperror|permerror|policy)$/;
+/**
+ * Facts from Levuvo's own checks, given to the model as trusted: only ratings and fixed codes.
+ * Everything the sender controls (link texts and targets, Reply-To, file names, domains) goes into
+ * the untrusted part with the message (securityDetails), never next to the instructions.
+ */
 export function securityFacts(detail) {
   const sec = detail.security || {};
-  const facts = { client_rating: sec.level || 'unknown' };
-  for (const [k, v] of Object.entries(sec.auth || {})) if (v) facts[k] = v;
-  for (const c of (sec.checks || []).slice(0, 12)) {
+  const facts = { client_rating: ['ok', 'info', 'warning', 'danger'].includes(sec.level) ? sec.level : 'unknown' };
+  for (const [k, v] of Object.entries(sec.auth || {}))
+    if (['spf', 'dkim', 'dmarc'].includes(k) && AUTH_VALUES.test(String(v))) facts[k] = v;
+  for (const c of (sec.checks || []).slice(0, 12))
+    if (/^[a-z_]{1,40}$/.test(String(c.code)) && ['ok', 'info', 'warning', 'danger'].includes(c.level))
+      facts[`check_${c.code}`] = c.level;
+  facts.attachments = (detail.attachments || []).length;
+  return facts;
+}
+/** The sender-controlled details of the checks, for the untrusted part of the prompt. */
+export function securityDetails(detail) {
+  const lines = [];
+  for (const c of (detail.security?.checks || []).slice(0, 12)) {
     const extra = ['shown', 'actual', 'replyTo', 'filename', 'domain']
       .map(k => c[k])
       .filter(Boolean)
+      .map(v => String(v).slice(0, 300))
       .join(' → ');
-    facts[`check_${c.code}`] = `${c.level}${extra ? `: ${extra}` : ''}`;
+    if (extra) lines.push(`${String(c.code).slice(0, 40)}: ${extra}`);
   }
-  facts.attachments =
-    (detail.attachments || [])
-      .map(a => a.filename)
-      .slice(0, 10)
-      .join(', ') || 'none';
-  return facts;
+  const files = (detail.attachments || []).map(a => String(a.filename || '').slice(0, 200)).slice(0, 10);
+  if (files.length) lines.push(`attachments: ${files.join(', ')}`);
+  return lines.join('\n');
 }
 
 export function registerAiRoutes(ctx) {
@@ -150,7 +164,10 @@ export function registerAiRoutes(ctx) {
       }
       case 'assess': {
         const [d] = await loadThread(accountId, body.refs);
-        return { lang, message: messageForAi(d), facts: securityFacts(d) };
+        const message = messageForAi(d);
+        const details = securityDetails(d);
+        if (details) message.text = `[Check details from the email]\n${details}\n\n${message.text}`;
+        return { lang, message, facts: securityFacts(d) };
       }
       case 'rewrite':
         return { lang, mode: clientText(input.mode, 20), text: clientText(input.text), profile: profile() };

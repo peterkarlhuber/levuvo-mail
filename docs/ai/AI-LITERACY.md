@@ -26,7 +26,10 @@ predicts plausible text. It does not "know" facts and can be wrong in a confiden
 
 ## Your responsibility
 
-- You decide. Nothing is sent, saved or moved without your click; check every draft and every approval.
+- You decide. In the reading pane and the composer nothing is sent, saved or moved without your click;
+  check every draft and every approval. An external agent you connect with the level "organize" can move,
+  archive, mark and snooze mails and create events without attendees, contacts and tasks **without**
+  asking; give that level only to agents you trust, and look at the AI log now and then.
 - Do not type passwords, codes or keys into the assistant.
 - Use cloud models only if your organization allows them, and never for accounts marked "No cloud AI".
 - Report anything unusual to [contact].

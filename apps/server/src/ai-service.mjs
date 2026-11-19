@@ -8,7 +8,8 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { SidecarError } from './ai-sidecar.mjs';
 
-export const CONSENT_VERSION = '2026-11-18';
+// Raised whenever the consent text changes: every cloud consent has to be given again.
+export const CONSENT_VERSION = '2026-11-19';
 export const AI_PROVIDERS = ['ollama', 'anthropic', 'openai'];
 export const CLOUD_PROVIDERS = ['anthropic', 'openai'];
 export const AI_FEATURES = [

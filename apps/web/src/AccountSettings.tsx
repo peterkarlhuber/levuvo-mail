@@ -435,7 +435,7 @@ export default function AccountSettings({
           '{user}: Das Passwort wird in den Schlüsselbund des Betriebssystems verschoben. Auf dem Mailserver ändert sich nichts.',
           { user: item.user }
         ),
-        confirmLabel: t('Übernehmen')
+        confirmLabel: t('In den Schlüsselbund verschieben')
       }))
     )
       return;

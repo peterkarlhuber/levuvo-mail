@@ -2,7 +2,7 @@
 
 | Workflow | Trigger | Contents |
 |---|---|---|
-| `ci.yml` | PR, push to `master` | Quality (syntax, lint, format, 201 tests, i18n, typecheck, build, license notices), security (audit, secret scan, workflow check), unsigned desktop builds, aggregate status `CI passed` |
+| `ci.yml` | PR, push to `master` | Quality (lockfile consistency, workflow policy, syntax, lint, format, all unit tests of server, UI and desktop configuration, i18n, typecheck, build, large-mailbox benchmark, accessibility test with axe-core in Chromium, license notices), security (audit, secret scan), AI sidecar (Python: ruff, pytest, bundled runtime build with hashed lock), unsigned desktop builds, aggregate status `CI passed` |
 | `build-desktop.yml` | called by CI/release, manual | Matrix macOS ARM64 (`macos-15`), Windows ARM64 (`windows-11-arm`), Windows x64 (`windows-2022`): tests on the target platform, installer, architecture check, app startup test, Credential Manager test (Windows), checksums, upload |
 | `release.yml` | tag `vX.Y.Z`, manual | version/tag check, quality, builds, assembly, draft release |
 | `codeql.yml` | PR, push, weekly | CodeQL JavaScript/TypeScript |
@@ -22,7 +22,7 @@ Helper scripts in `scripts/`: `verify-app-arch.mjs` (PE/Mach-O architecture), `s
 
 ## Open security findings
 
-See the section “Known and deliberately open” in `VALIDATION-REPORT.md` and the audit summary of the respective CI run (build tool dependencies of `electron-builder`, relevant only at build time).
+Known and deliberately open points are maintained in `SECURITY.md` (section “Known open items”), together with the audit summary of the respective CI run.
 
 ## CodeQL findings (import 2.2.0, 15 alerts)
 
