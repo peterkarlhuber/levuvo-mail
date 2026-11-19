@@ -30,6 +30,7 @@ Die Reiter oben wechselst du per Klick oder mit den Pfeiltasten.
 | Reiter | Wofür |
 |---|---|
 | Übersicht | Was zuletzt passiert ist |
+| Chat | Kurze Nachrichten an alle Mitglieder, Ende-zu-Ende-verschlüsselt. Antworten, eigene Nachrichten bearbeiten oder löschen; `Enter` sendet, `Shift` + `Enter` beginnt eine neue Zeile |
 | Notizen | Texte, die mehrere gleichzeitig bearbeiten |
 | Mails | E-Mails zum Thema mit internen Kommentaren |
 | Aufgaben | Aufgaben mit Zuständigen und Fälligkeit |
@@ -37,6 +38,8 @@ Die Reiter oben wechselst du per Klick oder mit den Pfeiltasten.
 | Dateien | Dateien mit früheren Versionen |
 | Mitglieder | Wer dabei ist und welche Rolle hat |
 | Einstellungen | Name und Beschreibung; erlauben, dass der Assistent und Cloud-KI den Raum sehen |
+
+Chat-Nachrichten kommen meist nach wenigen Sekunden an. Ungelesene zählt Levuvo Mail in der linken Leiste, in der Liste der Räume und am Reiter, nur auf diesem Gerät: Es gibt keine Lesebestätigungen.
 
 Eine Mail legst du in einen Raum, indem du sie öffnest, im Menü **…** auf **In Raum legen** klickst und den Raum auswählst.
 
