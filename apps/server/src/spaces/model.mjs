@@ -416,7 +416,15 @@ const summarize = (state, op) => {
 /** Applies one verified operation. Returns false when the author was not allowed to do it. */
 export function applyOp(state, op, docs) {
   const { author, type } = op;
-  const d = op.data;
+  // Ops of a newer format, unknown types and invalid data are kept for others but never applied.
+  let d;
+  try {
+    if (op.v !== 1) throw bad('unsupported version');
+    d = validateOpData(type, op.data);
+  } catch {
+    state.ignored++;
+    return false;
+  }
   if (!can(state, author, type, d)) {
     state.ignored++;
     return false;

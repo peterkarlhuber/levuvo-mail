@@ -283,6 +283,7 @@ test('Spaces: fold is deterministic whatever the arrival order', () => {
   doc1.getXmlFragment('default');
   const ops = [
     {
+      v: 1,
       id: `${a.id}:1`,
       author: a.id,
       seq: 1,
@@ -292,6 +293,7 @@ test('Spaces: fold is deterministic whatever the arrival order', () => {
       data: { name: 'X', description: '', owner: card }
     },
     {
+      v: 1,
       id: `${a.id}:2`,
       author: a.id,
       seq: 2,
@@ -301,6 +303,7 @@ test('Spaces: fold is deterministic whatever the arrival order', () => {
       data: { id: 'b'.repeat(32), title: 'T1' }
     },
     {
+      v: 1,
       id: `${a.id}:3`,
       author: a.id,
       seq: 3,

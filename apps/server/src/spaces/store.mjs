@@ -130,6 +130,10 @@ export async function openSpaceStore({ dir, vault }) {
       const snapshot = encode(index, 'spaces.index');
       return queued('index', () => atomicWrite(path.join(dir, 'index.lvs'), snapshot));
     },
+    /** Read-modify-write on the index as it is now (never on an older copy someone kept). */
+    async updateIndex(fn) {
+      return this.saveIndex(fn(index) || index);
+    },
     async putChunk(blob, n, data) {
       await atomicWrite(blobName(blob, n), data);
     },

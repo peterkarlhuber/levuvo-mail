@@ -136,6 +136,13 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
           </div>
         </div>
         {error && <p className="banner error">{error}</p>}
+        {list?.updateNeeded && (
+          <p className="banner warn" role="status">
+            {t(
+              'Ein Mitglied nutzt eine neuere Levuvo-Version. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.'
+            )}
+          </p>
+        )}
         {list?.invitations.map(inv => (
           <InvitationCard
             key={inv.id}
