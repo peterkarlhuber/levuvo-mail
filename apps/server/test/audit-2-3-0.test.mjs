@@ -530,9 +530,13 @@ test('DATA-03: two devices that are not the owner never both send (takeover lock
 test('DATA-01: a sync that fails while fetching never marks the folder complete', async t => {
   const { createLocalIndex } = await import('../src/local-index.mjs');
   const { syntheticMailbox } = await import('./helpers/synthetic-mailbox.mjs');
-  const dir = tmp(t);
+  // The database is closed before its folder is removed (Windows keeps open files locked).
+  const dir = mkdtempSync(join(tmpdir(), 'lv-audit23-'));
   const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 3) });
-  t.after(() => index.close());
+  t.after(() => {
+    index.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
   const client = syntheticMailbox(300, { textChars: 50 });
   const folders = [{ path: 'INBOX', flags: new Set() }];
   const fetch = client.fetch.bind(client);
