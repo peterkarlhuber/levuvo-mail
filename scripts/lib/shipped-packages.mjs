@@ -15,8 +15,16 @@ export const BUNDLED = [
   '@tiptap/starter-kit',
   '@tiptap/pm',
   '@tiptap/extension-image',
-  '@tiptap/core'
+  '@tiptap/core',
+  // Dictation (speech worker): the browser parts of transformers.js; its Node-only dependencies
+  // (onnxruntime-node, sharp) are not bundled, so the package itself is listed without them.
+  '@huggingface/jinja',
+  '@huggingface/tokenizers',
+  'onnxruntime-web'
 ];
+
+/** Bundled packages whose own dependencies are not bundled (only the browser build is used). */
+export const BUNDLED_WITHOUT_DEPS = ['@huggingface/transformers'];
 
 /** SPDX-ish licence string of a package.json. */
 export function licenseOf(pkg) {
@@ -54,6 +62,9 @@ export function shippedNpmPackages(root) {
     for (const dep of Object.keys(lock[path].dependencies || {})) addBundled(resolveFrom(path, dep));
   };
   for (const name of BUNDLED) addBundled(`node_modules/${name}`);
+  for (const name of BUNDLED_WITHOUT_DEPS)
+    if (lock[`node_modules/${name}`] && existsSync(join(root, 'node_modules', name, 'package.json')))
+      selected.set(`node_modules/${name}`, true);
 
   const seen = new Set();
   const out = [];
