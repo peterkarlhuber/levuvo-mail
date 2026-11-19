@@ -16,6 +16,7 @@ import {
 } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button } from './ui';
 import { Row, Section, Segmented, Toggle } from './Settings';
 import { McpSettings } from './SettingsMcp';
 import type { AccountItem } from './types';
@@ -225,9 +226,14 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                   ))}
               </datalist>
               {runtime?.ollama?.running && !models.includes(settings.model) && (
-                <button className="btn small" disabled={busy === 'pull'} onClick={() => void pull(settings.model)}>
-                  <Download size={14} /> {t('Herunterladen')}
-                </button>
+                <Button
+                  size="sm"
+                  icon={<Download size={14} />}
+                  disabled={busy === 'pull'}
+                  onClick={() => void pull(settings.model)}
+                >
+                  {t('Herunterladen')}
+                </Button>
               )}
             </Row>
             <Row
@@ -249,9 +255,14 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 ))}
               </datalist>
               {runtime?.ollama?.running && !models.some(m => m.startsWith(settings.embedModel)) && (
-                <button className="btn small" disabled={busy === 'pull'} onClick={() => void pull(settings.embedModel)}>
-                  <Download size={14} /> {t('Herunterladen')}
-                </button>
+                <Button
+                  size="sm"
+                  icon={<Download size={14} />}
+                  disabled={busy === 'pull'}
+                  onClick={() => void pull(settings.embedModel)}
+                >
+                  {t('Herunterladen')}
+                </Button>
               )}
             </Row>
           </>
@@ -273,17 +284,18 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
               }
             >
               <input type="password" autoComplete="off" value={key} onChange={e => setKey(e.target.value)} />
-              <button
-                className="btn small"
+              <Button
+                size="sm"
                 disabled={!key || busy === 'save'}
                 onClick={() => void save({ apiKey: key, keyProvider: settings.provider }).then(() => setKey(''))}
               >
                 {t('Speichern')}
-              </button>
+              </Button>
             </Row>
             <div className="settings-actions">
-              <button
-                className="btn small danger"
+              <Button
+                size="sm"
+                variant="danger"
                 onClick={() =>
                   void save({
                     provider: 'ollama',
@@ -293,7 +305,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 }
               >
                 {t('Einwilligung widerrufen')}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -411,20 +423,23 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
           ))}
         </div>
         <div className="settings-actions">
-          <button className="btn small" onClick={() => void load()}>
-            <RefreshCcw size={14} /> {t('Aktualisieren')}
-          </button>
-          <button
-            className="btn small"
+          <Button size="sm" icon={<RefreshCcw size={14} />} onClick={() => void load()}>
+            {t('Aktualisieren')}
+          </Button>
+          <Button
+            size="sm"
+            icon={<Trash2 size={14} />}
             onClick={async () => {
               await postJson('/api/ai/log/clear', {}, 'ai-v1');
               void load();
             }}
           >
-            <Trash2 size={14} /> {t('Protokoll leeren')}
-          </button>
-          <button
-            className="btn small danger"
+            {t('Protokoll leeren')}
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            icon={<Trash2 size={14} />}
             onClick={async () => {
               if (
                 await confirm({
@@ -442,8 +457,8 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
               }
             }}
           >
-            <Trash2 size={14} /> {t('Alle KI-Daten löschen')}
-          </button>
+            {t('Alle KI-Daten löschen')}
+          </Button>
         </div>
       </Section>
     </>

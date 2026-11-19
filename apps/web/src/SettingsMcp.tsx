@@ -3,6 +3,7 @@ import { Bot, Check, Copy, KeyRound, Plus, Trash2, X } from 'lucide-react';
 import { getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button, IconButton } from './ui';
 import { Row, Section, Toggle } from './Settings';
 
 type Level = 'read' | 'draft' | 'organize' | 'full';
@@ -121,12 +122,12 @@ export function ApprovalList({ onChange }: { onChange?: () => void }) {
             )}
           </div>
           <div className="settings-actions">
-            <button className="btn small primary" onClick={() => void decide(a.id, true)}>
-              <Check size={14} /> {t('Freigeben')}
-            </button>
-            <button className="btn small" onClick={() => void decide(a.id, false)}>
-              <X size={14} /> {t('Ablehnen')}
-            </button>
+            <Button size="sm" variant="primary" icon={<Check size={14} />} onClick={() => void decide(a.id, true)}>
+              {t('Freigeben')}
+            </Button>
+            <Button size="sm" icon={<X size={14} />} onClick={() => void decide(a.id, false)}>
+              {t('Ablehnen')}
+            </Button>
           </div>
         </div>
       ))}
@@ -250,10 +251,9 @@ export function McpSettings() {
                 {t('ohne Freigabe senden')}
               </label>
             )}
-            <button
-              className="icon-button"
-              aria-label={t('Zugang entfernen')}
-              title={t('Zugang entfernen')}
+            <IconButton
+              label={t('Zugang entfernen')}
+              icon={<Trash2 size={16} />}
               onClick={async () => {
                 if (
                   await confirm({
@@ -266,9 +266,7 @@ export function McpSettings() {
                   if (next) setState(next);
                 }
               }}
-            >
-              <Trash2 size={16} />
-            </button>
+            />
           </Row>
         ))}
         <Row label={t('Neuer Agent')} hint={t('Der Zugangsschlüssel wird nur einmal angezeigt.')}>
@@ -286,8 +284,9 @@ export function McpSettings() {
               </option>
             ))}
           </select>
-          <button
-            className="btn small"
+          <Button
+            size="sm"
+            icon={<Plus size={14} />}
             disabled={!name.trim()}
             onClick={async () => {
               const r = await post('/api/mcp/agents/create', { name, level });
@@ -298,8 +297,8 @@ export function McpSettings() {
               }
             }}
           >
-            <Plus size={14} /> {t('Zugang erstellen')}
-          </button>
+            {t('Zugang erstellen')}
+          </Button>
         </Row>
         {created && (
           <div className="ai-token">
@@ -309,17 +308,17 @@ export function McpSettings() {
             </p>
             <small>{t('Claude Desktop und andere Programme mit Befehl (claude_desktop_config.json):')}</small>
             <pre>{desktopConfig}</pre>
-            <button className="btn small" onClick={() => copy(desktopConfig)}>
-              <Copy size={14} /> {t('Kopieren')}
-            </button>
+            <Button size="sm" icon={<Copy size={14} />} onClick={() => copy(desktopConfig)}>
+              {t('Kopieren')}
+            </Button>
             <small>{t('Claude Code und andere Programme mit HTTP-Unterstützung:')}</small>
             <pre>{httpCommand}</pre>
-            <button className="btn small" onClick={() => copy(httpCommand)}>
-              <Copy size={14} /> {t('Kopieren')}
-            </button>
-            <button className="btn small" onClick={() => setCreated(null)}>
+            <Button size="sm" icon={<Copy size={14} />} onClick={() => copy(httpCommand)}>
+              {t('Kopieren')}
+            </Button>
+            <Button size="sm" onClick={() => setCreated(null)}>
               {t('Fertig')}
-            </button>
+            </Button>
           </div>
         )}
       </Section>
