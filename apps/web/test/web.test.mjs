@@ -1132,3 +1132,23 @@ test('Protect with password: the composer refuses the same weak passwords as the
   for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
     assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
 });
+
+test('Newsletter hub: the weekly overview reads the newest 20 newsletters of the last seven days', async () => {
+  const { weekOfNewsletters } = await import('../src/newsletter-week.ts');
+  const now = Date.parse('2026-11-19T12:00:00Z');
+  const mail = (uid, daysAgo, bundle = 'newsletter') => ({
+    uid,
+    bundle,
+    date: new Date(now - daysAgo * 86400_000).toISOString()
+  });
+  const list = [
+    mail(1, 8),
+    mail(2, 1),
+    mail(3, 0.5, 'invoice'),
+    ...Array.from({ length: 25 }, (_, i) => mail(10 + i, i / 10))
+  ];
+  const week = weekOfNewsletters(list, now);
+  assert.equal(week.length, 20);
+  assert.equal(week[0].uid, 10, 'newest first');
+  assert.ok(week.every(m => m.bundle === 'newsletter' && m.uid !== 1));
+});

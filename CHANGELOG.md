@@ -48,6 +48,10 @@
 ### Settings
 - **Free-text fields are wide enough:** "Closing line" and "Own instructions" (AI & agents → Writing style) sit below their label at full width; the instructions box shows four lines and can be resized vertically. Single-line fields beside a label (Ollama address, models, API key) get a usable width instead of the browser default.
 
+### Newsletter hub
+- **Weekly overview:** the newsletter bundle offers "Weekly overview": the assistant reads the newsletters of the last seven days (at most 20) and gives one line per newsletter plus up to three highlights; each line opens the mail. Runs only when started, marked as AI-generated, under the "Summarize" function and its cloud rules.
+- **All senders:** the newsletter bundle lists every sender (not only the first twelve) with one-click unsubscribe.
+
 ### Privacy cockpit
 - **Settings → Privacy shows what happened in the last 30 days:** how many tracking pixels were blocked (per day), how often the AI ran on this device and how often in the cloud (per function, and how much of it ran automatically), which external agents (MCP) accessed what, newsletter unsubscribes, external images you loaded and model downloads. "What left Levuvo Mail" lists every kind of data that went off the device.
 - **Data-minimised:** besides the existing AI log (no content) only daily counters are stored – no addresses, hosts, subjects or message IDs; 30 days, deletable, not in backups.

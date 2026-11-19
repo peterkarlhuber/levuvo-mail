@@ -107,6 +107,49 @@ def digest(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+class NewsletterItem(BaseModel):
+    id: str = Field(description="The id of the newsletter exactly as given")
+    summary: str = Field(description="One line under 160 characters: the most useful content of this newsletter")
+
+
+class NewsletterDigest(BaseModel):
+    highlights: list[str] = Field(
+        default_factory=list, description="At most three lines: what is most worth knowing across all newsletters"
+    )
+    items: list[NewsletterItem] = Field(default_factory=list)
+
+
+MAX_NEWSLETTERS = 20
+
+
+def newsletters(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """A short weekly overview of newsletters, so the single mails need not be read one by one."""
+    items = [i for i in params.get("items") or [] if isinstance(i, dict)][:MAX_NEWSLETTERS]
+    if not items:
+        raise RpcError("invalid_input", "items required")
+    ids = [_text(i.get("id"), 40) for i in items]
+    body = "\n\n---\n\n".join(f"Newsletter id: {nid}\n{_mail(i, 2500)}" for nid, i in zip(ids, items, strict=True))
+    result = _ask(
+        engine,
+        f"Write a short overview of these newsletters for the user in {_lang(params)}. For each newsletter give one "
+        "line with its most useful content (news, offers with price and end date, events with date). Skip "
+        "advertising phrases. Highlights: at most three lines across all newsletters. Use only the given ids.",
+        frame_untrusted(body, "newsletters"),
+        NewsletterDigest,
+        max_tokens=2500,
+    )
+    known = set(ids)
+    seen: set[str] = set()
+    kept = []
+    for item in result.get("items", []):
+        if item.get("id") in known and item["id"] not in seen:
+            seen.add(item["id"])
+            kept.append(item)
+    result["items"] = kept
+    result["highlights"] = [str(h)[:300] for h in result.get("highlights", [])[:3]]
+    return result
+
+
 class Translation(BaseModel):
     source_language: str
     translation: str
@@ -558,6 +601,7 @@ def filter_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
 
 TASKS = {
     "digest": digest,
+    "newsletters": newsletters,
     "translate": translate,
     "reply": reply,
     "rewrite": rewrite,
