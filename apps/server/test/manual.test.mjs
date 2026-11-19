@@ -201,3 +201,35 @@ test('ask: matching manual sections go to the model and come back as manual sour
   assert.match(out.result.sources[0].section, /^\d+\.\d+$/);
   assert.equal(out.result.sources[1].uid, 7);
 });
+
+test('manual follows the app language, with its own index per language and a fallback', async t => {
+  const { createManual } = await import('../src/manual.mjs');
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const embedded = [];
+  const ai = {
+    get: () => ({ enabled: true, features: {}, embedModel: 'm' }),
+    async run(kind, { texts }) {
+      embedded.push(...texts);
+      return { vectors: texts.map(x => [/sicherung|backup/i.test(x) ? 1 : 0, 0.1]) };
+    }
+  };
+  const manual = createManual({ ai });
+  const [de] = await manual.search('Sicherung', { lang: 'de' });
+  const [en] = await manual.search('backup', { lang: 'en' });
+  assert.match(de.chapter, /Erste Schritte/);
+  assert.match(en.chapter, /Getting started/);
+  const count = embedded.length;
+  // Switching back and forth uses the vectors already built for each language.
+  await manual.search('Sicherung', { lang: 'de' });
+  await manual.search('backup', { lang: 'en' });
+  assert.equal(embedded.length, count + 2, 'only the two questions are embedded');
+
+  // A language without a manual shows the other one instead of an empty help view.
+  const dir = mkdtempSync(join(tmpdir(), 'lv-manual-lang-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(join(dir, 'de'));
+  writeFileSync(join(dir, 'de', '01-a.md'), '# Erste Schritte\n\n## Sicherung\n\nText.\n');
+  const fallback = createManual({ root: dir });
+  assert.equal(fallback.chapters('en')[0].title, 'Erste Schritte');
+});

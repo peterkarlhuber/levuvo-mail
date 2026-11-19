@@ -101,16 +101,21 @@ export function createManual({ root = DEFAULT_ROOT, ai = null } = {}) {
   const cache = new Map(); // lang -> chapters
   const vectors = new Map(); // `${model}\0${lang}\0${hash}` -> Float32Array[]
 
+  const read = l => {
+    const dir = path.join(root, l);
+    return existsSync(dir)
+      ? readdirSync(dir)
+          .filter(f => f.endsWith('.md'))
+          .sort()
+          .map(name => ({ name, markdown: readFileSync(path.join(dir, name), 'utf8') }))
+      : [];
+  };
+  /** The manual in the app's language; a language without a manual falls back to the other one. */
   function chapters(lang) {
     const l = MANUAL_LANGS.includes(lang) ? lang : 'de';
     if (!cache.has(l)) {
-      const dir = path.join(root, l);
-      const files = existsSync(dir)
-        ? readdirSync(dir)
-            .filter(f => f.endsWith('.md'))
-            .sort()
-            .map(name => ({ name, markdown: readFileSync(path.join(dir, name), 'utf8') }))
-        : [];
+      let files = read(l);
+      if (!files.length) files = read(MANUAL_LANGS.find(x => x !== l));
       cache.set(l, parseManual(files));
     }
     return cache.get(l);
