@@ -1,25 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent
+} from 'react';
 import DOMPurify from 'dompurify';
 import { isRemoteSrc } from './trackers';
-import {
-  AlarmClock,
-  Archive,
-  CheckCheck,
-  CloudOff,
-  Globe2,
-  GripVertical,
-  Keyboard,
-  Mail,
-  Menu,
-  Paperclip,
-  PenSquare,
-  RefreshCcw,
-  Search,
-  ShieldAlert,
-  Star,
-  Trash2,
-  X
-} from 'lucide-react';
+import { CloudOff, Globe2, Keyboard, Menu, PenSquare, RefreshCcw, Search, X } from 'lucide-react';
 import Composer, { type ComposeInitial, type OutgoingPayload } from './Composer';
 import { plainToHtml, SIGNATURE_SEPARATOR } from './editor';
 import MessageList, { DRAG_TYPE } from './MessageList';
@@ -34,12 +25,11 @@ import { bodyText, fullDateLabel, replyAllRecipients, replyRecipient } from './f
 import { useT } from './i18n';
 import { publishFolders, type MailCommand } from './command-bus';
 import { isInbox, isSnoozeFolder, orderFolders, special } from './folder-utils';
-import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } from './mail-sync';
+import { isMissingMessage, removesMessages, snapshotApplies } from './mail-sync';
 import FollowupList from './FollowupList';
 import AttachmentOverview from './AttachmentOverview';
 import { BundleHeader, BundleRows } from './Bundles';
 import { ScreenerRow, ScreenerView } from './Screening';
-import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
 import type {
@@ -55,9 +45,17 @@ import type {
 } from './types';
 
 import { ATTACHMENTS, FOLLOWUPS, UNIFIED } from './mail/views';
+import {
+  countLabel as listCountLabel,
+  initialListState,
+  listReducer,
+  nextAfterRemoval as nextAfter,
+  PAGE,
+  visibleList
+} from './mail/list-state';
+import ListToolbar from './mail/ListToolbar';
+import ColumnResizer from './mail/ColumnResizer';
 export { ATTACHMENTS, FOLLOWUPS, UNIFIED };
-const PAGE = 40;
-type Filter = 'all' | 'unread' | 'flagged' | 'attachments';
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 function quotedHtml(d: Detail) {
@@ -124,16 +122,12 @@ export default function MailInstance({
   const [status, setStatus] = useState<ApiStatus | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folder, setFolder] = useState(initialOpen?.folder || 'INBOX');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [nextBeforeUid, setNextBeforeUid] = useState<number | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [stale, setStale] = useState<number | null>(null);
+  const [list, dispatchList] = useReducer(listReducer, initialListState);
+  const { messages, hasMore, nextBeforeUid, loadingMore, stale, busy, error, checkedUids, filter } = list;
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
-  const [filter, setFilter] = useState<Filter>('all');
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   // Paging cursor of the local index search ("everywhere"); null when there is no further page.
@@ -142,8 +136,6 @@ export default function MailInstance({
   const searchTimer = useRef<number | null>(null);
   const searchAbort = useRef<AbortController | null>(null);
   const requestSeq = useRef(0);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
   const [composer, setComposer] = useState<ComposeInitial | null>(null);
@@ -155,11 +147,8 @@ export default function MailInstance({
   const [readerOpen, setReaderOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
-  const [checkedUids, setCheckedUids] = useState<number[]>([]);
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
-  const resizeAnchor = useRef<{ x: number; width: number } | null>(null);
   const [listWidth, setListWidth] = useState(prefs.listWidth);
-  const [bulkSnooze, setBulkSnooze] = useState(false);
 
   const unified = folder === UNIFIED;
   const followupView = folder === FOLLOWUPS;
@@ -220,36 +209,32 @@ export default function MailInstance({
     runAction: (action, uids) => runActionRef.current(action, uids)
   });
   const bundled = useBundleSuggestions(bundling, messages, accountId);
-  const visibleMessages = useMemo(() => {
-    let list = bundled;
-    if (!searching && !unified && query.trim()) {
-      const q = query.trim().toLowerCase();
-      list = list.filter(m => `${m.subject} ${m.fromName} ${m.fromEmail}`.toLowerCase().includes(q));
-    }
-    if (screeningOn) {
-      const held = (m: Message) => unknownSenders.has(m.fromEmail.toLowerCase());
-      list = screener
-        ? list.filter(held)
-        : list.filter(m => !held(m) && !blockedSenders.has(m.fromEmail.toLowerCase()));
-    }
-    if (bundling && !screener) list = bundle ? list.filter(m => m.bundle === bundle) : list.filter(m => !m.bundle);
-    if (filter === 'unread') list = list.filter(m => m.unread);
-    if (filter === 'flagged') list = list.filter(m => m.flagged);
-    if (filter === 'attachments') list = list.filter(m => m.hasAttachments);
-    return list;
-  }, [
-    bundled,
-    query,
-    searching,
-    unified,
-    filter,
-    bundling,
-    bundle,
-    screeningOn,
-    screener,
-    unknownSenders,
-    blockedSenders
-  ]);
+  const visibleMessages = useMemo(
+    () =>
+      visibleList({
+        messages: bundled,
+        query,
+        searching,
+        unified,
+        filter,
+        screening: screeningOn ? { screener, unknown: unknownSenders, blocked: blockedSenders } : null,
+        bundling,
+        bundle
+      }),
+    [
+      bundled,
+      query,
+      searching,
+      unified,
+      filter,
+      bundling,
+      bundle,
+      screeningOn,
+      screener,
+      unknownSenders,
+      blockedSenders
+    ]
+  );
   const visibleUids = useMemo(() => visibleMessages.map(m => m.uid), [visibleMessages]);
 
   const selected =
@@ -270,16 +255,10 @@ export default function MailInstance({
         ? t('Gestört')
         : t('Verbinde …');
 
-  const applyPage = useCallback((page: MessagePage, append: boolean) => {
-    setMessages(old => {
-      if (!append) return page.messages;
-      const known = new Set(old.map(m => m.uid));
-      return [...old, ...page.messages.filter(m => !known.has(m.uid))];
-    });
-    setHasMore(page.hasMore);
-    setNextBeforeUid(page.nextBeforeUid);
-    setStale(page.stale ? page.cachedAt || Date.now() : null);
-  }, []);
+  const applyPage = useCallback(
+    (page: MessagePage, append: boolean) => dispatchList({ type: 'pageLoaded', page, append, now: Date.now() }),
+    []
+  );
 
   const selectUid = useCallback(
     (uid: number | null, open = true) => {
@@ -293,24 +272,16 @@ export default function MailInstance({
   const loadMessages = useCallback(
     async (path: string) => {
       const seq = ++requestSeq.current;
-      setCheckedUids([]);
-      setBusy(true);
-      setError('');
+      dispatchList({ type: 'loadStarted' });
       try {
         if (path === FOLLOWUPS || path === ATTACHMENTS) {
-          setMessages([]);
-          setHasMore(false);
-          setNextBeforeUid(null);
-          setStale(null);
+          dispatchList({ type: 'emptied' });
           return;
         }
         if (path === UNIFIED) {
           const data = await getJson<{ messages: Message[] }>('/api/unified');
           if (seq !== requestSeq.current) return;
-          setMessages(data.messages);
-          setHasMore(false);
-          setNextBeforeUid(null);
-          setStale(null);
+          dispatchList({ type: 'replaced', messages: data.messages });
           return;
         }
         const page = await getJson<MessagePage>(
@@ -324,13 +295,9 @@ export default function MailInstance({
           pendingOpen.current = null;
         }
       } catch (e) {
-        if (seq === requestSeq.current) {
-          setError((e as Error).message);
-          setMessages([]);
-          setHasMore(false);
-        }
+        if (seq === requestSeq.current) dispatchList({ type: 'loadFailed', error: (e as Error).message });
       } finally {
-        if (seq === requestSeq.current) setBusy(false);
+        if (seq === requestSeq.current) dispatchList({ type: 'loadFinished' });
       }
     },
     [accountId, applyPage, selectUid]
@@ -350,7 +317,7 @@ export default function MailInstance({
           }
         }
       } catch (e) {
-        setError((e as Error).message);
+        dispatchList({ type: 'error', error: (e as Error).message });
       }
     },
     [accountId, loadMessages, initialOpen?.folder]
@@ -374,7 +341,10 @@ export default function MailInstance({
           sendEnabled: false,
           sender: null
         });
-        setError(t('Die lokale Mailverbindung ist nicht erreichbar. Bitte Levuvo Mail neu starten.'));
+        dispatchList({
+          type: 'error',
+          error: t('Die lokale Mailverbindung ist nicht erreichbar. Bitte Levuvo Mail neu starten.')
+        });
       });
     return () => {
       active = false;
@@ -400,25 +370,29 @@ export default function MailInstance({
   const loadMore = useCallback(async () => {
     if (everywhere) {
       if (!hasMore || loadingMore || localCursor === null) return;
-      setLoadingMore(true);
+      dispatchList({ type: 'loadingMore', value: true });
       const seq = requestSeq.current;
       try {
         const data = await getJson<{ messages: Message[]; total: number; nextCursor?: string | null }>(
           `/api/search/local?q=${encodeURIComponent(query.trim())}&limit=${PAGE}&cursor=${encodeURIComponent(localCursor)}`
         );
         if (seq !== requestSeq.current) return;
-        setMessages(previous => [...previous, ...data.messages]);
+        dispatchList({
+          type: 'localPageLoaded',
+          messages: data.messages,
+          hasMore: Boolean(data.nextCursor),
+          append: true
+        });
         setLocalCursor(data.nextCursor ?? null);
-        setHasMore(Boolean(data.nextCursor));
       } catch (e) {
-        setError((e as Error).message);
+        dispatchList({ type: 'error', error: (e as Error).message });
       } finally {
-        setLoadingMore(false);
+        dispatchList({ type: 'loadingMore', value: false });
       }
       return;
     }
     if (!hasMore || loadingMore || nextBeforeUid === null || unified) return;
-    setLoadingMore(true);
+    dispatchList({ type: 'loadingMore', value: true });
     const seq = requestSeq.current;
     try {
       const path = searching
@@ -427,9 +401,9 @@ export default function MailInstance({
       const page = await getJson<MessagePage>(path, accountId);
       if (seq === requestSeq.current) applyPage(page, true);
     } catch (e) {
-      setError((e as Error).message);
+      dispatchList({ type: 'error', error: (e as Error).message });
     } finally {
-      setLoadingMore(false);
+      dispatchList({ type: 'loadingMore', value: false });
     }
   }, [
     hasMore,
@@ -461,15 +435,14 @@ export default function MailInstance({
       setFolders(old => old.map(f => (f.path.toUpperCase() === 'INBOX' ? { ...f, unseen: inboxSnapshot.unseen } : f)));
     if (folder.toUpperCase() !== 'INBOX' || query.trim() || busy || actionBusy) return;
     appliedSnapshot.current = inboxSnapshot.checkedAt;
-    setStale(null);
-    setMessages(old => mergeSnapshot(old, inboxSnapshot.messages));
+    dispatchList({ type: 'snapshotApplied', messages: inboxSnapshot.messages });
   }, [inboxSnapshot, folder, accountReady, query, busy, actionBusy]);
 
   useEffect(() => {
     if (!unified) return;
     const timer = window.setInterval(() => {
       void getJson<{ messages: Message[] }>('/api/unified')
-        .then(d => setMessages(d.messages))
+        .then(d => dispatchList({ type: 'replaced', messages: d.messages }))
         .catch(() => {});
     }, 25_000);
     return () => window.clearInterval(timer);
@@ -542,7 +515,7 @@ export default function MailInstance({
       postAction(`/api/messages/${detail.uid}/action`, { folder, action: 'markRead' }, accountId)
         .then(() => {
           onLocalChangeRef.current?.();
-          setMessages(old => old.map(m => (m.uid === detail.uid ? { ...m, unread: false } : m)));
+          dispatchList({ type: 'patched', uids: [detail.uid], patch: { unread: false } });
           setFolders(old =>
             old.map(f =>
               f.path === folder && typeof f.unseen === 'number' ? { ...f, unseen: Math.max(0, f.unseen - 1) } : f
@@ -569,7 +542,7 @@ export default function MailInstance({
   const chooseFolder = (path: string) => {
     stopSearch();
     ++requestSeq.current;
-    setCheckedUids([]);
+    dispatchList({ type: 'checkedSet', uids: [] });
     setReaderOpen(false);
     selectUid(null, false);
     setFolder(path);
@@ -585,16 +558,16 @@ export default function MailInstance({
 
   // Server-side search after a short typing pause: this folder (IMAP) or everywhere (local index).
   const search = (value: string, nextScope = scope) => {
-    setCheckedUids([]);
+    dispatchList({ type: 'checkedSet', uids: [] });
     setQuery(value);
     ++requestSeq.current;
-    setBusy(false);
+    dispatchList({ type: 'busy', value: false });
     stopSearch();
     setSearchBusy(false);
     if (!accountReady || unified) return;
     const term = value.trim();
     if (term.length < 2) {
-      setError('');
+      dispatchList({ type: 'error', error: '' });
       if (searchTotal !== null) {
         setSearchTotal(null);
         void loadMessages(folder);
@@ -616,10 +589,13 @@ export default function MailInstance({
           );
           if (controller.signal.aborted || seq !== requestSeq.current) return;
           setSearchTotal(data.total);
-          setMessages(data.messages);
+          dispatchList({
+            type: 'localPageLoaded',
+            messages: data.messages,
+            hasMore: Boolean(data.nextCursor),
+            append: false
+          });
           setLocalCursor(data.nextCursor ?? null);
-          setHasMore(Boolean(data.nextCursor));
-          setNextBeforeUid(null);
         } else {
           const data = await getJson<MessagePage>(
             `/api/search?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(term)}&limit=${PAGE}`,
@@ -631,7 +607,8 @@ export default function MailInstance({
           applyPage(data, false);
         }
       } catch (err) {
-        if (!controller.signal.aborted && seq === requestSeq.current) setError((err as Error).message);
+        if (!controller.signal.aborted && seq === requestSeq.current)
+          dispatchList({ type: 'error', error: (err as Error).message });
       } finally {
         if (seq === requestSeq.current) setSearchBusy(false);
       }
@@ -658,8 +635,8 @@ export default function MailInstance({
         accountId
       );
       if (selectedUid !== null && uids.includes(selectedUid)) selectUid(nextAfterRemoval(uids), false);
-      setMessages(old => old.filter(m => !uids.includes(m.uid)));
-      setCheckedUids(old => old.filter(u => !uids.includes(u)));
+      dispatchList({ type: 'removed', uids });
+      dispatchList({ type: 'unchecked', uids });
       toast({
         text: t('Zurückgestellt bis {when}.', { when: fullDateLabel(r.until) }),
         kind: 'success',
@@ -678,7 +655,7 @@ export default function MailInstance({
       });
       void loadFolders(false);
     } catch (e) {
-      setError((e as Error).message);
+      dispatchList({ type: 'error', error: (e as Error).message });
     } finally {
       setActionBusy(false);
     }
@@ -702,11 +679,7 @@ export default function MailInstance({
         )
       : undefined;
 
-  const nextAfterRemoval = (uids: number[]) => {
-    const index = visibleMessages.findIndex(m => uids.includes(m.uid));
-    const rest = visibleMessages.filter(m => !uids.includes(m.uid));
-    return rest[Math.min(index, rest.length - 1)]?.uid ?? null;
-  };
+  const nextAfterRemoval = (uids: number[]) => nextAfter(visibleMessages, uids);
 
   /** One request for one or many messages (server: batch-action, max 500). */
   // The screening hook moves blocked mail with the current runAction.
@@ -717,7 +690,7 @@ export default function MailInstance({
     if (!writeEnabled || !uids.length || actionBusy) return false;
     if ((action === 'archive' && !archiveExists) || (action === 'trash' && isTrash && source === folder)) return false;
     setActionBusy(true);
-    setError('');
+    dispatchList({ type: 'error', error: '' });
     localChangeAt.current = Date.now();
     try {
       type Undo = { folder: string; action: ReaderAction; uids: string[]; destination?: string } | null;
@@ -741,7 +714,7 @@ export default function MailInstance({
         const before = new Map(
           messages.filter(m => uids.includes(m.uid)).map(m => [m.uid, { unread: m.unread, flagged: m.flagged }])
         );
-        setMessages(old => old.map(m => (uids.includes(m.uid) ? { ...m, ...patch } : m)));
+        dispatchList({ type: 'patched', uids, patch });
         if (uids.length > 1 && data.undo) {
           const undo = data.undo;
           toast({
@@ -752,7 +725,7 @@ export default function MailInstance({
               label: t('Rückgängig'),
               run: () => {
                 void postAction('/api/messages/batch-action', undo, accountId).then(() =>
-                  setMessages(old => old.map(m => (before.has(m.uid) ? { ...m, ...before.get(m.uid) } : m)))
+                  dispatchList({ type: 'flagsRestored', before })
                 );
               }
             }
@@ -769,7 +742,7 @@ export default function MailInstance({
           );
       } else if (source === folder) {
         if (selectedUid !== null && uids.includes(selectedUid)) selectUid(nextAfterRemoval(uids), false);
-        setMessages(old => old.filter(m => !uids.includes(m.uid)));
+        dispatchList({ type: 'removed', uids });
         const destination = folders.find(f => f.path === data.destination);
         // A trash folder the server just created is not in the list yet.
         if (!destination && data.destination) void loadFolders(false);
@@ -800,7 +773,7 @@ export default function MailInstance({
         });
         void loadFolders(false);
       }
-      setCheckedUids(old => old.filter(u => !uids.includes(u)));
+      dispatchList({ type: 'unchecked', uids });
       return true;
     } catch (e) {
       if (isMissingMessage(e)) {
@@ -810,14 +783,14 @@ export default function MailInstance({
         if (source === folder) {
           if (removesMessages(action)) {
             if (selectedUid !== null && uids.includes(selectedUid)) selectUid(nextAfterRemoval(uids), false);
-            setMessages(old => old.filter(m => !uids.includes(m.uid)));
-            setCheckedUids(old => old.filter(u => !uids.includes(u)));
+            dispatchList({ type: 'removed', uids });
+            dispatchList({ type: 'unchecked', uids });
           } else if (!searching) void loadMessages(folder);
           void loadFolders(false);
         }
         return false;
       }
-      setError((e as Error).message);
+      dispatchList({ type: 'error', error: (e as Error).message });
       return false;
     } finally {
       setActionBusy(false);
@@ -853,7 +826,7 @@ export default function MailInstance({
       await loadFolders(false);
       toast({ text: t('Archivordner „{folder}“ ist bereit.', { folder: data.folder }), kind: 'success' });
     } catch (e) {
-      setError((e as Error).message);
+      dispatchList({ type: 'error', error: (e as Error).message });
     } finally {
       setActionBusy(false);
     }
@@ -1013,7 +986,7 @@ export default function MailInstance({
   const beginForward = async () => {
     if (!detail || composeBusy) return;
     setComposeBusy(true);
-    setError('');
+    dispatchList({ type: 'error', error: '' });
     try {
       const files = await fetchAttachments(detail, true);
       const id = defaultIdentity(detail);
@@ -1036,7 +1009,7 @@ export default function MailInstance({
             : undefined
       });
     } catch (err) {
-      setError((err as Error).message);
+      dispatchList({ type: 'error', error: (err as Error).message });
     } finally {
       setComposeBusy(false);
     }
@@ -1045,7 +1018,7 @@ export default function MailInstance({
   const beginEditDraft = async () => {
     if (!detail?.draftId || !detail.uidValidity || !isDraftFolder || selectedUid === null || composeBusy) return;
     setComposeBusy(true);
-    setError('');
+    dispatchList({ type: 'error', error: '' });
     try {
       const files = await fetchAttachments(detail, false);
       if (files === null)
@@ -1071,7 +1044,7 @@ export default function MailInstance({
         scheduledFor: detail.scheduledFor
       });
     } catch (err) {
-      setError((err as Error).message);
+      dispatchList({ type: 'error', error: (err as Error).message });
     } finally {
       setComposeBusy(false);
     }
@@ -1111,7 +1084,7 @@ export default function MailInstance({
     if (key === '?') return run(() => setShortcuts(true));
     if (key === 'Escape')
       return run(() => {
-        setCheckedUids([]);
+        dispatchList({ type: 'checkedSet', uids: [] });
         setReaderOpen(false);
       });
     if (key === 'n' || key === 'c') return run(beginNewMessage);
@@ -1180,7 +1153,6 @@ export default function MailInstance({
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const resizeList = (width: number) => setListWidth(Math.max(300, Math.min(680, Math.round(width))));
   const listTitle = followupView
     ? t('Nachfassen')
     : attachmentView
@@ -1190,23 +1162,18 @@ export default function MailInstance({
         : everywhere
           ? t('Suche in allen Ordnern')
           : folderLabel(currentFolder);
-  const filters: { id: Filter; label: string; icon?: typeof Star }[] = [
-    { id: 'all', label: t('Alle') },
-    { id: 'unread', label: t('Ungelesen') },
-    { id: 'flagged', label: t('Markiert'), icon: Star },
-    { id: 'attachments', label: t('Anhang'), icon: Paperclip }
-  ];
-  const countLabel = searchBusy
-    ? t('Suche läuft …')
-    : searching
-      ? t('{count} Treffer', { count: searchTotal ?? 0 })
-      : checkedCount
-        ? t('{count} ausgewählt', { count: checkedCount })
-        : unified
-          ? t('{count} neueste', { count: visibleMessages.length })
-          : filter !== 'all'
-            ? t('{count} von {total} geladenen', { count: visibleMessages.length, total: messages.length })
-            : `${t('{count} Nachrichten', { count: currentFolder?.total ?? visibleMessages.length })}${currentFolder?.unseen ? ` · ${t('{count} ungelesen', { count: currentFolder.unseen })}` : ''}`;
+  const countLabel = listCountLabel(t, {
+    searchBusy,
+    searching,
+    searchTotal,
+    checkedCount,
+    unified,
+    filter,
+    visibleCount: visibleMessages.length,
+    loadedCount: messages.length,
+    folderTotal: currentFolder?.total,
+    folderUnseen: currentFolder?.unseen
+  });
 
   return (
     <div className="app-shell">
@@ -1342,125 +1309,30 @@ export default function MailInstance({
               </div>
             )}
             {!panelView && (
-              <div className="list-toolbar">
-                {!unified && !everywhere && (
-                  <label className="select-all">
-                    <input
-                      type="checkbox"
-                      checked={allChecked}
-                      onChange={e => setCheckedUids(e.target.checked ? visibleUids : [])}
-                      disabled={!visibleUids.length || actionBusy}
-                      aria-label={t('Alle sichtbaren auswählen')}
-                    />
-                  </label>
-                )}
-                {checkedCount > 0 ? (
-                  <div className="bulk-toolbar" aria-label={t('Sammelaktionen')}>
-                    <span aria-live="polite">{countLabel}</span>
-                    <button
-                      disabled={!writeEnabled || actionBusy}
-                      onClick={() => mutateSelected('markRead')}
-                      title={t('Als gelesen markieren')}
-                      aria-label={t('Als gelesen markieren')}
-                    >
-                      <CheckCheck size={14} />
-                    </button>
-                    <button
-                      disabled={!writeEnabled || actionBusy}
-                      onClick={() => mutateSelected('markUnread')}
-                      title={t('Als ungelesen markieren')}
-                      aria-label={t('Als ungelesen markieren')}
-                    >
-                      <Mail size={14} />
-                    </button>
-                    <button
-                      disabled={!writeEnabled || actionBusy}
-                      onClick={() => mutateSelected('flag')}
-                      title={t('Markieren')}
-                      aria-label={t('Markieren')}
-                    >
-                      <Star size={14} />
-                    </button>
-                    <button
-                      disabled={!writeEnabled || actionBusy || !archiveExists}
-                      onClick={() => mutateSelected('archive')}
-                      title={t('Archivieren')}
-                      aria-label={t('Archivieren')}
-                    >
-                      <Archive size={14} />
-                    </button>
-                    <button
-                      disabled={!writeEnabled || actionBusy}
-                      onClick={() => mutateSelected(isJunk ? 'notSpam' : 'spam')}
-                      title={isJunk ? t('Kein Spam') : t('Als Spam markieren')}
-                      aria-label={isJunk ? t('Kein Spam') : t('Als Spam markieren')}
-                    >
-                      <ShieldAlert size={14} />
-                    </button>
-                    <button
-                      disabled={!writeEnabled || actionBusy || isTrash}
-                      onClick={() => mutateSelected('trash')}
-                      title={t('In den Papierkorb')}
-                      aria-label={t('In den Papierkorb')}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <span className="menu-anchor">
-                      <button
-                        disabled={!writeEnabled || actionBusy || isDraftFolder}
-                        onClick={() => setBulkSnooze(!bulkSnooze)}
-                        title={t('Zurückstellen')}
-                        aria-label={t('Zurückstellen')}
-                        aria-expanded={bulkSnooze}
-                      >
-                        <AlarmClock size={14} />
-                      </button>
-                      {bulkSnooze && (
-                        <WhenMenu
-                          title={t('Zurückstellen bis')}
-                          onClose={() => setBulkSnooze(false)}
-                          onPick={date => {
-                            setBulkSnooze(false);
-                            void snooze(
-                              checkedUids.filter(uid => visibleUids.includes(uid)),
-                              date
-                            );
-                          }}
-                        />
-                      )}
-                    </span>
-                    <button
-                      disabled={actionBusy}
-                      onClick={() => setCheckedUids([])}
-                      title={t('Auswahl aufheben')}
-                      aria-label={t('Auswahl aufheben')}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="list-count" aria-live="polite">
-                      {countLabel}
-                    </span>
-                    {!unified && !everywhere && (
-                      <div className="filter-chips" role="group" aria-label={t('Filter')}>
-                        {filters.map(f => (
-                          <button
-                            key={f.id}
-                            className={filter === f.id ? 'active' : ''}
-                            aria-pressed={filter === f.id}
-                            onClick={() => setFilter(f.id)}
-                          >
-                            {f.icon && <f.icon size={12} />}
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+              <ListToolbar
+                selectable={!unified && !everywhere}
+                allChecked={allChecked}
+                visibleCount={visibleUids.length}
+                checkedCount={checkedCount}
+                countLabel={countLabel}
+                filter={filter}
+                writeEnabled={writeEnabled}
+                actionBusy={actionBusy}
+                archiveExists={archiveExists}
+                isJunk={isJunk}
+                isTrash={isTrash}
+                isDraftFolder={isDraftFolder}
+                onCheckAll={checked => dispatchList({ type: 'checkedSet', uids: checked ? visibleUids : [] })}
+                onClearChecked={() => dispatchList({ type: 'checkedSet', uids: [] })}
+                onFilter={value => dispatchList({ type: 'filter', filter: value })}
+                onBulkAction={mutateSelected}
+                onBulkSnooze={date =>
+                  void snooze(
+                    checkedUids.filter(uid => visibleUids.includes(uid)),
+                    date
+                  )
+                }
+              />
             )}
           </div>
           {stale && (
@@ -1480,7 +1352,7 @@ export default function MailInstance({
               <button onClick={refresh} disabled={busy}>
                 {t('Erneut versuchen')}
               </button>
-              <button aria-label={t('Meldung schließen')} onClick={() => setError('')}>
+              <button aria-label={t('Meldung schließen')} onClick={() => dispatchList({ type: 'error', error: '' })}>
                 <X size={15} />
               </button>
             </div>
@@ -1567,9 +1439,7 @@ export default function MailInstance({
                         : undefined
                   }
                   onSelect={openMessage}
-                  onToggleChecked={(uid, checked) =>
-                    setCheckedUids(old => (checked ? Array.from(new Set([...old, uid])) : old.filter(x => x !== uid)))
-                  }
+                  onToggleChecked={(uid, checked) => dispatchList({ type: 'checked', uid, checked })}
                   onToggleFlag={writeEnabled ? m => void runAction(m.flagged ? 'unflag' : 'flag', [m.uid]) : undefined}
                   quick={
                     writeEnabled && !isDraftFolder
@@ -1586,47 +1456,7 @@ export default function MailInstance({
               )}
             </>
           )}
-          <div
-            className="column-resizer"
-            role="separator"
-            aria-label={t('Listenbreite ändern')}
-            aria-orientation="vertical"
-            aria-valuemin={300}
-            aria-valuemax={680}
-            aria-valuenow={listWidth}
-            tabIndex={0}
-            title={t('Ziehen oder Pfeiltasten · Doppelklick setzt zurück')}
-            onPointerDown={e => {
-              if (e.button !== 0) return;
-              resizeAnchor.current = { x: e.clientX, width: listWidth };
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={e => {
-              if (resizeAnchor.current) resizeList(resizeAnchor.current.width + e.clientX - resizeAnchor.current.x);
-            }}
-            onPointerUp={e => {
-              resizeAnchor.current = null;
-              if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-              setPrefs({ listWidth });
-            }}
-            onPointerCancel={() => {
-              resizeAnchor.current = null;
-            }}
-            onDoubleClick={() => {
-              resizeList(400);
-              setPrefs({ listWidth: 400 });
-            }}
-            onKeyDown={e => {
-              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-              e.preventDefault();
-              e.stopPropagation();
-              const w = Math.max(300, Math.min(680, listWidth + (e.key === 'ArrowRight' ? 20 : -20)));
-              setListWidth(w);
-              setPrefs({ listWidth: w });
-            }}
-          >
-            <GripVertical size={14} />
-          </div>
+          <ColumnResizer width={listWidth} onResize={setListWidth} onCommit={width => setPrefs({ listWidth: width })} />
         </main>
         <Reader
           accountId={accountId}

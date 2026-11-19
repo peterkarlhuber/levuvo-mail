@@ -734,3 +734,166 @@ test('PERF-LEV-009: bundle suggestions remember skipped messages, back off after
   clock += 1000;
   assert.ok(cache.ready('a'), 'a success resets the backoff');
 });
+
+test('Mail list reducer: loading, paging, snapshot, patches and checkboxes', async () => {
+  const { initialListState: s0, listReducer: reduce } = await import('../src/mail/list-state.ts');
+  const m = (uid, extra = {}) => ({
+    uid,
+    fromName: '',
+    fromEmail: `u${uid}@x.test`,
+    subject: `S${uid}`,
+    date: null,
+    unread: true,
+    ...extra
+  });
+  const page = (uids, extra = {}) => ({
+    folder: 'INBOX',
+    total: 9,
+    messages: uids.map(u => m(u)),
+    hasMore: true,
+    nextBeforeUid: Math.min(...uids),
+    ...extra
+  });
+  let s = reduce({ ...s0, checkedUids: [1], error: 'old' }, { type: 'loadStarted' });
+  assert.deepEqual([s.busy, s.error, s.checkedUids], [true, '', []]);
+  s = reduce(s, { type: 'pageLoaded', page: page([9, 8, 7]), append: false, now: 5 });
+  assert.deepEqual(
+    s.messages.map(x => x.uid),
+    [9, 8, 7]
+  );
+  assert.deepEqual([s.hasMore, s.nextBeforeUid, s.stale], [true, 7, null]);
+  // Appending skips UIDs already in the list.
+  s = reduce(s, {
+    type: 'pageLoaded',
+    page: page([7, 6], { hasMore: false, nextBeforeUid: null }),
+    append: true,
+    now: 5
+  });
+  assert.deepEqual(
+    s.messages.map(x => x.uid),
+    [9, 8, 7, 6]
+  );
+  assert.equal(s.hasMore, false);
+  // Stale pages carry their cache time, or now when the server did not send one.
+  assert.equal(
+    reduce(s, { type: 'pageLoaded', page: page([1], { stale: true, cachedAt: 42 }), append: false, now: 5 }).stale,
+    42
+  );
+  assert.equal(reduce(s, { type: 'pageLoaded', page: page([1], { stale: true }), append: false, now: 5 }).stale, 5);
+  s = reduce(s, { type: 'loadFinished' });
+  assert.equal(s.busy, false);
+  // Local index pages: replace resets the IMAP cursor, append keeps every row.
+  const local = reduce(
+    { ...s, nextBeforeUid: 3 },
+    { type: 'localPageLoaded', messages: [m(1)], hasMore: true, append: false }
+  );
+  assert.deepEqual([local.messages.length, local.hasMore, local.nextBeforeUid], [1, true, null]);
+  assert.equal(
+    reduce(local, { type: 'localPageLoaded', messages: [m(1)], hasMore: false, append: true }).messages.length,
+    2
+  );
+  // Patches, undo of flags, removal.
+  s = reduce(s, { type: 'patched', uids: [9, 8], patch: { unread: false } });
+  assert.deepEqual(
+    s.messages.map(x => x.unread),
+    [false, false, true, true]
+  );
+  s = reduce(s, { type: 'flagsRestored', before: new Map([[9, { unread: true, flagged: false }]]) });
+  assert.deepEqual([s.messages[0].unread, s.messages[0].flagged], [true, false]);
+  s = reduce(s, { type: 'removed', uids: [8] });
+  assert.deepEqual(
+    s.messages.map(x => x.uid),
+    [9, 7, 6]
+  );
+  // Snapshot replaces the top and clears the offline marker.
+  s = reduce({ ...s, stale: 1 }, { type: 'snapshotApplied', messages: [m(10), m(9)] });
+  assert.deepEqual([s.messages.map(x => x.uid), s.stale], [[10, 9, 7, 6], null]);
+  // Checkboxes: no duplicates, uncheck several.
+  s = reduce(s, { type: 'checked', uid: 7, checked: true });
+  s = reduce(s, { type: 'checked', uid: 7, checked: true });
+  s = reduce(s, { type: 'checked', uid: 6, checked: true });
+  assert.deepEqual(s.checkedUids, [7, 6]);
+  assert.deepEqual(reduce(s, { type: 'unchecked', uids: [7, 99] }).checkedUids, [6]);
+  assert.deepEqual(reduce(s, { type: 'checked', uid: 6, checked: false }).checkedUids, [7]);
+  // Views without a list, all inboxes, failures.
+  assert.deepEqual(reduce(s, { type: 'emptied' }).messages, []);
+  const unified = reduce({ ...s, hasMore: true, stale: 3 }, { type: 'replaced', messages: [m(1)] });
+  assert.deepEqual(
+    [unified.messages.length, unified.hasMore, unified.nextBeforeUid, unified.stale],
+    [1, false, null, null]
+  );
+  const failed = reduce(s, { type: 'loadFailed', error: 'down' });
+  assert.deepEqual([failed.error, failed.messages, failed.hasMore], ['down', [], false]);
+  assert.equal(reduce(s, { type: 'filter', filter: 'unread' }).filter, 'unread');
+});
+
+test('Mail list: visible rows, next selection after removal, count line', async () => {
+  const { visibleList, nextAfterRemoval, countLabel } = await import('../src/mail/list-state.ts');
+  const m = (uid, extra = {}) => ({
+    uid,
+    fromName: 'Anna',
+    fromEmail: `u${uid}@x.test`,
+    subject: `S${uid}`,
+    date: null,
+    unread: false,
+    ...extra
+  });
+  const all = [
+    m(1, { unread: true }),
+    m(2, { flagged: true, bundle: 'news' }),
+    m(3, { hasAttachments: true, fromEmail: 'NEW@x.test' }),
+    m(4)
+  ];
+  const base = {
+    messages: all,
+    query: '',
+    searching: false,
+    unified: false,
+    filter: 'all',
+    screening: null,
+    bundling: false,
+    bundle: null
+  };
+  const uids = o => visibleList({ ...base, ...o }).map(x => x.uid);
+  assert.deepEqual(uids({}), [1, 2, 3, 4]);
+  // One character filters the loaded rows locally; a server search does not filter again.
+  assert.deepEqual(uids({ query: 's3' }), [3]);
+  assert.deepEqual(uids({ query: 's3', searching: true }), [1, 2, 3, 4]);
+  assert.deepEqual(uids({ query: 's3', unified: true }), [1, 2, 3, 4]);
+  assert.deepEqual(uids({ filter: 'unread' }), [1]);
+  assert.deepEqual(uids({ filter: 'flagged' }), [2]);
+  assert.deepEqual(uids({ filter: 'attachments' }), [3]);
+  // Bundles: the open bundle shows its rows, otherwise bundled rows are hidden.
+  assert.deepEqual(uids({ bundling: true }), [1, 3, 4]);
+  assert.deepEqual(uids({ bundling: true, bundle: 'news' }), [2]);
+  // Screening: held senders only in the screener, blocked senders never; bundles off in the screener.
+  const screening = { screener: false, unknown: new Set(['new@x.test']), blocked: new Set(['u4@x.test']) };
+  assert.deepEqual(uids({ screening }), [1, 2]);
+  assert.deepEqual(uids({ screening: { ...screening, screener: true }, bundling: true }), [3]);
+
+  assert.equal(nextAfterRemoval(all, [2]), 3);
+  assert.equal(nextAfterRemoval(all, [3, 4]), 2);
+  assert.equal(nextAfterRemoval([m(1)], [1]), null);
+
+  const t = (s, v = {}) => s.replace(/\{(\w+)\}/g, (_, k) => String(v[k]));
+  const c = {
+    searchBusy: false,
+    searching: false,
+    searchTotal: null,
+    checkedCount: 0,
+    unified: false,
+    filter: 'all',
+    visibleCount: 4,
+    loadedCount: 6,
+    folderTotal: 120,
+    folderUnseen: 3
+  };
+  assert.equal(countLabel(t, { ...c, searchBusy: true, searching: true }), 'Suche läuft …');
+  assert.equal(countLabel(t, { ...c, searching: true, searchTotal: 7, checkedCount: 2 }), '7 Treffer');
+  assert.equal(countLabel(t, { ...c, searching: true }), '0 Treffer');
+  assert.equal(countLabel(t, { ...c, checkedCount: 2 }), '2 ausgewählt');
+  assert.equal(countLabel(t, { ...c, unified: true }), '4 neueste');
+  assert.equal(countLabel(t, { ...c, filter: 'unread' }), '4 von 6 geladenen');
+  assert.equal(countLabel(t, c), '120 Nachrichten · 3 ungelesen');
+  assert.equal(countLabel(t, { ...c, folderTotal: null, folderUnseen: 0 }), '4 Nachrichten');
+});
