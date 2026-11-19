@@ -2,7 +2,7 @@
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from './ui/focus';
-import { CircleCheck, LoaderCircle, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { CircleCheck, LoaderCircle, Mail, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
@@ -10,6 +10,8 @@ import { useT } from './i18n';
 import { dateLabel } from './format';
 import { Button, Field, IconButton, Segmented } from './ui';
 import { ApprovalList } from './SettingsMcp';
+import { Markdown } from './Markdown';
+import { uniqueSources } from './assistant-sources';
 
 type Skill = {
   id: string;
@@ -40,6 +42,11 @@ type Entry =
       found?: boolean;
       sources?: Source[];
       model?: string;
+      // false: a fixed text of the app ("nothing found"), not written by the model.
+      generated?: boolean;
+      // The model reached the maximum answer length; the answer can be asked again with more room.
+      truncated?: boolean;
+      maxTokens?: number;
       error?: string;
     }
   | {
@@ -90,25 +97,35 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
     setEntries(list => list.map(e => (e.id === id ? ({ ...e, ...patch } as Entry) : e)));
   }, []);
 
-  async function ask(question: string) {
-    const id = ++seq.current;
+  async function ask(question: string, again?: { id: number; minTokens: number }) {
+    const id = again?.id ?? ++seq.current;
     // The last answered questions go along, so a follow-up like "and the price?" is understood.
     const history = entries
-      .filter(e => e.kind === 'ask' && e.answer)
+      .filter(e => e.kind === 'ask' && e.answer && e.id < id)
       .slice(-2)
       .map(e => ({ question: e.prompt, answer: e.kind === 'ask' ? e.answer : '' }));
-    setEntries(list => [...list, { id, kind: 'ask', prompt: question, busy: true }]);
+    if (again) update(id, { busy: true, truncated: false, error: undefined });
+    else setEntries(list => [...list, { id, kind: 'ask', prompt: question, busy: true }]);
     try {
-      const r = await runAi<{ answer: string; found: boolean; sources: Source[] }>('ask', {
-        input: { question, history },
+      const r = await runAi<{
+        answer: string;
+        found: boolean;
+        sources: Source[];
+        truncated?: boolean;
+        maxTokens?: number;
+      }>('ask', {
+        input: { question, history, ...(again ? { minTokens: again.minTokens } : {}) },
         lang
       });
       update(id, {
         busy: false,
         answer: r.result.answer,
         found: r.result.found,
-        sources: r.result.sources,
-        model: r.model
+        sources: uniqueSources(r.result.sources || []),
+        model: r.model,
+        generated: r.generated,
+        truncated: Boolean(r.result.truncated),
+        maxTokens: r.result.maxTokens
       });
     } catch (err) {
       update(id, { busy: false, error: aiErrorText(err instanceof ApiError ? err.code : undefined, t) });
@@ -202,22 +219,23 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
           </div>
         ) : (
           <>
+            {/* The routines stay visible above the scrolling conversation, in one scrollable row. */}
+            {enabled?.agents && skills.length > 0 && (
+              <div className="assistant-skills" role="list" aria-label={t('Routinen')}>
+                {skills.map(s => (
+                  <button
+                    key={s.id}
+                    role="listitem"
+                    className="chip"
+                    title={s.builtin ? t(s.hint) : s.hint}
+                    onClick={() => void runSkill(s)}
+                  >
+                    <Play size={12} aria-hidden="true" /> {s.builtin ? t(s.name) : s.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="assistant-body">
-              {enabled?.agents && skills.length > 0 && (
-                <div className="assistant-skills" role="list" aria-label={t('Routinen')}>
-                  {skills.map(s => (
-                    <button
-                      key={s.id}
-                      role="listitem"
-                      className="chip"
-                      title={s.builtin ? t(s.hint) : s.hint}
-                      onClick={() => void runSkill(s)}
-                    >
-                      <Play size={12} /> {s.builtin ? t(s.name) : s.name}
-                    </button>
-                  ))}
-                </div>
-              )}
               {entries.length === 0 && (
                 <p className="ai-hint">
                   {t(
@@ -246,27 +264,46 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                         {e.error}
                       </div>
                     )}
+                    {e.kind === 'ask' && e.truncated && !e.busy && (
+                      <div className="assistant-answer">
+                        <p className="ai-hint" role="status">
+                          {t('Antwort gekürzt: Sie war länger als die maximale Antwortlänge.')}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            void ask(e.prompt, { id: e.id, minTokens: Math.min(16384, (e.maxTokens || 1500) * 2) })
+                          }
+                        >
+                          {t('Weiter antworten')}
+                        </Button>
+                      </div>
+                    )}
                     {e.kind === 'ask' && e.answer && (
                       <div className="assistant-answer">
-                        <p className={e.found === false ? 'ai-hint' : undefined}>{e.answer}</p>
+                        <Markdown text={e.answer} className={e.found === false ? 'ai-hint' : undefined} />
                         {e.sources && e.sources.length > 0 && (
-                          <ul className="assistant-sources">
+                          <ul className="assistant-sources" aria-label={t('Quellen')}>
                             {e.sources.map(s => (
                               <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
                                 <button
-                                  className="text-button"
+                                  className="chip source-chip"
+                                  title={[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
+                                    .filter(Boolean)
+                                    .join(' · ')}
                                   onClick={() => {
                                     onClose();
                                     onOpenMessage(s);
                                   }}
                                 >
-                                  {s.subject || t('(ohne Betreff)')}
+                                  <Mail size={12} aria-hidden="true" />
+                                  <span className="source-chip-subject">{s.subject || t('(ohne Betreff)')}</span>
+                                  <span className="assistant-source-meta">
+                                    {[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </span>
                                 </button>
-                                <span className="assistant-source-meta">
-                                  {[s.fromName || s.fromEmail, s.date ? dateLabel(s.date) : '']
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </span>
                                 {s.quote && (
                                   <blockquote className="assistant-quote">
                                     {s.attachment && (
@@ -281,14 +318,16 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                             ))}
                           </ul>
                         )}
-                        <span className="ai-label">
-                          <Sparkles size={11} /> {t('KI-generiert')} · {e.model}
-                        </span>
+                        {e.generated !== false && (
+                          <span className="ai-label">
+                            <Sparkles size={11} aria-hidden="true" /> {t('KI-generiert')} · {e.model}
+                          </span>
+                        )}
                       </div>
                     )}
                     {e.kind === 'task' && e.report && (
                       <div className="assistant-answer">
-                        <p className="assistant-report">{e.report}</p>
+                        <Markdown text={e.report} className="assistant-report" />
                         {Boolean(e.newApprovals) && (
                           <p className="ai-hint">
                             <CircleCheck size={13} />{' '}

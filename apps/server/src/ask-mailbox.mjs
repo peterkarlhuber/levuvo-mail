@@ -10,6 +10,9 @@ import { normalize } from './local-index.mjs';
 
 const RRF_K = 60;
 const MAX_TERMS = 5;
+// Below this cosine similarity a hit found only by meaning is treated as unrelated. Embedding models
+// put unrelated texts around 0.2 to 0.4 and related ones clearly above 0.5 (bge-m3, Qwen3-Embedding).
+export const MIN_COSINE = 0.45;
 
 // Question words and fillers in German and English; they never narrow a search.
 const STOP = new Set(
@@ -94,6 +97,11 @@ export async function retrieve({ semantic, localIndex, ids, question, context = 
     for (const term of terms)
       lists.push({ hits: await localIndex.search(ids, term, { limit: 12 }).catch(() => []), weight: 0.8 });
   }
+  // What made each mail a hit: the best similarity by meaning, and whether a word of the question
+  // really occurs in it. A mail with neither is not relevant (see `relevant`).
+  const cosine = new Map();
+  for (const h of meaning || []) cosine.set(keyOf(h), Math.max(cosine.get(keyOf(h)) ?? -1, Number(h.score) || 0));
+  const words = new Set(lists.filter(l => l.hits !== meaning).flatMap(l => l.hits.map(keyOf)));
   const fused = fuse(
     lists.filter(l => l.hits.length),
     limit
@@ -101,9 +109,19 @@ export async function retrieve({ semantic, localIndex, ids, question, context = 
   const out = [];
   for (const h of fused) {
     const item = h.text === undefined ? await localIndex?.text?.(h.accountId, h.folder, h.uid).catch(() => null) : h;
-    if (item) out.push({ ...h, ...item, score: h.score });
+    if (item)
+      out.push({ ...h, ...item, score: h.score, cosine: cosine.get(keyOf(h)) ?? null, wordHit: words.has(keyOf(h)) });
   }
   return out;
+}
+
+/**
+ * Whether a hit can plausibly answer the question: a word of the question occurs in it, or it is
+ * close enough in meaning. Without this, a question with no answer in the mailbox still gets the
+ * "nearest" mails, and the model answers from something unrelated.
+ */
+export function relevant(hit, minCosine = MIN_COSINE) {
+  return Boolean(hit?.wordHit) || (typeof hit?.cosine === 'number' && hit.cosine >= minCosine);
 }
 
 /**

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from collections.abc import Callable
@@ -217,6 +218,99 @@ CASES: list[Case] = [
         },
         lambda r: None if r.get("events") else "no event found",
         "Termin aus freiem Text",
+    ),
+]
+
+
+# --- assistant: the model decides itself whether to search the mailbox (tool search_mailbox) ---
+# Step 1 of a question has no mail: the model either answers (greeting, "who are you?") or asks for the
+# search. Step 2 gets the hits; it must not take its identity from mail or write source ids in the text.
+ASSISTANT = {"model": "local model", "provider": "ollama"}
+STORAGE_MAILS = [
+    {
+        "id": "s1",
+        **_mail(
+            "Willkommen bei Levuvo Storage Share, powered by Nextcloud. Ihr Konto ist eingerichtet, 100 GB.",
+            "Levuvo Storage Share <noreply@storage.example>",
+            "Willkommen bei Storage Share",
+        ),
+    },
+    {
+        "id": "s2",
+        **_mail(
+            "Die Absprache zum Termin 'Test' wurde am 19. November 2026 um 16:00 Uhr abgesagt.",
+            "Kalender <calendar@example.com>",
+            "Abgesagt: Test",
+        ),
+    },
+]
+
+
+def _answers_directly(result: dict[str, Any]) -> str | None:
+    if "search" in result:
+        return f"searched the mailbox for {result['search']!r}"
+    answer = str(result.get("answer") or "").lower()
+    if not answer:
+        return "empty answer"
+    return "mentions mail content" if any(w in answer for w in ("nextcloud", "storage share", "abgesagt")) else None
+
+
+def _searches(result: dict[str, Any]) -> str | None:
+    return None if result.get("search") else "answered without searching the mailbox"
+
+
+def _no_markers(result: dict[str, Any]) -> str | None:
+    answer = str(result.get("answer") or "")
+    return "source ids in the answer text" if re.search(r"\bs\d+\b|sources?:|quellen?:", answer, re.I) else None
+
+
+def _decide(case_id: str, question: str, lang: str, check: Callable[[dict[str, Any]], str | None], note: str) -> Case:
+    return Case(case_id, "assistant", "ask", {"lang": lang, "question": question, "assistant": ASSISTANT}, check, note)
+
+
+CASES += [
+    _decide("decide-hi", "hi", "de", _answers_directly, "„hi“: direkte Antwort, keine Suche"),
+    _decide("decide-how-are-you", "wie geht es dir?", "de", _answers_directly, "Smalltalk ohne Suche"),
+    _decide("decide-who", "wer bst du?", "de", _answers_directly, "„wer bst du?“ (Tippfehler): Selbstbeschreibung"),
+    _decide("decide-what-can", "what can you do?", "en", _answers_directly, "Fähigkeiten auf Englisch"),
+    _decide("decide-thanks", "danke!", "de", _answers_directly, "Dank ohne Suche"),
+    _decide("decide-offer", "Was hat Müller zum Angebot gesagt?", "de", _searches, "Postfachfrage: Suche"),
+    _decide("decide-cloud", "welchen cloud speicher verwenden wir?", "de", _searches, "Frage zum Postfach: Suche"),
+    _decide("decide-hi-question", "Hi, wann ist das Meeting mit Anna?", "de", _searches, "Gruß + Frage: Suche"),
+    _decide("decide-invoice-en", "Did the invoice from Acme arrive?", "en", _searches, "Englische Postfachfrage"),
+    Case(
+        "answer-identity",
+        "assistant",
+        "ask",
+        {"lang": "de", "question": "wer bist du?", "sources": STORAGE_MAILS, "assistant": ASSISTANT},
+        _all(_not_contains("nextcloud", "storage share"), _no_markers),
+        "„wer bist du?“ mit Mails: keine Selbstbeschreibung aus Mails",
+    ),
+    Case(
+        "answer-no-markers",
+        "assistant",
+        "ask",
+        {
+            "lang": "de",
+            "question": "Wann wurde der Termin Test abgesagt?",
+            "sources": STORAGE_MAILS,
+            "assistant": ASSISTANT,
+        },
+        _all(_no_markers, _field("found", True)),
+        "Echte Frage: Antwort ohne „(sources: s1…)“ im Text",
+    ),
+    Case(
+        "answer-not-found",
+        "assistant",
+        "ask",
+        {
+            "lang": "de",
+            "question": "Was kostet das Angebot von Müller?",
+            "sources": STORAGE_MAILS,
+            "assistant": ASSISTANT,
+        },
+        _all(_field("found", False), _not_contains("16:00")),
+        "Nichts Passendes: „nicht gefunden“ statt einer fremden Mail",
     ),
 ]
 

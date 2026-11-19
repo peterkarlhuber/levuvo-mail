@@ -379,5 +379,32 @@ export const AI_EN: Record<string, string> = {
   'Gerade läuft ein Download. Bitte warten, bis er fertig ist.':
     'A download is running. Please wait until it is finished.',
   'Das lokale Modell ist nicht erreichbar. Bitte Levuvo neu starten.':
-    'The local model cannot be reached. Please restart Levuvo.'
+    'The local model cannot be reached. Please restart Levuvo.',
+  'Antwort gekürzt: Sie war länger als die maximale Antwortlänge.':
+    'Answer cut off: it was longer than the maximum response length.',
+  Quellen: 'Sources',
+  'Weiter antworten': 'Continue',
+  Erweitert: 'Advanced',
+  'Gilt für das Modell {model}. Leere Felder bedeuten „Automatisch“.':
+    'Applies to the model {model}. Empty fields mean “Automatic”.',
+  'Kontextlänge (Tokens)': 'Context length (tokens)',
+  'Wie viel Text das Modell auf einmal lesen kann: Regeln, Frage und gefundene Mails zusammen. Die maximale Antwortlänge begrenzt dagegen nur, wie lang die Antwort werden darf. Standard {value}, erlaubt {min} bis {max}.':
+    'How much text the model can read at once: rules, question and the mails found, together. The maximum response length, in contrast, only limits how long the answer may get. Default {value}, allowed {min} to {max}.',
+  'Diese Kontextlänge braucht etwa {gib} GB zusätzlichen Arbeitsspeicher neben dem Modell (dieser Computer hat {ram} GB). Bei zu wenig Speicher wird das Modell langsam.':
+    'This context length needs about {gib} GB of memory in addition to the model (this computer has {ram} GB). With too little memory the model gets slow.',
+  'Max. Antwortlänge (Tokens)': 'Max response length (tokens)',
+  'Obergrenze für eine Antwort (Max Tokens). Automatisch: passend zur Funktion, z. B. 1.500 für Fragen ans Postfach. Erlaubt {min} bis {max}.':
+    'Upper limit for one answer (max tokens). Automatic: suited to each function, e.g. 1,500 for questions to the mailbox. Allowed {min} to {max}.',
+  Automatisch: 'Automatic',
+  Temperatur: 'Temperature',
+  'Niedrig (0 bis 0,3) antwortet sachlich und gleichbleibend, höher (bis 2) abwechslungsreicher. Automatisch: 0,2 für Fragen ans Postfach, sonst der Standard des Modells.':
+    'Low (0 to 0.3) answers factually and consistently, higher (up to 2) more varied. Automatic: 0.2 for questions to the mailbox, otherwise the model default.',
+  Thinking: 'Thinking',
+  'Ob das Modell vor der Antwort nachdenkt. Gilt nur für Modelle, die das können (z. B. Qwen 3.5). Automatisch: aus bei Fragen ans Postfach, damit sie schnell bleiben.':
+    'Whether the model thinks before it answers. Only for models that can (e.g. Qwen 3.5). Automatic: off for questions to the mailbox, so they stay fast.',
+  Zurücksetzen: 'Reset',
+  'Unbekannte Thinking-Stufe.': 'Unknown thinking level.',
+  'Kontextlänge außerhalb der Grenzen.': 'Context length out of range.',
+  'Temperatur außerhalb der Grenzen.': 'Temperature out of range.',
+  'Antwortlänge außerhalb der Grenzen.': 'Response length out of range.'
 };

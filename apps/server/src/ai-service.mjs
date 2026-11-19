@@ -15,6 +15,7 @@ import {
   defaultModel,
   recommendedTier
 } from './ai-model-catalog.mjs';
+import { effectiveModelOptions, modelLimits, validateModelOptions } from './ai-model-options.mjs';
 
 // Raised whenever the consent text changes: every cloud consent has to be given again.
 export const CONSENT_VERSION = '2026-11-19';
@@ -68,6 +69,8 @@ export const DEFAULT_AI_SETTINGS = {
   features: Object.fromEntries(AI_FEATURES.map(f => [f, true])),
   consents: {},
   noCloudAccounts: [],
+  // Advanced settings per model (ai-model-options.mjs); a missing model or value means automatic.
+  modelOptions: {},
   profile: { tone: 'auto', address: 'auto', signoff: '', instructions: '' }
 };
 export const AI_TONES = ['auto', 'friendly', 'formal', 'casual', 'brief'];
@@ -83,8 +86,13 @@ const MODEL_NAME = /^[A-Za-z0-9._:/-]{1,120}$/;
  * `managed`: Levuvo's own Ollama runs the local models, so only models of the fixed catalog are
  * accepted and the address is chosen by the app (the setting stays for development only).
  */
-export function validateAiSettings(input, current, { managed = false } = {}) {
-  const next = { ...current, features: { ...current.features }, consents: { ...current.consents } };
+export function validateAiSettings(input, current, { managed = false, totalBytes = os.totalmem() } = {}) {
+  const next = {
+    ...current,
+    features: { ...current.features },
+    consents: { ...current.consents },
+    modelOptions: { ...(current.modelOptions || {}) }
+  };
   if (input.enabled !== undefined) next.enabled = input.enabled === true;
   if (input.provider !== undefined) {
     if (!AI_PROVIDERS.includes(input.provider)) throw invalid('Unbekannter KI-Anbieter.');
@@ -135,6 +143,15 @@ export function validateAiSettings(input, current, { managed = false } = {}) {
         .slice(0, n);
     if (p.signoff !== undefined) next.profile.signoff = clean(p.signoff, 200);
     if (p.instructions !== undefined) next.profile.instructions = clean(p.instructions, 1000);
+  }
+  // { model, contextLength, maxTokens, temperature, thinking }: the advanced settings of one model;
+  // all values null ("Zurücksetzen") removes the entry.
+  if (input.modelOptions && typeof input.modelOptions === 'object') {
+    const model = String(input.modelOptions.model || next.model);
+    if (!MODEL_NAME.test(model)) throw invalid('Ungültiger Modellname.');
+    const clean = validateModelOptions(input.modelOptions, model, { provider: next.provider, totalBytes });
+    if (clean) next.modelOptions[model] = clean;
+    else delete next.modelOptions[model];
   }
   if (Array.isArray(input.noCloudAccounts))
     next.noCloudAccounts = [...new Set(input.noCloudAccounts.map(String).filter(id => /^[\w-]{1,64}$/.test(id)))];
@@ -248,7 +265,11 @@ export function createAiService({
   // Fingerprint of the settings the running sidecar confirmed; '' while it is unconfirmed (new
   // process, failed configure, changed settings). Tasks only run on a confirmed configuration.
   let configured = '';
-  const fingerprintOf = (s, apiKey, url) => JSON.stringify([s.provider, s.model, url, s.embedModel, apiKey.length]);
+  const options = (s = get()) => effectiveModelOptions(s, totalmem());
+  const fingerprintOf = (s, apiKey, url) =>
+    JSON.stringify([s.provider, s.model, url, s.embedModel, apiKey.length, options(s)]);
+  // The own Ollama runs with the context length of the selected model (OLLAMA_CONTEXT_LENGTH).
+  localRuntime?.configure?.({ contextLength: () => options().contextLength });
   async function effectiveUrl(s) {
     try {
       return await localUrl(s);
@@ -270,7 +291,8 @@ export function createAiService({
       model: s.model,
       baseUrl,
       embedModel: s.embedModel,
-      apiKey
+      apiKey,
+      options: options(s)
     });
     configured = fingerprint;
   }
@@ -302,7 +324,11 @@ export function createAiService({
       keys: Object.fromEntries(CLOUD_PROVIDERS.map(p => [p, Boolean(keyOf(p))])),
       consentVersion: CONSENT_VERSION,
       vaultAvailable: Boolean(vault?.available),
-      localRuntime: managed ? 'bundled' : 'external'
+      localRuntime: managed ? 'bundled' : 'external',
+      // Limits and values in effect for the selected model, for Settings → KI & Agenten → Erweitert.
+      modelLimits: modelLimits(s.model, { provider: s.provider, totalBytes: totalmem() }),
+      effectiveOptions: options(s),
+      totalMemory: totalmem()
     };
   }
   /** True when content of this account must not reach the configured (cloud) model. */
@@ -334,7 +360,7 @@ export function createAiService({
     configure,
     async save(input) {
       const current = get();
-      const next = validateAiSettings(input, current, { managed });
+      const next = validateAiSettings(input, current, { managed, totalBytes: totalmem() });
       if (input.apiKey !== undefined) {
         const provider = String(input.keyProvider || next.provider);
         if (!CLOUD_PROVIDERS.includes(provider)) throw invalid('Für lokale Modelle wird kein Schlüssel benötigt.');
@@ -397,6 +423,8 @@ export function createAiService({
     },
     ensureAllowed,
     cloudBlocked: id => cloudBlocked(id),
+    /** Context length, answer length, temperature and thinking in effect for the selected model. */
+    options: () => options(),
     /** Runs one AI function. `accountId` decides whether a cloud model may see the content. */
     async run(kind, input, { accountId = null, sources = [], source = 'user' } = {}) {
       const feature = TASK_FEATURE[kind];

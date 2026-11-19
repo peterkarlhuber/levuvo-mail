@@ -39,6 +39,20 @@ export type AiSettings = {
   vaultAvailable: boolean;
   /** 'bundled': Levuvo's own Ollama with the fixed model list; 'external': an address (development). */
   localRuntime?: 'bundled' | 'external';
+  /** Advanced settings per model (Settings → KI & Agenten → Erweitert). */
+  modelOptions?: Record<string, ModelOptions>;
+  modelLimits?: ModelLimits;
+  totalMemory?: number;
+};
+
+export type Thinking = 'auto' | 'off' | 'low' | 'medium' | 'high';
+export type ModelOptions = { contextLength?: number; maxTokens?: number; temperature?: number; thinking?: Thinking };
+export type ModelLimits = {
+  local: boolean;
+  context?: { min: number; max: number; default: number; mibPerToken: number; noteGib: number };
+  maxTokens: { min: number; max: number };
+  temperature?: { min: number; max: number };
+  thinking: boolean;
 };
 
 export type AiRuntime = {
@@ -51,7 +65,15 @@ export type AiRuntime = {
 
 export type MessageRef = { folder: string; uid: number };
 
-export type AiResult<T> = { kind: string; result: T; provider: AiProvider; model: string; generated: true };
+export type AiResult<T> = {
+  kind: string;
+  result: T;
+  provider: AiProvider;
+  model: string;
+  // false for a fixed answer of the assistant (greeting, "who are you?", nothing found): no model ran.
+  generated: boolean;
+  direct?: boolean;
+};
 
 export const isCloud = (p: AiProvider) => p !== 'ollama';
 

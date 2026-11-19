@@ -10,6 +10,8 @@ import { isTrackingImage, remoteImageKey, trackerHost } from '../src/trackers.ts
 import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 import { detectWindowFrame } from '../src/window-frame.ts';
+import { inlineTokens, parseBlocks } from '../src/markdown-parse.ts';
+import { uniqueSources } from '../src/assistant-sources.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -1072,4 +1074,34 @@ test('Protect with password: the composer refuses the same weak passwords as the
   const server = await import('../../server/src/protected-message.mjs');
   for (const pw of ['aaaaaaaaaa', '1234567890', 'Passwort123', 'Qwertzuiop1', 'Sommer-2026!', 'k7Qm-9XpT-a2Hc-ZrW4'])
     assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
+});
+
+test('Assistant: answers render as safe Markdown (bold, lists), never HTML', () => {
+  const blocks = parseBlocks(
+    'Am **19. November** abgesagt.\n\n- **Sender:** Anna\n- Datum: heute\n\n1. eins\n2. zwei\n---\n## Titel'
+  );
+  assert.deepEqual(blocks[0], { kind: 'p', lines: ['Am **19. November** abgesagt.'] });
+  assert.deepEqual(blocks[1], { kind: 'ul', items: ['**Sender:** Anna', 'Datum: heute'] });
+  assert.deepEqual(blocks[2], { kind: 'ol', items: ['eins', 'zwei'] });
+  assert.deepEqual(blocks[3], { kind: 'p', lines: ['**Titel**'] });
+  assert.deepEqual(inlineTokens('Am **19. November** um `16:00`, *bitte*'), [
+    { kind: 'text', text: 'Am ' },
+    { kind: 'strong', text: '19. November' },
+    { kind: 'text', text: ' um ' },
+    { kind: 'code', text: '16:00' },
+    { kind: 'text', text: ', ' },
+    { kind: 'em', text: 'bitte' }
+  ]);
+  // snake_case and HTML stay plain text
+  assert.deepEqual(inlineTokens('file_name_x <b>x</b>'), [{ kind: 'text', text: 'file_name_x <b>x</b>' }]);
+});
+
+test('Assistant: the same mail or notification shows one source chip', () => {
+  const a = { subject: 'Admin hat Levuvo mit dir geteilt', fromEmail: 'a@x', date: '2026-11-17T10:00:00Z', uid: 3 };
+  const b = { ...a, uid: 5, date: '2026-11-17T11:00:00Z' };
+  const c = { ...a, uid: 2, subject: 'Admin hat 01_Unternehmen mit dir geteilt' };
+  assert.deepEqual(
+    uniqueSources([a, b, c]).map(s => s.uid),
+    [3, 2]
+  );
 });

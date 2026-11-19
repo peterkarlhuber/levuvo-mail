@@ -19,6 +19,7 @@ PROVIDERS = ("ollama", "anthropic", "openai")
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODELS = {"ollama": "qwen3.5:9b", "anthropic": "claude-sonnet-5-5", "openai": "gpt-5.5-mini"}
 DEFAULT_EMBED_MODEL = "qwen3-embedding:0.6b"
+THINKING = ("auto", "off", "low", "medium", "high")
 
 
 def is_cloud_model(name: str) -> bool:
@@ -51,6 +52,10 @@ class Config:
     embed_model: str = DEFAULT_EMBED_MODEL
     api_key: str = ""
     timeout: float = 180.0
+    # The user's advanced settings for this model (Settings → KI & Agenten → Erweitert); None is automatic.
+    max_tokens: int | None = None
+    temperature: float | None = None
+    thinking: str = "auto"
 
     def public(self) -> dict[str, Any]:
         """The configuration without the key."""
@@ -60,6 +65,7 @@ class Config:
             "baseUrl": self.base_url,
             "embedModel": self.embed_model,
             "hasKey": bool(self.api_key),
+            "options": {"maxTokens": self.max_tokens, "temperature": self.temperature, "thinking": self.thinking},
         }
 
 
@@ -92,9 +98,22 @@ class Engine:
         embed = str(params.get("embedModel") or DEFAULT_EMBED_MODEL).strip()
         if is_cloud_model(embed):
             raise RpcError("invalid_input", "Ollama cloud models are not allowed: content would leave the device")
+        opts = params.get("options") if isinstance(params.get("options"), dict) else {}
+        max_tokens = opts.get("maxTokens")
+        if max_tokens is not None and not (isinstance(max_tokens, int) and 256 <= max_tokens <= 16384):
+            raise RpcError("invalid_input", "maxTokens out of range")
+        temperature = opts.get("temperature")
+        if temperature is not None and not (isinstance(temperature, (int, float)) and 0 <= temperature <= 2):
+            raise RpcError("invalid_input", "temperature out of range")
+        thinking = str(opts.get("thinking") or "auto")
+        if thinking not in THINKING:
+            raise RpcError("invalid_input", "unknown thinking level")
         with self._lock:
             self._config = replace(
                 self._config,
+                max_tokens=max_tokens,
+                temperature=float(temperature) if temperature is not None and provider == "ollama" else None,
+                thinking=thinking,
                 provider=provider,
                 model=model,
                 base_url=base_url,
@@ -122,7 +141,10 @@ class Engine:
             return cached
         caps: dict[str, str] = {}
         try:
-            caps.update(self.ollama().show(model).capability_overrides())
+            details = self.ollama().show(model)
+            caps.update(details.capability_overrides())
+            # Not an Orkexa capability: whether the model thinks before answering (Qwen 3.5 does).
+            caps["_thinking"] = "supported" if "thinking" in (details.capabilities or []) else "unsupported"
             known = True
         except Exception:
             caps["tools"] = "unknown"
@@ -144,10 +166,29 @@ class Engine:
         before_tool: Any = None,
         max_tokens: int = 1500,
         max_tool_rounds: int = 8,
+        temperature: float | None = None,
+        think: bool = True,
+        min_tokens: int | None = None,
     ) -> Any:
+        """An agent for the active model.
+
+        ``temperature`` and ``think=False`` apply to local models only: cloud reasoning models reject a
+        temperature, and their thinking is set by the provider. ``think=False`` turns thinking off for a
+        local model that thinks, so a short answer is not delayed (and its tokens not used up) by it.
+        """
         from orkexa import Agent
+        from orkexa.providers.options import CompatibleOptions
 
         cfg = self.config
+        # The user's settings win over the defaults of a function; "auto" keeps them.
+        if cfg.max_tokens is not None:
+            max_tokens = cfg.max_tokens
+        if min_tokens:  # "Länger antworten" after an answer was cut off
+            max_tokens = max(max_tokens, min(int(min_tokens), 16384))
+        if cfg.temperature is not None:
+            temperature = cfg.temperature
+        if cfg.thinking == "off":
+            think = False
         common: dict[str, Any] = {
             "system_prompt": system,
             "output_format": output_format,
@@ -161,8 +202,18 @@ class Engine:
         }
         if cfg.provider == "ollama":
             caps = dict(self._ollama_caps(cfg.model))
+            thinking = caps.pop("_thinking", "unknown") == "supported"
             if not tools:
                 caps.pop("tools", None)
+            request: dict[str, Any] = {}
+            if temperature is not None:
+                request["temperature"] = temperature
+            if thinking and cfg.thinking in ("low", "medium", "high"):
+                request["reasoning_effort"] = cfg.thinking
+            elif thinking and not think:
+                request["reasoning_effort"] = "none"
+            if request:
+                common["options"] = CompatibleOptions(request_options=request)
             return Agent(
                 provider="ollama",
                 model=cfg.model,

@@ -347,6 +347,20 @@ und beim Schreiben wird nur nach deinem Klick gesendet, gespeichert oder verscho
 Cloud-Modell übertragen wird, steht im Einwilligungsdialog und in PRIVACY.md (auch Stilproben, Suchtreffer
 und was Routinen lesen). Das Einsortieren in Bündel im Hintergrund läuft nur mit dem lokalen Modell.
 
+**Erweitert (Einstellungen → KI & Agenten → Erweitert, eingeklappt):** gilt für das gewählte Modell, leere
+Felder bedeuten „Automatisch“, **Zurücksetzen** stellt die Standardwerte wieder her.
+- **Kontextlänge (Tokens):** wie viel Text das Modell auf einmal liest (Regeln, Frage und gefundene Mails
+  zusammen). Standard: 8.192 für kleine, 16.384 für Standard-, 32.768 für große Modelle; die Obergrenze
+  richtet sich nach dem Arbeitsspeicher dieses Computers. Ab etwa 2 GB zusätzlichem Speicherbedarf zeigt
+  Levuvo Mail einen Hinweis. Eine geänderte Länge gilt nach einem automatischen Neustart des eigenen
+  Ollama (nicht während eines Downloads). Nur für lokale Modelle.
+- **Max. Antwortlänge (Tokens):** Obergrenze für eine Antwort (Max Tokens). Automatisch passt sie zur
+  Funktion, z. B. 1.500 für Fragen ans Postfach.
+- **Temperatur:** niedrig antwortet sachlich und gleichbleibend, höher abwechslungsreicher. Automatisch
+  0,2 für Fragen ans Postfach. Nur für lokale Modelle.
+- **Thinking:** Aus, Niedrig, Mittel, Hoch – nur für Modelle, die vor der Antwort nachdenken (z. B. Qwen
+  3.5). Automatisch ist es bei Fragen ans Postfach aus, damit sie schnell bleiben.
+
 **In einer Nachricht:** Zusammenfassen (wer will was bis wann, Fristen, Beträge, offene Fragen),
 Übersetzen, Termine/Aufgaben/Kontakte finden und mit „Übernehmen“ speichern, Echtheit prüfen
 (Druck, Zahlungsaufforderung, geänderte IBAN, falscher Absender).
@@ -365,15 +379,23 @@ Anbieter. Eine Umformulierung bleibt mit „Vom Assistenten geändert · Rückg�
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 
 **Assistent-Fenster (✦ links oder Strg/⌘ + J):**
-- **Frage:** „Was hat Müller zum Angebot gesagt?“ – kurze Antwort mit den Quell-Mails zum Anklicken, jeweils
-  mit Absender, Datum und einer zitierten Stelle (nur Stellen, die wörtlich in der Mail stehen). Die Suche
-  verbindet Bedeutung und genaue Wörter, findet also auch Namen, Rechnungsnummern und seltene Begriffe, und
-  liest PDF- und Textanhänge der besten Treffer. Rückfragen wie „Und der Preis?“ beziehen sich auf die
-  vorige Antwort; das Papierkorb-Symbol beginnt ein neues Gespräch.
+- **Frage:** „Was hat Müller zum Angebot gesagt?“ – kurze Antwort mit den Quell-Mails als anklickbare
+  Kärtchen, jeweils mit Absender, Datum und einer zitierten Stelle (nur Stellen, die wörtlich in der Mail
+  stehen). **Ob im Postfach gesucht wird, entscheidet das Modell selbst:** Auf „Hallo“, „Danke“ oder „Wer
+  bist du?“ antwortet der Assistent direkt und nennt dabei sein Modell und ob es lokal oder in der Cloud
+  läuft; für eine Frage zu deinen Mails ruft er die Postfachsuche auf. Die Suche verbindet Bedeutung und
+  genaue Wörter, findet also auch Namen, Rechnungsnummern und seltene Begriffe, und liest PDF- und
+  Textanhänge der besten Treffer. Nur Mails, die zur Frage passen, gehen an das Modell; passt keine,
+  lautet die Antwort ehrlich „Dazu habe ich in deinen Mails nichts gefunden“. Antworten erscheinen
+  formatiert (fett, Listen) in der Sprache der Oberfläche. Wird eine Antwort länger als die maximale
+  Antwortlänge, steht dort „Antwort gekürzt“ mit dem Knopf **Weiter antworten**, der mit mehr Platz neu antwortet.
+  Rückfragen wie „Und der Preis?“ beziehen sich auf die vorige Antwort; das Papierkorb-Symbol beginnt ein
+  neues Gespräch.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche“ – der Assistent sucht freie Zeiten und legt
   einen Entwurf an. Gesendet wird nichts.
 - **Routinen:** Tagesbriefing, Offene Antworten, Newsletter aufräumen, Meeting vorbereiten, Termin
-  vereinbaren, Antwortentwürfe vorbereiten.
+  vereinbaren, Antwortentwürfe vorbereiten. Die Leiste bleibt oben stehen, auch wenn der Verlauf scrollt;
+  passen nicht alle Knöpfe, lässt sie sich seitlich schieben.
 - **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt, Aufgabe,
   Papierkorb) – „Freigeben“ oder „Ablehnen“.
 
