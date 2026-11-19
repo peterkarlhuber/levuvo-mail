@@ -170,14 +170,48 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.rail-item').nth(3).click();
       await page.locator('.spaces-module').waitFor();
       await axe(page, 'spaces');
+      // A space with members, a note, tasks, an event and a file (QA-LEV-009).
+      await page.locator('.space-row', { hasText: 'Projekt Relaunch' }).click();
+      await page.locator('.space-tabs').waitFor();
+      await axe(page, 'space overview');
+      for (const tab of ['Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder']) {
+        await page.getByRole('tab', { name: tab }).click();
+        await page.waitForTimeout(150);
+        await axe(page, `space › ${tab}`);
+      }
+      // Tabs: arrow keys move the selection and the focus (UX-LEV-013).
+      await page.getByRole('tab', { name: 'Dateien' }).focus();
+      await page.keyboard.press('ArrowRight');
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.getAttribute('aria-selected')),
+        'true',
+        'arrow key selects the next tab'
+      );
       await page.locator('.rail-item').nth(4).click();
       await page.locator('.tasks-module').waitFor();
       await axe(page, 'tasks');
+      await page.locator('.tasks-sidebar .folder-item', { hasText: 'Alle offenen' }).click();
+      await page.locator('.task-row').first().waitFor();
+      await axe(page, 'tasks with entries');
       await page.locator('.tasks-sidebar .btn.primary').click();
       await page.locator('.task-dialog').waitFor();
       assert.ok(await page.locator('.task-dialog').evaluate(d => d.contains(document.activeElement)));
       await axe(page, 'task dialog');
       await page.keyboard.press('Escape');
+      await page.locator('.task-dialog').waitFor({ state: 'detached' });
+      // Typed input is not thrown away by Escape: a discard question comes first, starting on "Abbrechen"
+      // (UX-LEV-007/008).
+      await page.locator('.tasks-sidebar .btn.primary').click();
+      await page.locator('.task-dialog').waitFor();
+      await page.keyboard.type('Entwurf');
+      await page.keyboard.press('Escape');
+      await page.locator('.confirm-card[role="alertdialog"]').last().waitFor();
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Abbrechen');
+      await axe(page, 'discard question');
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('.task-dialog input').first().inputValue(), 'Entwurf');
+      await page.keyboard.press('Escape');
+      await page.locator('.confirm-card .btn.primary.danger').click();
       await page.locator('.task-dialog').waitFor({ state: 'detached' });
       await page.locator('.task-list-actions button', { hasText: 'Liste verbinden' }).click();
       await page.locator('.ui-dialog').waitFor();
@@ -231,6 +265,11 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     }
     await page.locator('.rail-item:visible').first().click();
     await page.setViewportSize({ width: 320, height: 640 });
+    // Tasks keep their views and "Neue Aufgabe" on a phone (UX-LEV-001).
+    await page.locator('.rail-item:visible').nth(4).click();
+    await page.locator('.tasks-sidebar .btn.primary').waitFor({ state: 'visible' });
+    await page.locator('.tasks-sidebar .folder-item', { hasText: 'Alle offenen' }).waitFor({ state: 'visible' });
+    await page.locator('.rail-item:visible').first().click();
     const width = await page.evaluate(() => document.documentElement.scrollWidth);
     assert.ok(width <= 320, `page scrolls horizontally at 320px (${width}px)`);
     await context.close();

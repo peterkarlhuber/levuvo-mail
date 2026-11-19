@@ -54,8 +54,9 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
   instructions from there.
 - Model output is parsed into fixed schemas (Pydantic); ids and sources are filtered to known values.
 - The model cannot act by itself: functions only return suggestions; agent tools that change something
-  are limited by permission level and, for sending, invitations, contacts and the trash, wait for the
-  user's approval. Permanent deletion, accounts, passwords, keys, encryption, AI settings and full exports
+  are limited by permission level and, for sending, invitations and the trash, wait for the user's
+  approval (contacts and tasks proposed at level draft too). At level organize, moving, archiving,
+  marking, snoozing, events without attendees, contacts and tasks run without approval and are logged. Permanent deletion, accounts, passwords, keys, encryption, AI settings and full exports
   are not available as tools.
 - A second allow-list in the sidecar restricts each routine to its tools (`agents.py: before_tool`).
 - `python -m levuvo_ai.evals` checks a model against synthetic injection mails before it is recommended.
@@ -69,8 +70,12 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
 - Levels read / draft / organize / full; "send without approval" is a separate, explicitly confirmed
   setting per agent at level full.
 - Rate limit 120 calls per minute per agent; request size limits.
-- Approvals expire after 7 days; after the decision the payload is deleted; each approval executes at
-  most once.
+- Approvals expire after 7 days (removed from the file at the next change or start); after the decision
+  the payload is deleted; each approval executes at most once. An approval shows the full content
+  (sending account, all recipients, full text, attendees). Removing an agent or lowering its level
+  withdraws its pending approvals.
+- Accounts marked "No cloud AI" are hidden from external agents (their model is assumed to be a cloud
+  model), the same way as from the built-in assistant with a cloud model.
 - Tokens of the built-in assistant live only in memory and expire after 20 minutes.
 - Other modules can add tools only through the registry, which enforces the same levels, log and
   approvals (`createToolRegistry`).

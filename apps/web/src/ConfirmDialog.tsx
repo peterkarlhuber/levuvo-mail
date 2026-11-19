@@ -57,8 +57,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
   const primary = useRef<HTMLButtonElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const trap = useFocusTrap<HTMLFormElement>(!!pending);
+  const trap = useFocusTrap<HTMLDivElement>(!!pending);
 
   const confirm = useCallback(
     (o: ConfirmOptions) => new Promise<boolean>(resolve => setPending({ kind: 'confirm', ...o, resolve })),
@@ -90,6 +91,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (pending?.kind === 'prompt') input.current?.focus();
+    // A destructive confirmation must not delete on a reflex Enter: start on "Abbrechen".
+    else if (pending?.kind === 'confirm' && pending.danger) cancel.current?.focus();
     else if (pending) primary.current?.focus();
   }, [pending]);
 
@@ -120,16 +123,14 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             if (e.target === e.currentTarget) close(false);
           }}
         >
-          <form
+          {/* The role sits on a div (a form may not be an alertdialog); the form only handles Enter. */}
+          <div
             ref={trap}
             className="confirm-card"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="dialog-title"
-            onSubmit={e => {
-              e.preventDefault();
-              close(true);
-            }}
+            aria-describedby={pending.message ? 'dialog-message' : undefined}
             onKeyDown={e => {
               if (e.key === 'Escape') {
                 e.stopPropagation();
@@ -137,41 +138,49 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               }
             }}
           >
-            <h2 id="dialog-title">{pending.title}</h2>
-            {pending.message && <p>{pending.message}</p>}
-            {pending.kind === 'prompt' && (
-              <label className="dialog-field">
-                {pending.label}
-                <input
-                  ref={input}
-                  type={pending.type || 'text'}
-                  value={value}
-                  onChange={e => {
-                    setValue(e.target.value);
-                    setError('');
-                  }}
-                  autoComplete="off"
-                />
-              </label>
-            )}
-            {error && (
-              <p className="dialog-error" role="alert">
-                {error}
-              </p>
-            )}
-            <div className="confirm-actions">
-              <button type="button" className="btn" onClick={() => close(false)}>
-                {pending.cancelLabel || t('Abbrechen')}
-              </button>
-              <button
-                ref={primary}
-                type="submit"
-                className={pending.kind === 'confirm' && pending.danger ? 'btn primary danger' : 'btn primary'}
-              >
-                {pending.confirmLabel || t('OK')}
-              </button>
-            </div>
-          </form>
+            <form
+              className="confirm-form"
+              onSubmit={e => {
+                e.preventDefault();
+                close(true);
+              }}
+            >
+              <h2 id="dialog-title">{pending.title}</h2>
+              {pending.message && <p id="dialog-message">{pending.message}</p>}
+              {pending.kind === 'prompt' && (
+                <label className="dialog-field">
+                  {pending.label}
+                  <input
+                    ref={input}
+                    type={pending.type || 'text'}
+                    value={value}
+                    onChange={e => {
+                      setValue(e.target.value);
+                      setError('');
+                    }}
+                    autoComplete="off"
+                  />
+                </label>
+              )}
+              {error && (
+                <p className="dialog-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="confirm-actions">
+                <button ref={cancel} type="button" className="btn" onClick={() => close(false)}>
+                  {pending.cancelLabel || t('Abbrechen')}
+                </button>
+                <button
+                  ref={primary}
+                  type="submit"
+                  className={pending.kind === 'confirm' && pending.danger ? 'btn primary danger' : 'btn primary'}
+                >
+                  {pending.confirmLabel || t('OK')}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       <div className="toasts" role="status" aria-live="polite">

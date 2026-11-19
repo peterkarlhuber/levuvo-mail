@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
 import DOMPurify from 'dompurify';
+import { isRemoteSrc } from './trackers';
 import {
   AlarmClock,
   Archive,
@@ -99,10 +100,22 @@ const escapeHtml = (s: string) =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 function quotedHtml(d: Detail) {
   if (d.html) {
-    const clean = DOMPurify.sanitize(d.html, {
-      FORBID_TAGS: ['style', 'script', 'form', 'input', 'button', 'iframe', 'svg', 'math'],
-      FORBID_ATTR: ['style', 'class', 'id']
+    const doc = DOMPurify.sanitize(d.html, {
+      FORBID_TAGS: ['style', 'script', 'form', 'input', 'button', 'iframe', 'svg', 'math', 'picture', 'source'],
+      FORBID_ATTR: ['style', 'class', 'id', 'srcset', 'background'],
+      RETURN_DOM_FRAGMENT: true
     });
+    // The editor would load remote images of the quoted mail right away (tracking pixels, the
+    // sender learns the reply is being written) although the reader blocks them: they become a
+    // short text placeholder instead (SEC-LEV-006).
+    for (const img of Array.from(doc.querySelectorAll('img'))) {
+      if (!isRemoteSrc(img.getAttribute('src'))) continue;
+      const alt = (img.getAttribute('alt') || '').trim();
+      img.replaceWith(alt ? document.createTextNode(`[${alt.slice(0, 200)}]`) : document.createTextNode(''));
+    }
+    const box = document.createElement('div');
+    box.append(doc);
+    const clean = box.innerHTML;
     return clean.length > 200_000 ? plainToHtml(bodyText(d).slice(0, 50_000)) : clean;
   }
   return plainToHtml(d.text.slice(0, 50_000));

@@ -2,6 +2,7 @@
 // and Google. Only the refresh token is stored (OS keychain); access tokens live in
 // memory and are used for IMAP/SMTP via XOAUTH2.
 import { createHash, randomBytes } from 'node:crypto';
+import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 export const PROVIDERS = {
   microsoft: {
@@ -96,9 +97,10 @@ export function emailFromIdToken(idToken, expect = null) {
 export function createOAuthManager({
   config,
   providers = PROVIDERS,
-  fetchImpl = globalThis.fetch,
+  fetchImpl: rawFetch = globalThis.fetch,
   now = () => Date.now()
 }) {
+  const fetchImpl = withTimeout(rawFetch, TIMEOUTS.token);
   const pending = new Map();
   const tokens = new Map();
   const configured = id => Boolean(providers[id] && config?.[id]?.clientId);

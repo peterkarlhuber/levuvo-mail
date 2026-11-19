@@ -499,3 +499,85 @@ test('M-03 (audit 2.3.0): "load images" is bound to one message, not to its UID'
   assert.notEqual(remoteImageKey('acc1', { ...a, uidValidity: '2' }), key, 'folder recreated');
   assert.equal(remoteImageKey('acc1', null), null);
 });
+
+// ---------- Audit 2026-11-19 (block D): accessibility and privacy regressions ----------
+import { readFileSync } from 'node:fs';
+const css = name => readFileSync(join(root, 'apps/web/src/styles', name), 'utf8');
+function themeTokens(theme) {
+  const src = css('tokens.css');
+  const block =
+    theme === 'dark' ? /:root,\s*\[data-theme='dark'\]\s*\{([^}]*)\}/ : /\[data-theme='light'\]\s*\{([^}]*)\}/;
+  const out = {};
+  for (const m of block.exec(src)[1].matchAll(/--([\w-]+):\s*(#[0-9a-f]{3,8})/gi)) out[m[1]] = m[2];
+  return out;
+}
+function contrast(a, b) {
+  const lum = hex => {
+    const h = hex.length === 4 ? hex.replace(/(\w)/g, '$1$1').slice(1) : hex.slice(1, 7);
+    const [r, g, bl] = [0, 2, 4].map(i => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
+test('UX-LEV-005/006: status, danger and star colours meet WCAG AA in both themes', () => {
+  for (const theme of ['dark', 'light']) {
+    const tk = themeTokens(theme);
+    assert.ok(tk['on-danger'], `${theme}: --on-danger is defined per theme`);
+    assert.ok(contrast(tk['on-danger'], tk.danger) >= 4.5, `${theme}: --on-danger on --danger`);
+    for (const name of ['ok', 'warn', 'danger', 'text', 'muted'])
+      assert.ok(contrast(tk[name], tk.bg) >= 4.5, `${theme}: --${name} on --bg (${contrast(tk[name], tk.bg)})`);
+    assert.ok(contrast(tk.star, tk.bg) >= 3, `${theme}: --star is a non-text marker (3:1)`);
+  }
+});
+
+test('UX-LEV-004/019/001: focus ring on fields, 24px targets, tasks navigation on small screens', () => {
+  const base = css('base.css');
+  assert.match(base, /input:focus-visible[\s\S]*?\{\s*outline: var\(--focus-ring\)/);
+  assert.match(base, /\.searchbox:focus-within/);
+  assert.match(css('mail.css'), /\.folder-more \{[^}]*min-width: var\(--touch-target\)/);
+  assert.match(css('dialogs.css'), /\.toast-close \{[^}]*min-height: var\(--touch-target\)/);
+  assert.match(
+    css('tasks.css'),
+    /@media \(max-width: 960px\)[\s\S]*\.calendar-sidebar\.tasks-sidebar \{[^}]*display: flex/
+  );
+});
+
+test('UX-LEV-014: "Übernehmen" on AI suggestions is "Apply", the keychain button has its own text', async () => {
+  const { EN: en } = await import('../src/i18n-en.ts');
+  assert.equal(en['Übernehmen'], 'Apply');
+  assert.equal(en['In den Schlüsselbund verschieben'], 'Move to keychain');
+});
+
+test('UX-LEV-015: date-only due dates are local days, never a clock time', async () => {
+  const { dueDateLabel, setFormatLocale } = await import('../src/format.ts');
+  setFormatLocale('de-AT');
+  const now = new Date(2026, 10, 19, 23, 30);
+  assert.equal(dueDateLabel('2026-11-19', now), '19. Nov.');
+  assert.doesNotMatch(dueDateLabel('2026-11-19', now), /:/);
+  assert.match(dueDateLabel('2027-01-02', now), /2027/);
+  assert.equal(dueDateLabel('', now), '–');
+});
+
+test('SEC-LEV-006/007: remote CSS images are removed, data: images and other CSS stay', async () => {
+  const { stripRemoteCss, isRemoteSrc } = await import('../src/trackers.ts');
+  assert.equal(stripRemoteCss('color: red; background: url(https://t.example/p.gif)'), 'color: red;');
+  assert.equal(stripRemoteCss("background-image:url( '//t.example/o' );color:blue"), 'color:blue');
+  assert.equal(stripRemoteCss('.a{background:url(http://t.example/x)} .b{color:red}'), '.a{} .b{color:red}');
+  // CSS escapes and image-set() cannot hide a tracker.
+  assert.equal(stripRemoteCss('background: u\\72l(https://t.example/x)'), '');
+  assert.equal(stripRemoteCss('background-image: image-set("https://t.example/x" 1x)'), '');
+  const inline = 'background: url(data:image/png;base64,AAAA); color: red';
+  assert.equal(stripRemoteCss(inline), inline);
+  assert.equal(stripRemoteCss('content: "\\201C"'), 'content: "\\201C"');
+  assert.equal(stripRemoteCss('x: url(https://t/x); y: "\\3c /style>"'), null);
+  assert.equal(isRemoteSrc('https://t.example/p.gif'), true);
+  assert.equal(isRemoteSrc('//t.example/p.gif'), true);
+  assert.equal(isRemoteSrc('cid:logo'), false);
+  assert.equal(isRemoteSrc('data:image/png;base64,AA'), false);
+  assert.equal(isRemoteSrc(null), false);
+});

@@ -106,7 +106,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
       const ok = await confirm({
         title: t('Cloud-KI von {provider} verwenden?', { provider: PROVIDER_NAMES[provider] }),
         message: t(
-          'Für jede KI-Funktion, die du aufrufst, wird der Inhalt der betroffenen Nachrichten an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU. Für Konten, die du unten sperrst, wird nichts übertragen. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.',
+          'Für jede KI-Funktion, die du aufrufst, werden die dafür nötigen Inhalte an {provider} übertragen und dort verarbeitet, möglicherweise außerhalb der EU: die betroffenen Nachrichten; bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ zusätzlich bis zu fünf deiner zuletzt gesendeten Mails als Stilprobe; bei Fragen an das Postfach die gefundenen Mails aller nicht gesperrten Konten; bei Aufgaben und Routinen des Assistenten die Mails, Termine, Kontakte und Aufgaben, die er dafür liest, und Inhalte von Räumen, die Cloud-KI erlauben. Für Konten, die du unten sperrst, wird nichts übertragen. Das Einsortieren im Hintergrund läuft nur mit einem lokalen Modell. Ohne diese Einwilligung bleibt alles lokal. Du kannst sie jederzeit widerrufen.',
           { provider: PROVIDER_NAMES[provider] }
         ),
         confirmLabel: t('Einwilligen'),

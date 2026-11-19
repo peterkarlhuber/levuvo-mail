@@ -70,6 +70,24 @@ textarea:focus {
   border-color: var(--border-strong);
   outline: none;
 }
+/* Keyboard focus must stay visible (WCAG 2.4.7): fields get the shared ring, and containers whose
+   inner field has no border of its own show it around the whole box. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.searchbox:focus-within,
+.task-quick:focus-within,
+.palette-input:focus-within,
+.compose-editor-wrap:focus-within,
+.space-note:focus-within {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}
+.searchbox input:focus-visible,
+.task-quick input:focus-visible,
+.palette-input input:focus-visible {
+  outline: none;
+}
 input[type='checkbox'],
 input[type='radio'] {
   accent-color: var(--accent);

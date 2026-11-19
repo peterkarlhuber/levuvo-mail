@@ -9,6 +9,9 @@ import {
   buildOrganizerMessage,
   buildReply,
   invitationToStoredIcs,
+  applyCancel,
+  validTimezone,
+  mergeInvitation,
   applyReply,
   parseItip,
   dueAlarms,
@@ -571,18 +574,24 @@ export function registerDavRoutes(ctx) {
           buildReply(loaded.ics, { email: myEmail, name: identity.from.name }, partstat)
         );
       if (partstat !== 'DECLINED' && inv.start && inv.end) {
-        const local = v => (inv.allDay ? v.slice(0, 10) : localWall(v, 'Europe/Vienna'));
+        // The invitation's own time zone (else the device's), and its repetition: a series
+        // invitation stays a series instead of becoming a single event in a fixed zone.
+        const tzid = [inv.tzid, Intl.DateTimeFormat().resolvedOptions().timeZone, 'UTC'].find(
+          z => z && validTimezone(z)
+        );
+        const local = v => (inv.allDay ? v.slice(0, 10) : localWall(v, tzid));
         await cloud.saveEvent({
           accountId: calendar.accountId,
           calendarUrl: calendar.url,
           model: validateEventInput({
             summary: inv.summary || '—',
             allDay: inv.allDay,
-            tzid: inv.allDay ? null : 'Europe/Vienna',
+            tzid: inv.allDay ? null : tzid,
             start: local(inv.start),
             end: local(inv.end),
             location: inv.location,
-            description: inv.description
+            description: inv.description,
+            rrule: inv.recurrenceId ? null : inv.rrule
           }),
           notify: false
         });
@@ -606,21 +615,30 @@ export function registerDavRoutes(ctx) {
       calendar?.accountId === LOCAL_ACCOUNT && local
         ? local.findAllByUid(inv.uid)[0] || null
         : await davService.findByUid(inv.uid, { accountId: calendar?.accountId || null });
-    if (partstat === 'DECLINED') {
-      if (existing)
+    if (existing) {
+      // An invitation for one occurrence only changes that occurrence of the stored series; an
+      // outdated REQUEST (lower SEQUENCE) leaves the stored event alone.
+      const merged = mergeInvitation(existing.data, loaded.ics, myEmail, partstat);
+      if (merged.action === 'delete')
         await backend(existing.accountId).deleteCalendarObject(existing.accountId, existing.url, existing.etag);
-    } else {
+      else if (merged.action === 'update')
+        await backend(existing.accountId).updateCalendarObject(
+          existing.accountId,
+          existing.url,
+          existing.etag,
+          merged.ics
+        );
+      stored = merged.action === 'update' || (merged.action === 'ignore' && partstat !== 'DECLINED');
+    } else if (partstat !== 'DECLINED') {
       const ics = invitationToStoredIcs(loaded.ics, myEmail, partstat);
-      if (existing)
-        await backend(existing.accountId).updateCalendarObject(existing.accountId, existing.url, existing.etag, ics);
-      else if (calendar?.accountId && calendar?.url)
+      if (calendar?.accountId && calendar?.url)
         await backend(calendar.accountId).createCalendarObject(
           calendar.accountId,
           calendar.url,
           inv.uid || randomUUID(),
           ics
         );
-      stored = Boolean(existing || calendar?.url);
+      stored = Boolean(calendar?.url);
     }
     return { ok: true, partstat, stored, replied: Boolean(inv.organizer?.email) };
   });
@@ -645,9 +663,24 @@ export function registerDavRoutes(ctx) {
       return { ok: true, applied: applied > 0 };
     }
     if (inv.method === 'CANCEL') {
-      for (const copy of copies)
-        await backend(copy.accountId).deleteCalendarObject(copy.accountId, copy.url, copy.etag);
-      return { ok: true, applied: true };
+      // Only the organizer's own cancellation counts, only for the occurrence it names and only
+      // when it is not older than the stored event (RECURRENCE-ID, SEQUENCE; RFC 5546 §3.2.5).
+      const sender = loaded.detail.from?.[0]?.email || '';
+      let applied = 0;
+      let reason = null;
+      for (const copy of copies) {
+        const result = applyCancel(copy.data, loaded.ics, sender);
+        if (result.action === 'delete')
+          await backend(copy.accountId).deleteCalendarObject(copy.accountId, copy.url, copy.etag);
+        else if (result.action === 'update')
+          await backend(copy.accountId).updateCalendarObject(copy.accountId, copy.url, copy.etag, result.ics);
+        else {
+          reason = result.reason;
+          continue;
+        }
+        applied++;
+      }
+      return applied ? { ok: true, applied: true } : { ok: true, applied: false, reason };
     }
     throw fail('Diese Kalendernachricht kann nicht übernommen werden.', 'invitation_invalid');
   });

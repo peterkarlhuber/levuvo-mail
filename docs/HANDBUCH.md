@@ -1,4 +1,4 @@
-# Levuvo Mail 2.2 – Handbuch
+# Levuvo Mail 2.3 – Handbuch
 
 *Less effort. More impact.*
 
@@ -8,7 +8,8 @@ auf deinem Gerät; Levuvo sieht weder deine Nachrichten noch deine Zugangsdaten.
 **Inhalt:** 1 Installation · 2 Konto einrichten · 3 Die Oberfläche · 4 Lesen · 5 Schreiben ·
 6 Ordnung halten · 7 Suche & Offline · 8 Filter & Abwesenheit · 9 Kalender · 10 Kontakte ·
 11 Verschlüsselung · 12 Sicherheit & Phishing · 13 Einstellungen · 14 Tastenkürzel ·
-15 Fehlerbehebung · 16 Datenschutz
+15 Fehlerbehebung · 16 Datenschutz · 17 Levuvo Mail Assistant (KI) · 18 Aufgaben · 19 Räume ·
+20 Sicherung & Umzug · 21 Neue Absender & Bündel
 
 ---
 
@@ -52,7 +53,8 @@ Bis zu fünf Konten. „Entfernen“ löscht nur die Einrichtung auf diesem Ger�
 
 ## 3 Die Oberfläche
 
-Links die **Navigationsleiste**: E-Mail, Kalender, Kontakte, Hilfe, Einstellungen (Alt+1, Alt+2, Alt+3, Alt+,).
+Links die **Navigationsleiste**: E-Mail, Kalender, Kontakte, Räume, Aufgaben, Assistent, Hilfe, Einstellungen
+(Alt+1 bis Alt+5, Strg/⌘+J für den Assistenten, Alt+, für die Einstellungen).
 
 Im Bereich E-Mail: **Ordnerleiste** – **Nachrichtenliste** – **Lesebereich**. Die Breite der Liste lässt
 sich mit der Maus oder den Pfeiltasten am Trenner ändern (Doppelklick setzt zurück). Die Anzeige oben
@@ -298,7 +300,8 @@ Rückfrage, Passwörter/Token/Schlüssel nur im Schlüsselbund, die App ist nur 
 | P | drucken / PDF |
 | / | suchen |
 | Strg/⌘ + Enter | senden (im Editor) |
-| Alt + 1 · 2 · 3 | E-Mail · Kalender · Kontakte |
+| Alt + 1 · 2 · 3 · 4 · 5 | E-Mail · Kalender · Kontakte · Räume · Aufgaben |
+| Strg/⌘ + J | Assistent |
 | Alt + , | Einstellungen |
 | Esc | schließen / Auswahl aufheben |
 | ? | Übersicht |
@@ -329,8 +332,10 @@ Der Assistent ist **standardmäßig aus**. Einschalten unter **Einstellungen →
 mit einem lokalen Modell auf diesem Computer (Ollama, empfohlen **qwen3.5:9b**, bei 8 GB RAM
 **qwen3.5:4b**); für die Suche nach Bedeutung **Qwen3-Embedding 0.6B**. Fehlt ein Modell, lädt
 „Herunterladen“ es. Cloud-Modelle (Anthropic, OpenAI) gehen nur nach einer Einwilligung und nie für
-Konten mit „Keine Cloud-KI“. Alle Ergebnisse sind als **KI-generiert** gekennzeichnet; gesendet,
-gespeichert oder verschoben wird nur nach deinem Klick.
+Konten mit „Keine Cloud-KI“. Alle Ergebnisse sind als **KI-generiert** gekennzeichnet; im Lesebereich
+und beim Schreiben wird nur nach deinem Klick gesendet, gespeichert oder verschoben. Was bei einem
+Cloud-Modell übertragen wird, steht im Einwilligungsdialog und in PRIVACY.md (auch Stilproben, Suchtreffer
+und was Routinen lesen). Das Einsortieren in Bündel im Hintergrund läuft nur mit dem lokalen Modell.
 
 **In einer Nachricht:** Zusammenfassen (wer will was bis wann, Fristen, Beträge, offene Fragen),
 Übersetzen, Termine/Aufgaben/Kontakte finden und mit „Übernehmen“ speichern, Echtheit prüfen
@@ -341,8 +346,10 @@ fertiger Mail, Umformulieren (kürzer, höflicher, förmlicher, lockerer, Rechts
 mit „Rückgängig“. Vor dem Senden prüft der Assistent auf vergessenen Anhang, scharfen Ton, falsche
 Empfänger und sensible Daten; du entscheidest, ob trotzdem gesendet wird.
 
-**Schreibstil:** Tonfall, Anrede (du/Sie), Grußformel und eigene Anweisungen. Ohne Angaben orientiert
-sich der Assistent an deinen gesendeten Mails (nur als Stilvorlage, kein Training).
+**Schreibstil:** Tonfall, Anrede (du/Sie), Grußformel und eigene Anweisungen. Zusätzlich bekommt der
+Assistent bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ bis zu fünf deiner zuletzt gesendeten
+Mails als Stilprobe (nur dein eigener Text, kein Training); bei einem Cloud-Modell gehen sie mit an den
+Anbieter. Eine Umformulierung bleibt mit „Vom Assistenten geändert · Rückgängig“ markiert.
 
 **Filter in Worten:** unter Einstellungen → Filter z. B. „Rechnungen von Lieferanten in den Ordner
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
@@ -353,13 +360,17 @@ Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
   einen Entwurf an. Gesendet wird nichts.
 - **Routinen:** Tagesbriefing, Offene Antworten, Newsletter aufräumen, Meeting vorbereiten, Termin
   vereinbaren, Antwortentwürfe vorbereiten.
-- **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt,
+- **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt, Aufgabe,
   Papierkorb) – „Freigeben“ oder „Ablehnen“.
 
 **Agenten (MCP-Server):** Unter Einstellungen → KI & Agenten den MCP-Server einschalten, einen Agenten
 anlegen (Stufe Lesen, Entwürfe, Ordnen oder Alles inkl. Senden) und den einmal angezeigten Token bzw. die
 fertige Konfiguration in Claude Desktop oder Claude Code eintragen. Der Server ist nur auf diesem
-Computer erreichbar. Endgültiges Löschen, Konten, Passwörter, Schlüssel und KI-Einstellungen sind für
+Computer erreichbar. Mit der Stufe **Ordnen** darf ein Agent Mails ohne Rückfrage verschieben, archivieren,
+markieren und zurückstellen sowie Termine ohne Teilnehmer, Kontakte und Aufgaben anlegen (alles im
+KI-Protokoll). Senden, Termine mit Teilnehmern und der Papierkorb warten immer auf deine Freigabe; sie zeigt
+Absendekonto, alle Empfänger und den vollständigen Text. Konten mit „Keine Cloud-KI“ sieht ein externer
+Agent nicht. Endgültiges Löschen, Konten, Passwörter, Schlüssel und KI-Einstellungen sind für
 Agenten nie zugänglich.
 
 **KI-Protokoll:** zeigt, was KI und Agenten getan haben (ohne Mailinhalte, 30 Tage, nur auf diesem
@@ -368,3 +379,46 @@ Freigaben und Agenten.
 
 Für Organisationen: Vorlagen für Nutzungsrichtlinie, Verarbeitungsverzeichnis, Sicherheitskonzept und
 eine KI-Kurzanleitung liegen unter `docs/ai/`.
+
+## 18 Aufgaben
+
+**Aufgaben** in der Navigationsleiste (Alt+5). Ansichten: Heute, Demnächst, Überfällig, Alle offenen,
+Erledigt. „Neue Aufgabe“ oder die Schnelleingabe oben in der Liste legt eine Aufgabe an; aus einer Mail
+über „Als Aufgabe“ (der Link zur Mail bleibt erhalten). Eine Aufgabe hat Fälligkeit (Tag oder Uhrzeit),
+Erinnerung als Mitteilung, Priorität, Notiz und Wiederholung; eine wiederholte Aufgabe behält ihre
+Uhrzeit auch über die Zeitumstellung. Auf schmalen Fenstern und am Handy stehen Ansichten, Listen und
+„Neue Aufgabe“ oben über der Liste.
+
+**Listen verbinden:** Aufgaben → Listen → „Liste verbinden“: eine CalDAV-Liste, Microsoft To Do oder
+Google Tasks. Abgeglichen werden Titel, Notiz, Fälligkeit, Erinnerung, Priorität, Wiederholung und Status
+(Google Tasks: nur Titel, Notiz, Tag und Status); der Link zur Mail bleibt auf diesem Gerät. Trennen
+beendet den Abgleich, auf dem Server wird nichts gelöscht. Aufgaben werden auf dem Gerät verschlüsselt
+gespeichert.
+
+## 19 Räume
+
+Ein **Raum** (Alt+4) sammelt alles zu einem Thema, Projekt oder Kunden: Notizen, die mehrere gleichzeitig
+bearbeiten, angeheftete Mails mit internen Kommentaren, Aufgaben und Termine mit Zuständigen, Dateien mit
+Versionen und eine Aktivitätsliste. Mitglieder lädst du per Mail-Adresse ein (Rollen Eigentümer,
+Bearbeiter, Leser) und vergleichst beim Beitritt den Sicherheitscode. Es gibt keinen Levuvo-Server: jedes
+Mitglied hat eine verschlüsselte Kopie, Änderungen gehen Ende-zu-Ende-verschlüsselt als Mails zwischen den
+Postfächern. Die Reiter lassen sich mit den Pfeiltasten wechseln, Dateien auch per Tastatur hochladen.
+Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
+Erlaubnis. Details: `docs/SPACES.md`.
+
+## 20 Sicherung & Umzug
+
+**Einstellungen → Sicherung → Sicherung erstellen** speichert alles, was nur auf diesem Gerät liegt
+(Einstellungen, Konten ohne Passwörter, lokaler Kalender, Kontakte, Aufgaben, Vorlagen, Absender-
+Entscheidungen, eigene Schlüssel, Räume, KI-Einstellungen, Routinen und Agenten ohne Token) in einer mit
+deinem Passwort verschlüsselten Datei. **Wiederherstellen** prüft die Datei und ersetzt die Daten beim
+nächsten Start; die vorherigen Daten bleiben unter `before-restore/`. Danach die Kontopasswörter einmal neu
+eingeben. Bewahre die Sicherung so sorgfältig auf wie den Computer selbst.
+
+## 21 Neue Absender & Bündel
+
+**Neue Absender zuerst prüfen** (Einstellungen → Allgemein): Mails von Absendern, die nicht in deinen
+Kontakten stehen und denen du nie geschrieben hast, warten unter „Neue Absender“, bis du sie annimmst oder
+blockierst. **Bündel** fassen Newsletter, Rechnungen, Benachrichtigungen u. Ä. in je einer Zeile zusammen;
+mit eingeschaltetem lokalem Modell hilft der Assistent beim Einsortieren. Die **Anhang-Übersicht** zeigt
+alle Anhänge eines Ordners, die **Phishing-Prüfung** warnt bei verdächtigen Mails (Kapitel 12).

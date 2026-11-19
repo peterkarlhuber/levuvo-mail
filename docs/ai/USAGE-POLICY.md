@@ -22,7 +22,11 @@ connected through the MCP server.
    or other special categories (Art. 9 GDPR) must be marked "No cloud AI". [List of affected accounts or
    roles.]
 4. **Human in the loop.** AI results are suggestions. The user reads and checks every draft, event,
-   contact and task before it is used. Nothing is sent, moved or saved without a click by the user.
+   contact and task before it is used. In the reading pane and the composer nothing is sent, moved or
+   saved without a click by the user. Agents with the level "organize" can move, archive, mark and snooze
+   mails and create events without attendees, contacts and tasks without asking (logged in the AI log);
+   this level needs [approval by role]. Sending, events with attendees and moving to the trash always
+   wait for an approval.
 5. **Responsibility stays with the user.** Content sent under one's own name is one's own statement,
    whether or not an AI suggested it.
 6. **Labelling.** AI results are marked as "AI-generated" in the app. If a text is published or passed to
