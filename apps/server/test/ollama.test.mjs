@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import { spawn as nodeSpawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -299,6 +299,47 @@ test('downloads: cancel keeps the progress, a new download resumes, discard remo
     assert.equal(existsSync(partial), false);
     assert.equal(existsSync(path.join(dir, 'blobs', `sha256-${'b'.repeat(64)}`)), true);
     assert.equal((await mm.list()).models.find(m => m.id === 'ministral-3:3b').job, null);
+  } finally {
+    await ollama.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('downloads: the parts of one paused model can be discarded while another model downloads', async () => {
+  const ollama = await fakeOllama({ slow: true });
+  const dir = tmp();
+  mkdirSync(path.join(dir, 'blobs'));
+  const old = path.join(dir, 'blobs', `sha256-${'c'.repeat(64)}-partial`);
+  writeFileSync(old, 'from an earlier session');
+  utimesSync(old, new Date(Date.now() - 3600e3), new Date(Date.now() - 3600e3));
+  const mm = createModelManager({
+    runtime: runtimeAt(ollama.url, dir),
+    statfs: async () => ({ bavail: 1e6, bsize: 1e6 })
+  });
+  const job = async id => (await mm.list()).models.find(m => m.id === id).job;
+  try {
+    await mm.download('gemma4:e2b');
+    await until(async () => (await job('gemma4:e2b')).completed > 0);
+    const gemmaPart = path.join(dir, 'blobs', `sha256-${'d'.repeat(64)}-partial-0`);
+    writeFileSync(gemmaPart, 'gemma');
+    mm.cancel('gemma4:e2b');
+    await until(async () => (await job('gemma4:e2b')).status === 'canceled');
+    await mm.download('ministral-3:3b');
+    await until(async () => (await job('ministral-3:3b')).completed > 0);
+    const ministralPart = path.join(dir, 'blobs', `sha256-${'e'.repeat(64)}-partial-0`);
+    writeFileSync(ministralPart, 'ministral');
+    // All parts at once: refused while a download runs.
+    await assert.rejects(mm.discardPartial(), { kind: 'busy' });
+    // The parts of the paused model: removed, the running download and older parts untouched.
+    assert.deepEqual(await mm.discardPartial('gemma4:e2b'), { removed: 1 });
+    assert.equal(existsSync(gemmaPart), false);
+    assert.equal(existsSync(ministralPart), true);
+    assert.equal(existsSync(old), true);
+    assert.equal(await job('gemma4:e2b'), null);
+    assert.equal((await job('ministral-3:3b')).status, 'downloading');
+    // Nothing paused under that name: nothing to do.
+    assert.deepEqual(await mm.discardPartial('gemma4:e2b'), { removed: 0 });
+    mm.cancel('ministral-3:3b');
   } finally {
     await ollama.close();
     rmSync(dir, { recursive: true, force: true });

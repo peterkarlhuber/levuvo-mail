@@ -13,8 +13,6 @@ import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier } from
 // Room left on the disk after a download: the system and the mailbox need space too.
 export const DISK_RESERVE = 2 * 1024 ** 3;
 const PULL_STALL_MS = 120_000;
-// A part changed this recently may still be written by a running download.
-const ACTIVE_PART_MS = 30_000;
 const PARTIAL = /^sha256-[0-9a-f]{64}-partial/;
 
 const stripDigest = d => String(d || '').replace(/^sha256:/, '');
@@ -208,6 +206,7 @@ export function createModelManager({
       const reason = job.controller.signal.reason;
       if (job.canceled) {
         job.status = 'canceled';
+        job.pausedAt = Date.now();
         job.parts = [...new Set([...(job.parts || []), ...(await partsSince(job.startedAt).catch(() => []))])];
       } else {
         job.status = 'error';
@@ -276,9 +275,10 @@ export function createModelManager({
   }
 
   /**
-   * Removes the parts of cancelled downloads: of one model (id), or of all paused ones. While
-   * another model downloads, files it is still writing are left alone (recently changed), and on
-   * Windows an open file cannot be removed anyway.
+   * Removes the parts of cancelled downloads: of one model (id), also while another model
+   * downloads, or of all paused ones while nothing downloads. A part changed after its model was
+   * paused is shared with the running download and stays (on Windows an open file cannot be
+   * removed anyway).
    */
   async function discardPartial(id) {
     const running = [...jobs.values()].some(j => ['downloading', 'verifying'].includes(j.status));
@@ -297,11 +297,11 @@ export function createModelManager({
       ? jobs.get(targets[0]).parts || []
       : (await readdir(dir).catch(() => [])).filter(n => PARTIAL.test(n)).map(n => path.join(dir, n));
     let removed = 0;
-    const now = Date.now();
+    const pausedAt = id ? jobs.get(targets[0]).pausedAt || 0 : 0;
     for (const file of files) {
-      if (running) {
+      if (id) {
         const st = await stat(file).catch(() => null);
-        if (!st || now - st.mtimeMs < ACTIVE_PART_MS) continue;
+        if (!st || st.mtimeMs > pausedAt + 1000) continue;
       }
       try {
         await rm(file);
