@@ -5,9 +5,10 @@
 //   → sent ($LevuvoSent, then moved to Trash) | failed ($LevuvoFailed, nothing was sent)
 //   | uncertain ($LevuvoSending left behind: SMTP may have run; never retried automatically).
 // No automatic retry after an uncertain SMTP result (same policy as normal sending).
+import { createHash } from 'node:crypto';
 import PostalMime from 'postal-mime';
 import { findDraftFolder } from './drafts.mjs';
-import { findSpecialFolder } from './mail-actions.mjs';
+import { childFolderPath, findSpecialFolder, selectableFolders } from './mail-actions.mjs';
 import { fetchUidOne, isRequestedFetchResult, uidSet } from './imap-fetch.mjs';
 import { findSentFolder } from './send-utils.mjs';
 
@@ -248,7 +249,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
  * can never proceed together; the owner never yields to a running other device, so both
  * do not keep backing off either.
  */
-async function claim(client, item, { mine, now, claims, folderKey, pollMs }) {
+async function claim(client, item, { mine, now, claims, folderKey, pollMs, folders }) {
   const own = mine ? CLAIM_OWNER_FLAG : CLAIM_OTHER_FLAG;
   const theirs = mine ? CLAIM_OTHER_FLAG : CLAIM_OWNER_FLAG;
   const uid = String(item.uid);
@@ -284,7 +285,66 @@ async function claim(client, item, { mine, now, claims, folderKey, pollMs }) {
     await sleep(pollMs);
   }
   claims.delete(key);
-  return (await client.messageFlagsAdd(uid, [SENDING_FLAG], { uid: true })) !== false;
+  let lockPath = null;
+  if (!mine) {
+    lockPath = await takeoverLock(client, folders, { key, folderKey, uid, now, claims });
+    if (!lockPath) {
+      await client.messageFlagsRemove(uid, [own], { uid: true }).catch(() => {});
+      return false;
+    }
+    // Won the lock: the owner may have claimed meanwhile (it never waits for the lock).
+    flags = await freshFlags(client, item.uid);
+    if (!flags?.has(own) || flags.has(theirs) || final(flags)) {
+      await client.messageFlagsRemove(uid, [own], { uid: true }).catch(() => {});
+      await tryDelete(client, lockPath);
+      return false;
+    }
+  }
+  if ((await client.messageFlagsAdd(uid, [SENDING_FLAG], { uid: true })) === false) {
+    if (lockPath) await tryDelete(client, lockPath);
+    return false;
+  }
+  return lockPath || true;
+}
+
+// Takeover lock. Keywords cannot tell two other devices apart (both set $LevuvoClaimOther), and
+// IMAP has no compare-and-swap for flags. Creating a mailbox is atomic: of several devices that
+// CREATE the same name, exactly one succeeds. A device that is not the owner therefore only sends
+// after it created the lock folder for this message; it deletes the folder afterwards.
+const LOCK_PREFIX = 'Levuvo-Sendelock-';
+const lockName = (folderKey, uid) =>
+  `${LOCK_PREFIX}${createHash('sha256').update(`${folderKey}:${uid}`).digest('hex').slice(0, 16)}`;
+const tryCreate = (client, path) =>
+  Promise.resolve()
+    .then(() => client.mailboxCreate(path))
+    .catch(() => null);
+const tryDelete = (client, path) =>
+  Promise.resolve()
+    .then(() => client.mailboxDelete(path))
+    .catch(() => null);
+const isLockFolder = f => (f.path.split(/[./]/).at(-1) || '').startsWith(LOCK_PREFIX);
+
+async function takeoverLock(client, folders, { key, folderKey, uid, now, claims }) {
+  let path;
+  try {
+    path = childFolderPath(folders, lockName(folderKey, uid), 'Levuvo');
+  } catch {
+    return null; // hierarchy unknown: no safe lock, so no takeover
+  }
+  const made = await tryCreate(client, path);
+  if (made?.created === true) {
+    claims.delete(`lock:${key}`);
+    return path;
+  }
+  // Held by another device. One that stopped before $LevuvoSending leaves it behind: released
+  // after the lease, the next run competes again.
+  const since = claims.get(`lock:${key}`) ?? now;
+  claims.set(`lock:${key}`, since);
+  if (now - since >= CLAIM_LEASE_MS) {
+    await tryDelete(client, path);
+    claims.delete(`lock:${key}`);
+  }
+  return null;
 }
 
 async function cleanUp(client, uid, trash) {
@@ -328,9 +388,16 @@ export async function sendDue(
   const due = items.filter(isDue);
   const leftovers = items.filter(i => i.state === 'sent' || (i.state === 'uncertain' && wasSent && i.messageId));
   if (!due.length && !leftovers.length) return { results, next: nextAt() };
-  const trash = findSpecialFolder(await client.list(), '\\Trash');
-  const lock = await client.getMailboxLock(folder);
+  const folders = selectableFolders(await client.list());
+  const trash = findSpecialFolder(folders, '\\Trash');
   const folderKey = `${folder}:${uidValidity}`;
+  // Lock folders whose message is no longer waiting (sent by the owner, removed) are left over.
+  const waiting = new Set(
+    items.filter(i => ['scheduled', 'claimed'].includes(i.state)).map(i => lockName(folderKey, String(i.uid)))
+  );
+  for (const f of folders.filter(isLockFolder))
+    if (!waiting.has(f.path.split(/[./]/).at(-1))) await tryDelete(client, f.path);
+  const lock = await client.getMailboxLock(folder);
   try {
     for (const item of leftovers) {
       // Unconfirmed: the copy in "Sent" proves the message went out (absence proves nothing).
@@ -343,53 +410,62 @@ export async function sendDue(
     }
     for (const item of due) {
       const mine = Boolean(instanceId) && item.owner === instanceId;
-      if (!(await claim(client, item, { mine, now, claims, folderKey, pollMs }))) continue;
-      const current = await fetchUidOne(client, item.uid, { flags: true, source: true });
-      if (!current?.source) {
-        // Claimed but unreadable: release, nothing was sent.
-        await client
-          .messageFlagsRemove(String(item.uid), [SENDING_FLAG, CLAIM_OWNER_FLAG, CLAIM_OTHER_FLAG], { uid: true })
-          .catch(() => {});
-        continue;
-      }
-      const parsed = await PostalMime.parse(current.source);
-      const recipients = [...(parsed.to || []), ...(parsed.cc || []), ...(parsed.bcc || [])]
-        .flatMap(a => (a.group ? a.group : [a]))
-        .map(a => a.address)
-        .filter(Boolean);
-      const raw = stripHeaders(current.source, ['bcc', 'x-levuvo-*']);
+      const claimed = await claim(client, item, { mine, now, claims, folderKey, pollMs, folders });
+      if (!claimed) continue;
       try {
-        await submit(recipients, raw);
-      } catch (err) {
-        if (isRetryableSubmitError(err) && now - Date.parse(item.sendAt) < RETRY_WINDOW_MS) {
-          // Nothing reached the server's DATA phase: release the claim, the next run tries again.
-          await client
-            .messageFlagsRemove(String(item.uid), [SENDING_FLAG, CLAIM_OWNER_FLAG, CLAIM_OTHER_FLAG], { uid: true })
-            .catch(() => {});
-          results.push({ uid: item.uid, sent: false, retry: true });
-          continue;
-        }
-        if (isDefinitiveSubmitFailure(err)) {
-          // Refused before DATA: certainly not sent, shown as failed.
-          await client.messageFlagsAdd(String(item.uid), [FAILED_FLAG], { uid: true }).catch(() => {});
-          await client.messageFlagsRemove(String(item.uid), [SENDING_FLAG], { uid: true }).catch(() => {});
-          results.push({ uid: item.uid, sent: false });
-        } else {
-          // During or after DATA: delivery unknown. $LevuvoSending stays, the message is shown as
-          // unconfirmed and never sent again automatically.
-          results.push({ uid: item.uid, sent: false, uncertain: true });
-        }
-        continue;
+        await sendClaimed(item);
+      } finally {
+        if (typeof claimed === 'string') await tryDelete(client, claimed);
       }
-      await client.messageFlagsAdd(String(item.uid), [SENT_FLAG], { uid: true }).catch(() => {});
-      await saveSent(raw).catch(() => {});
-      await cleanUp(client, item.uid, trash);
-      results.push({ uid: item.uid, sent: true, subject: item.subject });
     }
   } finally {
     lock.release();
   }
   return { results, next: nextAt() };
+
+  async function sendClaimed(item) {
+    const current = await fetchUidOne(client, item.uid, { flags: true, source: true });
+    if (!current?.source) {
+      // Claimed but unreadable: release, nothing was sent.
+      await client
+        .messageFlagsRemove(String(item.uid), [SENDING_FLAG, CLAIM_OWNER_FLAG, CLAIM_OTHER_FLAG], { uid: true })
+        .catch(() => {});
+      return;
+    }
+    const parsed = await PostalMime.parse(current.source);
+    const recipients = [...(parsed.to || []), ...(parsed.cc || []), ...(parsed.bcc || [])]
+      .flatMap(a => (a.group ? a.group : [a]))
+      .map(a => a.address)
+      .filter(Boolean);
+    const raw = stripHeaders(current.source, ['bcc', 'x-levuvo-*']);
+    try {
+      await submit(recipients, raw);
+    } catch (err) {
+      if (isRetryableSubmitError(err) && now - Date.parse(item.sendAt) < RETRY_WINDOW_MS) {
+        // Nothing reached the server's DATA phase: release the claim, the next run tries again.
+        await client
+          .messageFlagsRemove(String(item.uid), [SENDING_FLAG, CLAIM_OWNER_FLAG, CLAIM_OTHER_FLAG], { uid: true })
+          .catch(() => {});
+        results.push({ uid: item.uid, sent: false, retry: true });
+        return;
+      }
+      if (isDefinitiveSubmitFailure(err)) {
+        // Refused before DATA: certainly not sent, shown as failed.
+        await client.messageFlagsAdd(String(item.uid), [FAILED_FLAG], { uid: true }).catch(() => {});
+        await client.messageFlagsRemove(String(item.uid), [SENDING_FLAG], { uid: true }).catch(() => {});
+        results.push({ uid: item.uid, sent: false });
+      } else {
+        // During or after DATA: delivery unknown. $LevuvoSending stays, the message is shown as
+        // unconfirmed and never sent again automatically.
+        results.push({ uid: item.uid, sent: false, uncertain: true });
+      }
+      return;
+    }
+    await client.messageFlagsAdd(String(item.uid), [SENT_FLAG], { uid: true }).catch(() => {});
+    await saveSent(raw).catch(() => {});
+    await cleanUp(client, item.uid, trash);
+    results.push({ uid: item.uid, sent: true, subject: item.subject });
+  }
 }
 
 /** True when a message with this Message-ID is in the Sent folder (settles "unconfirmed"). */

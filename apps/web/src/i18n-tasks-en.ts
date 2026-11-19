@@ -62,5 +62,11 @@ export const TASKS_EN: Record<string, string> = {
   'Die Liste beim Anbieter ist leer. Zur Sicherheit wurde hier nichts gelöscht.':
     'The list at the provider is empty. To be safe, nothing was deleted here.',
   'Einige Aufgaben ließen sich nicht abgleichen. Der nächste Abgleich versucht es erneut.':
-    'Some tasks could not be synced. The next sync tries again.'
+    'Some tasks could not be synced. The next sync tries again.',
+  'Die Liste auf dem Server ist zu groß für den Abgleich. Zur Sicherheit wurde nichts geändert.':
+    'The list on the server is too large to sync. To be safe, nothing was changed.',
+  'Die Liste beim Anbieter ist zu groß für den Abgleich. Zur Sicherheit wurde nichts geändert.':
+    'The list at the provider is too large to sync. To be safe, nothing was changed.',
+  'Der Anbieter hat eine unerwartete Antwort geschickt.': 'The provider sent an unexpected answer.',
+  'Unerwartete Antwort des Anbieters.': 'Unexpected answer from the provider.'
 };

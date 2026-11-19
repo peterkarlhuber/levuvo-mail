@@ -4,9 +4,29 @@ import { classifyExternalUrl, isPreviewFrameUrl } from '../../desktop/links.mjs'
 import { createReminderMonitor } from '../../desktop/reminders.mjs';
 import { createTranslator, DESKTOP_TEXTS } from '../../desktop/i18n.mjs';
 
-test('Desktop: Microsoft/Google sign-in pages open without asking, others need confirmation', () => {
-  assert.equal(classifyExternalUrl('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?x=1').trusted, true);
-  assert.equal(classifyExternalUrl('https://accounts.google.com/o/oauth2/v2/auth').trusted, true);
+test('Desktop: the own Microsoft/Google sign-in opens without asking, other links need confirmation', () => {
+  const back = encodeURIComponent('http://127.0.0.1:51234/oauth/callback');
+  assert.equal(
+    classifyExternalUrl(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?redirect_uri=${back}`).trusted,
+    true
+  );
+  assert.equal(classifyExternalUrl(`https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=${back}`).trusted, true);
+  // Audit 2.3.0 (SEC-01): any other page on those hosts, e.g. from a mail, is confirmed first.
+  assert.equal(
+    classifyExternalUrl('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?x=1').trusted,
+    false
+  );
+  assert.equal(classifyExternalUrl('https://accounts.google.com/o/oauth2/v2/auth').trusted, false);
+  assert.equal(
+    classifyExternalUrl(
+      `https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=${encodeURIComponent('https://evil.example/oauth/callback')}`
+    ).trusted,
+    false
+  );
+  assert.equal(
+    classifyExternalUrl('https://accounts.google.com/ServiceLogin?continue=https://evil.example').trusted,
+    false
+  );
   assert.equal(classifyExternalUrl('http://accounts.google.com/').trusted, false);
   assert.equal(classifyExternalUrl('https://accounts.google.com.evil.example/').trusted, false);
   assert.deepEqual(classifyExternalUrl('tel:+43 (1) 234-56'), {

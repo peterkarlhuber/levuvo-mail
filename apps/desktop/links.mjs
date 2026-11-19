@@ -1,6 +1,27 @@
 // Classification of external link targets before they are handed to the OS.
-// Own website and the sign-in pages of the OAuth providers (opened by "Sign in with …").
-const TRUSTED_HOSTS = new Set(['levuvo.at', 'www.levuvo.at', 'login.microsoftonline.com', 'accounts.google.com']);
+// Own website, and the sign-in pages of the OAuth providers (opened by "Sign in with …").
+// A sign-in page is only trusted as the app's own sign-in: the authorize endpoint with the answer
+// going back to this computer (127.0.0.1/oauth/callback). Any other page on those hosts, e.g. a
+// link in a mail, is confirmed like every other link.
+const TRUSTED_HOSTS = new Set(['levuvo.at', 'www.levuvo.at']);
+const OAUTH_AUTHORIZE = {
+  'login.microsoftonline.com': /^\/[\w.-]+\/oauth2\/v2\.0\/authorize$/,
+  'accounts.google.com': /^\/o\/oauth2\/v2\/auth$/
+};
+function isOwnSignIn(url) {
+  const path = OAUTH_AUTHORIZE[url.hostname.toLowerCase()];
+  if (!path || !path.test(url.pathname)) return false;
+  try {
+    const back = new URL(url.searchParams.get('redirect_uri') || '');
+    return (
+      back.protocol === 'http:' &&
+      ['127.0.0.1', 'localhost', '[::1]'].includes(back.hostname) &&
+      back.pathname === '/oauth/callback'
+    );
+  } catch {
+    return false;
+  }
+}
 
 const PDF_VIEWER_ID = 'mhjfbmdgcfjbbpaeojofohoefgiehjai';
 
@@ -53,6 +74,6 @@ export function classifyExternalUrl(raw) {
     kind: 'web',
     host,
     display,
-    trusted: url.protocol === 'https:' && TRUSTED_HOSTS.has(host)
+    trusted: url.protocol === 'https:' && (TRUSTED_HOSTS.has(host) || isOwnSignIn(url))
   };
 }

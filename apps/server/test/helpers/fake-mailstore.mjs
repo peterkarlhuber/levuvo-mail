@@ -92,8 +92,16 @@ export function createMailStore({ folders = ['INBOX', 'Drafts', 'Sent', 'Trash']
         selected = path;
         return { release() {} };
       },
+      // Like IMAP CREATE: atomic, and an existing name is reported (ALREADYEXISTS → created: false).
       async mailboxCreate(path) {
+        await op('create');
+        if (boxes.has(path)) return { path, created: false };
         boxes.set(path, { path, uidValidity: 9, nextUid: 1, messages: new Map(), modseq: 1n });
+        return { path, created: true };
+      },
+      async mailboxDelete(path) {
+        await op('delete');
+        if (!boxes.delete(path)) throw Object.assign(new Error('no mailbox'), { responseStatus: 'NO' });
         return { path };
       },
       async search(query) {

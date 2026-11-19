@@ -140,7 +140,20 @@ export function createAiLog(filename) {
     await rename(tmp, filename);
   }
   let writes = 0;
+  // The 30-day limit also holds while the AI is not used: old lines are removed at the start and
+  // twice a day, not only when new entries are written.
+  const sweep = () => {
+    queue = queue
+      .then(async () => {
+        if ((await read()).some(e => !(Date.parse(e.at) >= Date.now() - LOG_DAYS * 86400_000))) await prune();
+      })
+      .catch(() => {});
+    return queue;
+  };
+  void sweep();
+  setInterval(sweep, 12 * 3600_000).unref?.();
   return {
+    sweep,
     add(entry) {
       const line = JSON.stringify({ at: new Date().toISOString(), ...entry });
       queue = queue
@@ -177,11 +190,15 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       return '';
     }
   };
+  // Fingerprint of the settings the running sidecar confirmed; '' while it is unconfirmed (new
+  // process, failed configure, changed settings). Tasks only run on a confirmed configuration.
   let configured = '';
+  const fingerprintOf = (s, apiKey) => JSON.stringify([s.provider, s.model, s.baseUrl, s.embedModel, apiKey.length]);
   async function configure(callRaw) {
+    configured = '';
     const s = get();
     const apiKey = CLOUD_PROVIDERS.includes(s.provider) ? keyOf(s.provider) : '';
-    const fingerprint = JSON.stringify([s.provider, s.model, s.baseUrl, s.embedModel, apiKey.length]);
+    const fingerprint = fingerprintOf(s, apiKey);
     const call = callRaw || ((m, p) => sidecar.call(m, p, { timeout: 15000 }));
     await call('configure', {
       provider: s.provider,
@@ -192,6 +209,18 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     });
     configured = fingerprint;
   }
+  /** Fails closed: a task never runs on a sidecar that still has an older provider configured. */
+  async function ensureConfigured() {
+    const s = get();
+    const want = fingerprintOf(s, CLOUD_PROVIDERS.includes(s.provider) ? keyOf(s.provider) : '');
+    if (configured === want && sidecar.running) return;
+    try {
+      await configure();
+    } catch (err) {
+      throw Object.assign(new SidecarError('not_configured'), { statusCode: 503, cause: err });
+    }
+    if (configured !== want) throw Object.assign(new SidecarError('not_configured'), { statusCode: 503 });
+  }
   function publicSettings() {
     const s = get();
     return {
@@ -201,7 +230,16 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       vaultAvailable: Boolean(vault?.available)
     };
   }
-  function ensureAllowed(feature, accountId) {
+  /** True when content of this account must not reach the configured (cloud) model. */
+  function cloudBlocked(accountId, s = get()) {
+    return CLOUD_PROVIDERS.includes(s.provider) && Boolean(accountId) && s.noCloudAccounts.includes(accountId);
+  }
+  /**
+   * `accountId` is the account the request is about; `sources` lists the account of every piece
+   * of mail content in the model input (e.g. the hits of a question across all accounts). All of
+   * them must be allowed for the configured provider.
+   */
+  function ensureAllowed(feature, accountId, sources = []) {
     const s = get();
     if (!s.enabled) throw Object.assign(new SidecarError('disabled'), { statusCode: 409 });
     if (feature && s.features[feature] === false)
@@ -209,7 +247,7 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
     if (CLOUD_PROVIDERS.includes(s.provider)) {
       if (s.consents[s.provider]?.version !== CONSENT_VERSION)
         throw Object.assign(new SidecarError('consent_missing'), { statusCode: 409 });
-      if (accountId && s.noCloudAccounts.includes(accountId))
+      if ([accountId, ...sources].some(id => cloudBlocked(id, s)))
         throw Object.assign(new SidecarError('cloud_blocked'), { statusCode: 409 });
       if (!keyOf(s.provider)) throw Object.assign(new SidecarError('auth'), { statusCode: 409 });
     }
@@ -270,15 +308,17 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       return sidecar.call('pull', { model }, { timeout: 60 * 60 * 1000 });
     },
     ensureAllowed,
+    cloudBlocked: id => cloudBlocked(id),
     /** Runs one AI function. `accountId` decides whether a cloud model may see the content. */
-    async run(kind, input, { accountId = null, source = 'user' } = {}) {
+    async run(kind, input, { accountId = null, sources = [], source = 'user' } = {}) {
       const feature = TASK_FEATURE[kind];
       if (!feature) throw invalid('Unbekannte KI-Funktion.');
       // Embeddings always run on the local Ollama, also when a cloud model writes the answers, so the
       // per-account cloud block does not apply to them.
-      const s = ensureAllowed(feature, kind === 'embed' ? null : accountId);
+      const s = kind === 'embed' ? ensureAllowed(feature, null) : ensureAllowed(feature, accountId, sources);
       const started = Date.now();
       try {
+        await ensureConfigured();
         const result = await sidecar.call('task', { kind, input });
         // Background indexing would flood the log; the indexer writes one entry per run instead.
         if (source !== 'index')
@@ -311,6 +351,7 @@ export function createAiService({ settingsFile, vault, sidecar, log, logger = ()
       const s = ensureAllowed('agents', accountId);
       const started = Date.now();
       try {
+        await ensureConfigured();
         const result = await sidecar.call('agent', params, { timeout: 15 * 60 * 1000 });
         void log.add({
           type: 'agent',

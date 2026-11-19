@@ -307,8 +307,9 @@ function nativeNotify({ label, count, test = false, accountId, title, body, modu
 /**
  * Opt-in crash reports: only when the user enabled them in Settings → Privacy AND this
  * build contains a report URL (package.json "levuvo.crashReportUrl" or LEVUVO_CRASH_REPORT_URL).
- * Minidumps contain no mail content by design of the app (mail data is not kept in the
- * main process); extra parameters are limited to version and platform.
+ * The mail server runs in the main process, so a minidump of it can contain fragments of mail
+ * content, addresses or keys that were in memory; Settings and PRIVACY.md say so. Extra
+ * parameters are limited to version and platform.
  */
 async function startCrashReporting(localGet) {
   let url = process.env.LEVUVO_CRASH_REPORT_URL || '';
@@ -345,6 +346,7 @@ async function boot() {
     desktop: true,
     sessionSecret: secret,
     env: process.env,
+    packaged: app.isPackaged,
     // After a restore was staged: start again so the restored data is loaded from the beginning.
     onRestartRequested: () => {
       void shutdown().finally(() => {

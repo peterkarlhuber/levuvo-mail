@@ -35,6 +35,7 @@ const MAX_CONTENT_BYTES = 200 * 1024 * 1024; // all files together, decrypted
 const PENDING_DIR = 'restore-pending';
 const SAFETY_DIR = 'before-restore';
 const KEEP_SAFETY_COPIES = 3;
+const SAFETY_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
 const LOCAL = 'local';
 
 /**
@@ -46,6 +47,7 @@ const SPACES_DIR = 'spaces';
 const SPACES_SECRETS = ['spaces-key', 'spaces-identity'];
 const STAGED_SECRET = name => `restore-pending-${name}`;
 const PREVIOUS_SECRET = name => `${name}-before-restore`;
+const STAGED_CRYPTO = name => `restore-pending-crypto-${name}`;
 const SPACE_PATH = /^(?:[a-f0-9]{32}\.lvs|index\.lvs|blobs\/[a-f0-9]{16,64}\.\d{1,6})$/;
 const MAX_SPACE_FILES = 50_000;
 
@@ -468,7 +470,10 @@ export async function stageRestore({ dir, accountsPath, vault, backup }) {
     await writePrivate(path.join(pending, name), out);
     staged.push(name);
   }
-  for (const [name, value] of Object.entries(backup.secrets)) vault.set('crypto', name, value);
+  // Private keys wait under a staging name too and replace the current ones only at the restart;
+  // cancelling removes them again.
+  const cryptoSecrets = Object.keys(backup.secrets);
+  for (const [name, value] of Object.entries(backup.secrets)) vault.set(LOCAL, STAGED_CRYPTO(name), value);
   const spaces = Object.entries(backup.spaces || {});
   for (const [name, value] of spaces) {
     const target = path.join(pending, SPACES_DIR, ...name.split('/'));
@@ -485,7 +490,13 @@ export async function stageRestore({ dir, accountsPath, vault, backup }) {
   // The manifest is written last: without it, a half-written staging folder is never applied.
   await writePrivate(
     path.join(pending, 'manifest.json'),
-    JSON.stringify({ version: 1, createdAt: backup.createdAt, stagedAt: new Date().toISOString(), files: staged })
+    JSON.stringify({
+      version: 1,
+      createdAt: backup.createdAt,
+      stagedAt: new Date().toISOString(),
+      files: staged,
+      cryptoSecrets
+    })
   );
   return { staged };
 }
@@ -500,13 +511,37 @@ export async function pendingRestore(dir) {
 }
 
 export async function cancelRestore(dir, vault = null) {
+  const manifest = await pendingRestore(dir);
   await rm(path.join(dir, PENDING_DIR), { recursive: true, force: true });
+  for (const name of stagedCryptoNames(manifest)) {
+    try {
+      vault?.delete?.(LOCAL, STAGED_CRYPTO(name));
+    } catch {
+      /* best effort */
+    }
+  }
   for (const name of SPACES_SECRETS) {
     try {
       vault?.delete?.(LOCAL, STAGED_SECRET(name));
     } catch {
       /* best effort */
     }
+  }
+}
+
+const stagedCryptoNames = manifest =>
+  (Array.isArray(manifest?.cryptoSecrets) ? manifest.cryptoSecrets : []).filter(
+    n => typeof n === 'string' && /^[\w.:-]{1,200}$/.test(n)
+  );
+
+/** Moves the staged private keys to their real keychain names (again safe after an interruption). */
+function applyCryptoSecrets(vault, manifest) {
+  if (!vault?.available) return;
+  for (const name of stagedCryptoNames(manifest)) {
+    const value = vault.get(LOCAL, STAGED_CRYPTO(name));
+    if (!value) continue; // applied before an interruption
+    vault.set('crypto', name, value);
+    vault.delete?.(LOCAL, STAGED_CRYPTO(name));
   }
 }
 
@@ -597,6 +632,7 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
     if (hasStaged) await rename(source, target);
   }
   await applySpaces({ dir, pending, safety, vault, staged: spacesStaged });
+  applyCryptoSecrets(vault, manifest);
   dropStaleSecrets(
     vault,
     beforeAccounts,
@@ -612,11 +648,21 @@ export async function applyPendingRestore({ dir, accountsPath, vault, logger = (
   return { createdAt: manifest.createdAt, files: [...staged], safetyCopy: path.join(SAFETY_DIR, stamp) };
 }
 
-async function pruneSafetyCopies(dir) {
+/**
+ * Safety copies are personal data outside the active stores: at most the last three restores,
+ * and none older than 30 days (checked at every start, not only after a restore).
+ */
+export async function pruneSafetyCopies(dir, { now = Date.now() } = {}) {
   const root = path.join(dir, SAFETY_DIR);
   const entries = (await readdir(root).catch(() => [])).sort();
-  for (const old of entries.slice(0, Math.max(0, entries.length - KEEP_SAFETY_COPIES)))
-    await rm(path.join(root, old), { recursive: true, force: true });
+  const keep = new Set(entries.slice(Math.max(0, entries.length - KEEP_SAFETY_COPIES)));
+  for (const name of entries) {
+    const at = await stat(path.join(root, name))
+      .then(st => st.mtimeMs)
+      .catch(() => now);
+    if (keep.has(name) && now - at < SAFETY_MAX_AGE_MS) continue;
+    await rm(path.join(root, name), { recursive: true, force: true });
+  }
 }
 
 /** File name for a new backup, e.g. levuvo-backup-2026-11-18.levuvo */

@@ -111,6 +111,8 @@ export function aiErrorText(code: string | undefined, t: (s: string) => string) 
       return t('Für Cloud-KI fehlt die Einwilligung.');
     case 'ai_cloud_blocked':
       return t('Für dieses Konto ist Cloud-KI gesperrt.');
+    case 'ai_not_configured':
+      return t('Der KI-Anbieter ließ sich nicht umstellen. Bitte die KI-Einstellungen prüfen.');
     case 'ai_auth':
       return t('API-Schlüssel fehlt oder ist ungültig.');
     case 'ai_timeout':

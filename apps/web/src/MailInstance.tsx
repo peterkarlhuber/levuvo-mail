@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent
+} from 'react';
+import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
 import DOMPurify from 'dompurify';
 import {
   AlarmClock,
@@ -179,6 +189,17 @@ export default function MailInstance({
   const [checkedUids, setCheckedUids] = useState<number[]>([]);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [folderMenu, setFolderMenu] = useState<{ path: string; x: number; y: number } | null>(null);
+  // Keyboard: focus moves into the folder menu when it opens and back to its button when it closes.
+  const folderMenuRef = useRef<HTMLDivElement>(null);
+  const folderMenuOpener = useRef<HTMLElement | null>(null);
+  const folderMenuOpen = Boolean(folderMenu);
+  useLayoutEffect(() => {
+    if (folderMenuOpen) focusFirstItem(folderMenuRef.current);
+  }, [folderMenuOpen]);
+  const closeFolderMenu = (refocus: boolean) => {
+    setFolderMenu(null);
+    if (refocus) folderMenuOpener.current?.focus();
+  };
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
   const resizeAnchor = useRef<{ x: number; width: number } | null>(null);
   const [listWidth, setListWidth] = useState(prefs.listWidth);
@@ -1400,6 +1421,7 @@ export default function MailInstance({
                     onContextMenu={e => {
                       if (!writeEnabled) return;
                       e.preventDefault();
+                      folderMenuOpener.current = e.currentTarget.querySelector('button');
                       setFolderMenu({ path: f.path, x: e.clientX, y: e.clientY });
                     }}
                   >
@@ -1420,7 +1442,10 @@ export default function MailInstance({
                       <button
                         className="folder-more"
                         aria-label={t('Ordneraktionen: {folder}', { folder: folderLabel(f) })}
+                        aria-haspopup="menu"
+                        aria-expanded={folderMenu?.path === f.path}
                         onClick={e => {
+                          folderMenuOpener.current = e.currentTarget;
                           const r = e.currentTarget.getBoundingClientRect();
                           setFolderMenu({ path: f.path, x: r.left, y: r.bottom });
                         }}
@@ -1484,14 +1509,14 @@ export default function MailInstance({
         )}
         {folderMenu && menuFolder && (
           <>
-            <button className="menu-dismiss" aria-label={t('Menü schließen')} onClick={() => setFolderMenu(null)} />
+            <button className="menu-dismiss" aria-label={t('Menü schließen')} onClick={() => closeFolderMenu(true)} />
             <div
+              ref={folderMenuRef}
               className="menu floating"
               role="menu"
+              aria-label={t('Ordneraktionen: {folder}', { folder: folderLabel(menuFolder) })}
               style={{ left: folderMenu.x, top: folderMenu.y }}
-              onKeyDown={e => {
-                if (e.key === 'Escape') setFolderMenu(null);
-              }}
+              onKeyDown={e => menuKeyDown(e, closeFolderMenu)}
             >
               <button role="menuitem" onClick={() => void manageFolder('create', menuFolder)}>
                 {t('Unterordner anlegen')}

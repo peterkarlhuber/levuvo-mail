@@ -73,8 +73,18 @@ export async function buildSyncMail({ from, fromName = '', to, kind, spaceName, 
   );
 }
 
+// Largest raw sync mail: a 30 MiB envelope in base64 plus headers. Bigger ones are not even
+// downloaded (anyone can send a mail with the X-Levuvo-Space header).
+export const MAX_SYNC_MAIL_BYTES = 42 * 1024 * 1024;
+async function fetchSyncSource(client, uid) {
+  const meta = await fetchUidOne(client, uid, { size: true });
+  if (!meta || !Number.isSafeInteger(meta.size) || meta.size > MAX_SYNC_MAIL_BYTES) return null;
+  return fetchUidOne(client, uid, { source: true });
+}
+
 /** Reads the envelope from a raw sync mail, or null if it is none. */
 export async function parseSyncMail(source) {
+  if (!source || source.length > MAX_SYNC_MAIL_BYTES) return null;
   const parsed = await PostalMime.parse(source, { attachmentEncoding: 'arraybuffer' });
   const header = (parsed.headers || []).find(h => h.key === SPACES_HEADER.toLowerCase());
   if (!header) return null;
@@ -145,18 +155,25 @@ export function createMailTransport(ctx, store) {
         const index = store.index();
         const cursor = index.cursors?.[accountId] || {};
         let validity;
+        let backlog;
         let lock = await client.getMailboxLock(hidden.path);
         try {
           validity = String(client.mailbox?.uidValidity || '');
           const last = cursor.uidValidity === validity ? Number(cursor.last || 0) : 0;
           cursor.last = last;
-          const uids = ((await client.search({ uid: `${last + 1}:*` }, { uid: true })) || []).filter(u => u > last);
+          const uids = ((await client.search({ uid: `${last + 1}:*` }, { uid: true })) || [])
+            .filter(u => u > last)
+            .sort((a, b) => a - b);
+          let done = 0;
           for (const uid of uids.slice(0, MAX_PER_RUN)) {
-            const message = await fetchUidOne(client, uid, { source: true });
+            const message = await fetchSyncSource(client, uid);
             const mail = message?.source ? await parseSyncMail(message.source).catch(() => null) : null;
             if (mail && !(await handleSafe(mail))) break;
             cursor.last = uid;
+            done++;
           }
+          // Everything up to UIDNEXT was handled: only then may the cursor jump over mails moved in below.
+          backlog = done < uids.length;
           // Transport mails are not kept forever: everything is in each member's local copy.
           const before = new Date(Date.now() - RETENTION_DAYS * 86400_000);
           const old = ((await client.search({ before }, { uid: true })) || []).filter(
@@ -179,7 +196,7 @@ export function createMailTransport(ctx, store) {
               (await client.search({ header: { [SPACES_HEADER.toLowerCase()]: 'v1' } }, { uid: true })) || [];
             const moved = [];
             for (const uid of uids.slice(0, MAX_PER_RUN)) {
-              const message = await fetchUidOne(client, uid, { source: true });
+              const message = await fetchSyncSource(client, uid);
               if (!message?.source) continue;
               const mail = await parseSyncMail(message.source).catch(() => null);
               // Mails that only pretend to be sync mails stay where they are.
@@ -194,8 +211,11 @@ export function createMailTransport(ctx, store) {
             lock.release();
           }
         }
-        // Mails moved just now were handled already: skip them on the next pass.
-        if (movedAny) {
+        // Mails moved just now were handled already: skip them on the next pass. Not while older
+        // mails of the hidden folder still wait (more than one run's worth, or one that failed):
+        // the cursor stays at the last handled one, and the moved mails are read once more (the
+        // spaces ignore changes they already have).
+        if (movedAny && !backlog) {
           const status = await client.status(hidden.path, { uidNext: true, uidValidity: true }).catch(() => null);
           if (status?.uidNext && String(status.uidValidity || validity) === validity)
             cursor.last = Number(status.uidNext) - 1;

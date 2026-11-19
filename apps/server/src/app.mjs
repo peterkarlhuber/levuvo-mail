@@ -7,7 +7,7 @@ import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
-import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +39,7 @@ import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
-import { applyPendingRestore, pendingRestore } from './backup.mjs';
+import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
@@ -113,22 +113,57 @@ export function mailboxIdentity(account) {
   return JSON.stringify([String(imap.host || '').toLowerCase(), String(imap.user || '').toLowerCase(), provider]);
 }
 
-/** Small JSON settings file (non-secret data only). */
+/**
+ * Small JSON settings file (non-secret data only).
+ * - Only a missing file starts from `fallback`. A damaged file is kept as `<name>.corrupt-<time>`
+ *   before starting over; a file that cannot be read for another reason (permissions, disk) is
+ *   never overwritten: saving then fails until the next start.
+ * - Writes run one after another in call order, so the last save is what ends up on disk; a
+ *   failed write does not leave an unsaved value behind (unless a newer save followed).
+ */
 export async function createJsonFile(filename, fallback) {
   let value = fallback;
+  let persisted = fallback;
+  let unreadable = null;
   try {
     value = { ...fallback, ...JSON.parse(await readFile(filename, 'utf8')) };
+    persisted = value;
   } catch (err) {
-    if (err.code !== 'ENOENT') value = fallback;
+    if (err instanceof SyntaxError) {
+      const aside = `${filename}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+      await rename(filename, aside).catch(() => {});
+    } else if (err.code !== 'ENOENT') {
+      unreadable = err;
+    }
+    value = fallback;
   }
+  let queue = Promise.resolve();
   return {
     get: () => value,
-    async save(next) {
+    save(next) {
+      if (unreadable)
+        return Promise.reject(
+          Object.assign(new Error('Die Einstellungsdatei ist nicht lesbar und wird nicht überschrieben.'), {
+            code: 'store_unreadable',
+            statusCode: 500
+          })
+        );
       value = next;
-      await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-      const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-      await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
-      await rename(tmp, filename);
+      const write = queue.then(async () => {
+        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
+        try {
+          await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
+          await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
+          await rename(tmp, filename);
+          persisted = next;
+        } catch (err) {
+          await unlink(tmp).catch(() => {});
+          if (value === next) value = persisted;
+          throw err;
+        }
+      });
+      queue = write.catch(() => {});
+      return write;
     }
   };
 }
@@ -152,6 +187,7 @@ export async function createMailServer({
   background = true,
   onRestartRequested = null,
   aiSidecar = null,
+  packaged = false,
   logger = () => {}
 } = {}) {
   if (desktop && !/^[a-f0-9]{64}$/.test(sessionSecret)) throw new Error('Desktop-Sitzungsschlüssel fehlt.');
@@ -172,6 +208,7 @@ export async function createMailServer({
     logger(`restore could not be applied: ${err.code || err.message}`);
   }
   backupState.pending = Boolean(await pendingRestore(dir));
+  await pruneSafetyCopies(dir).catch(() => {});
 
   const accountManager = await createAccountManager({
     env: effectiveEnv,
@@ -538,6 +575,7 @@ export async function createMailServer({
     createSidecar({
       env,
       logger,
+      requireBundled: packaged,
       onStart: call => ai.configure(call)
     });
   ai = createAiService({

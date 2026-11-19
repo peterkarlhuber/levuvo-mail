@@ -27,6 +27,8 @@ export const PROVIDERS = {
     imapHost: 'outlook.office365.com',
     smtpHost: 'smtp.office365.com',
     smtpPort: 587,
+    // v2.0 tokens: https://login.microsoftonline.com/<tenant id>/v2.0
+    issuer: /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/,
     extraParams: { prompt: 'select_account' }
   },
   google: {
@@ -44,6 +46,7 @@ export const PROVIDERS = {
     imapHost: 'imap.gmail.com',
     smtpHost: 'smtp.gmail.com',
     smtpPort: 465,
+    issuer: /^(https:\/\/)?accounts\.google\.com$/,
     extraParams: { access_type: 'offline', prompt: 'consent' }
   }
 };
@@ -65,9 +68,24 @@ export function oauthConfigFrom(pkg = {}, env = process.env) {
 }
 
 /** Email from the id_token received directly from the token endpoint over TLS (OIDC §3.1.3.7). */
-export function emailFromIdToken(idToken) {
+/**
+ * E-mail address from the ID token. With `expect`, the claims are checked as OpenID Connect
+ * requires: issuer, audience (our client ID), expiry and the nonce of this sign-in. The token
+ * comes straight from the provider's token endpoint over TLS, which OIDC Core 3.1.3.7 accepts
+ * in place of checking the signature.
+ */
+export function emailFromIdToken(idToken, expect = null) {
   try {
     const payload = JSON.parse(Buffer.from(String(idToken).split('.')[1], 'base64url').toString('utf8'));
+    if (expect) {
+      const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+      const nowSec = Math.floor(expect.now / 1000);
+      if (!expect.issuer?.test(String(payload.iss || ''))) return '';
+      if (!aud.includes(expect.clientId)) return '';
+      if (aud.length > 1 && payload.azp !== expect.clientId) return '';
+      if (!Number.isFinite(payload.exp) || payload.exp < nowSec - 300) return '';
+      if (!expect.nonce || payload.nonce !== expect.nonce) return '';
+    }
     const email = String(payload.email || payload.preferred_username || payload.upn || '').toLowerCase();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
   } catch {
@@ -132,7 +150,16 @@ export function createOAuthManager({
       for (const [state, entry] of pending) if (now() - entry.created > PENDING_TTL_MS) pending.delete(state);
       const verifier = b64url(randomBytes(48));
       const state = b64url(randomBytes(24));
-      pending.set(state, { provider, verifier, redirectUri, relinkAccountId, created: now(), status: 'pending' });
+      const nonce = b64url(randomBytes(24));
+      pending.set(state, {
+        provider,
+        verifier,
+        nonce,
+        redirectUri,
+        relinkAccountId,
+        created: now(),
+        status: 'pending'
+      });
       const p = providers[provider];
       const url = new URL(p.authUrl);
       const params = {
@@ -141,6 +168,7 @@ export function createOAuthManager({
         redirect_uri: redirectUri,
         scope: p.scopes.join(' '),
         state,
+        nonce,
         code_challenge: b64url(createHash('sha256').update(verifier).digest()),
         code_challenge_method: 'S256',
         ...p.extraParams
@@ -164,7 +192,12 @@ export function createOAuthManager({
         code_verifier: entry.verifier,
         ...(providers[entry.provider].mailScope ? { scope: providers[entry.provider].mailScope } : {})
       });
-      const email = emailFromIdToken(data.id_token);
+      const email = emailFromIdToken(data.id_token, {
+        issuer: providers[entry.provider].issuer,
+        clientId: config[entry.provider].clientId,
+        nonce: entry.nonce,
+        now: now()
+      });
       if (!email) throw fail('Die E-Mail-Adresse konnte nicht ermittelt werden.', 'oauth_email_missing');
       if (!data.refresh_token) throw fail('Der Anbieter hat keine dauerhafte Anmeldung erlaubt.', 'oauth_no_refresh');
       return {

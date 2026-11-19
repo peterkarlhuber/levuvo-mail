@@ -75,6 +75,8 @@ export async function loadParsedMessage(client, folder, uid, { crypto = null, co
         };
         if (opened.raw) {
           source = Buffer.isBuffer(opened.raw) ? opened.raw : Buffer.from(opened.raw, 'binary');
+          // Decrypted (possibly decompressed) content gets the same limit as the mail itself.
+          if (source.byteLength > MAX_MESSAGE_BYTES) throw tooLarge('Entschlüsselte Nachricht überschreitet 12 MiB.');
           parsed = await parse(source);
         }
       } else if (crypto.pgp && /-----BEGIN PGP (MESSAGE|SIGNED MESSAGE)-----/.test(parsed.text || '')) {

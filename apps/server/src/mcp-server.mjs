@@ -391,7 +391,7 @@ export function buildTools(ctx) {
         await call(
           'POST',
           `/api/messages/${ref.uid}/action?account=${q(accountId(a.account))}`,
-          { folder: ref.folder, action: 'move', destination },
+          { folder: ref.folder, action: 'move', destination, notToTrash: true },
           'mail-v1'
         );
         return JSON.stringify({ ok: true });
@@ -617,6 +617,8 @@ export function createApprovals(file, { execute, log }) {
   const items = () => (file.get().items || []).filter(i => Date.now() - Date.parse(i.createdAt) < APPROVAL_TTL);
   const save = list => file.save({ ...file.get(), items: list.slice(-200) });
   const listeners = new Set();
+  // Expired entries leave the file at the start, not only at the next decision.
+  if ((file.get().items || []).length !== items().length) void save(items()).catch(() => {});
   return {
     list: () => items().filter(i => i.status === 'pending'),
     recent: () => items().slice(-50).reverse(),
@@ -645,8 +647,18 @@ export function createApprovals(file, { execute, log }) {
       if (!approve) {
         item.status = 'rejected';
       } else {
+        // Claimed before anything runs (no await in between), so a second decision on the same
+        // item finds it no longer pending. The claim is saved first: after a crash during the
+        // action the item stays "executing" and is never run again (at most once).
+        item.status = 'executing';
+        const payload = edits && typeof edits === 'object' ? { ...item.payload, ...edits } : item.payload;
         try {
-          const payload = edits && typeof edits === 'object' ? { ...item.payload, ...edits } : item.payload;
+          await save(list);
+        } catch (err) {
+          item.status = 'pending';
+          throw err;
+        }
+        try {
           item.result = await execute(item.type, payload);
           item.status = 'approved';
         } catch (err) {
@@ -655,8 +667,12 @@ export function createApprovals(file, { execute, log }) {
         }
       }
       item.decidedAt = new Date().toISOString();
-      // The payload (message text) is not needed any more once decided.
+      // The payload and the text excerpt (message text) are not needed any more once decided.
       item.payload = null;
+      if (item.summary && typeof item.summary === 'object' && 'text' in item.summary) {
+        item.summary = { ...item.summary };
+        delete item.summary.text;
+      }
       await save(list);
       void log.add({
         type: 'approval',

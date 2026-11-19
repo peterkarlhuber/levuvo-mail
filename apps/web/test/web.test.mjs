@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { addDays, editorTimes, eventRange, hm, layoutDay, parseYmd, startOfWeek, ymd } from '../src/calendar-utils.ts';
 import { orderFolders } from '../src/folder-utils.ts';
 import { applySuggestions, bundleSuggester, registerBundleSuggester } from '../src/bundle-suggest.ts';
-import { isTrackingImage, trackerHost } from '../src/trackers.ts';
+import { isTrackingImage, remoteImageKey, trackerHost } from '../src/trackers.ts';
 import { shortcutAt } from '../src/templates.ts';
 import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n.mjs';
 
@@ -488,4 +488,14 @@ test('Tasks: reminder choices, views and tasks of a mail', async () => {
     tasksForMail([{ ...mailTask, done: true }], { accountId: 'a', folder: 'INBOX', uid: 5, messageId: null }).length,
     0
   );
+});
+
+test('M-03 (audit 2.3.0): "load images" is bound to one message, not to its UID', () => {
+  const a = { folder: 'INBOX', uid: 7, uidValidity: '1', messageId: '<a@x>' };
+  const key = remoteImageKey('acc1', a);
+  assert.equal(remoteImageKey('acc1', { ...a }), key);
+  assert.notEqual(remoteImageKey('acc1', { ...a, folder: 'Archiv' }), key, 'same UID in another folder');
+  assert.notEqual(remoteImageKey('acc2', a), key, 'same UID in another account');
+  assert.notEqual(remoteImageKey('acc1', { ...a, uidValidity: '2' }), key, 'folder recreated');
+  assert.equal(remoteImageKey('acc1', null), null);
 });

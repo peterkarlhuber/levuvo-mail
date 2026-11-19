@@ -151,7 +151,12 @@ export function createTaskSync({
     const caps = adapter.caps;
     const stamp = () => now().toISOString();
     const remoteItems = await adapter.pull(link);
-    const remote = new Map(remoteItems.map(r => [r.remoteId, { ...r, fields: cleanRemote(r.fields, caps) }]));
+    if (!Array.isArray(remoteItems)) throw fail('Unerwartete Antwort des Anbieters.', 'task_sync_bad_response', 502);
+    // Items the adapter could not read are still there: kept as they are, never taken as deleted.
+    const unreadable = new Set(remoteItems.filter(r => r.unreadable).map(r => r.remoteId));
+    const remote = new Map(
+      remoteItems.filter(r => !r.unreadable).map(r => [r.remoteId, { ...r, fields: cleanRemote(r.fields, caps) }])
+    );
     const snapshot = file.get();
     const tasks = (Array.isArray(snapshot.tasks) ? snapshot.tasks : []).filter(t => t.sync?.link === link.id);
     const tombstones = state().tombstones.filter(t => t.link === link.id);
@@ -176,6 +181,7 @@ export function createTaskSync({
     for (const tomb of tombstones) {
       const item = remote.get(tomb.remoteId);
       known.add(tomb.remoteId);
+      if (unreadable.has(tomb.remoteId)) continue; // decided once it is readable again
       if (!item) {
         doneTombstones.push(tomb);
         continue;
@@ -224,6 +230,7 @@ export function createTaskSync({
       }
       known.add(sync.remoteId);
       const item = remote.get(sync.remoteId);
+      if (!item && unreadable.has(sync.remoteId)) continue;
       if (!item) {
         if (suspicious) continue;
         if (sync.base && same(local, sync.base)) {

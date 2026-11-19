@@ -84,3 +84,17 @@ export function trackerHost(src: string) {
     return '';
   }
 }
+
+/**
+ * Identity of one message for "load external images": account, folder, UIDVALIDITY, UID and
+ * Message-ID. A UID alone repeats across folders and accounts, so a consent given for one
+ * message must not carry over to another one with the same UID.
+ */
+export function remoteImageKey(
+  accountId: string,
+  detail: { folder: string; uid: number; uidValidity?: string; messageId?: string | null } | null
+) {
+  return detail
+    ? JSON.stringify([accountId, detail.folder, detail.uidValidity || '', detail.uid, detail.messageId || ''])
+    : null;
+}
