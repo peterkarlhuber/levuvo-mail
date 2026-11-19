@@ -1,5 +1,6 @@
 // Levuvo Mail local API. Created by the Electron main process (desktop mode) or by
 // server.mjs for browser-based development. Binds to 127.0.0.1 only.
+import { atomicWrite } from './local-store.mjs';
 import { createScreeningStore } from './screening.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
@@ -8,7 +9,7 @@ import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
-import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
+import { readFile, rename } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -151,14 +152,10 @@ export async function createJsonFile(filename, fallback) {
         );
       value = next;
       const write = queue.then(async () => {
-        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
         try {
-          await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-          await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, { mode: 0o600 });
-          await rename(tmp, filename);
+          await atomicWrite(filename, `${JSON.stringify(next, null, 2)}\n`);
           persisted = next;
         } catch (err) {
-          await unlink(tmp).catch(() => {});
           if (value === next) value = persisted;
           throw err;
         }

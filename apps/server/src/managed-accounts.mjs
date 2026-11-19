@@ -1,6 +1,7 @@
 // Account metadata is kept in a private local file; secrets ONLY reside in the
 // operating system credential vault. There is no plaintext fallback.
-import { mkdir, readFile, writeFile, rename, chmod } from 'node:fs/promises';
+import { atomicWrite } from './local-store.mjs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { randomBytes } from 'node:crypto';
@@ -206,20 +207,7 @@ export async function createAccountManager({
   }
 
   async function persist(next) {
-    await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-    const data = JSON.stringify({ version: 1, accounts: next }, null, 2) + '\n';
-    const tmp = `${filename}.${randomBytes(6).toString('hex')}.tmp`;
-    try {
-      await writeFile(tmp, data, { flag: 'wx', mode: 0o600 });
-      await chmod(tmp, 0o600);
-      await rename(tmp, filename);
-    } catch (err) {
-      const { unlink } = await import('node:fs/promises');
-      try {
-        await unlink(tmp);
-      } catch {}
-      throw err;
-    }
+    await atomicWrite(filename, JSON.stringify({ version: 1, accounts: next }, null, 2) + '\n');
     managed = next;
   }
   // Every change of the account list runs one after another and is derived from the list as it is

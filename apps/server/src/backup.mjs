@@ -13,8 +13,9 @@
 // Restoring never edits live data: the content is checked, re-encrypted with this device's keys
 // and staged in `restore-pending/`. On the next start, before any store opens, the staged files
 // replace the current ones; the current ones are kept in `before-restore/<time>/` first.
+import { atomicWrite } from './local-store.mjs';
 import { createCipheriv, createDecipheriv, randomBytes, scrypt as scryptCb } from 'node:crypto';
-import { mkdir, readFile, readdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { gunzip as gunzipCb, gzip as gzipCb } from 'node:zlib';
@@ -76,6 +77,19 @@ export const BACKUP_FILES = {
   'ai-skills.json': { kind: 'json' },
   // MCP settings and agents (token hashes only). mcp-approvals.json is short-lived and stays out.
   'mcp.json': { kind: 'json' }
+};
+
+/**
+ * Local files that are deliberately not part of a backup, with the reason. Every data file the
+ * app writes is either in BACKUP_FILES or here; a test checks this, so a new store cannot be
+ * forgotten silently.
+ */
+export const NOT_BACKED_UP = {
+  'instance.json': 'installation ID of this device',
+  'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
+  'mcp-approvals.json': 'short-lived approvals that expire',
+  '*.lvdb': 'search index; rebuilt from the mailbox',
+  '*.lvx': 'search index before 2.3; migrated and deleted'
 };
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -451,17 +465,7 @@ function validateContent(content, doc) {
   };
 }
 
-async function writePrivate(filename, text) {
-  await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-  const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-  try {
-    await writeFile(tmp, text, { mode: 0o600 });
-    await rename(tmp, filename);
-  } catch (err) {
-    await unlink(tmp).catch(() => {});
-    throw err;
-  }
-}
+const writePrivate = (filename, text) => atomicWrite(filename, text);
 
 /** This device's key for a local store; created only where no encrypted file exists yet. */
 async function deviceKey(vault, name, currentFile) {

@@ -3,9 +3,9 @@
 // used only after the user consented to it (DSGVO Art. 6/7, documented with time and text version) and
 // never for accounts marked as "no cloud AI" (e.g. professional secrecy). API keys live in the system
 // keychain only. The log stores what happened, never the content of a message.
-import { appendFile, readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { atomicWrite } from './local-store.mjs';
+import { appendFile, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { randomBytes } from 'node:crypto';
 import { SidecarError } from './ai-sidecar.mjs';
 
 // Raised whenever the consent text changes: every cloud consent has to be given again.
@@ -136,9 +136,7 @@ export function createAiLog(filename) {
   async function prune() {
     const cutoff = Date.now() - LOG_DAYS * 86400_000;
     const kept = (await read()).filter(e => Date.parse(e.at) >= cutoff).slice(-LOG_MAX);
-    const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-    await writeFile(tmp, kept.map(e => JSON.stringify(e)).join('\n') + (kept.length ? '\n' : ''), { mode: 0o600 });
-    await rename(tmp, filename);
+    await atomicWrite(filename, kept.map(e => JSON.stringify(e)).join('\n') + (kept.length ? '\n' : ''));
   }
   let writes = 0;
   // The 30-day limit also holds while the AI is not used: old lines are removed at the start and

@@ -444,3 +444,24 @@ test('DB-LEV-005: backups from a newer app or with a newer store format are refu
   });
   await assert.rejects(decryptBackup(broken, PASSWORD, { ownApp: '2.3.0' }), e => e.code === 'backup_invalid');
 });
+
+test('ARC-LEV-003: every local data file is in the backup or excluded on purpose', async () => {
+  const { BACKUP_FILES, NOT_BACKED_UP } = await import('../src/backup.mjs');
+  const { readdirSync: list } = await import('node:fs');
+  const src = new URL('../src/', import.meta.url);
+  const names = new Set();
+  const files = [
+    ...list(src)
+      .filter(f => f.endsWith('.mjs'))
+      .map(f => new URL(f, src)),
+    ...list(new URL('spaces/', src))
+      .filter(f => f.endsWith('.mjs'))
+      .map(f => new URL(`spaces/${f}`, src))
+  ];
+  for (const file of files)
+    for (const m of readFileSync(file, 'utf8').matchAll(/path\.join\(\s*dir\s*,\s*'([a-z0-9._-]+\.jsonl?)'/g))
+      names.add(m[1]);
+  assert.ok(names.size >= 15, `found ${names.size} files`);
+  const missing = [...names].filter(n => !Object.hasOwn(BACKUP_FILES, n) && !Object.hasOwn(NOT_BACKED_UP, n));
+  assert.deepEqual(missing, [], 'add new local files to BACKUP_FILES or NOT_BACKED_UP');
+});

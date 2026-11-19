@@ -2,9 +2,9 @@
 // (same model as CalDAV, so series, reminders and invitations behave identically), encrypted with
 // AES-256-GCM; the key lives in the OS keychain. Without a keychain the file stays readable only
 // for the user (0600).
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { readFile, rename } from 'node:fs/promises';
+import { atomicWrite, createWriteQueue, isSealed, keychainKey, seal, unseal } from './local-store.mjs';
 import ICAL from 'ical.js';
 import { expandObject, parseIcs } from './calendar-model.mjs';
 
@@ -20,25 +20,6 @@ const COLORS = ['#7c6cf2', '#1a8f5a', '#d9822b', '#c2417a', '#2f8fb8'];
 
 export const isLocalCalendar = url => String(url || '').startsWith(LOCAL_PREFIX);
 
-function encrypt(key, text) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const body = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
-  return JSON.stringify({
-    v: 1,
-    iv: iv.toString('base64'),
-    tag: cipher.getAuthTag().toString('base64'),
-    data: body.toString('base64')
-  });
-}
-function decrypt(key, raw) {
-  const box = JSON.parse(raw);
-  if (box.v !== 1) return raw;
-  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
-  decipher.setAuthTag(Buffer.from(box.tag, 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(box.data, 'base64')), decipher.final()]).toString('utf8');
-}
-
 /**
  * @param {object} o
  * @param {string} o.filename
@@ -51,22 +32,10 @@ export async function createLocalCalendar({ filename, vault }) {
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
-  const encrypted = raw !== null && raw.trimStart().startsWith('{"v":1');
-  let key = null;
-  if (vault?.available) {
-    try {
-      let hex = vault.get(LOCAL_ACCOUNT, 'calendar-key');
-      // A new key only for a calendar that has no encrypted data yet: a fresh key for an existing
-      // encrypted file would make it unreadable and the next save would overwrite every event.
-      if (!hex && !encrypted) {
-        hex = randomBytes(32).toString('hex');
-        vault.set(LOCAL_ACCOUNT, 'calendar-key', hex);
-      }
-      key = hex ? Buffer.from(hex, 'hex') : null;
-    } catch {
-      key = null;
-    }
-  }
+  const encrypted = isSealed(raw);
+  // A new key only for a calendar that has no encrypted data yet: a fresh key for an existing
+  // encrypted file would make it unreadable and the next save would overwrite every event.
+  const key = keychainKey(vault, 'calendar-key', { create: !encrypted, account: LOCAL_ACCOUNT });
   // Calendar data is never written in plain text (fail closed): without a key from the system
   // keychain the device calendar is unavailable instead of silently unencrypted.
   if (!key)
@@ -81,7 +50,7 @@ export async function createLocalCalendar({ filename, vault }) {
     if (!key) throw fail('Der lokale Kalender ist gesperrt (Schlüsselbund nicht verfügbar).', 'local_locked', 423);
     let text;
     try {
-      text = decrypt(key, raw);
+      text = unseal(key, raw);
     } catch {
       throw fail(
         'Der lokale Kalender lässt sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.',
@@ -102,26 +71,10 @@ export async function createLocalCalendar({ filename, vault }) {
   if (!state.calendars.length)
     state.calendars.push({ id: randomUUID(), name: 'Persönlich', color: COLORS[0], hidden: false });
 
-  let writing = Promise.resolve();
+  const writes = createWriteQueue();
   function persist() {
-    const snapshot = JSON.stringify(state);
-    // Each write reports its own error, but a failed write must not block every later one:
-    // the queue continues after a rejection.
-    const run = writing
-      .catch(() => {})
-      .then(async () => {
-        await mkdir(path.dirname(filename), { recursive: true, mode: 0o700 });
-        const tmp = `${filename}.${randomBytes(4).toString('hex')}.tmp`;
-        try {
-          await writeFile(tmp, encrypt(key, snapshot), { mode: 0o600 });
-          await rename(tmp, filename);
-        } catch (err) {
-          await unlink(tmp).catch(() => {});
-          throw err;
-        }
-      });
-    writing = run;
-    return run;
+    const snapshot = seal(key, JSON.stringify(state));
+    return writes.push(() => atomicWrite(filename, snapshot));
   }
   // A plain-text file from an earlier version is encrypted right away.
   if (raw !== null && !encrypted) await persist();
@@ -338,6 +291,6 @@ export async function createLocalCalendar({ filename, vault }) {
       await persist();
       return { imported, skipped };
     },
-    flush: () => writing
+    flush: () => writes.flush()
   };
 }

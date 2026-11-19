@@ -229,3 +229,50 @@ test('QA-LEV-004 (SEC-03): a PGP message that unpacks to more than 16 MiB is ref
   const fine = await anna.openInline(await seal('Hallo Anna'));
   assert.equal(fine.text, 'Hallo Anna');
 });
+
+test('ARC-LEV-003: shared local store: atomic write, write queue, keychain keys, sealed format', async () => {
+  const { atomicWrite, createWriteQueue, keychainKey, seal, unseal, isSealed } = await import('../src/local-store.mjs');
+  const { mkdtempSync, readdirSync, readFileSync: read, rmSync, statSync, mkdirSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-store-'));
+  try {
+    const file = join(dir, 'sub', 'a.json');
+    await atomicWrite(file, '{"x":1}');
+    assert.equal(read(file, 'utf8'), '{"x":1}');
+    if (process.platform !== 'win32') assert.equal(statSync(file).mode & 0o777, 0o600);
+    // A target that cannot be replaced: the error is reported and no temporary file stays behind.
+    mkdirSync(join(dir, 'blocked', 'inside'), { recursive: true });
+    await assert.rejects(atomicWrite(join(dir, 'blocked'), 'y'));
+    assert.deepEqual(
+      readdirSync(dir).filter(f => f.endsWith('.tmp')),
+      []
+    );
+    const queue = createWriteQueue();
+    const order = [];
+    const failed = queue.push(async () => {
+      order.push(1);
+      throw new Error('disk');
+    });
+    const next = queue.push(async () => order.push(2));
+    await assert.rejects(failed, /disk/);
+    await next;
+    await queue.flush();
+    assert.deepEqual(order, [1, 2], 'a failed write does not block the next one');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const m = new Map();
+  const vault = { available: true, get: (a, k) => m.get(`${a}:${k}`) || '', set: (a, k, v) => m.set(`${a}:${k}`, v) };
+  assert.equal(keychainKey(vault, 'k'), null, 'no key is created unless asked');
+  const key = keychainKey(vault, 'k', { create: true });
+  assert.equal(key.length, 32);
+  assert.deepEqual(keychainKey(vault, 'k'), key);
+  const forgetful = { available: true, get: () => '', set() {} };
+  assert.equal(keychainKey(forgetful, 'k', { create: true }), null, 'a key the keychain does not keep is not used');
+  const box = seal(key, 'Grüße');
+  assert.ok(isSealed(box));
+  assert.equal(unseal(key, box), 'Grüße');
+  assert.throws(() => unseal(keychainKey(vault, 'other', { create: true }), box));
+  assert.throws(() => unseal(key, '{"plain":true}'), /format/);
+});
