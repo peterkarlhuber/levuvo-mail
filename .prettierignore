@@ -9,3 +9,4 @@ build/
 test/e2e/screenshots
 .venv/
 apps/ai/
+docs/manual/.build/

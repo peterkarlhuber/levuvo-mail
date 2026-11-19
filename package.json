@@ -51,7 +51,9 @@
     "ai:runtime": "node scripts/build-ai-runtime.mjs",
     "ollama:runtime": "node scripts/fetch-ollama.mjs",
     "check:ollama": "node scripts/ollama/check-ollama-runtime.mjs",
-    "check:models": "node scripts/ollama/check-catalog.mjs"
+    "check:models": "node scripts/ollama/check-catalog.mjs",
+    "manual:screenshots": "node scripts/manual/capture-screenshots.mjs",
+    "manual:pdf": "node scripts/manual/build-pdf.mjs"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.2.1",
