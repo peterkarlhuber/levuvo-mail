@@ -6,6 +6,7 @@ import { ApiError } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button } from './ui';
 
 export type AiRule = {
   name: string;
@@ -65,9 +66,15 @@ export function FilterAssist({
         onChange={e => setText(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && text.trim() && !busy && void create()}
       />
-      <button className="btn small" disabled={!text.trim() || busy} onClick={() => void create()}>
-        {busy ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {t('Regel vorschlagen')}
-      </button>
+      <Button
+        size="sm"
+        disabled={!text.trim() || busy}
+        aria-busy={busy || undefined}
+        icon={busy ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}
+        onClick={() => void create()}
+      >
+        {t('Regel vorschlagen')}
+      </Button>
     </div>
   );
 }

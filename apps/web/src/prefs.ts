@@ -9,6 +9,8 @@ export type Prefs = {
   conversations: boolean;
   /** Inbox: newsletters, invoices and notifications collapsed into bundles. */
   bundles: boolean;
+  /** Inbox: mail from new senders waits in a screener until accepted or blocked. */
+  screening: boolean;
   listWidth: number;
   sendDelay: number;
   calendarView: 'month' | 'week' | 'day' | 'agenda';
@@ -23,6 +25,7 @@ export const DEFAULT_PREFS: Prefs = {
   markReadOnOpen: true,
   conversations: false,
   bundles: true,
+  screening: false,
   listWidth: 400,
   sendDelay: 10,
   calendarView: 'week',
@@ -39,6 +42,7 @@ function read(): Prefs {
       markReadOnOpen: v.markReadOnOpen !== false,
       conversations: v.conversations === true,
       bundles: v.bundles !== false,
+      screening: v.screening === true,
       listWidth:
         typeof v.listWidth === 'number' && v.listWidth >= 300 && v.listWidth <= 680
           ? v.listWidth

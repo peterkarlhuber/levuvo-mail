@@ -57,6 +57,8 @@ export const BACKUP_FILES = {
   'accounts.json': { kind: 'json' },
   'app-settings.json': { kind: 'json' },
   'followups.json': { kind: 'json' },
+  // Sender screening decisions (allowed / blocked addresses per account).
+  'screening.json': { kind: 'json' },
   'templates.json': { kind: 'json' },
   'dav.json': { kind: 'json' },
   'cloud.json': { kind: 'json' },

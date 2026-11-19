@@ -167,10 +167,21 @@
   padding: var(--space-2-5) var(--space-3-5);
   border-top: 1px solid var(--border);
 }
-.assistant-input textarea {
+.assistant-input .field {
   flex: 1;
   min-width: 160px;
+  margin: 0;
+}
+.assistant-input textarea {
+  width: 100%;
   resize: none;
+}
+.assistant-input .icon-button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.assistant-input .icon-button.primary:disabled {
+  opacity: 0.5;
 }
 
 .filter-assist {

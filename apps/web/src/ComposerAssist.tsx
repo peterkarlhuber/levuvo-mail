@@ -7,6 +7,7 @@ import { aiEnabled, aiErrorText, runAi, type AiFeature } from './ai';
 export { ownPart } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { Button } from './ui';
 
 type Draft = { subject: string; body: string };
 type Issue = { kind: 'attachment' | 'tone' | 'recipient' | 'sensitive'; message: string };
@@ -91,17 +92,18 @@ export function ComposerAssist({ accountId, source, getDraft, setDraft, subject,
   const draft = () => getDraft().trim();
   return (
     <div className="menu-anchor compose-ai" ref={menu}>
-      <button
-        type="button"
-        className="btn small"
+      <Button
+        size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={Boolean(busy)}
+        aria-busy={Boolean(busy) || undefined}
         onClick={() => setOpen(o => !o)}
         title={t('Levuvo Mail Assistant')}
+        icon={busy ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />}
       >
-        {busy ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {busy || t('Assistent')}
-      </button>
+        {busy || t('Assistent')}
+      </Button>
       {open && (
         <div className="menu template-menu left" role="menu">
           {features.reply && source && (
