@@ -38,6 +38,7 @@ import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
 import { PrivacyDataSettings } from './SettingsPrivacyData';
 import { AboutCompliance } from './AboutCompliance';
+import { PrivacyCockpit } from './PrivacyCockpit';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
 
@@ -484,7 +485,7 @@ function SearchIndex() {
   );
 }
 
-function Privacy() {
+function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
   const { t } = useT();
   const [settings, setSettings] = useState<{ crashReports: boolean } | null>(null);
   useEffect(() => {
@@ -497,6 +498,7 @@ function Privacy() {
   }
   return (
     <>
+      <PrivacyCockpit onOpenAiLog={onOpenAiLog} />
       <Section
         title={t('Datenschutz')}
         description={t(
@@ -748,7 +750,7 @@ export default function Settings(props: Props) {
             onCheckNow={props.onCheckNow}
           />
         )}
-        {props.tab === 'privacy' && <Privacy />}
+        {props.tab === 'privacy' && <Privacy onOpenAiLog={() => props.onTab('ai')} />}
         {props.tab === 'backup' && <BackupSettings />}
         {props.tab === 'help' && <Help />}
         {props.tab === 'about' && <About runtime={props.runtime} />}

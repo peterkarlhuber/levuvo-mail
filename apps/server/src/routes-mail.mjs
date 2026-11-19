@@ -1019,6 +1019,7 @@ export function registerMailRoutes(ctx) {
       if (info.oneClick) {
         await oneClickUnsubscribe(info.http, ctx.unsubscribeOptions || {});
         diagnostics.record('unsubscribe', 'one-click');
+        void ctx.privacy?.add({ unsubscribeOneClick: 1 });
         return { done: true, method: 'one-click' };
       }
       if (info.mailto) {
@@ -1036,6 +1037,7 @@ export function registerMailRoutes(ctx) {
         const smtp = await ctx.smtpConfigFor(account);
         await submitEmail(smtp, input, raw, ctx.smtpFactory(smtp));
         diagnostics.record('unsubscribe', 'mail');
+        void ctx.privacy?.add({ unsubscribeMail: 1 });
         return { done: true, method: 'mail', to: info.mailto.to };
       }
       return { done: false, method: 'web', url: info.http };
