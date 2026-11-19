@@ -15,7 +15,7 @@ z-index numbers, radii, spacing or colours (`scripts/check-design-tokens.mjs`, a
 | Radius | `--radius-sm` 4 · `--radius-md` 6 · `--radius-lg` 10 · `--radius-full` | `50%` for circles. |
 | Layers | `--z-base` < `raised` < `sticky` < `dropdown` < `drawer-scrim` < `drawer` < `overlay` < `popover-dismiss` < `popover` < `composer` < `modal` < `preview` < `dialog` < `toast` | Never use raw numbers. |
 | Elevation | `--elevation-1/2/3` | |
-| Controls | `--control-h-sm/--control-h/--control-h-lg`, `--touch-target` | Touch target is 24px (WCAG 2.2 AA) and grows to 44px on touch screens (`pointer: coarse`). |
+| Controls | `--control-h-sm/--control-h/--control-h-lg`, `--touch-target`, `--field-w` | Touch target is 24px (WCAG 2.2 AA) and grows to 44px on touch screens (`pointer: coarse`). |
 | Motion | `--duration-fast`, `--duration`, `--ease` | Animations are switched off under `prefers-reduced-motion`. |
 | Layout | `--rail-w`, `--sidebar-w`, `--content-max` | |
 
@@ -58,4 +58,5 @@ import { Button, IconButton, Field, Segmented, Dialog, Toolbar, useFocusTrap } f
    are reserved; fixed elements sit above them. Use `dvh`, never `vh`.
 7. `npm run test:a11y` (axe-core in Chromium, part of CI) must stay free of violations; add new
    screens to `test/a11y/a11y.test.mjs`.
-8. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.
+8. In settings, free-text fields use `<Row wide>`: the field sits below the label at full width.
+9. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.

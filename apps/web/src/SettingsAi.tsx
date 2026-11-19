@@ -353,7 +353,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             <option value="sie">{t('Sie')}</option>
           </select>
         </Row>
-        <Row label={t('Grußformel')} hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.')}>
+        <Row wide label={t('Grußformel')} hint={t('Zum Beispiel „Liebe Grüße“. Die Signatur fügt Levuvo selbst an.')}>
           <input
             maxLength={200}
             defaultValue={profile.signoff}
@@ -361,11 +361,12 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
           />
         </Row>
         <Row
+          wide
           label={t('Eigene Anweisungen')}
           hint={t('Zum Beispiel „Keine Ausrufezeichen, Termine immer mit Wochentag“.')}
         >
           <textarea
-            rows={3}
+            rows={4}
             maxLength={1000}
             defaultValue={profile.instructions}
             onBlur={e =>

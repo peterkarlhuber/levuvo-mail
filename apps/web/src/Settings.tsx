@@ -69,7 +69,18 @@ export function Section({
     </section>
   );
 }
-export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+export function Row({
+  label,
+  hint,
+  wide,
+  children
+}: {
+  label: string;
+  hint?: string;
+  /** Free-text field: placed below the label at full row width. */
+  wide?: boolean;
+  children: ReactNode;
+}) {
   const id = useId();
   const control = useRef<HTMLDivElement>(null);
   // Fields inside a row get the row's label and hint as accessible name and description,
@@ -93,7 +104,7 @@ export function Row({ label, hint, children }: { label: string; hint?: string; c
     });
   });
   return (
-    <div className="settings-row">
+    <div className={wide ? 'settings-row settings-row--wide' : 'settings-row'}>
       <div className="settings-row-label">
         <label id={`${id}-label`} htmlFor={`${id}-field`}>
           {label}

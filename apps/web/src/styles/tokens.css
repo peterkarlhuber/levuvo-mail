@@ -137,6 +137,7 @@
   --control-h-sm: 28px;
   --control-h: 34px;
   --control-h-lg: 40px;
+  --field-w: 20rem; /* single-line text fields beside a settings label */
   --touch-target: 24px; /* WCAG 2.2 AA minimum; raised to 44px on coarse pointers */
   --focus-ring: 2px solid var(--focus, var(--accent));
   --focus-offset: 2px;
