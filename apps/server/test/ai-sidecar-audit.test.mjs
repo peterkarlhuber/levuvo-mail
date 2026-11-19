@@ -48,7 +48,8 @@ test('REL-LEV-004: timed-out requests that would fill every worker restart the s
     );
     await new Promise(resolve => setTimeout(resolve, 50));
     assert.ok(logs.some(m => /restarting/.test(m)));
-    assert.equal((await sidecar.call('again')).method, 'again');
+    // The fresh process has to boot first, which can take longer than 150 ms on a slow runner.
+    assert.equal((await sidecar.call('again', {}, { timeout: 10_000 })).method, 'again');
     assert.equal(spawned, 2, 'a fresh process takes new work');
   } finally {
     await sidecar.stop();

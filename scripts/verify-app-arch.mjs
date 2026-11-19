@@ -28,6 +28,9 @@ export function detectArchitectures(file) {
     if (pe.length === 6 && pe.toString('latin1', 0, 4) === 'PE\0\0') return [PE[pe.readUInt16LE(4)] || 'unknown'];
     return [];
   }
+  // ELF (Linux, only for the CI runtime check): e_machine at offset 18, little endian.
+  if (head.length >= 20 && head.readUInt32BE(0) === 0x7f454c46 && head[5] === 1)
+    return [{ 0x3e: 'x64', 0xb7: 'arm64' }[head.readUInt16LE(18)] || 'unknown'];
   if (head.length >= 8) {
     const beMagic = head.readUInt32BE(0);
     if (beMagic === 0xcafebabe) {
@@ -74,8 +77,20 @@ if (/verify-app-arch\.mjs$/.test(process.argv[1] || '')) {
     f => f.includes(`${sep}ai-runtime${sep}`) && /(\.so|\.pyd|\.dylib|\.dll|python3?\.exe|python3\.\d+)$/.test(f)
   );
   const interpreter = runtime.find(f => /(python\.exe|python3\.\d+)$/.test(f));
+  // Levuvo's own Ollama: the server and its runner. On macOS Ollama ships universal binaries, so the
+  // target architecture must be among the ones in the file.
+  const ollama = files.filter(f => f.includes(`${sep}ollama${sep}`) && /[\\/](ollama|llama-server)(\.exe)?$/.test(f));
+  if (!ollama.some(f => /[\\/]ollama(\.exe)?$/.test(f))) {
+    console.error('✗ Bundled Ollama not found');
+  }
   const targets = [main, ...natives, ...runtime].filter(Boolean);
-  let failed = !main;
+  let failed = !main || !ollama.some(f => /[\\/]ollama(\.exe)?$/.test(f));
+  for (const file of ollama) {
+    const found = detectArchitectures(file);
+    const ok = found.includes(arch);
+    console.log(`${ok ? '✓' : '✗'} ${file.slice(root.length + 1)} → ${found.join(',') || 'unknown'} (needs ${arch})`);
+    if (!ok) failed = true;
+  }
   if (!interpreter) {
     console.error('✗ Bundled AI runtime (Python interpreter) not found');
     failed = true;

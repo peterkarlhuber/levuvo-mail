@@ -19,6 +19,7 @@ import { useT } from './i18n';
 import { Button } from './ui';
 import { Row, Section, Segmented, Toggle } from './Settings';
 import { McpSettings } from './SettingsMcp';
+import { LocalModelSettings } from './SettingsLocalModels';
 import type { AccountItem } from './types';
 
 type LogEntry = {
@@ -158,12 +159,15 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
   if (!settings) return <LoaderCircle className="spin" size={18} />;
   const profile = { tone: 'auto', address: 'auto', signoff: '', instructions: '', ...settings.profile };
   const cloud = isCloud(settings.provider);
+  const bundled = settings.localRuntime === 'bundled';
   const runtimeLine = !runtime?.available
     ? t('KI-Komponente nicht verfügbar ({reason}).', { reason: runtime?.reason || '–' })
     : settings.provider === 'ollama'
       ? runtime.ollama?.running
         ? t('Ollama {version} läuft auf diesem Computer.', { version: runtime.ollama.version || '' })
-        : t('Ollama läuft nicht. Bitte Ollama installieren und starten (ollama.com).')
+        : bundled
+          ? t('Levuvos eigenes Ollama startet beim ersten Gebrauch.')
+          : t('Ollama läuft nicht. Bitte Ollama installieren und starten (ollama.com).')
       : t('Cloud-Modell von {provider}.', { provider: PROVIDER_NAMES[settings.provider] });
 
   return (
@@ -196,7 +200,16 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             ]}
           />
         </Row>
-        {!cloud && (
+        {bundled && (
+          <LocalModelSettings
+            enabled={settings.enabled}
+            cloud={cloud}
+            save={async body => {
+              await save(body);
+            }}
+          />
+        )}
+        {!cloud && !bundled && (
           <>
             <Row label={t('Ollama-Adresse')} hint={t('Nur Adressen auf diesem Computer.')}>
               <input

@@ -47,6 +47,8 @@ import { createBackgroundJobs } from './background-jobs.mjs';
 import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
+import { createOllamaRuntime } from './ollama-runtime.mjs';
+import { createModelManager } from './ollama-models.mjs';
 import { registerSpaceRoutes, spacesDir } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
 
@@ -186,6 +188,7 @@ export async function createMailServer({
   background = true,
   onRestartRequested = null,
   aiSidecar = null,
+  ollamaRuntime = null,
   packaged = false,
   logger = () => {}
 } = {}) {
@@ -612,12 +615,18 @@ export async function createMailServer({
       requireBundled: packaged,
       onStart: call => ai.configure(call)
     });
+  // Levuvo's own Ollama (bundled binary), independent of an Ollama installed on the computer.
+  const localRuntime = ollamaRuntime || createOllamaRuntime({ dataDir: dir, env, logger });
+  const aiLog = createAiLog(path.join(dir, 'ai-log.jsonl'));
+  const models = localRuntime.available ? createModelManager({ runtime: localRuntime, log: aiLog, logger }) : null;
   ai = createAiService({
     settingsFile: aiSettings,
     vault: store,
     sidecar,
-    log: createAiLog(path.join(dir, 'ai-log.jsonl')),
-    logger
+    log: aiLog,
+    logger,
+    localRuntime,
+    models
   });
 
   const jobs = createBackgroundJobs({ logger });
@@ -760,6 +769,7 @@ export async function createMailServer({
       taskSchedule?.stop();
       watchers.stopAll();
       await sidecar.stop().catch(() => {});
+      await localRuntime.stop().catch(() => {});
       await mcp.stop().catch(() => {});
       await api.close();
       localIndex.close();

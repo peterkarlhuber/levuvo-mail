@@ -28,8 +28,8 @@ export const AI_EN: Record<string, string> = {
   'Standard, ab 16 GB RAM (Apache 2.0)': 'Default, 16 GB RAM or more (Apache 2.0)',
   'Klein, ab 8 GB RAM (Apache 2.0)': 'Small, 8 GB RAM or more (Apache 2.0)',
   'Groß, ab 32 GB RAM (Apache 2.0)': 'Large, 32 GB RAM or more (Apache 2.0)',
-  'Standard, klein und mehrsprachig (Apache 2.0)': 'Default, small and multilingual (Apache 2.0)',
-  'Alternative, mehrsprachig (MIT)': 'Alternative, multilingual (MIT)',
+  'Standard, mehrsprachig, am besten bei deutschen Mails (MIT)': 'Default, multilingual, best on German emails (MIT)',
+  'Klein und mehrsprachig (Apache 2.0)': 'Small and multilingual (Apache 2.0)',
   'Läuft immer lokal, auch bei Cloud-KI. {note}': 'Always runs locally, even with cloud AI. {note}',
   'Suchmodell wechseln?': 'Change the search model?',
   'Der Suchindex wird mit {model} im Hintergrund neu aufgebaut. Bis dahin findet die semantische Suche weniger.':
@@ -319,5 +319,65 @@ export const AI_EN: Record<string, string> = {
   'Frage an das Postfach': 'Question to the mailbox',
   'Aufgabe für den Assistenten': 'Task for the assistant',
   'Verlauf des Assistenten': 'Assistant history',
-  'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})'
+  'Vom Assistenten geändert ({model})': 'Changed by the assistant ({model})',
+  // Levuvo's own Ollama and its model list
+  'Levuvos eigenes Ollama startet beim ersten Gebrauch.': "Levuvo's own Ollama starts on first use.",
+  'Modell zu groß für diesen Computer?': 'Model too large for this computer?',
+  '{name} braucht mehr Arbeitsspeicher, als dieser Computer hat. Es kann sehr langsam laufen oder gar nicht starten.':
+    '{name} needs more memory than this computer has. It may run very slowly or not start at all.',
+  'Trotzdem wählen': 'Choose anyway',
+  '{name} löschen?': 'Delete {name}?',
+  'Das Modell ist gerade ausgewählt. Die KI-Funktionen, die es brauchen, gehen erst nach einem neuen Download wieder.':
+    'This model is currently selected. The AI features that need it work again only after a new download.',
+  'Das Modell wird von diesem Computer entfernt ({size}). Du kannst es jederzeit wieder herunterladen.':
+    'The model is removed from this computer ({size}). You can download it again at any time.',
+  'Lokale Modelle': 'Local models',
+  EU: 'EU',
+  vorhanden: 'downloaded',
+  'zu groß': 'too large',
+  knapp: 'tight',
+  'Lokale KI': 'Local AI',
+  'Levuvo bringt sein eigenes Ollama {version} mit. Es läuft nur auf diesem Computer, getrennt von einem anderen installierten Ollama. Für diesen Computer ({ram} GB Arbeitsspeicher) passt die Größe „{tier}“.':
+    'Levuvo comes with its own Ollama {version}. It runs only on this computer, separate from any other Ollama installed. For this computer ({ram} GB memory) the size “{tier}” fits.',
+  Bereit: 'Ready',
+  'Startet …': 'Starting …',
+  'Bitte ein Modell aus der Liste wählen.': 'Please choose a model from the list.',
+  'Bitte wählen': 'Please choose',
+  empfohlen: 'recommended',
+  'Suchindex mit {model}: {done} von {total} Nachrichten': 'Search index with {model}: {done} of {total} messages',
+  'Fortschritt des Suchindex': 'Search index progress',
+  'Heruntergeladene Modelle': 'Downloaded models',
+  'Noch {free} frei auf diesem Laufwerk.': '{free} free on this drive.',
+  '{name} löschen': 'Delete {name}',
+  'Unterbrochene Downloads: {names}': 'Interrupted downloads: {names}',
+  'Für diesen Computer zu groß.': 'Too large for this computer.',
+  'Läuft hier, aber knapp: andere Programme werden langsamer.': 'Runs here, but tight: other programs get slower.',
+  'Passt zu diesem Computer.': 'Fits this computer.',
+  '{vendor}, Lizenz {license}, {size}.': '{vendor}, license {license}, {size}.',
+  'Anbieter aus der EU.': 'Provider from the EU.',
+  '{name}: Prüfsumme wird kontrolliert …': '{name}: checking the checksum …',
+  '{name} wird heruntergeladen: {pct} % ({done} von {total})': 'Downloading {name}: {pct} % ({done} of {total})',
+  'Download von {name}': 'Download of {name}',
+  '{name} ist heruntergeladen und geprüft.': '{name} is downloaded and verified.',
+  'Download pausiert bei {pct} %. Bereits geladene Teile bleiben erhalten.':
+    'Download paused at {pct} %. Parts already downloaded are kept.',
+  '{name} ist noch nicht auf diesem Computer ({size}).': '{name} is not on this computer yet ({size}).',
+  Fortsetzen: 'Resume',
+  'Dieses Modell steht nicht in der Liste.': 'This model is not in the list.',
+  'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.':
+    "Levuvo's own Ollama is not included in this installation.",
+  'Klein, ab 8 GB Arbeitsspeicher': 'Small, from 8 GB memory',
+  'Standard, ab 16 GB Arbeitsspeicher': 'Standard, from 16 GB memory',
+  'Groß, ab 32 GB Arbeitsspeicher': 'Large, from 32 GB memory',
+  Klein: 'Small',
+  Standard: 'Standard',
+  Groß: 'Large',
+  'Prüfsumme stimmt nicht. Das Modell wurde entfernt. Bitte erneut herunterladen.':
+    'The checksum does not match. The model was removed. Please download it again.',
+  'Der Download ist fehlgeschlagen. Bitte erneut versuchen.': 'The download failed. Please try again.',
+  'Dieses Modell steht nicht in Levuvos Modellliste.': "This model is not in Levuvo's model list.",
+  'Gerade läuft ein Download. Bitte warten, bis er fertig ist.':
+    'A download is running. Please wait until it is finished.',
+  'Das lokale Modell ist nicht erreichbar. Bitte Levuvo neu starten.':
+    'The local model cannot be reached. Please restart Levuvo.'
 };

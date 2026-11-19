@@ -5,13 +5,14 @@
 // Vectors go to a vector store with the interface putVectors / searchVectors / dropVectors. The shared
 // encrypted SQLite store of the index replaces the in-memory store below without changes here.
 
+import { queryPrefixFor } from './ai-model-catalog.mjs';
+
 const BATCH = 32;
 // A run stops after this many failed batches in a row (model gone, Ollama stopped); what is
 // embedded so far stays and the next run continues with the rest.
 const MAX_FAILED_BATCHES = 3;
 const TEXT_CHARS = 1500;
 const MAX_MEMORY_ENTRIES = 5000;
-const QUERY_PREFIX = 'Instruct: Given a search query, retrieve relevant emails that answer it\nQuery: ';
 
 /** Exact cosine search over normalized Float32 vectors, in memory (until the SQLite store is available). */
 export function createMemoryVectorStore({ maxEntries = MAX_MEMORY_ENTRIES } = {}) {
@@ -246,8 +247,9 @@ export function createSemanticIndex({
     if (!usableIds.length) return [];
     // Catch up in the background; the search uses what is already embedded.
     for (const id of usableIds) void sync(id).catch(() => null);
-    const [vector] = (await ai.run('embed', { texts: [QUERY_PREFIX + text] }, { source: 'index' })).vectors;
     const m = model();
+    // Each embedding model has its own search instruction (bge-m3 none, Qwen3-Embedding one).
+    const [vector] = (await ai.run('embed', { texts: [queryPrefixFor(m) + text] }, { source: 'index' })).vectors;
     const hits = (
       await Promise.all(
         usableIds.map(async id =>
@@ -266,9 +268,29 @@ export function createSemanticIndex({
     return out;
   }
 
+  /** Rebuild progress per account: vectors of the current model against indexed messages. */
+  async function progress(ids) {
+    const m = model();
+    const out = [];
+    for (const id of ids) {
+      const status = await localIndex.status(id).catch(() => null);
+      if (!status?.enabled) continue;
+      const s = state.get(id);
+      out.push({
+        accountId: id,
+        model: m,
+        messages: status.messages ?? null,
+        vectors: vectors.persistent ? (status.vectors ?? null) : (vectors.size?.(id, m) ?? null),
+        running: Boolean(s?.running)
+      });
+    }
+    return out;
+  }
+
   return {
     sync,
     search,
+    progress,
     forget: async id => {
       for (const [key, s] of state) if (!id || key === id) if (s.model) await vectors.dropVectors(key, s.model);
       if (id) state.delete(id);
