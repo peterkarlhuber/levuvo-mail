@@ -115,6 +115,7 @@ export function searchRoom(detail, query, { limit = 30 } = {}) {
   for (const m of detail.mails) consider('mail', m.id, m.subject, `${m.from?.address || ''}\n${m.text}`);
   for (const c of detail.comments) consider('comment', c.id, '', c.text);
   for (const f of detail.files) consider('file', f.id, f.name, f.folder);
+  for (const m of detail.chat || []) consider('chat', m.id, '', m.text);
   return hits.slice(0, limit);
 }
 
@@ -129,6 +130,7 @@ const CHANGE_LABELS = {
   update_task: s => `Aufgabe „${s}“ ändern`,
   add_event: s => `Termin „${s}“ eintragen`,
   comment: () => 'Kommentar schreiben',
+  chat_post: () => 'Nachricht im Chat senden',
   add_mail: () => 'Mail in den Raum legen',
   invite: s => `${s} einladen`,
   remove_member: s => `${s} entfernen`,
@@ -220,6 +222,9 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
             return { ok: true, id: p.data.data.id };
           case 'add_mail':
             return ctx.spaces.addMail(p.room, p.data);
+          case 'chat_post':
+            // Marked as AI-generated for every member (EU AI Act Art. 50).
+            return { id: await s.postChat(p.room, { text: p.data.text, replyTo: p.data.replyTo, ai: true }) };
           case 'invite':
             return s.invite(p.room, p.data);
           case 'remove_member':
@@ -335,15 +340,52 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
         level: 'read',
         readOnly: true,
         description:
-          'Search notes, tasks, events, pinned mails, comments and file names in one space or all spaces. Each hit has a source {room, kind, id} to cite.',
+          'Search notes, tasks, events, pinned mails, comments, chat messages and file names in one space or all spaces. Each hit has a source {room, kind, id} to cite.',
         inputSchema: obj({ query: { type: 'string', minLength: 2, maxLength: 200 }, room: ROOM }, ['query']),
         run: async (a, agent) => {
           const s = await service();
-          const targets = a.room
-            ? [(await room(a.room, agent)).detail]
-            : (await rooms(agent)).filter(r => r.status === 'active').map(r => s.detail(r.id));
+          const targets = (
+            a.room
+              ? [(await room(a.room, agent)).detail]
+              : (await rooms(agent)).filter(r => r.status === 'active').map(r => s.detail(r.id))
+          ).map(d => ({ ...d, chat: s.chat(d.id, { limit: 500 }).messages }));
           const hits = targets.flatMap(d => searchRoom(d, a.query).map(h => ({ ...h, roomName: d.name })));
           return untrusted(hits.slice(0, 50), 'search');
+        }
+      },
+      {
+        name: 'read_room_chat',
+        level: 'read',
+        readOnly: true,
+        description:
+          'Read the chat of a space: the newest messages (default 50, at most 200), optionally only those since a point in time. For "what was discussed" summaries; cite messages by id.',
+        inputSchema: obj(
+          {
+            room: ROOM,
+            since: { type: 'string', description: 'ISO date/time' },
+            limit: { type: 'integer', minimum: 1, maximum: 200 }
+          },
+          ['room']
+        ),
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
+          const names = Object.fromEntries(detail.members.map(m => [m.id, m.name || m.email]));
+          const since = a.since && !Number.isNaN(Date.parse(a.since)) ? new Date(a.since).toISOString() : '';
+          const limit = Math.max(1, Math.min(Number(a.limit) || 50, 200));
+          const messages = s
+            .chat(detail.id, { limit: since ? 500 : limit })
+            .messages.filter(m => !since || m.at >= since)
+            .slice(-limit)
+            .map(m => ({
+              id: m.id,
+              at: m.at,
+              by: names[m.by] || m.by,
+              text: short(m.text, 2000),
+              ...(m.replyTo ? { replyTo: m.replyTo } : {}),
+              ...(m.ai ? { aiGenerated: true } : {}),
+              ...(m.editedAt ? { edited: true } : {})
+            }));
+          return untrusted({ messages }, `${detail.name} chat`);
         }
       },
       {
@@ -621,6 +663,31 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
             text: String(a.text).slice(0, 20_000)
           };
           return change(detail, 'op', ['comment'], { type: 'comment.add', data }, { text: short(a.text, 1000) });
+        }
+      },
+      {
+        name: 'room_chat_post',
+        level: 'organize',
+        approval: 'room_change',
+        description:
+          'Write a message in the chat of a space (approval required). It is shown to all members as written with the assistant.',
+        inputSchema: obj(
+          {
+            room: ROOM,
+            text: { type: 'string', minLength: 1, maxLength: 10_000 },
+            reply_to: { type: 'string', description: 'ID of the chat message this answers (from read_room_chat).' }
+          },
+          ['room', 'text']
+        ),
+        run: async (a, agent) => {
+          const { s, detail } = await room(a.room, agent);
+          writable(detail);
+          const replyTo = a.reply_to ? String(a.reply_to) : null;
+          if (replyTo && !s.chat(detail.id, { limit: 500 }).messages.some(m => m.id === replyTo))
+            throw toolError('reply_to: no such chat message (use read_room_chat).');
+          const text = String(a.text || '').slice(0, 10_000);
+          if (!text.trim()) throw toolError('text must not be empty.');
+          return proposal(detail, 'chat_post', ['chat_post'], { text, replyTo }, { text: short(text, 1000) });
         }
       },
       {

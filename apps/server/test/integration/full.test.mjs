@@ -391,6 +391,59 @@ test('Complete system against real servers', { skip: !enabled && 'LEVUVO_IT_* no
     );
   });
 
+  await t.test('Formatted vacation reply with signature and inline logo is sent by the server', async () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const sig = await call(
+      'POST',
+      '/api/accounts/update',
+      {
+        id: peter.id,
+        signatureHtml: `<p>Peter <i>Test</i></p><p><img src="data:image/png;base64,${png}" alt="Logo"></p>`
+      },
+      'accounts-v1'
+    );
+    assert.equal(sig.status, 200, JSON.stringify(sig.body));
+    const saved = await call(
+      'POST',
+      P('/api/sieve'),
+      {
+        config: {
+          rules: [],
+          vacation: {
+            enabled: true,
+            subject: `Abwesend ${stamp}`,
+            bodyHtml: '<p>Ich bin <strong>bis Montag</strong> nicht da.</p>',
+            includeSignature: true,
+            days: 1
+          }
+        },
+        replaceForeign: true
+      },
+      'mail-v1'
+    );
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.equal(saved.body.format, 'html', 'the server accepts vacation :mime');
+    const loaded = (await call('GET', P('/api/sieve'))).body.config.vacation;
+    assert.match(loaded.bodyHtml, /<strong>bis Montag<\/strong>/);
+    assert.equal(loaded.includeSignature, true);
+    try {
+      await sendAs(anna.id, { to: [env.LEVUVO_IT_USER], subject: `Frage ${stamp}`, text: 'Bist du da?' });
+      const reply = await findIn(anna.id, 'INBOX', `Abwesend ${stamp}`);
+      const detail = (await call('GET', A(`/api/messages/${reply.uid}?folder=INBOX`))).body;
+      assert.match(detail.html, /<strong>bis Montag<\/strong>/);
+      assert.match(detail.html, /<i>Test<\/i>/, 'signature appended');
+      assert.match(detail.html, /src="data:image\/png;base64/, 'logo travels inline (cid), not as a web link');
+      assert.match(detail.text, /bis Montag nicht da/);
+    } finally {
+      await call(
+        'POST',
+        P('/api/sieve'),
+        { config: { rules: [], vacation: { enabled: false } }, replaceForeign: true },
+        'mail-v1'
+      );
+    }
+  });
+
   await t.test('HTML mail with alias, embedded image and text version', async () => {
     const aliasAddress = env.LEVUVO_IT_USER.replace('@', '+office@');
     const upd = await call(

@@ -2,11 +2,21 @@
 
 ## Unreleased
 
+### Spaces
+- **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
+- **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
+- **Unread messages** are counted on the rail, in the list of spaces and on the tab, on this device only: there are no read receipts and no typing indicators.
+- **Assistant:** it can read and search the chat and, after your approval, write a message; such messages are marked "AI-generated" for every member.
+
+### Compliance
 - Compliance: gap analyses and templates for the Cyber Resilience Act, the AI Act, the GDPR, accessibility and other rules in `docs/compliance/` (vulnerability handling, 24 h/72 h reporting, support period, risk assessment, technical documentation, EU declaration of conformity template, record of processing, DPIA template, options for DOC-LEV-009, AI system inventory, licensing policy, user information); coordinated vulnerability disclosure policy in `SECURITY.md`; compliance section in the release checklist. Not legal advice.
 
 ## 2.5.0 – 19 November 2026
 
 > **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
+
+### Vacation reply
+- **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving.
 
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
