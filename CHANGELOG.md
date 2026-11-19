@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Search index
+- **Index for search by meaning shows its state:** not there (with the reason, e.g. AI off or search model not downloaded), running with "x of y messages" and the time left, paused, incomplete, done (number and time) or error. Shown in Settings → AI & agents, in Settings → Search & offline and as a quiet line below the search field while you search. **Pause**, **Resume**, **Index now** and **Index again**; a pause survives a restart.
+- **"As of" in Search & offline is the last check:** before, it only moved when something changed, so "Update now" looked as if nothing happened. After an update the app now says what it found ("nothing new", "x new, y removed") or which account failed.
+
+### Sizes and storage
+- **One size format everywhere:** attachments, spaces, contacts, the composer, calendar attachments, models and free disk space use decimal units (kB, MB, GB, TB, 1 MB = 1,000,000 bytes, like Finder and the model registry) in the UI language. Limits stated in the app now hold exactly (attachments 8 MB, protected messages 5 MB, calendar 5 MB per file and 10 MB per event, Microsoft 365 3 MB, signature 300 kB, out-of-office images 400 kB); the composer said "8 MiB" before.
+- **Where your data is:** Settings → Privacy → Data stored on this device lists the folders of this computer (app data, AI models, search index, spaces, safety copies) with their size, and opens them in Finder or Explorer.
+- The product is called "Levuvo Mail" in the remaining texts (backup, spaces, filters, AI settings, exported calendar and contacts file names).
+
 ### Window frame (macOS)
 - **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo.
 
