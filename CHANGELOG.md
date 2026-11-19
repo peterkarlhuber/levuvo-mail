@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Ask your mailbox
+- **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
+- **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.
+- **Sources with a quote:** every source email shows sender, date and a passage from it; a passage is shown only if it literally occurs in that email or attachment.
+- **Follow-up questions:** "and the price?" refers to the previous answer (the last two turns go along, framed as untrusted). The bin icon starts a new conversation.
+
 ### Spaces
 - **Chat in every space:** a new "Chat" tab for quick exchanges between the members, end-to-end encrypted over your mailboxes like everything else in a space. Owners and editors write, readers follow along. Reply to a message, edit your own, delete your own (the owner may delete any); a deleted message disappears from every member's copy. Enter sends, Shift+Enter starts a new line.
 - **Arrives within seconds:** chat messages are sent right away instead of after the 20-second pause, and the app fetches them as soon as the IMAP IDLE connection reports them, usually within 1 to 5 seconds. Without IDLE, accounts with spaces are checked every 30 seconds. No server of our own is involved.
