@@ -24,7 +24,6 @@ import {
   Sparkles,
   Users,
   Workflow,
-  CalendarClock,
   type LucideIcon
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
