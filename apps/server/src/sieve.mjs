@@ -333,7 +333,7 @@ export async function saveSieve(client, config, { trashFolder, replaceForeign = 
   const foreign = scripts.find(s => s.active && s.name !== SCRIPT_NAME);
   if (foreign && !replaceForeign) {
     throw fail(
-      `Auf dem Server ist bereits das Filterskript „${foreign.name}“ aktiv. Ersetzen bestätigen, um Levuvo-Regeln zu aktivieren.`,
+      `Auf dem Server ist bereits das Filterskript „${foreign.name}“ aktiv. Ersetzen bestätigen, um die Regeln von Levuvo Mail zu aktivieren.`,
       'sieve_foreign_active',
       409
     );

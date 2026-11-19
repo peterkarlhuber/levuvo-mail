@@ -1,6 +1,6 @@
 # Tastenkürzel
 
-Mit `?` zeigt Levuvo Mail diese Übersicht jederzeit an. Auf dem Mac nimmst du `⌘` statt `Strg`.
+In der E-Mail-Ansicht zeigt `?` diese Übersicht an. Auf dem Mac nimmst du `⌘` statt `Strg` und `⌥` (Wahltaste) statt `Alt`.
 
 :::columns
 
@@ -8,7 +8,7 @@ Mit `?` zeigt Levuvo Mail diese Übersicht jederzeit an. Auf dem Mac nimmst du `
 
 | Tasten | Aktion |
 |---|---|
-| `Strg` + `K` | Befehlssuche öffnen |
+| `Strg` + `K` | Befehlspalette öffnen |
 | `Strg` + `J` | Assistent öffnen |
 | `Alt` + `1` | E-Mail |
 | `Alt` + `2` | Kalender |
@@ -17,7 +17,6 @@ Mit `?` zeigt Levuvo Mail diese Übersicht jederzeit an. Auf dem Mac nimmst du `
 | `Alt` + `5` | Aufgaben |
 | `Alt` + `,` | Einstellungen |
 | `Esc` | Schließen oder Auswahl aufheben |
-| `?` | Übersicht der Tastenkürzel |
 
 :::next
 
@@ -39,5 +38,6 @@ Mit `?` zeigt Levuvo Mail diese Übersicht jederzeit an. Auf dem Mac nimmst du `
 | `P` | Drucken oder als PDF speichern |
 | `/` | Suchen |
 | `Strg` + `Enter` | Senden (im Editor) |
+| `?` | Übersicht der Tastenkürzel |
 
 :::end

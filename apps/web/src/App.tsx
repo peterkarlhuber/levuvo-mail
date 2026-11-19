@@ -495,6 +495,12 @@ function Shell() {
     setSettingsTab(tab);
     setModule('settings');
   }, []);
+  // A manual section linked from the assistant's answer opens the help page.
+  useEffect(() => {
+    const open = () => openSettings('help');
+    window.addEventListener('levuvo:manual', open);
+    return () => window.removeEventListener('levuvo:manual', open);
+  }, [openSettings]);
   const composeTo = useCallback(
     (to: string) => {
       restore(active.id, { mode: 'new', to, cc: '', bcc: '', subject: '' });
@@ -530,7 +536,7 @@ function Shell() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-panel">
-          <img src="/levuvo-header-logo.png" alt="Levuvo" className="onboarding-logo brand-image" />
+          <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="onboarding-logo brand-image" />
           <h1>
             {credentialsMissing ? (
               t('Zugang prüfen')
@@ -595,7 +601,7 @@ function Shell() {
     <div className={`app-frame density-${prefs.density}`}>
       <nav className="rail" aria-label={t('Bereiche')}>
         <span className="rail-logo" title="Levuvo Mail">
-          <img src="/favicon.png" alt="Levuvo" />
+          <img src="/favicon.png" alt="Levuvo Mail" />
         </span>
         {rail.map(item => (
           <button
@@ -782,15 +788,16 @@ function ModuleShortcuts({ onModule, onAssistant }: { onModule: (m: Module) => v
         return;
       }
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      // e.code, not e.key: on a Mac, Option + 1 types "¡" and the key would never match.
       const map: Record<string, Module> = {
-        '1': 'mail',
-        '2': 'calendar',
-        '3': 'contacts',
-        '4': 'spaces',
-        '5': 'tasks',
-        ',': 'settings'
+        Digit1: 'mail',
+        Digit2: 'calendar',
+        Digit3: 'contacts',
+        Digit4: 'spaces',
+        Digit5: 'tasks',
+        Comma: 'settings'
       };
-      const target = map[e.key];
+      const target = map[e.code];
       if (target) {
         e.preventDefault();
         onModule(target);

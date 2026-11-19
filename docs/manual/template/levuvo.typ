@@ -29,9 +29,12 @@
 
 // Screenshots float to the top or bottom of the page (placement: auto), so a tall image never
 // leaves half a page empty, and they never split across pages.
-// On the first page of a chapter a screenshot may only go to the bottom, never above the title.
-#let shot(path, alt, caption) = context figure(
-  placement: if query(heading.where(level: 1)).any(h => h.location().page() == here().page()) { bottom } else { auto },
+// On the first page of a chapter a screenshot may only go to the bottom, never above the title:
+// `opening` marks screenshots in a chapter's first section, the page check catches the rest.
+#let shot(path, alt, caption, opening: false) = context figure(
+  placement: if opening or query(heading.where(level: 1)).any(h => h.location().page() == here().page()) {
+    bottom
+  } else { auto },
   block(
     width: 88%,
     radius: 7pt,

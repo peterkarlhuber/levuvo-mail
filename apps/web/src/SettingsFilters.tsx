@@ -453,7 +453,7 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
           <div className="settings-sticky-actions">
             {state.foreignActive && (
               <small className="muted">
-                {t('Auf dem Server aktiv: „{name}“ (nicht von Levuvo).', { name: state.foreignActive })}
+                {t('Auf dem Server aktiv: „{name}“ (nicht von Levuvo Mail).', { name: state.foreignActive })}
               </small>
             )}
             {!dirty && !state.foreignActive && (

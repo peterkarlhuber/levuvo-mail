@@ -28,7 +28,7 @@ Entwürfe werden beim Schreiben automatisch gespeichert. **Als Entwurf schließe
 
 ### Senden rückgängig machen
 
-Nach dem Senden steht unten einige Sekunden lang „Wird gesendet … Rückgängig“. Ein Klick auf **Rückgängig** holt die Nachricht zurück in den Editor. Wie lange du Zeit hast, stellst du unter **Einstellungen → Allgemein** ein (aus oder 5 bis 30 Sekunden).
+Nach dem Senden steht unten kurz „Wird in 10 s gesendet“ mit **Rückgängig**. Ein Klick darauf holt die Nachricht zurück in den Editor. Wie lange du Zeit hast, stellst du unter **Einstellungen → Allgemein** ein: aus, 5, 10 (Standard), 20 oder 30 Sekunden.
 
 ### Später senden
 
@@ -47,14 +47,14 @@ Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt
 | Was du tun willst | So geht es |
 |---|---|
 | Wichtiges markieren | Stern anklicken oder `S` |
-| Erledigtes wegräumen | **Archivieren** oder `E` |
+| Erledigtes wegräumen | Archiv-Symbol oder `E` |
 | Löschen | Papierkorb-Symbol oder `Entf` |
 | Als Spam melden | Schild-Symbol oder `!` |
 | In einen Ordner legen | **Verschieben …** im Lesebereich oder per Drag & Drop auf den Ordner |
 | Später wieder vorlegen | Wecker-Symbol oder `B`, dann einen Zeitpunkt wählen |
 | Viele auf einmal bearbeiten | Häkchen vor den Nachrichten setzen, dann die Aktion oben wählen |
 
-Nach jeder dieser Aktionen erscheint unten **Rückgängig**. Ein Klick macht sie sofort wieder rückgängig.
+Nach Archivieren, Löschen, Verschieben, Spam, Zurückstellen und Sammelaktionen erscheint unten **Rückgängig**. Ein Klick macht die Aktion sofort wieder rückgängig.
 
 **Zurückstellen** nimmt eine Mail aus dem Posteingang und legt sie zur gewählten Zeit wieder ungelesen hinein, etwa „Montag früh“. Bis dahin liegt sie im Ordner **Zurückgestellt**.
 
@@ -72,15 +72,15 @@ Mit dem Schalter **Überall** daneben durchsuchst du alle Ordner und Konten auf 
 
 Wenn du willst, landen Mails von Unbekannten nicht direkt im Posteingang. Unbekannt heißt: Der Absender steht nicht in deinen Kontakten und du hast ihm noch nie geschrieben.
 
-1. Schalte unter **Einstellungen → Allgemein** die Option **Neue Absender zuerst prüfen** ein.
+1. Schalte unter **Einstellungen → Allgemein** die Option **Neue Absender zuerst prüfen** ein. Das gilt für Mails, die ab dann ankommen.
 2. Mails neuer Absender sammeln sich oben in der Liste unter **Neue Absender**.
-3. Öffne die Zeile und entscheide je Absender: **Annehmen** lässt künftige Mails durch, **Blockieren** hält sie fern.
+3. Öffne die Zeile und entscheide je Absender: **Annehmen** lässt künftige Mails durch, **Blockieren** verschiebt seine Mails in den Spam-Ordner.
 
 ![Neue Absender annehmen oder blockieren](screening.png)
 
 ## Bündel und Anhang-Übersicht
 
-**Bündel** fassen Newsletter, Rechnungen, Benachrichtigungen und Ähnliches in jeweils einer Zeile zusammen. So bleibt der Posteingang übersichtlich. Ist der KI-Assistent mit lokalem Modell eingeschaltet, hilft er beim Einsortieren.
+**Bündel** fassen Newsletter, Rechnungen, Benachrichtigungen und Ähnliches in jeweils einer Zeile zusammen. So bleibt der Posteingang übersichtlich. Ist der KI-Assistent mit lokalem Modell eingeschaltet, hilft er beim Einsortieren. Ein- und ausschalten kannst du die Bündel unter **Einstellungen → Allgemein → Posteingang bündeln**.
 
 Die **Anhang-Übersicht** (in der Ordnerleiste unter **Anhänge**) zeigt alle Dateien eines Ordners auf einen Blick. Praktisch, wenn du ein bestimmtes PDF suchst.
 
@@ -89,7 +89,7 @@ Die **Anhang-Übersicht** (in der Ordnerleiste unter **Anhänge**) zeigt alle Da
 Unter **Einstellungen → Filter & Abwesenheit** legst du Regeln fest, etwa „Mails von rechnung@lieferant.at in den Ordner Buchhaltung“. Die Regeln laufen direkt auf deinem Mailserver. Sie wirken also auch, wenn Levuvo Mail geschlossen ist.
 
 - **Abwesenheitsnotiz:** einschalten, Zeitraum, Betreff und Text eingeben, speichern.
-- **Regeln:** Bedingung wählen (Von, An, Betreff …), Aktion wählen (verschieben, als gelesen markieren …), **Auf dem Server speichern**.
+- **Regeln:** Klicke auf **Regel hinzufügen**, wähle eine Bedingung (Von, An/CC, Betreff …) und eine Aktion (verschieben, als gelesen markieren …) und klicke auf **Auf dem Server speichern**.
 
 Das klappt, wenn dein Anbieter Serverfilter anbietet (Fachbegriff: Sieve oder ManageSieve). Bei Microsoft 365 und Gmail richtest du Regeln stattdessen im Webmail des Anbieters ein.
 
@@ -97,10 +97,10 @@ Das klappt, wenn dein Anbieter Serverfilter anbietet (Fachbegriff: Sieve oder Ma
 
 ### Mit Passwort schützen
 
-Diese Art funktioniert für jeden Empfänger, ohne dass er etwas einrichten muss. Ideal für Verträge, Zugangsdaten oder persönliche Dokumente.
+Diese Art funktioniert für jeden Empfänger, ohne dass er etwas einrichten muss. Geeignet für Verträge, Zugangsdaten oder persönliche Dokumente.
 
 1. Wähle beim Schreiben im Feld **Ohne Verschlüsselung** die Option **Mit Passwort schützen**.
-2. Levuvo Mail schlägt ein starkes Passwort vor. Du kannst es übernehmen oder ändern.
+2. Levuvo Mail schlägt ein starkes Passwort vor. Du kannst es übernehmen oder ändern (mindestens 10 Zeichen). Text und Anhänge dürfen zusammen höchstens 5 MiB groß sein.
 3. Klicke auf **Senden**.
 4. Teile dem Empfänger das Passwort auf einem anderen Weg mit, etwa per SMS oder Telefon. Nie in derselben Mail.
 

@@ -13,6 +13,12 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] The installed app contains the AI runtime (`resources/ai-runtime/python`); Settings → AI & agents shows the AI component as available
 - [ ] Settings → About shows 2.5.0, legal notice (Impressum) filled in
 
+## User manual
+- [ ] `docs/manual` (German and English) covers every new or changed feature of this release; labels match the app
+- [ ] Screenshots re-captured with this version; PDFs (`Levuvo-Mail-Handbuch-X.Y.Z.pdf`, `Levuvo-Mail-Manual-X.Y.Z.pdf`) show this version and date
+- [ ] Every page looked at: layout, screenshots beside their text, no split tables, no near-empty pages
+- [ ] Settings → Help shows the manual; the assistant answers a "how do I …" question with a manual source
+
 ## First setup (fresh user profile)
 - [ ] Welcome page in the system language (German or English), theme follows the system
 - [ ] Wrong password → clear message, nothing saved; “Test connection” green

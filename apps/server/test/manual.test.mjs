@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { toTypst, inline, esc } from '../../../scripts/manual/markdown-to-typst.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
+const root0 = root;
 const dir = lang => join(root, 'docs/manual', lang);
 const chapters = lang =>
   readdirSync(dir(lang))
@@ -67,4 +68,136 @@ test('manual converter: escaping, keys, links, lists and callouts', () => {
   assert.match(toTypst('# Welcome', { image: f => f }), /numbering: none/);
   assert.throws(() => toTypst('```js', { image: f => f }), /Unsupported/);
   assert.throws(() => toTypst('| a | b |\n| c | d |', { image: f => f }), /separator/);
+});
+
+test('manual sections: numbering like the PDF, plain text without markup', async () => {
+  const { parseManual, plainText, createManual } = await import('../src/manual.mjs');
+  const chapters = parseManual([
+    { name: '00-welcome.md', markdown: '# Welcome\n\nHello.\n' },
+    {
+      name: '01-start.md',
+      markdown:
+        '# Getting started\n\nIntro.\n\n## Back up your data\n\n1. Click **Save backup**.\n\n![Alt](x.png)\n\n## Quit\n\nUse `Ctrl` + `Q`.\n'
+    }
+  ]);
+  assert.equal(chapters[0].number, null);
+  assert.equal(chapters[1].number, 1);
+  assert.deepEqual(
+    chapters[1].sections.map(s => s.number),
+    ['1', '1.1', '1.2']
+  );
+  assert.equal(chapters[1].sections[1].text, '1. Click Save backup.');
+  assert.equal(plainText('| a | b |\n|---|---|\n| c | d |'), 'a – b\nc – d');
+
+  // The real manual: both languages load, keyword search finds the backup section without a model.
+  const manual = createManual();
+  for (const lang of ['de', 'en']) assert.ok(manual.chapters(lang).length >= 8, lang);
+  const [de] = await manual.search('Wie mache ich eine Sicherung?', { lang: 'de' });
+  assert.match(de.title, /Sicher/);
+  const [en] = await manual.search('How do I make a backup?', { lang: 'en' });
+  assert.match(en.title, /back/i);
+  assert.deepEqual(await manual.search('', { lang: 'de' }), []);
+  assert.equal(manual.imagePath('de', '../secret.png'), null);
+  assert.equal(manual.imagePath('xx', 'mail.png'), null);
+  assert.ok(manual.imagePath('en', 'mail.png'));
+});
+
+test('manual search uses the embedding model and keeps vectors per model', async () => {
+  const { createManual } = await import('../src/manual.mjs');
+  const embeds = [];
+  let model = 'm-a';
+  const ai = {
+    get: () => ({ enabled: true, features: {}, embedModel: model }),
+    async run(kind, { texts }) {
+      embeds.push(texts.length);
+      // One dimension per word "backup"/"sicherung": the question and the backup section line up.
+      return { vectors: texts.map(t => [/backup|sicher/i.test(t) ? 1 : 0, 0.1]) };
+    }
+  };
+  const root = join(root0, 'docs/manual');
+  const manual = createManual({ root, ai });
+  const hits = await manual.search('backup', { lang: 'en' });
+  assert.ok(hits.length > 0);
+  const first = embeds.length;
+  await manual.search('backup again', { lang: 'en' });
+  assert.equal(embeds.length, first + 1, 'sections are not embedded twice');
+  model = 'm-b';
+  await manual.search('backup', { lang: 'en' });
+  assert.ok(embeds.length > first + 2, 'a model change embeds the sections again');
+  // A failing model falls back to word matching.
+  ai.run = async () => {
+    throw new Error('not downloaded');
+  };
+  model = 'm-c';
+  assert.ok((await manual.search('backup', { lang: 'en' })).length > 0);
+});
+
+test('ask: matching manual sections go to the model and come back as manual sources', async t => {
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { createJsonFile } = await import('../src/app.mjs');
+  const { createAiService, createAiLog, DEFAULT_AI_SETTINGS } = await import('../src/ai-service.mjs');
+  const { registerAiRoutes } = await import('../src/routes-ai.mjs');
+  const { createManual } = await import('../src/manual.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-manual-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const calls = [];
+  const m = new Map();
+  const ai = createAiService({
+    settingsFile: await createJsonFile(join(dir, 'ai.json'), DEFAULT_AI_SETTINGS),
+    vault: {
+      available: true,
+      get: (i, k) => m.get(`${i}:${k}`) || '',
+      set: (i, k, v) => m.set(`${i}:${k}`, v),
+      delete: () => {}
+    },
+    sidecar: {
+      running: true,
+      async call(method, params) {
+        calls.push({ method, params });
+        return method === 'task' ? { answer: 'ok', found: true, sources: ['m1', 's1'] } : { ok: true };
+      },
+      async stop() {},
+      diagnostics: () => ({})
+    },
+    log: createAiLog(join(dir, 'log.jsonl'))
+  });
+  // The stub has no embeddings, so the manual search falls back to word matching.
+  await ai.save({ enabled: true });
+  const handlers = {};
+  registerAiRoutes({
+    api: { get: (p, ...r) => (handlers[`GET ${p}`] = r.at(-1)), post: (p, ...r) => (handlers[`POST ${p}`] = r.at(-1)) },
+    ai,
+    manual: createManual(),
+    requireAction: () => true,
+    accounts: () => [{ id: 'a' }],
+    ownAddresses: () => [],
+    aiForgetHooks: [],
+    semantic: {
+      search: async () => [{ accountId: 'a', folder: 'INBOX', uid: 7, subject: 'S', text: 'T' }],
+      sync: async () => null,
+      forget: async () => {}
+    }
+  });
+  const reply = { code: () => reply, send: x => x };
+  const out = await handlers['POST /api/ai/run'](
+    {
+      body: {
+        kind: 'ask',
+        lang: 'de',
+        input: { question: 'Wie erstelle ich eine Sicherung?' },
+        manualMap: [{ manual: true, chapterId: 'x' }]
+      }
+    },
+    reply
+  );
+  const task = calls.find(c => c.method === 'task');
+  assert.ok(task, JSON.stringify(out));
+  const sent = JSON.stringify(task.params);
+  assert.match(sent, /"m1"/);
+  assert.match(sent, /Sicherung/);
+  assert.equal(out.result.sources[0].manual, true);
+  assert.notEqual(out.result.sources[0].chapterId, 'x', 'the client cannot inject manual sources');
+  assert.match(out.result.sources[0].section, /^\d+\.\d+$/);
+  assert.equal(out.result.sources[1].uid, 7);
 });

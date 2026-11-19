@@ -20,7 +20,7 @@ Click **New message** or press `N`. To answer, use **Reply** (`R`), **Reply all*
 
 1. **From:** Choose the sender address if you have several. The matching signature is added automatically.
 2. **To:** Type a name or an address. Levuvo Mail suggests contacts. **CC/BCC** adds more recipients. BCC recipients can't see the others.
-3. Enter the **subject** and the text. The bar above the text formats it (bold, lists, links, images).
+3. Enter the **Subject** and the text. The bar above the text formats it (bold, lists, links, images).
 4. **Attachments:** Click **Choose files** or drag files into the window. Up to eight files with 8 MiB (about 8 MB) in total are allowed.
 5. Click **Send** or press `Ctrl` + `Enter`.
 
@@ -28,7 +28,7 @@ Drafts are saved automatically while you write. **Close as draft** keeps the mes
 
 ### Undo send
 
-After sending, "Sending … Undo" shows at the bottom for a few seconds. Clicking **Undo** brings the message back into the editor. How long you have is set under **Settings → General** (off or 5 to 30 seconds).
+After sending, "Sending in 10 s" with **Undo** shows briefly at the bottom. Clicking it brings the message back into the editor. How long you have is set under **Settings → General**: off, 5, 10 (default), 20 or 30 seconds.
 
 ### Send later
 
@@ -47,14 +47,14 @@ At the bottom left of the editor choose, for example, **Follow up after 3 days**
 | What you want to do | How |
 |---|---|
 | Mark as important | Click the star or press `S` |
-| Put away what's done | **Archive** or `E` |
-| Delete | Bin icon or `Delete` |
+| Put away what's done | Archive icon or `E` |
+| Delete | Trash icon or `Del` |
 | Report as spam | Shield icon or `!` |
 | Put in a folder | **Move …** in the reading pane, or drag it onto the folder |
 | Bring back later | Alarm clock icon or `B`, then choose a time |
 | Handle many at once | Tick the messages, then choose the action at the top |
 
-After each of these actions, **Undo** appears at the bottom. One click reverses it straight away.
+After archiving, deleting, moving, spam, snoozing and bulk actions, **Undo** appears at the bottom. One click reverses the action straight away.
 
 **Snooze** takes an email out of the inbox and puts it back, unread, at the time you choose, for example "Monday morning". Until then it waits in the **Snoozed** folder.
 
@@ -72,15 +72,15 @@ With the **Everywhere** switch next to it you search all folders and accounts at
 
 If you like, email from strangers doesn't go straight into the inbox. A stranger is someone who isn't in your contacts and whom you have never written to.
 
-1. Under **Settings → General**, switch on **Review new senders first**.
+1. Under **Settings → General**, switch on **Review new senders first**. It applies to email that arrives from then on.
 2. Email from new senders collects at the top of the list under **New senders**.
-3. Open that row and decide for each sender: **Accept** lets their future emails through, **Block** keeps them out.
+3. Open that row and decide for each sender: **Accept** lets their future emails through, **Block** moves their emails to the spam folder.
 
 ![Accept or block new senders](screening.png)
 
 ## Bundles and the attachment overview
 
-**Bundles** group newsletters, invoices, notifications and the like into one row each. That keeps the inbox clear. If the AI assistant is on with a local model, it helps to sort them.
+**Bundles** group newsletters, invoices, notifications and the like into one row each. That keeps the inbox clear. If the AI assistant is on with a local model, it helps to sort them. You switch bundles on and off under **Settings → General → Bundle the inbox**.
 
 The **attachment overview** (in the folder bar under **Attachments**) shows all files in a folder at a glance. Handy when you are looking for a particular PDF.
 
@@ -89,7 +89,7 @@ The **attachment overview** (in the folder bar under **Attachments**) shows all 
 Under **Settings → Filters & vacation** you set up rules, for example "emails from invoice@supplier.com into the Accounting folder". The rules run directly on your mail server, so they also work when Levuvo Mail is closed.
 
 - **Vacation reply:** switch it on, enter the period, subject and text, save.
-- **Rules:** choose a condition (From, To, Subject …), choose an action (move, mark as read …), then **Save on the server**.
+- **Rules:** Click **Add rule**, choose a condition (From, To/CC, Subject …) and an action (move, mark as read …), and click **Save on the server**.
 
 This works if your provider offers server filters (the technical term is Sieve or ManageSieve). With Microsoft 365 and Gmail, set up rules in the provider's webmail instead.
 
@@ -97,10 +97,10 @@ This works if your provider offers server filters (the technical term is Sieve o
 
 ### Protect with password
 
-This works for every recipient, without them setting anything up. Ideal for contracts, login details or personal documents.
+This works for every recipient, without them setting anything up. Suitable for contracts, login details or personal documents.
 
 1. While writing, choose **Protect with password** in the **No encryption** field.
-2. Levuvo Mail suggests a strong password. You can keep it or change it.
+2. Levuvo Mail suggests a strong password. You can keep it or change it (at least 10 characters). Text and attachments together may be at most 5 MiB.
 3. Click **Send**.
 4. Tell the recipient the password another way, for example by text message or phone. Never in the same email.
 

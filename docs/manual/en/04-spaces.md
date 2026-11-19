@@ -19,7 +19,7 @@ End-to-end encrypted means: only the members can read the content. Not even your
    - **Owner** may do everything, including managing members.
    - **Editor** may create and change content.
    - **Reader** may only read.
-3. The invited person sees the invitation in their spaces and clicks **Join**.
+3. The invited person needs Levuvo Mail too. They get an email, see the invitation under **Spaces** and click **Join**.
 
 > **Tip:** When someone joins, Levuvo Mail shows both sides a safety code. Compare it quickly on the phone. If it matches, nobody is secretly listening in.
 
@@ -36,7 +36,8 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Events | Shared events |
 | Files | Files with earlier versions |
 | Members | Who is in and which role they have |
+| Settings | Name and description; allow the assistant and cloud AI to see the space |
 
 To put an email into a space, open it, click **Add to space** in the **…** menu and choose the space.
 
-The AI assistant only sees a space if its owner allows it. Cloud AI needs a separate, additional permission.
+The AI assistant only sees a space if its owner allows it in the space's **Settings** tab. Cloud AI needs a separate, additional permission there.

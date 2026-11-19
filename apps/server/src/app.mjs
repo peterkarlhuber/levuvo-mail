@@ -1,5 +1,6 @@
 // Levuvo Mail local API. Created by the Electron main process (desktop mode) or by
 // server.mjs for browser-based development. Binds to 127.0.0.1 only.
+import { createManual } from './manual.mjs';
 import { atomicWrite } from './local-store.mjs';
 import { createScreeningStore } from './screening.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
@@ -615,7 +616,7 @@ export async function createMailServer({
       requireBundled: packaged,
       onStart: call => ai.configure(call)
     });
-  // Levuvo's own Ollama (bundled binary), independent of an Ollama installed on the computer.
+  // Levuvo Mail's own Ollama (bundled binary), independent of an Ollama installed on the computer.
   const localRuntime = ollamaRuntime || createOllamaRuntime({ dataDir: dir, env, logger });
   const aiLog = createAiLog(path.join(dir, 'ai-log.jsonl'));
   const models = localRuntime.available ? createModelManager({ runtime: localRuntime, log: aiLog, logger }) : null;
@@ -693,6 +694,24 @@ export async function createMailServer({
   };
 
   api.get('/api/runtime', async () => ({ desktop, version: APP_VERSION, platform: process.platform }));
+  // The user manual for the help view (chapters as Markdown) and its screenshots.
+  const manual = createManual({ ai });
+  ctx.manual = manual;
+  api.get('/api/manual', async request => {
+    const lang = request.query?.lang === 'en' ? 'en' : 'de';
+    return {
+      lang,
+      chapters: manual.chapters(lang).map(c => ({ id: c.id, number: c.number, title: c.title, markdown: c.markdown }))
+    };
+  });
+  api.get('/api/manual/img/:lang/:file', async (request, reply) => {
+    const file = manual.imagePath(request.params.lang, request.params.file);
+    if (!file) return reply.code(404).send({ error: 'Bild nicht gefunden.' });
+    return reply
+      .type('image/png')
+      .header('Cache-Control', 'private, max-age=3600')
+      .send(await readFile(file));
+  });
   registerAccountRoutes(ctx);
   registerMailRoutes(ctx);
   registerDavRoutes(ctx);

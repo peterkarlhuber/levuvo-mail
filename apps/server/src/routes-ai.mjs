@@ -152,9 +152,23 @@ export function registerAiRoutes(ctx) {
         const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
         const hits = await semantic.search(ids, question, { limit: 8 });
         body.sourceMap = hits.map(h => ({ accountId: h.accountId, folder: h.folder, uid: h.uid, subject: h.subject }));
+        // "How do I …" questions: the best matching sections of the user manual (no personal data).
+        const manualHits = ctx.manual ? await ctx.manual.search(question, { lang, limit: 3 }).catch(() => []) : [];
+        body.manualMap = manualHits.map(h => ({
+          manual: true,
+          chapterId: h.chapterId,
+          section: h.number,
+          title: h.title
+        }));
         return {
           lang,
           question,
+          manual: manualHits.map((h, i) => ({
+            id: `m${i + 1}`,
+            title: [h.number, h.title].filter(Boolean).join(' '),
+            chapter: h.chapter,
+            text: h.text.slice(0, 2500)
+          })),
           sources: hits.map((h, i) => ({
             id: `s${i + 1}`,
             from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
@@ -267,7 +281,7 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  // Levuvo's own Ollama: the fixed model list, downloads with progress, cancel and delete.
+  // Levuvo Mail's own Ollama: the fixed model list, downloads with progress, cancel and delete.
   const localModels = ai.localModels;
   const noRuntime = reply =>
     reply.code(409).send({
@@ -323,14 +337,19 @@ export function registerAiRoutes(ctx) {
     try {
       const accountId = body.account ? String(body.account) : null;
       ai.ensureAllowed(null, accountId);
-      delete body.sourceMap; // set by prepare() only, never taken from the client
+      // set by prepare() only, never taken from the client
+      delete body.sourceMap;
+      delete body.manualMap;
       const input = await prepare(kind, body);
       // Every account whose mail text is in the input is checked again, right before the model call.
       const sources = Array.isArray(body.sourceMap) ? body.sourceMap.map(s => s.accountId) : [];
       const result = await ai.run(kind, input, { accountId, sources });
       if (kind === 'ask' && Array.isArray(body.sourceMap))
         result.sources = (result.sources || [])
-          .map(id => body.sourceMap[Number(String(id).slice(1)) - 1])
+          .map(id => {
+            const n = Number(String(id).slice(1)) - 1;
+            return String(id).startsWith('m') ? body.manualMap?.[n] : body.sourceMap[n];
+          })
           .filter(Boolean);
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {

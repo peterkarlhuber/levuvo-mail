@@ -19,7 +19,7 @@ Ende-zu-Ende-verschlüsselt heißt: Nur die Mitglieder können die Inhalte lesen
    - **Besitzer** darf alles, auch Mitglieder verwalten.
    - **Bearbeiter** darf Inhalte anlegen und ändern.
    - **Leser** darf nur lesen.
-3. Die eingeladene Person sieht die Einladung in ihren Räumen und klickt auf **Beitreten**.
+3. Die eingeladene Person braucht ebenfalls Levuvo Mail. Sie bekommt eine Mail, sieht die Einladung unter **Räume** und klickt auf **Beitreten**.
 
 > **Tipp:** Beim Beitritt zeigt Levuvo Mail beiden Seiten einen Sicherheitscode. Vergleicht ihn kurz am Telefon. Stimmt er überein, sitzt niemand unbemerkt dazwischen.
 
@@ -36,7 +36,8 @@ Die Reiter oben wechselst du per Klick oder mit den Pfeiltasten.
 | Termine | Gemeinsame Termine |
 | Dateien | Dateien mit früheren Versionen |
 | Mitglieder | Wer dabei ist und welche Rolle hat |
+| Einstellungen | Name und Beschreibung; erlauben, dass der Assistent und Cloud-KI den Raum sehen |
 
 Eine Mail legst du in einen Raum, indem du sie öffnest, im Menü **…** auf **In Raum legen** klickst und den Raum auswählst.
 
-Der KI-Assistent sieht einen Raum nur, wenn der Besitzer das erlaubt. Für Cloud-KI braucht es eine eigene, zusätzliche Erlaubnis.
+Der KI-Assistent sieht einen Raum nur, wenn der Besitzer das im Reiter **Einstellungen** des Raums erlaubt. Für Cloud-KI braucht es dort eine eigene, zusätzliche Erlaubnis.

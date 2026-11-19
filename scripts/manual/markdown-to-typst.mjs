@@ -71,6 +71,7 @@ export function toTypst(markdown, { image, blocks = {} }) {
   const out = [];
   let i = 0;
   let first = true;
+  let sections = 0;
   const para = [];
   const flush = () => {
     if (para.length) out.push(inline(para.join(' ')), '');
@@ -88,6 +89,8 @@ export function toTypst(markdown, { image, blocks = {} }) {
       // The first chapter of the manual ("Welcome") carries no number.
       const unnumbered = level === 1 && first && /^(Willkommen|Welcome)$/.test(m[2]);
       if (level === 1) first = false;
+      if (level === 1) sections = 0;
+      if (level === 2) sections++;
       out.push(
         unnumbered
           ? `#heading(level: 1, numbering: none, outlined: true)[${inline(m[2])}]`
@@ -98,7 +101,9 @@ export function toTypst(markdown, { image, blocks = {} }) {
     } else if ((m = /^!\[([^\]]+)\]\(([^)]+)\)$/.exec(line.trim()))) {
       flush();
       const alt = m[1].replace(/[*`]/g, '').replace(/[\\"]/g, c => `\\${c}`);
-      out.push(`#shot("${image(m[2])}", "${alt}", [${inline(m[1])}])`, '');
+      // In a chapter's first section the screenshot is usually on the chapter's title page.
+      const opening = sections <= 1 ? ', opening: true' : '';
+      out.push(`#shot("${image(m[2])}", "${alt}", [${inline(m[1])}]${opening})`, '');
       i++;
     } else if ((m = /^:::(columns|next|end)$/.exec(line.trim()))) {
       // :::columns … :::next … :::end sets content side by side (the shortcut page).

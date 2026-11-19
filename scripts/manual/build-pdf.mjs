@@ -23,7 +23,7 @@ const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 const TEXT = {
   de: {
     title: 'Benutzerhandbuch',
-    subtitle: 'E-Mail, Kalender, Kontakte, Aufgaben und KI-Assistent für macOS und Windows',
+    subtitle: 'E-Mail, Kalender, Kontakte, Aufgaben, Räume und KI-Assistent für macOS und Windows',
     toc: 'Inhalt',
     running: 'Benutzerhandbuch',
     version: `Version ${version}`,
@@ -37,7 +37,7 @@ const TEXT = {
   },
   en: {
     title: 'User manual',
-    subtitle: 'Email, calendar, contacts, tasks and AI assistant for macOS and Windows',
+    subtitle: 'Email, calendar, contacts, tasks, spaces and AI assistant for macOS and Windows',
     toc: 'Contents',
     running: 'User manual',
     version: `Version ${version}`,

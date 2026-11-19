@@ -1,6 +1,6 @@
 # Keyboard shortcuts
 
-Press `?` to see this overview in Levuvo Mail at any time. On a Mac, use `⌘` instead of `Ctrl`.
+In the email view, `?` shows this overview. On a Mac, use `⌘` instead of `Ctrl` and `⌥` (Option) instead of `Alt`.
 
 :::columns
 
@@ -8,7 +8,7 @@ Press `?` to see this overview in Levuvo Mail at any time. On a Mac, use `⌘` i
 
 | Keys | Action |
 |---|---|
-| `Ctrl` + `K` | Open command search |
+| `Ctrl` + `K` | Open command palette |
 | `Ctrl` + `J` | Open the assistant |
 | `Alt` + `1` | Email |
 | `Alt` + `2` | Calendar |
@@ -17,7 +17,6 @@ Press `?` to see this overview in Levuvo Mail at any time. On a Mac, use `⌘` i
 | `Alt` + `5` | Tasks |
 | `Alt` + `,` | Settings |
 | `Esc` | Close or clear selection |
-| `?` | Shortcut overview |
 
 :::next
 
@@ -35,9 +34,10 @@ Press `?` to see this overview in Levuvo Mail at any time. On a Mac, use `⌘` i
 | `E` | Archive |
 | `B` | Snooze |
 | `!` | Spam or not spam |
-| `Delete` | Move to bin |
+| `Del` | Move to trash |
 | `P` | Print or save as PDF |
 | `/` | Search |
 | `Ctrl` + `Enter` | Send (in the editor) |
+| `?` | Shortcut overview |
 
 :::end

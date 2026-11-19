@@ -438,25 +438,46 @@ def assess(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
 
 class Answer(BaseModel):
     answer: str
-    sources: list[str] = Field(default_factory=list, description="ids of the emails the answer relies on")
+    sources: list[str] = Field(
+        default_factory=list, description="ids of the emails and manual sections the answer relies on"
+    )
     found: bool
 
 
 def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     sources = [s for s in params.get("sources") or [] if isinstance(s, dict) and s.get("id")][:12]
+    # Sections of the Levuvo Mail user manual, chosen by the client for "how do I ..." questions.
+    # They are the app's own text, so they are given as trusted reference, not as untrusted mail.
+    manual = [m for m in params.get("manual") or [] if isinstance(m, dict) and m.get("id")][:4]
     question = _text(params.get("question"), 500)
     if not question:
         raise RpcError("invalid_input", "question required")
     body = "\n\n===\n\n".join(f"[id: {_text(s['id'], 80)}]\n{_mail(s, 2500)}" for s in sources)
+    reference = "\n\n".join(
+        f"[id: {_text(m['id'], 20)}] {_text(m.get('chapter'), 120)} / {_text(m.get('title'), 160)}\n"
+        f"{_text(m.get('text'), 2500)}"
+        for m in manual
+    )
+    system = (
+        f"Answer the user's question in {_lang(params)} using only the emails provided. Cite the ids of the emails "
+        "you used in `sources`. If they do not contain the answer, set found=false and say so."
+    )
+    if manual:
+        system = (
+            f"Answer the user's question in {_lang(params)}. If it is about using the Levuvo Mail app, answer from "
+            "the Levuvo Mail manual sections below with short, concrete steps; otherwise answer only from the "
+            "emails provided. Always call the app Levuvo Mail. Cite the ids of the emails or manual sections you "
+            "used in `sources`. If neither contains the answer, set found=false and say so.\n\n"
+            "Levuvo Mail manual (trusted, from the app itself):\n" + reference
+        )
     result = _ask(
         engine,
-        f"Answer the user's question in {_lang(params)} using only the emails provided. Cite the ids of the emails "
-        "you used in `sources`. If they do not contain the answer, set found=false and say so.",
+        system,
         f"Question (trusted, from the user): {question}\n\n" + frame_untrusted(body or "(no emails)", "mailbox search"),
         Answer,
         max_tokens=1200,
     )
-    known = {str(s["id"]) for s in sources}
+    known = {str(s["id"]) for s in sources} | {str(m["id"]) for m in manual}
     result["sources"] = [s for s in result.get("sources", []) if s in known]
     return result
 

@@ -9,14 +9,14 @@
 ### Welche Kalender du siehst
 
 - **Auf diesem Gerät:** Dieser Kalender funktioniert sofort und ohne Konto. Termine bleiben verschlüsselt auf deinem Computer und erscheinen nicht auf dem Handy.
-- **Microsoft 365 und Google:** Hast du dich mit Microsoft oder Google angemeldet, kommen deine Kalender automatisch mit. Erscheint einmalig **Freigeben**, klicke darauf und bestätige im Browser mit demselben Konto.
-- **Andere Anbieter** wie Nextcloud, mailbox.org oder iCloud: Klicke links auf **Kalender verbinden** und gib die Adresse deines Kalenders und ein App-Passwort ein. Der Fachbegriff dafür ist CalDAV. Levuvo Mail hat Vorlagen für die bekannten Anbieter.
+- **Microsoft 365 und Google:** Hast du dich mit Microsoft oder Google angemeldet, kommen deine Kalender automatisch mit. Erscheint einmalig **Zugriff freigeben**, klicke darauf und bestätige im Browser mit demselben Konto.
+- **Andere Anbieter** wie Nextcloud, mailbox.org oder iCloud: Klicke links auf **Kalender verbinden** und gib die Server-Adresse, deinen Benutzernamen und ein App-Passwort ein. Der Fachbegriff dafür ist CalDAV. Levuvo Mail hat Vorlagen für die bekannten Anbieter.
 
 ### Termine anlegen und ändern
 
 1. Klicke auf **Neuer Termin** oder in ein freies Feld der Woche.
 2. Gib Titel, Beginn und Ende ein, optional Ort, Beschreibung und eine Erinnerung.
-3. Für einen wiederkehrenden Termin wählst du bei **Wiederholung** etwa „wöchentlich“.
+3. Für einen wiederkehrenden Termin wählst du bei **Wiederholung** etwa **Wöchentlich**.
 4. Klicke auf **Speichern**.
 
 Zum **Verschieben** ziehst du einen Termin mit der Maus an eine andere Stelle. Hat der Termin Teilnehmende, fragt Levuvo Mail, ob sie informiert werden sollen.
@@ -50,7 +50,7 @@ Kontakte von Microsoft 365 und Google erscheinen nach der Freigabe automatisch. 
 
 - **Schnell hinzufügen:** Tippe oben in das Feld **Aufgabe hinzufügen …** und drücke `Enter`.
 - **Ausführlich:** **Neue Aufgabe** öffnet ein Fenster für Fälligkeit, Erinnerung, Priorität, Notiz und Wiederholung.
-- **Aus einer Mail:** Klicke im Lesebereich auf **Als Aufgabe anlegen**. Die Aufgabe merkt sich die Mail, du kommst mit einem Klick zurück.
+- **Aus einer Mail:** Klicke im Lesebereich auf das Aufgaben-Symbol (**Als Aufgabe anlegen**). Die Aufgabe merkt sich die Mail, du kommst mit einem Klick zurück.
 - **Erledigt:** Kreis vor der Aufgabe anklicken.
 
 **Mit anderen Listen abgleichen:** Unter **Liste verbinden** verknüpfst du Microsoft To Do, Google Tasks oder eine CalDAV-Liste. Dann siehst du deine Aufgaben auch auf dem Handy. Trennen beendet nur den Abgleich, auf dem Server wird nichts gelöscht.

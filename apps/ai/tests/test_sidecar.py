@@ -82,6 +82,21 @@ def test_ask_keeps_only_given_sources() -> None:
         tasks.ask_mailbox(engine, {"question": ""})
 
 
+def test_ask_uses_manual_sections() -> None:
+    engine = StubEngine({"answer": "Einstellungen → Sicherung", "sources": ["m1", "s1", "x"], "found": True})
+    out = tasks.ask_mailbox(
+        engine,
+        {
+            "question": "Wie lege ich eine Sicherung an?",
+            "sources": [{"id": "s1", "text": "Hallo"}],
+            "manual": [{"id": "m1", "chapter": "Erste Schritte", "title": "1.4 Eine Sicherung anlegen", "text": "..."}],
+        },
+    )
+    assert out["sources"] == ["m1", "s1"]
+    assert "Levuvo Mail manual (trusted" in engine.calls[-1]["system"]
+    assert "1.4 Eine Sicherung anlegen" in engine.calls[-1]["system"]
+
+
 def test_other_tasks_run() -> None:
     engine = StubEngine({"subject": "", "body": "Hallo"})
     assert tasks.reply(engine, {**THREAD, "styleSamples": ["Lg Peter"], "instruction": "zusagen"})["body"] == "Hallo"

@@ -1,4 +1,4 @@
-// Live test of Levuvo's own Ollama with the real, pinned binary (CI job "Own Ollama").
+// Live test of Levuvo Mail's own Ollama with the real, pinned binary (CI job "Own Ollama").
 //   LEVUVO_OLLAMA_BIN=<fetched>/bin/ollama node --test test/ollama-live/*.test.mjs
 // Without LEVUVO_OLLAMA_BIN the test is skipped locally and fails in CI.
 import test from 'node:test';

@@ -1,6 +1,6 @@
 # KI-Assistent
 
-Der **Levuvo Mail Assistant** hilft dir, Mails schneller zu erfassen und zu beantworten. Er fasst lange Nachrichten zusammen, schlägt Antworten vor, findet Termine und Aufgaben in Mails und beantwortet Fragen zu deinem Postfach.
+Der **Levuvo Mail Assistant** unterstützt dich beim Lesen und Beantworten von Mails. Er fasst lange Nachrichten zusammen, schlägt Antworten vor, findet Termine und Aufgaben in Mails und beantwortet Fragen zu deinem Postfach.
 
 Der Assistent ist **standardmäßig ausgeschaltet**. Er tut nichts ohne dich: Gesendet, gespeichert, verschoben oder gelöscht wird nur, wenn du es bestätigst. Alles, was die KI erzeugt, ist als **KI-generiert** gekennzeichnet.
 
@@ -22,17 +22,17 @@ Levuvo Mail bringt für lokale Modelle ein eigenes, abgeschottetes Programm mit 
 3. Lass bei **Modell-Anbieter** die Einstellung **Lokal (Ollama)** stehen.
 4. Wähle bei **Sprachmodell** ein Modell aus der Liste. Levuvo Mail schlägt die Größe vor, die zu deinem Computer passt.
 5. Der Download startet mit Fortschrittsbalken. Je nach Internet dauert er einige Minuten. **Abbrechen** hält ihn an, später machst du mit **Fortsetzen** weiter.
-6. Sobald **Bereit** erscheint, kannst du loslegen.
+6. Sobald „… ist heruntergeladen und geprüft“ erscheint, kannst du loslegen. **Bereit** neben **Lokale KI** heißt nur, dass das Programm für lokale Modelle läuft.
 
-Für die **Suche nach Bedeutung** lädt Levuvo Mail zusätzlich ein kleines Suchmodell. Voreingestellt ist BGE-M3, es ist auf deutschen Mails am genauesten. Damit findet die Suche auch „Lieferung“, wenn in der Mail „Zustellung“ steht.
+Für die **Suche nach Bedeutung** lädt Levuvo Mail zusätzlich ein kleines Suchmodell. Voreingestellt ist BGE-M3, es lieferte in unseren Tests die besten Ergebnisse, gerade bei deutschen Mails. Damit findet die Suche auch „Lieferung“, wenn in der Mail „Zustellung“ steht.
 
-Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen. So ist sichergestellt, dass genau das richtige Modell auf deinem Computer liegt. Unter **Heruntergeladene Modelle** gibst du mit **Löschen** den Speicherplatz wieder frei.
+Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen, einer Art digitalem Fingerabdruck der Datei. So ist sichergestellt, dass genau das richtige Modell auf deinem Computer liegt. Unter **Heruntergeladene Modelle** gibst du mit **Löschen** den Speicherplatz wieder frei.
 
 ### Welches Modell passt?
 
 {{models}}
 
-Klein läuft ab 8 GB Arbeitsspeicher, Standard ab 16 GB, Groß ab 32 GB. Größere Modelle antworten besser, aber langsamer. Mit **EU** markierte Modelle stammen von Mistral AI aus Frankreich. Bei einem lokalen Modell spielt die Herkunft für deine Daten keine Rolle, denn sie verlassen deinen Computer nicht.
+Klein läuft ab 8 GB Arbeitsspeicher (RAM), Standard ab 16 GB, Groß ab 32 GB. Wie viel dein Computer hat, zeigt Levuvo Mail unter **Lokale KI** an. Größere Modelle antworten besser, aber langsamer. Mit **EU** markierte Modelle stammen von Mistral AI aus Frankreich. Bei einem lokalen Modell spielt die Herkunft für deine Daten keine Rolle, denn sie verlassen deinen Computer nicht.
 
 ## Was der Assistent kann
 
@@ -53,7 +53,7 @@ Im Editor öffnet der Knopf **Assistent** diese Hilfen:
 
 - **Antwort vorschlagen**, auch aus ein paar Stichworten von dir.
 - **Stichpunkte zu fertiger Mail** macht aus Notizen einen vollständigen Text.
-- **Umformulieren:** kürzer, höflicher, förmlicher, lockerer, Rechtschreibung prüfen oder übersetzen. Mit **Rückgängig** kommst du zum Original zurück.
+- **Umformulieren:** **Kürzer**, **Höflicher**, **Förmlicher**, **Lockerer**, **Rechtschreibung korrigieren**, **Auf Englisch** oder **Auf Deutsch**. Mit **Rückgängig** kommst du zum Original zurück.
 
 Vor dem Senden prüft der Assistent auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten. Du entscheidest, ob trotzdem gesendet wird.
 
@@ -61,7 +61,7 @@ Unter **Schreibstil** legst du fest, wie der Assistent für dich schreibt: Tonfa
 
 ### Das Assistent-Fenster
 
-Klicke links auf den Stern oder drücke `Strg` + `J`.
+Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 
 ![Das Assistent-Fenster](assistant.png)
 
@@ -72,7 +72,7 @@ Klicke links auf den Stern oder drücke `Strg` + `J`.
 
 ## Externe Agenten anbinden
 
-Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbinden. Der Fachbegriff dafür ist MCP-Server. Unter **Einstellungen → KI & Agenten → Agenten-Schnittstelle (MCP)** schaltest du ihn ein und legst mit **Neuer Agent** einen Zugang mit festen Rechten an: nur lesen, Entwürfe anlegen, ordnen oder alles. Senden, Termine mit Teilnehmenden und Löschen warten immer auf deine Freigabe. Passwörter, Schlüssel und Konten sind für Agenten nie erreichbar.
+Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbinden. Dafür stellt Levuvo Mail eine Schnittstelle bereit, den sogenannten MCP-Server. Er ist nur von diesem Computer aus erreichbar. Unter **Einstellungen → KI & Agenten → Agenten-Schnittstelle (MCP)** schaltest du ihn ein und legst mit **Neuer Agent** einen Zugang mit festen Rechten an: nur lesen, Entwürfe anlegen, ordnen oder alles. Senden, Termine mit Teilnehmenden und Löschen warten auf deine Freigabe. Nur wenn du bei der Stufe „Alles inkl. Senden“ **ohne Freigabe senden** ankreuzt, sendet der Agent direkt. Passwörter, Schlüssel und Konten sind für Agenten nie erreichbar.
 
 ## Datenschutz und KI-Regeln
 
@@ -80,8 +80,6 @@ Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbind
 - **Cloud nur mit Einwilligung.** Bevor du ein Cloud-Modell nutzt, zeigt Levuvo Mail genau, welche Inhalte übertragen werden. Du kannst die Einwilligung jederzeit mit **Einwilligung widerrufen** zurücknehmen.
 - **Konten sperren.** Unter **Keine Cloud-KI für diese Konten** schließt du einzelne Postfächer, etwa dein dienstliches, ganz von Cloud-KI aus.
 - **Daten anderer Menschen.** Mails enthalten auch Namen und Daten deiner Kontakte. Nutze Cloud-KI für dienstliche Mails nur, wenn deine Organisation das erlaubt.
-- **Kennzeichnung und Kontrolle.** KI-Ergebnisse sind immer gekennzeichnet. Die letzte Entscheidung triffst du. So verlangt es auch die europäische KI-Verordnung (EU AI Act).
+- **Kennzeichnung und Kontrolle.** KI-Ergebnisse sind immer gekennzeichnet. KI kann sich irren: Prüfe Zusammenfassungen und Vorschläge, besonders Beträge, Fristen und Namen. Die letzte Entscheidung triffst du, so verlangt es auch die europäische KI-Verordnung (EU AI Act).
 - **KI-Protokoll.** Unter **KI-Protokoll** siehst du, was KI und Agenten getan haben, ohne Mailinhalte, 30 Tage lang und nur auf diesem Gerät.
 - **Alles löschen.** **Alle KI-Daten löschen** entfernt Einstellungen, Einwilligungen, Schlüssel, Protokoll und Agenten. Deine Mails bleiben unverändert.
-
-> **Tipp:** KI kann sich irren. Prüfe Zusammenfassungen und Vorschläge, bevor du dich darauf verlässt, besonders bei Beträgen, Fristen und Namen.

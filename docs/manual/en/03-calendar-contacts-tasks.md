@@ -10,13 +10,13 @@ Open the calendar from the left bar or with `Alt` + `2`.
 
 - **On this device:** This calendar works straight away and without an account. Events stay encrypted on your computer and don't appear on your phone.
 - **Microsoft 365 and Google:** If you signed in with Microsoft or Google, your calendars come along automatically. If **Allow access** appears once, click it and confirm in the browser with the same account.
-- **Other providers** such as Nextcloud, mailbox.org or iCloud: Click **Connect calendar** on the left and enter your calendar's address and an app password. The technical term for this is CalDAV. Levuvo Mail has presets for the well-known providers.
+- **Other providers** such as Nextcloud, mailbox.org or iCloud: Click **Connect calendar** on the left and enter the server address, your user name and an app password. The technical term for this is CalDAV. Levuvo Mail has presets for the well-known providers.
 
 ### Create and change events
 
 1. Click **New event** or an empty slot in the week.
 2. Enter a title, start and end, and optionally a location, description and a reminder.
-3. For a recurring event, choose for example "weekly" under **Repeat**.
+3. For a recurring event, choose for example **Weekly** under **Repeat**.
 4. Click **Save**.
 
 To **move** an event, drag it with the mouse to another place. If the event has attendees, Levuvo Mail asks whether to let them know.
@@ -50,7 +50,7 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 
 - **Add quickly:** Type into the **Add a task …** field at the top and press `Enter`.
 - **In detail:** **New task** opens a window for due date, reminder, priority, notes and repeat.
-- **From an email:** Click **Create task** in the reading pane. The task remembers the email, so you get back to it with one click.
+- **From an email:** Click the task icon (**Create task**) in the reading pane. The task remembers the email, so you get back to it with one click.
 - **Done:** Click the circle in front of the task.
 
 **Sync with other lists:** **Connect a list** links Microsoft To Do, Google Tasks or a CalDAV list. Then you see your tasks on your phone too. Disconnecting only ends the sync; nothing is deleted on the server.

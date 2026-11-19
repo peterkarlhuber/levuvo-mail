@@ -11,6 +11,10 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createMailServer } from '../../apps/server/src/app.mjs';
 import { demoRoutes, NOW } from './demo-data.mjs';
+import { createManual } from '../../apps/server/src/manual.mjs';
+
+// Settings → Help shows the manual itself (the images from the last capture).
+const manual = createManual();
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixtures = JSON.parse(readFileSync(join(root, 'test/a11y/fixtures.json'), 'utf8'));
@@ -261,6 +265,23 @@ try {
       await context.route('**/api/**', route => {
         const req = route.request();
         const key = `${req.method()} ${new URL(req.url()).pathname}`;
+        if (key === 'GET /api/manual') {
+          const chapters = manual
+            .chapters(lang)
+            .map(({ id, number, title, markdown }) => ({ id, number, title, markdown }));
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ lang, chapters })
+          });
+        }
+        const img = /^GET \/api\/manual\/img\/(\w+)\/([^/]+)$/.exec(key);
+        if (img && manual.imagePath(img[1], img[2]))
+          return route.fulfill({
+            status: 200,
+            contentType: 'image/png',
+            body: readFileSync(manual.imagePath(img[1], img[2]))
+          });
         const own = typeof routes[key] === 'function' ? routes[key](req) : routes[key];
         if (own !== undefined)
           return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(own) });

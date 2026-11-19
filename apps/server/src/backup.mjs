@@ -88,7 +88,7 @@ export const NOT_BACKED_UP = {
   'instance.json': 'installation ID of this device',
   'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
   'mcp-approvals.json': 'short-lived approvals that expire',
-  // Levuvo's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
+  // Levuvo Mail's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
   // and the key pair the server creates for itself.
   'ollama/': 'models of the own Ollama; downloaded again from the fixed model list',
   '*.lvdb': 'search index; rebuilt from the mailbox',
@@ -344,12 +344,12 @@ export function readBackupHeader(text) {
   try {
     doc = JSON.parse(String(text));
   } catch {
-    throw fail('Das ist keine Levuvo-Sicherung.', 'backup_invalid');
+    throw fail('Das ist keine Sicherung von Levuvo Mail.', 'backup_invalid');
   }
-  if (doc?.format !== BACKUP_FORMAT) throw fail('Das ist keine Levuvo-Sicherung.', 'backup_invalid');
+  if (doc?.format !== BACKUP_FORMAT) throw fail('Das ist keine Sicherung von Levuvo Mail.', 'backup_invalid');
   if (doc.version !== BACKUP_VERSION)
     throw fail(
-      'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.',
+      'Diese Sicherung stammt aus einer neueren Version von Levuvo Mail. Bitte zuerst aktualisieren.',
       'backup_version'
     );
   const kdf = doc.kdf || {};
@@ -402,7 +402,7 @@ export async function decryptBackup(text, password, { ownApp = '' } = {}) {
   }
   if (ownApp && newerApp(doc.app, ownApp))
     throw fail(
-      'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.',
+      'Diese Sicherung stammt aus einer neueren Version von Levuvo Mail. Bitte zuerst aktualisieren.',
       'backup_version'
     );
   return validateContent(content, doc);
@@ -425,7 +425,7 @@ function validateContent(content, doc) {
     if (FORMAT_CHECKS[name] && !FORMAT_CHECKS[name](value))
       throw fail(
         typeof value.version === 'number' && value.version > 1
-          ? 'Diese Sicherung stammt aus einer neueren Version von Levuvo. Bitte zuerst aktualisieren.'
+          ? 'Diese Sicherung stammt aus einer neueren Version von Levuvo Mail. Bitte zuerst aktualisieren.'
           : 'Die Sicherung ist beschädigt.',
         typeof value.version === 'number' && value.version > 1 ? 'backup_version' : 'backup_invalid'
       );

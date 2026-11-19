@@ -2,13 +2,14 @@
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from './ui/focus';
-import { CircleCheck, LoaderCircle, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { BookOpen, CircleCheck, LoaderCircle, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Button, Field, IconButton, Segmented } from './ui';
 import { ApprovalList } from './SettingsMcp';
+import { openManualAt } from './ManualView';
 
 type Skill = {
   id: string;
@@ -18,7 +19,9 @@ type Skill = {
   builtin: boolean;
   param?: { name: string; label: string };
 };
-type Source = { accountId: string; folder: string; uid: number; subject: string };
+type MailSource = { accountId: string; folder: string; uid: number; subject: string };
+type ManualSource = { manual: true; chapterId: string; section: string; title: string };
+type Source = MailSource | ManualSource;
 type Entry =
   | {
       id: number;
@@ -46,7 +49,7 @@ type Entry =
 type Props = {
   open: boolean;
   onClose: () => void;
-  onOpenMessage: (s: Source) => void;
+  onOpenMessage: (s: MailSource) => void;
   onOpenSettings: () => void;
   onPending: (n: number) => void;
 };
@@ -235,19 +238,34 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                         <p>{e.answer}</p>
                         {e.sources && e.sources.length > 0 && (
                           <ul className="assistant-sources">
-                            {e.sources.map(s => (
-                              <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
-                                <button
-                                  className="text-button"
-                                  onClick={() => {
-                                    onClose();
-                                    onOpenMessage(s);
-                                  }}
-                                >
-                                  {s.subject || t('(ohne Betreff)')}
-                                </button>
-                              </li>
-                            ))}
+                            {e.sources.map(s =>
+                              'manual' in s ? (
+                                <li key={`manual:${s.chapterId}:${s.section}`}>
+                                  <button
+                                    className="text-button"
+                                    onClick={() => {
+                                      onClose();
+                                      openManualAt({ chapterId: s.chapterId, section: s.section });
+                                    }}
+                                  >
+                                    <BookOpen size={12} aria-hidden="true" /> {t('Handbuch')}:{' '}
+                                    {[s.section, s.title].filter(Boolean).join(' ')}
+                                  </button>
+                                </li>
+                              ) : (
+                                <li key={`${s.accountId}:${s.folder}:${s.uid}`}>
+                                  <button
+                                    className="text-button"
+                                    onClick={() => {
+                                      onClose();
+                                      onOpenMessage(s);
+                                    }}
+                                  >
+                                    {s.subject || t('(ohne Betreff)')}
+                                  </button>
+                                </li>
+                              )
+                            )}
                           </ul>
                         )}
                         <span className="ai-label">

@@ -80,7 +80,7 @@ function invalid(message, code = 'ai_invalid') {
 const MODEL_NAME = /^[A-Za-z0-9._:/-]{1,120}$/;
 
 /**
- * `managed`: Levuvo's own Ollama runs the local models, so only models of the fixed catalog are
+ * `managed`: Levuvo Mail's own Ollama runs the local models, so only models of the fixed catalog are
  * accepted and the address is chosen by the app (the setting stays for development only).
  */
 export function validateAiSettings(input, current, { managed = false } = {}) {
@@ -209,7 +209,7 @@ export function createAiService({
   sidecar,
   log,
   logger = () => {},
-  // Levuvo's own Ollama (ollama-runtime.mjs) and its model manager (ollama-models.mjs). Without
+  // Levuvo Mail's own Ollama (ollama-runtime.mjs) and its model manager (ollama-models.mjs). Without
   // them (development without a bundled binary) the configured address is used.
   localRuntime = null,
   models = null,

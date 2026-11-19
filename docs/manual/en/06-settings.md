@@ -19,7 +19,7 @@ Open the settings with the slider icon at the bottom left or with `Alt` + `,`.
 | Notifications | Allow and test notifications |
 | Privacy | Crash reports (optional), diagnostic report |
 | Backup | Create and restore backups |
-| Help | This manual, quick help, keyboard shortcuts |
+| Help | This manual with search, quick help, keyboard shortcuts |
 | About | Version, imprint, licences |
 
 ### Signature and additional sender addresses
@@ -30,12 +30,12 @@ Under **Settings → Accounts**, click an account to edit it. There you create a
 
 ## How Levuvo Mail protects your data
 
-- **Everything stays on your computer.** There is no Levuvo Mail server your email passes through. Levuvo Mail collects no usage data and shows no ads.
+- **Everything stays on your computer.** There is no Levuvo Mail server your email passes through. Your email only goes to your mail provider's servers. Levuvo Mail doesn't record how you use the app.
 - **Passwords in the secure store.** Account passwords and keys are kept in the Keychain (Mac) or the Credential Manager (Windows), never in a plain file.
 - **Local data encrypted.** The search index, local calendars, contacts, tasks and spaces are encrypted on disk.
 - **Safe display.** Emails are shown without scripts, external images are blocked and links ask first.
 - **Only reachable from your device.** The app doesn't accept connections from other computers.
-- **Crash reports only if you want.** Under **Settings → Privacy** you decide whether a technical report is sent after a crash.
+- **Crash reports only if you want.** Under **Settings → Privacy** you decide whether a technical report is sent after a crash. It may contain parts of open emails or addresses. That is why it is off by default.
 
 ![Security: keys and certificates](settings-security.png)
 
@@ -44,7 +44,7 @@ Under **Settings → Accounts**, click an account to edit it. There you create a
 | Problem | Solution |
 |---|---|
 | "Check access" appears at start | Unlock the Keychain (Mac) or check your Windows sign-in, then **Check again**. Nothing was deleted. |
-| The Mac says the app is "damaged" | Download the file again and follow **Warning when you open it for the first time**. If that doesn't help, ask your IT team for support. |
+| The Mac says the app is "damaged" | Ask your IT team for help. A short command in Terminal fixes this. |
 | Sign-in fails | Check the password. With GMX and WEB.DE, allow IMAP access in the webmail. With Gmail, use an app password or **Sign in with Google**. |
 | Sending with Microsoft 365 fails | Your IT team has to switch on "Authenticated SMTP" for the mailbox. |
 | Filters are "not available" | Your provider doesn't offer server filters. Create the rules in the webmail instead. |
@@ -52,7 +52,8 @@ Under **Settings → Accounts**, click an account to edit it. There you create a
 | Calendars or contacts from Microsoft or Google are missing | Click **Allow access** and confirm in the browser with the same account. In companies the IT team may have to agree. |
 | A scheduled or snoozed email didn't arrive | Levuvo Mail has to be running at the scheduled time; the background is enough. Otherwise it happens at the next start. |
 | No notifications | Open **Settings → Notifications** and grant permission, also in your computer's system settings. |
-| The assistant doesn't answer | Under **Settings → AI & agents**, check that **Ready** is shown and a model is fully downloaded. Otherwise restart Levuvo Mail. |
+| The assistant doesn't answer | Under **Settings → AI & agents**, check that the language model says "… is downloaded and verified". Otherwise restart Levuvo Mail. |
+| **Disrupted** is shown | The mail server isn't answering properly. Check the connection under **Settings → Accounts**; waiting a moment often helps. |
 
 ## Get help
 

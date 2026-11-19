@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### User manual
+- **Levuvo Mail user manual (German, English):** a task-oriented manual for first-time users, from installation and the first account to email, calendar, contacts, tasks, spaces, the AI assistant, settings, troubleshooting and a one-page shortcut reference. Built as an accessible PDF (PDF/UA-1, tagged, alt texts) with screenshots of the app in its default dark theme; the `Manual` workflow builds and checks it on every change.
+- **Manual in the app:** Settings → Help shows the manual with chapter list and search; the question mark in the rail opens it.
+- **The assistant answers app questions from the manual:** for "how do I …" questions it reads only the few matching sections (found with the same local search model as the mail search, by word match without one) and links to them as sources.
+
+### Fixes
+- **Alt shortcuts on the Mac:** Option + 1–5 and Option + , switch views again (they used the typed character, which is different on a Mac keyboard).
+- **"Allow access" button:** the Microsoft/Google permission button for calendars, contacts and tasks no longer showed "Approve" in English.
+- The product is called "Levuvo Mail" everywhere in the app, also in file names of calendar and contact exports.
+
 ## 2.5.0 – 19 November 2026
 
 > **Larger installer, models on demand:** the installer now contains Levuvo Mail's own Ollama, so it is bigger than 2.4.0 (about 0.6 GB more unpacked on macOS, 0.5 GB on Windows ARM64, 1.1 GB on Windows x64). No AI model is included: a model is downloaded when you first choose it in Settings → AI & agents, which needs a few GB of free disk space and an internet connection once.
