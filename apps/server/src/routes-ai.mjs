@@ -7,6 +7,7 @@ import { contactPayload, eventPayload, messageForAi, securityDetails, securityFa
 export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 import { createSemanticIndex } from './ai-semantic.mjs';
 import { readSources, retrieve, verifiedQuote } from './ask-mailbox.mjs';
+import { contactSamples, createStyleProfiles } from './style-profile.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
@@ -128,6 +129,69 @@ export function registerAiRoutes(ctx) {
   const own = () => ctx.ownAddresses().join(', ');
   const profile = () => ({ ...DEFAULT_AI_SETTINGS.profile, ...(ai.publicSettings().profile || {}) });
 
+  // Writing style per contact (opt-in): learned locally from sent mail, encrypted on disk.
+  let memoryStyle = { accounts: {} };
+  const styles =
+    ctx.styles ||
+    createStyleProfiles({
+      file: ctx.styleFile || {
+        persistent: false,
+        get: () => memoryStyle,
+        save: async next => {
+          memoryStyle = next;
+        }
+      },
+      localIndex: ctx.localIndex
+    });
+  ctx.styles = styles;
+  const addressesOf = account => (ctx.accountAddresses ? ctx.accountAddresses(account) : ctx.ownAddresses());
+  async function learnStyles() {
+    if (!profile().learnStyle) return;
+    for (const account of ctx.accounts()) {
+      const learned = await styles.learn(account, addressesOf(account)).catch(() => null);
+      if (learned)
+        void ai.log?.add({
+          type: 'index',
+          kind: 'style',
+          accountId: account.id,
+          count: learned.mails,
+          provider: 'local'
+        });
+    }
+  }
+  ctx.jobs?.register('style-profile', learnStyles, { every: 6 * 60 * 60_000, firstDelay: 2 * 60_000 });
+  ctx.aiForgetHooks.push(() => styles.clear());
+
+  /** The person a reply or new mail goes to: the sender of the last mail, or its recipient if that was the user. */
+  function recipientOf(details, account) {
+    const mine = new Set(addressesOf(account).map(a => a.toLowerCase()));
+    const last = details.at(-1) || {};
+    const from = String(last.from?.[0]?.email || '').toLowerCase();
+    if (from && !mine.has(from)) return from;
+    return String((last.to || []).map(a => a.email).find(e => e && !mine.has(e.toLowerCase())) || '').toLowerCase();
+  }
+  /** Style input for reply/compose: habits with this recipient and the user's mails to them first. */
+  async function styleInput(account, recipient) {
+    if (!account) return { styleSamples: [] };
+    const general = await styleSamples(account);
+    if (!profile().learnStyle || !recipient) return { styleSamples: general };
+    const habits = styles.contact(account.id, recipient);
+    const own = await contactSamples(ctx.localIndex, account.id, addressesOf(account), recipient);
+    return {
+      styleSamples: [...own, ...general].slice(0, 5),
+      contactStyle: habits
+        ? {
+            greeting: habits.greeting,
+            closing: habits.closing,
+            address: habits.address,
+            words: habits.words,
+            count: habits.count
+          }
+        : null,
+      styleContact: habits || own.length ? recipient : ''
+    };
+  }
+
   /** Builds the sidecar input for one AI function from references and client text. */
   async function prepare(kind, body) {
     const lang = body.lang === 'en' ? 'en' : 'de';
@@ -172,7 +236,7 @@ export function registerAiRoutes(ctx) {
           messages: details.map(messageForAi),
           instruction: clientText(input.instruction, 1000),
           profile: profile(),
-          styleSamples: account ? await styleSamples(account) : []
+          ...(await styleInput(account, account ? recipientOf(details, account) : ''))
         };
       }
       case 'assess': {
@@ -188,11 +252,18 @@ export function registerAiRoutes(ctx) {
         const out = {
           lang,
           bullets: clientText(input.bullets, 3000),
-          profile: profile(),
-          styleSamples: account ? await styleSamples(account) : []
+          profile: profile()
         };
-        if (Array.isArray(body.refs) && body.refs.length)
-          out.messages = (await loadThread(accountId, body.refs)).map(messageForAi);
+        const details = Array.isArray(body.refs) && body.refs.length ? await loadThread(accountId, body.refs) : [];
+        if (details.length) out.messages = details.map(messageForAi);
+        // A new mail: the first recipient the user typed; an answer: as for reply.
+        const typed = clientText(Array.isArray(input.to) ? input.to[0] : input.to, 320)
+          .trim()
+          .toLowerCase();
+        Object.assign(
+          out,
+          await styleInput(account, typed || (account && details.length ? recipientOf(details, account) : ''))
+        );
         return out;
       }
       case 'ask': {
@@ -299,9 +370,14 @@ export function registerAiRoutes(ctx) {
     if (!requireAction(request, reply, ACTION)) return;
     try {
       const before = ai.get().embedModel;
+      const learnedBefore = profile().learnStyle;
       const saved = await ai.save(request.body || {});
       // Another search model: its vectors are built in the background (the old ones are dropped).
       if (saved.embedModel !== before) void syncAll();
+      // Style learning switched on: learn now; switched off: the profile is deleted.
+      const learnNow = profile().learnStyle;
+      if (learnNow && !learnedBefore) void learnStyles();
+      if (!learnNow && learnedBefore) await styles.clear();
       return saved;
     } catch (err) {
       return aiError(reply, err);
@@ -430,6 +506,7 @@ export function registerAiRoutes(ctx) {
         result.sources = askSources(result, body.sourceMap, body.manualMap);
         delete result.quotes;
       }
+      if ((kind === 'reply' || kind === 'compose') && input.styleContact) result.styleContact = input.styleContact;
       return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
     } catch (err) {
       return aiError(reply, err);
@@ -486,6 +563,43 @@ export function registerAiRoutes(ctx) {
       const status = err.statusCode || err.status || 500;
       return reply.code(status).send({ error: status < 500 ? err.message : 'Speichern fehlgeschlagen.' });
     }
+  });
+  // The learned writing style: what was learned per account and contact, relearn, delete.
+  api.get('/api/ai/style', async () => ({
+    enabled: profile().learnStyle,
+    persistent: styles.persistent,
+    accounts: ctx.accounts().map(a => {
+      const p = styles.get(a.id);
+      return {
+        accountId: a.id,
+        label: a.label || a.user || a.id,
+        builtAt: p?.builtAt || null,
+        mails: p?.mails || 0,
+        overall: p?.overall || null,
+        contacts: Object.entries(p?.contacts || {})
+          .map(([email, c]) => ({ email, ...c }))
+          .sort((x, y) => y.count - x.count || x.email.localeCompare(y.email))
+      };
+    })
+  }));
+  api.post('/api/ai/style/learn', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    if (!profile().learnStyle) return reply.code(409).send({ error: 'Stil lernen ist ausgeschaltet.' });
+    await learnStyles();
+    return { learned: true };
+  });
+  api.post('/api/ai/style/remove', { bodyLimit: 2048 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const { account, contact } = request.body || {};
+    if (!ctx.accounts().some(a => a.id === account)) return reply.code(400).send({ error: 'Konto unbekannt.' });
+    if (contact) return { removed: await styles.removeContact(account, clientText(contact, 320)) };
+    await styles.clear(account);
+    return { removed: true };
+  });
+  api.post('/api/ai/style/clear', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    await styles.clear();
+    return { cleared: true };
   });
   api.get('/api/ai/log', async () => ({ entries: await ai.log.list(300) }));
   api.post('/api/ai/log/clear', { bodyLimit: 1024 }, async (request, reply) => {

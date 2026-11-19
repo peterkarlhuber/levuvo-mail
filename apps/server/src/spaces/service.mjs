@@ -1214,6 +1214,33 @@ export function createSpaceService({
     };
   }
 
+  /**
+   * Tasks assigned to this member in active spaces, for the main "Aufgaben" area
+   * (space-tasks.mjs). Read live from the space state: nothing is copied into the task file.
+   */
+  function myTasks() {
+    const out = [];
+    for (const r of store.all()) {
+      if (r.status !== 'active') continue;
+      const state = stateOf(r);
+      const me = state.members[keys.id];
+      if (!me || me.removed || state.dissolved) continue;
+      const space = { id: r.id, name: state.name || r.name || '', role: me.role };
+      for (const t of Object.values(state.tasks))
+        if (!t.deleted && t.assignee === keys.id) out.push({ space, task: { ...t } });
+    }
+    return out;
+  }
+  /** Active spaces this member may add tasks to (owner or editor). */
+  function writableSpaces() {
+    return store
+      .all()
+      .filter(r => r.status === 'active' && !stateOf(r).dissolved)
+      .map(r => ({ id: r.id, name: stateOf(r).name || r.name || '', role: stateOf(r).members[keys.id]?.role }))
+      .filter(s => s.role === 'owner' || s.role === 'editor')
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   // ---------------------------------------------------------------- notes (Yjs)
   function noteState(spaceId, noteId) {
     const r = record(spaceId);
@@ -1467,6 +1494,8 @@ export function createSpaceService({
     markChatRead,
     waitForChange,
     detail,
+    myTasks,
+    writableSpaces,
     create,
     invite,
     revokeInvite,
