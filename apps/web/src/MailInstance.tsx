@@ -1,38 +1,20 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type DragEvent
-} from 'react';
-import { focusFirstItem, menuKeyDown } from './ui/menu-keys';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import DOMPurify from 'dompurify';
 import { isRemoteSrc } from './trackers';
 import {
   AlarmClock,
   Archive,
-  BellRing,
   CheckCheck,
-  ChevronDown,
   CloudOff,
-  FilePenLine,
-  FolderPlus,
   Globe2,
   GripVertical,
-  Inbox,
   Keyboard,
   Mail,
-  Mails,
   Menu,
-  MoreHorizontal,
   Paperclip,
   PenSquare,
   RefreshCcw,
   Search,
-  Send,
   ShieldAlert,
   Star,
   Trash2,
@@ -41,6 +23,8 @@ import {
 import Composer, { type ComposeInitial, type OutgoingPayload } from './Composer';
 import { plainToHtml, SIGNATURE_SEPARATOR } from './editor';
 import MessageList, { DRAG_TYPE } from './MessageList';
+import MailSidebar from './mail/MailSidebar';
+import { useBundleSuggestions, useScreening } from './mail/useInboxOrder';
 import Reader, { printMessage, type ReaderAction } from './Reader';
 import { ShortcutsDialog } from './Panels';
 import { useUi } from './ConfirmDialog';
@@ -53,8 +37,7 @@ import { isMissingMessage, mergeSnapshot, removesMessages, snapshotApplies } fro
 import FollowupList from './FollowupList';
 import AttachmentOverview from './AttachmentOverview';
 import { BundleHeader, BundleRows } from './Bundles';
-import { applySuggestions, bundleSuggester, type BundleSuggestion } from './bundle-suggest';
-import { ScreenerRow, ScreenerView, type ScreeningState } from './Screening';
+import { ScreenerRow, ScreenerView } from './Screening';
 import WhenMenu from './WhenMenu';
 import { usePrefs } from './prefs';
 import type { SettingsTab } from './App';
@@ -70,32 +53,10 @@ import type {
   MessagePage
 } from './types';
 
-export const UNIFIED = '\u0000unified';
-export const FOLLOWUPS = '\u0000followups';
-export const ATTACHMENTS = '\u0000attachments';
+import { ATTACHMENTS, FOLLOWUPS, UNIFIED } from './mail/views';
+export { ATTACHMENTS, FOLLOWUPS, UNIFIED };
 const PAGE = 40;
 type Filter = 'all' | 'unread' | 'flagged' | 'attachments';
-const PROTECTED = new Set(['\\Inbox', '\\Drafts', '\\Sent', '\\Trash', '\\Junk', '\\Archive']);
-
-function folderIcon(folder: Folder) {
-  if (isSnoozeFolder(folder)) return AlarmClock;
-  switch (folder.specialUse) {
-    case '\\Inbox':
-      return Inbox;
-    case '\\Sent':
-      return Send;
-    case '\\Drafts':
-      return FilePenLine;
-    case '\\Archive':
-      return Archive;
-    case '\\Trash':
-      return Trash2;
-    case '\\Junk':
-      return ShieldAlert;
-    default:
-      return folder.path.toUpperCase() === 'INBOX' ? Inbox : Mail;
-  }
-}
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 function quotedHtml(d: Detail) {
@@ -173,12 +134,6 @@ export default function MailInstance({
   const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
   const [filter, setFilter] = useState<Filter>('all');
   const [bundle, setBundle] = useState<Bundle | null>(null);
-  const [suggestions, setSuggestions] = useState<Map<number, BundleSuggestion>>(() => new Map());
-  const [screening, setScreening] = useState<ScreeningState | null>(null);
-  const [screener, setScreener] = useState(false);
-  const [unknownSenders, setUnknownSenders] = useState<Set<string>>(() => new Set());
-  const checkedSenders = useRef(new Set<string>());
-  const spamMoved = useRef(new Set<number>());
   const [searchTotal, setSearchTotal] = useState<number | null>(null);
   // Paging cursor of the local index search ("everywhere"); null when there is no further page.
   const [localCursor, setLocalCursor] = useState<string | null>(null);
@@ -200,19 +155,6 @@ export default function MailInstance({
   const [actionBusy, setActionBusy] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
   const [checkedUids, setCheckedUids] = useState<number[]>([]);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [folderMenu, setFolderMenu] = useState<{ path: string; x: number; y: number } | null>(null);
-  // Keyboard: focus moves into the folder menu when it opens and back to its button when it closes.
-  const folderMenuRef = useRef<HTMLDivElement>(null);
-  const folderMenuOpener = useRef<HTMLElement | null>(null);
-  const folderMenuOpen = Boolean(folderMenu);
-  useLayoutEffect(() => {
-    if (folderMenuOpen) focusFirstItem(folderMenuRef.current);
-  }, [folderMenuOpen]);
-  const closeFolderMenu = (refocus: boolean) => {
-    setFolderMenu(null);
-    if (refocus) folderMenuOpener.current?.focus();
-  };
   const pendingOpen = useRef<number | null>(initialOpen?.uid ?? null);
   const resizeAnchor = useRef<{ x: number; width: number } | null>(null);
   const [listWidth, setListWidth] = useState(prefs.listWidth);
@@ -268,31 +210,19 @@ export default function MailInstance({
   const plainInbox =
     Boolean(currentFolder && isInbox(currentFolder)) && !unified && !everywhere && !searching && !query.trim();
   const bundling = prefs.bundles && plainInbox;
-  const screeningOn = prefs.screening && plainInbox && Boolean(screening?.since);
-  const blockedSenders = useMemo(() => new Set(screening?.blocked || []), [screening]);
-  const screened = useMemo(
-    () => (screeningOn ? messages.filter(m => unknownSenders.has(m.fromEmail.toLowerCase())) : []),
-    [screeningOn, messages, unknownSenders]
-  );
-  // Optional second opinion on bundles (AI); the local rules stay the default.
-  const bundled = useMemo(
-    () => (bundling ? applySuggestions(messages, suggestions) : messages),
-    [bundling, messages, suggestions]
-  );
-  useEffect(() => setSuggestions(new Map()), [accountId]);
-  useEffect(() => {
-    const suggest = bundleSuggester();
-    if (!bundling || !suggest || !messages.length) return;
-    let active = true;
-    suggest(messages, accountId)
-      .then(found => {
-        if (active && found.size) setSuggestions(old => new Map([...old, ...found]));
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [bundling, messages, accountId]);
+  // Sender screening (decisions, unknown senders, blocked mail to spam) and optional AI bundles.
+  const runActionRef = useRef<(action: ReaderAction, uids: number[]) => Promise<boolean>>(async () => false);
+  const { screeningOn, blockedSenders, unknownSenders, screened, screener, setScreener, decideSender } = useScreening({
+    enabled: prefs.screening,
+    accountReady: Boolean(status?.configured),
+    accountId,
+    plainInbox,
+    messages,
+    writeEnabled,
+    actionBusy,
+    runAction: (action, uids) => runActionRef.current(action, uids)
+  });
+  const bundled = useBundleSuggestions(bundling, messages, accountId);
   const visibleMessages = useMemo(() => {
     let list = bundled;
     if (!searching && !unified && query.trim()) {
@@ -325,77 +255,6 @@ export default function MailInstance({
   ]);
   const visibleUids = useMemo(() => visibleMessages.map(m => m.uid), [visibleMessages]);
 
-  // Sender screening: load (and on first use start) the decisions of this account.
-  useEffect(() => {
-    checkedSenders.current = new Set();
-    spamMoved.current = new Set();
-    setUnknownSenders(new Set());
-    setScreening(null);
-    if (!prefs.screening || !accountReady) return;
-    let active = true;
-    getJson<ScreeningState>('/api/screening', accountId)
-      .then(s => (s.since ? s : postAction<ScreeningState>('/api/screening/start', {}, accountId)))
-      .then(s => active && setScreening(s))
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [prefs.screening, accountReady, accountId]);
-  // Ask the server which senders of newly arrived mail are new (not in contacts, never written to).
-  useEffect(() => {
-    if (!screeningOn || !screening?.since) return;
-    const since = Date.parse(screening.since);
-    const decided = new Set([...screening.allowed, ...screening.blocked]);
-    const candidates = [
-      ...new Set(
-        messages
-          .filter(m => !m.bundle && m.date && Date.parse(m.date) >= since)
-          .map(m => m.fromEmail.toLowerCase())
-          .filter(e => e && !decided.has(e) && !checkedSenders.current.has(e))
-      )
-    ].slice(0, 300);
-    if (!candidates.length) return;
-    for (const e of candidates) checkedSenders.current.add(e);
-    postAction<{ unknown: string[] }>('/api/screening/check', { emails: candidates }, accountId)
-      .then(r => {
-        if (r.unknown.length) setUnknownSenders(old => new Set([...old, ...r.unknown]));
-      })
-      .catch(() => {
-        for (const e of candidates) checkedSenders.current.delete(e);
-      });
-  }, [screeningOn, screening, messages, accountId]);
-  // Mail from blocked senders goes to the spam folder as soon as it shows up.
-  useEffect(() => {
-    if (!screeningOn || !writeEnabled || actionBusy || !blockedSenders.size) return;
-    const uids = messages
-      .filter(m => blockedSenders.has(m.fromEmail.toLowerCase()) && !spamMoved.current.has(m.uid))
-      .map(m => m.uid);
-    if (!uids.length) return;
-    for (const uid of uids) spamMoved.current.add(uid);
-    void runAction('spam', uids).then(ok => {
-      if (!ok) for (const uid of uids) spamMoved.current.delete(uid);
-    });
-    // runAction is recreated on every render; the effect runs again when the inputs change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screeningOn, writeEnabled, actionBusy, blockedSenders, messages]);
-
-  async function decideSender(email: string, decision: 'allow' | 'block', uids: number[]) {
-    try {
-      const next = await postAction<ScreeningState>('/api/screening/decide', { email, decision }, accountId);
-      setScreening(next);
-      setUnknownSenders(old => {
-        const copy = new Set(old);
-        copy.delete(email);
-        return copy;
-      });
-      if (decision === 'block') {
-        for (const uid of uids) spamMoved.current.add(uid);
-        await runAction('spam', uids);
-      } else toast({ text: t('{email} angenommen.', { email }), kind: 'success' });
-    } catch (e) {
-      toast({ text: (e as Error).message, kind: 'error' });
-    }
-  }
   const selected =
     unified || everywhere
       ? visibleMessages.find(m => `${m.accountId}:${m.uid}` === selectedKey) || null
@@ -885,6 +744,10 @@ export default function MailInstance({
   };
 
   /** One request for one or many messages (server: batch-action, max 500). */
+  // The screening hook moves blocked mail with the current runAction.
+  useEffect(() => {
+    runActionRef.current = (action, uids) => runAction(action, uids);
+  });
   async function runAction(action: ReaderAction, uids: number[], destination?: string, source = folder) {
     if (!writeEnabled || !uids.length || actionBusy) return false;
     if ((action === 'archive' && !archiveExists) || (action === 'trash' && isTrash && source === folder)) return false;
@@ -1036,7 +899,6 @@ export default function MailInstance({
     // eslint-disable-next-line no-control-regex
     /^[^/\\.%*\u0000-\u001f]{1,80}$/.test(v.trim()) ? null : t('1–80 Zeichen, ohne / \\ . % *');
   async function manageFolder(op: 'create' | 'rename' | 'delete', target?: Folder) {
-    setFolderMenu(null);
     let name = '';
     if (op === 'create') {
       const v = await prompt({
@@ -1094,8 +956,20 @@ export default function MailInstance({
 
   const acceptsDrop = (e: DragEvent, f: Folder) =>
     writeEnabled && f.path !== folder && Array.from(e.dataTransfer.types).includes(DRAG_TYPE);
+  async function switchAccount(id: string) {
+    if (
+      composer &&
+      !(await confirm({
+        title: t('Konto wechseln?'),
+        message: t('Der offene Editor wird geschlossen. Nicht gespeicherte Änderungen gehen verloren.'),
+        confirmLabel: t('Wechseln')
+      }))
+    )
+      return;
+    setComposer(null);
+    onSelectAccount(id);
+  }
   async function dropOn(e: DragEvent, f: Folder) {
-    setDropTarget(null);
     if (!acceptsDrop(e, f)) return;
     e.preventDefault();
     try {
@@ -1351,7 +1225,6 @@ export default function MailInstance({
         : everywhere
           ? t('Suche in allen Ordnern')
           : folderLabel(currentFolder);
-  const menuFolder = folderMenu ? folders.find(f => f.path === folderMenu.path) : null;
   const filters: { id: Filter; label: string; icon?: typeof Star }[] = [
     { id: 'all', label: t('Alle') },
     { id: 'unread', label: t('Ungelesen') },
@@ -1373,197 +1246,36 @@ export default function MailInstance({
   return (
     <div className="app-shell">
       <div className="workspace" style={{ '--mail-list-width': `${listWidth}px` } as CSSProperties}>
-        <aside className={`sidebar ${mobileSidebar ? 'sidebar-open' : ''}`}>
-          <div className="sidebar-inner">
-            <div className="sidebar-brand">
-              <img src="/levuvo-header-logo.png" alt="Levuvo" className="brand-image" />
-              <span className="brand-product">
-                mail<span className="brand-dot">.</span>
-              </span>
-            </div>
-            <button className="compose-button" onClick={beginNewMessage} disabled={!status?.configured}>
-              <PenSquare size={17} />
-              <span>{t('Neue Nachricht')}</span>
-            </button>
-            <nav className="folders" aria-label={t('Ordner')}>
-              {accounts.length > 1 && (
-                <button onClick={() => chooseFolder(UNIFIED)} className={`folder-item ${unified ? 'active' : ''}`}>
-                  <Mails size={16} strokeWidth={1.8} />
-                  <span>{t('Alle Posteingänge')}</span>
-                </button>
-              )}
-              <button
-                onClick={() => chooseFolder(FOLLOWUPS)}
-                className={`folder-item ${followupView ? 'active' : ''}`}
-                title={t('Gesendete Nachrichten ohne Antwort')}
-              >
-                <BellRing size={16} strokeWidth={1.8} />
-                <span>{t('Nachfassen')}</span>
-                {followupsDue > 0 && (
-                  <span className="folder-count attention" aria-label={t('{count} fällig', { count: followupsDue })}>
-                    {followupsDue}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => chooseFolder(ATTACHMENTS)}
-                className={`folder-item ${attachmentView ? 'active' : ''}`}
-                title={t('Alle Dateien eines Ordners oder Kontakts')}
-              >
-                <Paperclip size={16} strokeWidth={1.8} />
-                <span>{t('Anhänge')}</span>
-              </button>
-              {ordered.map(({ folder: f, depth }) => {
-                const Icon = folderIcon(f);
-                const count = ['\\Sent', '\\Drafts', '\\Trash', '\\Junk'].includes(f.specialUse || '')
-                  ? null
-                  : f.unseen;
-                return (
-                  <div
-                    key={f.path}
-                    className={`folder-row ${dropTarget === f.path ? 'drop-target' : ''}`}
-                    style={{ '--depth': depth } as CSSProperties}
-                    onDragOver={e => {
-                      if (acceptsDrop(e, f)) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDropTarget(f.path);
-                      }
-                    }}
-                    onDragLeave={() => setDropTarget(old => (old === f.path ? null : old))}
-                    onDrop={e => void dropOn(e, f)}
-                    onContextMenu={e => {
-                      if (!writeEnabled) return;
-                      e.preventDefault();
-                      folderMenuOpener.current = e.currentTarget.querySelector('button');
-                      setFolderMenu({ path: f.path, x: e.clientX, y: e.clientY });
-                    }}
-                  >
-                    <button
-                      onClick={() => chooseFolder(f.path)}
-                      className={`folder-item ${folder === f.path ? 'active' : ''}`}
-                      title={f.path}
-                    >
-                      <Icon size={16} strokeWidth={1.8} />
-                      <span>{folderLabel(f)}</span>
-                      {count ? (
-                        <span className="folder-count" aria-label={t('{count} ungelesen', { count })}>
-                          {count > 999 ? '999+' : count}
-                        </span>
-                      ) : null}
-                    </button>
-                    {writeEnabled && (
-                      <button
-                        className="folder-more"
-                        aria-label={t('Ordneraktionen: {folder}', { folder: folderLabel(f) })}
-                        aria-haspopup="menu"
-                        aria-expanded={folderMenu?.path === f.path}
-                        onClick={e => {
-                          folderMenuOpener.current = e.currentTarget;
-                          const r = e.currentTarget.getBoundingClientRect();
-                          setFolderMenu({ path: f.path, x: r.left, y: r.bottom });
-                        }}
-                      >
-                        <MoreHorizontal size={14} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {writeEnabled && (
-                <button className="folder-item add-folder" onClick={() => void manageFolder('create')}>
-                  <FolderPlus size={16} strokeWidth={1.8} />
-                  <span>{t('Neuer Ordner')}</span>
-                </button>
-              )}
-            </nav>
-            <div className="sidebar-footer">
-              <label className="account-card account-picker">
-                <span className="account-avatar">{(account?.label || 'L').trim().charAt(0).toUpperCase()}</span>
-                <span className="account-data">
-                  <strong>{account?.label || t('Konto')}</strong>
-                  <small>{status?.mailbox || t('Nicht verbunden')}</small>
-                </span>
-                {accounts.length > 1 && <ChevronDown size={15} />}
-                <select
-                  aria-label={t('Konto wechseln')}
-                  value={accountId}
-                  disabled={accounts.length < 2 || actionBusy}
-                  onChange={async e => {
-                    const id = e.target.value;
-                    if (
-                      composer &&
-                      !(await confirm({
-                        title: t('Konto wechseln?'),
-                        message: t('Der offene Editor wird geschlossen. Nicht gespeicherte Änderungen gehen verloren.'),
-                        confirmLabel: t('Wechseln')
-                      }))
-                    )
-                      return;
-                    setComposer(null);
-                    onSelectAccount(id);
-                  }}
-                >
-                  {accounts.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.label} — {a.mailbox || t('Nicht verbunden')}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button className="text-button subtle account-settings-link" onClick={() => onOpenSettings('accounts')}>
-                {t('Konten & Signaturen')}
-              </button>
-              <div className="sidebar-motto">Less effort. More impact.</div>
-            </div>
-          </div>
-        </aside>
-        {mobileSidebar && (
-          <button className="mobile-overlay" aria-label={t('Menü schließen')} onClick={() => setMobileSidebar(false)} />
-        )}
-        {folderMenu && menuFolder && (
-          <>
-            <button className="menu-dismiss" aria-label={t('Menü schließen')} onClick={() => closeFolderMenu(true)} />
-            <div
-              ref={folderMenuRef}
-              className="menu floating"
-              role="menu"
-              aria-label={t('Ordneraktionen: {folder}', { folder: folderLabel(menuFolder) })}
-              style={{ left: folderMenu.x, top: folderMenu.y }}
-              onKeyDown={e => menuKeyDown(e, closeFolderMenu)}
-            >
-              <button role="menuitem" onClick={() => void manageFolder('create', menuFolder)}>
-                {t('Unterordner anlegen')}
-              </button>
-              {!PROTECTED.has(special(menuFolder)) && (
-                <button role="menuitem" onClick={() => void manageFolder('rename', menuFolder)}>
-                  {t('Umbenennen')}
-                </button>
-              )}
-              {!PROTECTED.has(special(menuFolder)) && (
-                <button role="menuitem" className="danger" onClick={() => void manageFolder('delete', menuFolder)}>
-                  {t('Löschen')}
-                </button>
-              )}
-              {menuFolder.unseen ? (
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    setFolderMenu(null);
-                    if (menuFolder.path === folder)
-                      void runAction(
-                        'markRead',
-                        messages.filter(m => m.unread).map(m => m.uid)
-                      );
-                    else chooseFolder(menuFolder.path);
-                  }}
-                >
-                  {t('Geladene als gelesen markieren')}
-                </button>
-              ) : null}
-            </div>
-          </>
-        )}
+        <MailSidebar
+          accountId={accountId}
+          accounts={accounts}
+          account={account}
+          status={status}
+          folder={folder}
+          folders={folders}
+          ordered={ordered}
+          followupsDue={followupsDue}
+          writeEnabled={writeEnabled}
+          actionBusy={actionBusy}
+          mobileOpen={mobileSidebar}
+          folderLabel={folderLabel}
+          acceptsDrop={acceptsDrop}
+          onChooseFolder={chooseFolder}
+          onNewMessage={beginNewMessage}
+          onDrop={(e, f) => void dropOn(e, f)}
+          onManageFolder={(op, target) => void manageFolder(op, target)}
+          onMarkLoadedRead={path => {
+            if (path === folder)
+              void runAction(
+                'markRead',
+                messages.filter(m => m.unread).map(m => m.uid)
+              );
+            else chooseFolder(path);
+          }}
+          onSwitchAccount={id => void switchAccount(id)}
+          onOpenAccounts={() => onOpenSettings('accounts')}
+          onCloseMobile={() => setMobileSidebar(false)}
+        />
         <main className="message-column">
           <div className="message-header">
             <div className="message-title-row">
