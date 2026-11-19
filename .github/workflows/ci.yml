@@ -115,6 +115,43 @@ jobs:
         run: |
           python -m pip install --require-hashes -r apps/ai/requirements-build.txt
           node scripts/build-ai-runtime.mjs --out "$RUNNER_TEMP/ai-runtime"
+      - name: Vulnerability scan of the hashed Python locks (pip-audit, blocking)
+        run: |
+          # Own environment, so the scanner's dependencies never mix with the tested ones.
+          python -m venv "$RUNNER_TEMP/audit"
+          "$RUNNER_TEMP/audit/bin/pip" install --require-hashes -r apps/ai/requirements-audit.txt
+          for lock in requirements-lock.txt requirements-build.txt requirements-backends.txt requirements-audit.txt requirements-dev-lock.txt; do
+            echo "::group::pip-audit $lock"
+            "$RUNNER_TEMP/audit/bin/pip-audit" --require-hashes --disable-pip --progress-spinner off -r "apps/ai/$lock"
+            echo '::endgroup::'
+          done
+      - name: Bundled CPython is the newest patch release (warning)
+        run: node scripts/check-python-runtime.mjs
+
+  electron-node:
+    name: Tests in the Node of Electron (production runtime)
+    # The server runs inside Electron's main process, whose Node differs from the setup-node line.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install (exact lockfile, with the Electron binary)
+        # npm ci on the runner does not leave the Electron binary in place; its own installer fetches and checks it.
+        run: |
+          npm ci --no-fund
+          node node_modules/electron/install.js
+      - name: npm test with ELECTRON_RUN_AS_NODE
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        run: |
+          node_modules/electron/dist/electron -p "'Electron ' + process.versions.electron + ', Node ' + process.version"
+          node_modules/electron/dist/electron --test apps/server/test/*.test.mjs apps/web/test/*.test.mjs
 
   desktop-build:
     name: Desktop build (unsigned)
@@ -130,7 +167,7 @@ jobs:
   ci-ok:
     name: CI passed
     if: ${{ always() }}
-    needs: [check, security, ai, desktop-build]
+    needs: [check, security, ai, electron-node, desktop-build]
     runs-on: ubuntu-24.04
     steps:
       - name: All required checks successful?

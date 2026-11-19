@@ -1,0 +1,57 @@
+name: Integration
+# Integration and UI end-to-end suites against real servers (Dovecot/Postfix with ManageSieve,
+# Radicale) started from test/servers/ with a throwaway CA and test accounts. Nightly, manual,
+# and callable from other workflows (e.g. before a release).
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  integration:
+    name: Real servers (IMAP, SMTP, Sieve, CalDAV/CardDAV)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Start test servers
+        run: test/servers/start.sh
+      - name: Integration suites (mail, calendar, contacts, tasks, spaces, backup, MCP)
+        run: |
+          source test/servers/.state/env
+          npm run test:integration
+      - name: Chromium for the UI test
+        run: npx playwright install --with-deps chromium
+      - name: UI end-to-end
+        run: |
+          source test/servers/.state/env
+          npm run build
+          npm run test:e2e
+          npm run test:e2e:live
+      - name: Server logs
+        if: ${{ failure() }}
+        run: docker compose -f test/servers/compose.yml logs --tail 200
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() }}
+        with:
+          name: e2e-screenshots
+          path: test/e2e/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Stop test servers
+        if: ${{ always() }}
+        run: docker compose -f test/servers/compose.yml down -v

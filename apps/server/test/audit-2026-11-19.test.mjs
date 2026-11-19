@@ -427,6 +427,7 @@ test(
     const { spawn: nodeSpawn } = await import('node:child_process');
     const { fileURLToPath } = await import('node:url');
     const { createSidecar } = await import('../src/ai-sidecar.mjs');
+    const { NODE_BIN } = await import('./fixtures/node-bin.mjs');
     const fake = fileURLToPath(new URL('./fixtures/fake-sidecar.mjs', import.meta.url));
     let started = 0;
     const spawn = (...args) => {
@@ -445,7 +446,7 @@ test(
     };
     const sidecar = createSidecar({
       spawn,
-      resolve: () => ({ command: process.execPath, args: [fake], cwd: process.cwd(), pythonPath: '' }),
+      resolve: () => ({ command: NODE_BIN, args: [fake], cwd: process.cwd(), pythonPath: '' }),
       timeoutMs: 3000
     });
     await sidecar.call('status');

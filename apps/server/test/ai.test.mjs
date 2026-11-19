@@ -14,9 +14,10 @@ import {
 } from '../src/ai-service.mjs';
 import { messageForAi, securityDetails, securityFacts } from '../src/routes-ai.mjs';
 import { createJsonFile } from '../src/app.mjs';
+import { NODE_BIN } from './fixtures/node-bin.mjs';
 
 const FAKE = fileURLToPath(new URL('./fixtures/fake-sidecar.mjs', import.meta.url));
-const fakeResolve = () => ({ command: process.execPath, args: [FAKE], cwd: process.cwd(), pythonPath: '' });
+const fakeResolve = () => ({ command: NODE_BIN, args: [FAKE], cwd: process.cwd(), pythonPath: '' });
 
 function vault() {
   const m = new Map();

@@ -3,6 +3,8 @@ updates:
   # Monthly, one grouped PR for minor/patch updates. Major version jumps are
   # not proposed automatically; they are evaluated deliberately when preparing
   # a feature release. Security alerts are reported independently of this file.
+  # Electron is held back the same way; scripts/check-electron-support.mjs (weekly supply-chain
+  # run and release:check) fails once the Electron line leaves the three supported majors.
   - package-ecosystem: npm
     directory: /
     schedule: { interval: monthly }
@@ -19,3 +21,18 @@ updates:
     groups:
       actions:
         patterns: ['*']
+  # Bundled AI runtime: hashed Python locks (requirements-lock.txt for the app, requirements-build.txt,
+  # -backends.txt and -audit.txt for the build). Tabrion and Orkexa stay on their reviewed commits.
+  # The interpreter itself is checked by scripts/check-python-runtime.mjs.
+  - package-ecosystem: pip
+    directory: /apps/ai
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: orkexa
+      - dependency-name: tabrion
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+    groups:
+      python-minor-and-patch:
+        update-types: [minor, patch]

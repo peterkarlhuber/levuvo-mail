@@ -120,6 +120,13 @@ test('Complete system against real servers', { skip: !enabled && 'LEVUVO_IT_* no
       );
       return r.body.messages?.find(m => m.subject.includes(subject));
     });
+  // Folder names differ between servers (INBOX.Sent with "." namespaces, Sent with "/"): use SPECIAL-USE.
+  const specialFolder = async (account, use) => {
+    const folders = (await call('GET', `/api/folders?account=${account}`)).body.folders || [];
+    const found = folders.find(f => f.specialUse === use);
+    assert.ok(found, `no ${use} folder: ${folders.map(f => f.path).join(', ')}`);
+    return found.path;
+  };
   const sendAs = (account, payload) =>
     call(
       'POST',
@@ -327,12 +334,13 @@ test('Complete system against real servers', { skip: !enabled && 'LEVUVO_IT_* no
     assert.equal((await open(password)).status, 429, 'short lockout after 5 failed attempts');
 
     // The sender's copy in "Sent" is protected too and opens with the same password.
-    const own = await findIn(peter.id, 'INBOX.Sent', `Zugang ${stamp}`);
+    const sentFolder = await specialFolder(peter.id, '\\Sent');
+    const own = await findIn(peter.id, sentFolder, `Zugang ${stamp}`);
     assert.ok(own, 'Kopie in Gesendet');
     const mine = await call(
       'POST',
       P('/api/messages/protected/open'),
-      { folder: 'INBOX.Sent', uid: own.uid, password },
+      { folder: sentFolder, uid: own.uid, password },
       'mail-v1'
     );
     assert.match(mine.body.html, /geheim-123/);

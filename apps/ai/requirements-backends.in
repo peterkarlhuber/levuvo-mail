@@ -1,0 +1,4 @@
+# PEP 517 build backends for Tabrion, Orkexa and levuvo-ai (scripts/build-ai-runtime.mjs builds them
+# with --no-build-isolation against exactly these hashed wheels, then removes them from the runtime).
+hatchling==1.33.0
+hatch-fancy-pypi-readme==25.1.0

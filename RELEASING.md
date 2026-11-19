@@ -32,11 +32,12 @@ Without certificates, **unsigned internal test builds** are produced (draft mark
 | Secret | Purpose |
 |---|---|
 | `LEVUVO_UPDATE_URL` | https update feed (e.g. `https://levuvo.at/downloads/mail/`) |
-| `CSC_LINK`, `CSC_KEY_PASSWORD` | certificate (.p12 for macOS Developer ID, .pfx for Windows; base64 or path) |
+| `CSC_LINK`, `CSC_KEY_PASSWORD` | macOS Developer ID Application certificate (.p12, base64) – passed to the macOS job only |
+| `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` | Windows Authenticode certificate (.pfx, base64) – passed to the Windows jobs only |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | notarization |
 | `LEVUVO_WIN_PUBLISHER` | exact certificate CN |
 
-Signed builds verify the signature (`Get-AuthenticodeSignature`, `codesign`, `spctl`, `stapler`) and fail on errors. Since macOS and Windows certificates are separate files, a separate secret per platform may be needed (`WIN_CSC_LINK`) – see `scripts/release-signed.mjs`.
+Signed builds verify the signature (`Get-AuthenticodeSignature`, `codesign`, `spctl`, `stapler`) and fail on errors. `scripts/release-signed.mjs` also refuses to build without the bundled AI runtime for the target, and afterwards checks the architectures, the Electron fuses and (Windows) that `app-update.yml` carries exactly `LEVUVO_WIN_PUBLISHER` – otherwise installed apps would reject every update.
 
 ## Updates
 
