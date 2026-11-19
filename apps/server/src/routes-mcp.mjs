@@ -16,13 +16,20 @@ import { registerTaskTools } from './ai-task-tools.mjs';
 import { resolveSidecar } from './ai-sidecar.mjs';
 import { CLOUD_PROVIDERS } from './ai-service.mjs';
 import { createSkills, skillInstruction } from './ai-skills.mjs';
+import { createSealedJsonFile } from './sealed-json.mjs';
 
 const ACTION = 'ai-v1';
 const q = s => encodeURIComponent(String(s));
 
 export async function setupMcp(ctx, { createJsonFile, dir }) {
   const file = await createJsonFile(path.join(dir, 'mcp.json'), { enabled: false, port: DEFAULT_MCP_PORT, agents: [] });
-  const approvalsFile = await createJsonFile(path.join(dir, 'mcp-approvals.json'), { items: [] });
+  // Approvals hold message text until decided: encrypted on disk (key in the keychain), or in
+  // memory only when there is no keychain.
+  const approvalsFile = await createSealedJsonFile(
+    path.join(dir, 'mcp-approvals.json'),
+    { items: [] },
+    { vault: ctx.store, keyName: 'mcp-approvals-key' }
+  );
   const persistent = createAgentRegistry(file);
   // Task tools: they report "not available" until the task list (ctx.tasks) exists.
   registerTaskTools(ctx, { registry: mcpToolRegistry(ctx), frame: frameUntrusted });

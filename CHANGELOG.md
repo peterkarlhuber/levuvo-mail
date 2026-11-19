@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Security and reliability (external audits of 2.3.0)
+- **Cloud AI block holds for questions across all accounts:** accounts marked "No cloud AI" are left out of the search before a cloud model answers, and every account whose text is in the model input is checked again right before the call.
+- **AI provider switch fails closed:** a task only runs once the AI component confirmed the current provider; if switching fails, tasks stop with a clear message instead of running on the previous provider. Installed apps only use the bundled AI runtime, never a Python found on the computer.
+- **Agent approvals:** an approval runs at most once, also when it is confirmed twice at the same time. Pending approvals are stored encrypted (key in the keychain, or only in memory without one), and the mail text is removed once decided. A plain "move" by an agent can no longer reach the trash under any folder name (SPECIAL-USE, known names, subfolders); that still needs approval.
+- **Task sync never deletes on incomplete lists:** a list that is longer than one sync can read, or tasks the server lists but this device cannot read, no longer count as "deleted there". Microsoft To Do and Google Tasks changes and deletions are sent with If-Match, so a change made elsewhere meanwhile is merged instead of overwritten.
+- **Shared spaces:** sync mails waiting in the hidden folder are never skipped when new ones arrive at the same time; oversized sync mails are not downloaded.
+- **Send later with several devices:** a device that is not the owner takes over only after it won an atomic lock on the server (a short-lived folder), so two other devices can never both send.
+- **Search index:** a folder counts as indexed only after its messages are stored, so an interrupted run is continued; the index file is only rebuilt when it is really unusable (wrong key, damaged), not after a temporary error.
+- **Restore:** restored private keys wait under a staging name until the restart, so cancelling leaves the keychain as it was. Safety copies in `before-restore/` are deleted after 30 days.
+- **Settings files:** a damaged file is kept aside instead of being overwritten, a file that cannot be read is never replaced, and writes happen in order.
+- **External images** are allowed for exactly one message (account, folder and UID), no longer for another message with the same UID.
+- **Links:** links from mails to Microsoft or Google sign-in pages are confirmed like every other link; only the sign-in the app starts itself opens directly.
+- **Sign-in with Microsoft or Google:** issuer, audience, expiry and a one-time nonce of the ID token are checked.
+- **Encrypted mails:** decrypted content gets the same 12 MiB limit; OpenPGP decompression stops at 16 MiB.
+- **AI activity log:** entries older than 30 days are removed at the start and twice a day, also when the AI is not used.
+- **Accessibility:** the folder actions menu can be used with the keyboard (focus moves in, arrows/Home/End, Escape returns to the button). In CI, the accessibility test fails instead of being skipped when the browser does not start.
+- **Crash reports:** the settings and the privacy notice now say that a memory dump may contain parts of open mails.
+
 ## 2.3.0 – 19 November 2026
 
 > **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.

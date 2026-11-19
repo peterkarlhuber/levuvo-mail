@@ -65,6 +65,7 @@ import type {
   SecurityReport
 } from './types';
 import { ReaderAssist } from './ReaderAssist';
+import { remoteImageKey } from './trackers';
 
 export type ReaderAction =
   'markRead' | 'markUnread' | 'flag' | 'unflag' | 'archive' | 'trash' | 'move' | 'spam' | 'notSpam';
@@ -809,7 +810,9 @@ export default function Reader(props: Props) {
   const { t } = useT();
   const { toast, confirm } = useUi();
   const [showTextFor, setShowTextFor] = useState<number | null>(null);
-  const [remoteFor, setRemoteFor] = useState<number | null>(null);
+  // External images are allowed for exactly one message: account, folder, UIDVALIDITY and UID
+  // (a UID alone repeats across folders).
+  const [remoteFor, setRemoteFor] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState('');
   const [preview, setPreview] = useState<Attachment | null>(null);
   const [menu, setMenu] = useState(false);
@@ -820,7 +823,8 @@ export default function Reader(props: Props) {
   const [snoozeMenu, setSnoozeMenu] = useState(false);
   // HTML is shown by default (sandboxed frame, remote images blocked); text on request.
   const showHtml = Boolean(detail?.html) && (!detail?.text || showTextFor !== detail?.uid);
-  const allowRemote = remoteFor === detail?.uid;
+  const remoteKey = remoteImageKey(accountId, detail);
+  const allowRemote = remoteKey !== null && remoteFor === remoteKey;
   const rendered = useMemo(
     () => (detail?.html ? renderEmailDocument(detail.html, { allowRemoteImages: allowRemote }) : null),
     [detail?.html, allowRemote]
@@ -1300,7 +1304,7 @@ export default function Reader(props: Props) {
                       </span>
                     )}
                     {detail.remoteContent && !allowRemote && (
-                      <button className="text-button" onClick={() => setRemoteFor(detail.uid)}>
+                      <button className="text-button" onClick={() => setRemoteFor(remoteKey)}>
                         <Image size={13} /> {t('Bilder laden')}
                       </button>
                     )}

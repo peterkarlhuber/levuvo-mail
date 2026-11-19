@@ -734,8 +734,8 @@ export const EN: Record<string, string> = {
   'Levuvo Mail hat keinen eigenen Server und kein Tracking. Deine E-Mails, Kontakte und Termine gehen nur an die Server deiner Anbieter. Updates werden direkt bei Levuvo (GitHub Releases) geprüft.':
     "Levuvo Mail has no server of its own and no tracking. Your emails, contacts and events only go to your providers' servers. Updates are checked directly with Levuvo (GitHub Releases).",
   'Absturzberichte senden': 'Send crash reports',
-  'Freiwillig. Bei einem Absturz wird ein technischer Bericht (ohne E-Mail-Inhalte, Adressen oder Passwörter) an Levuvo übermittelt. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.':
-    'Optional. If the app crashes, a technical report (without email content, addresses or passwords) is sent to Levuvo. Only effective if this build contains a report address; please restart after changing.',
+  'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an Levuvo übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.':
+    'Optional. If the app crashes, a technical report with a memory dump is sent to Levuvo. The dump may contain parts of emails or addresses that were open. Only effective if this build contains a report address; please restart after changing.',
   Diagnosebericht: 'Diagnostic report',
   'Für den Support: Version, System, Fehlerzähler und Verbindungsstatus. Keine Inhalte, keine Adressen. Du entscheidest, ob du ihn weitergibst.':
     'For support: version, system, error counters and connection status. No content, no addresses. You decide whether to share it.',
@@ -1070,6 +1070,10 @@ export const EN: Record<string, string> = {
   'Ungültiger Zielordner.': 'Invalid target folder.',
   'Quellordner nicht gefunden.': 'Source folder not found.',
   'Quelle und Ziel sind identisch.': 'Source and target are identical.',
+  'Entschlüsselte Nachricht überschreitet 12 MiB.': 'The decrypted message exceeds 12 MiB.',
+  'In den Papierkorb nur mit Freigabe.': 'Moving to the trash needs approval.',
+  'Die Einstellungsdatei ist nicht lesbar und wird nicht überschrieben.':
+    'The settings file cannot be read and is not overwritten.',
   'Der Ordner ist auf dem Server schreibgeschützt.': 'The folder is read-only on the server.',
   'Nachricht nicht mehr vorhanden. Bitte aktualisieren.': 'Message no longer exists. Please refresh.',
   'Markierung konnte nicht geändert werden.': 'The star could not be changed.',

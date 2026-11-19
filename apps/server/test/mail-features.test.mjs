@@ -200,9 +200,13 @@ test('Send later: time, strip headers, send exactly once', async () => {
   const client = {
     capabilities: new Set(['MOVE']),
     list: async () => [
+      { path: 'INBOX', delimiter: '.', flags: new Set() },
       { path: 'INBOX.Drafts', specialUse: '\\Drafts', flags: new Set() },
       { path: 'INBOX.Trash', specialUse: '\\Trash', flags: new Set() }
     ],
+    // Takeover lock of a device that is not the owner (here: no instance ID given).
+    mailboxCreate: async path => ({ path, created: true }),
+    mailboxDelete: async path => ({ path }),
     getMailboxLock: async () => ({ release() {} }),
     search: async () => [5, 6],
     async *fetch(uids, query) {
@@ -333,11 +337,12 @@ test('Filter rules: validation, script with embedded model', () => {
 
 test('OAuth: PKCE start, one-time callback, token refresh with rotation', async () => {
   const requests = [];
+  let claims = {};
   const fetchImpl = async (url, init) => {
     const body = Object.fromEntries(new URLSearchParams(String(init.body)));
     requests.push(body);
     if (body.grant_type === 'authorization_code') {
-      const idToken = `x.${Buffer.from(JSON.stringify({ email: 'Peter@Firma.onmicrosoft.com' })).toString('base64url')}.y`;
+      const idToken = `x.${Buffer.from(JSON.stringify({ email: 'Peter@Firma.onmicrosoft.com', ...claims })).toString('base64url')}.y`;
       return new Response(
         JSON.stringify({ access_token: 'at-1', refresh_token: 'rt-1', id_token: idToken, expires_in: 3600 }),
         { status: 200 }
@@ -359,9 +364,34 @@ test('OAuth: PKCE start, one-time callback, token refresh with rotation', async 
   const url = new URL(authUrl);
   assert.equal(url.searchParams.get('code_challenge_method'), 'S256');
   assert.equal(url.searchParams.get('state'), state);
+  const nonce = url.searchParams.get('nonce');
+  assert.ok(nonce && nonce.length >= 32);
+  const good = {
+    iss: 'https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0',
+    aud: 'cid',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    nonce
+  };
+  // Audit 2.3.0 (SEC-02): issuer, audience, expiry and nonce of the ID token are checked.
+  const attempt = async change => {
+    const again = oauth.start('microsoft', 'http://127.0.0.1:1/oauth/callback');
+    claims = { ...good, nonce: new URL(again.authUrl).searchParams.get('nonce'), ...change };
+    return oauth.complete(again.state, 'code-123');
+  };
+  assert.equal((await attempt({})).email, 'peter@firma.onmicrosoft.com', 'valid claims pass');
+  for (const bad of [
+    { iss: undefined, aud: undefined, exp: undefined, nonce: undefined },
+    { iss: 'https://evil.example/v2.0' },
+    { aud: 'other-app' },
+    { aud: ['cid', 'other-app'] },
+    { exp: Math.floor(Date.now() / 1000) - 3600 },
+    { nonce: 'replayed' }
+  ])
+    await assert.rejects(attempt(bad), { code: 'oauth_email_missing' }, JSON.stringify(bad));
+  claims = good;
   const done = await oauth.complete(state, 'code-123');
   assert.equal(done.email, 'peter@firma.onmicrosoft.com');
-  assert.ok(requests[0].code_verifier.length >= 43);
+  assert.ok(requests.at(-1).code_verifier.length >= 43);
   await assert.rejects(oauth.complete(state, 'code-123'), { code: 'oauth_state_invalid' });
   let rotated = null;
   assert.equal(
@@ -409,7 +439,12 @@ test('Scheduled send: a connection error releases the claim so the next run send
   const src = Buffer.from(`From: a@b.at\r\nTo: x@y.at\r\nX-Levuvo-Send-At: ${at}\r\nSubject: S\r\n\r\nHi\r\n`);
   const client = {
     capabilities: new Set(['MOVE']),
-    list: async () => [{ path: 'Drafts', specialUse: '\\Drafts', flags: new Set() }],
+    list: async () => [
+      { path: 'INBOX', delimiter: '/', flags: new Set() },
+      { path: 'Drafts', specialUse: '\\Drafts', flags: new Set() }
+    ],
+    mailboxCreate: async path => ({ path, created: true }),
+    mailboxDelete: async path => ({ path }),
     getMailboxLock: async () => ({ release() {} }),
     search: async () => [9],
     async *fetch(_uids, query) {

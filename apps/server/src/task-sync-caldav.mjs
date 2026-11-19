@@ -354,16 +354,25 @@ export function createCaldavTasks({ store, fetchImpl = globalThis.fetch, now = (
         const props = okProps(response);
         const href = xmlText(response, 'href');
         const data = xmlText(props, 'calendar-data');
-        if (!href || !data) continue;
+        if (!href) continue;
         const url = new URL(href, link.listId).toString();
         if (!allowedUrl(url, account.serverUrl)) continue;
+        if (items.length >= MAX_ITEMS)
+          throw fail(
+            'Die Liste auf dem Server ist zu groß für den Abgleich. Zur Sicherheit wurde nichts geändert.',
+            'task_sync_incomplete'
+          );
         let parsed;
         try {
-          parsed = parseTodo(data);
+          parsed = data ? parseTodo(data) : null;
         } catch {
           parsed = null;
         }
-        if (!parsed) continue;
+        if (!parsed) {
+          // Still there, only not readable here (no data, unknown format): never "deleted there".
+          items.push({ remoteId: url, etag: xmlText(props, 'getetag') || '', unreadable: true });
+          continue;
+        }
         items.push({
           remoteId: url,
           etag: xmlText(props, 'getetag') || '',
@@ -371,7 +380,6 @@ export function createCaldavTasks({ store, fetchImpl = globalThis.fetch, now = (
           fields: parsed.fields,
           raw: data
         });
-        if (items.length >= MAX_ITEMS) break;
       }
       return items;
     },

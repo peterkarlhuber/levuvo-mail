@@ -493,7 +493,7 @@ function Privacy() {
         <Row
           label={t('Absturzberichte senden')}
           hint={t(
-            'Freiwillig. Bei einem Absturz wird ein technischer Bericht (ohne E-Mail-Inhalte, Adressen oder Passwörter) an Levuvo übermittelt. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.'
+            'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an Levuvo übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.'
           )}
         >
           <Toggle

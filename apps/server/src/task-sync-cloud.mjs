@@ -18,6 +18,13 @@ const MAX_ITEMS = 5000;
 const MAX_PAGES = 60;
 const fail = (message, code, statusCode = 502, extra = {}) =>
   Object.assign(new Error(message), { code, statusCode, ...extra });
+// A list longer than the limits is never taken as complete: the sync engine reads tasks missing
+// from a pull as "deleted there", so a cut-off pull would delete tasks here.
+const incomplete = () =>
+  fail(
+    'Die Liste beim Anbieter ist zu groß für den Abgleich. Zur Sicherheit wurde nichts geändert.',
+    'task_sync_incomplete'
+  );
 const consent = account =>
   fail(
     'Für die Aufgaben dieses Kontos ist eine einmalige Freigabe beim Anbieter nötig.',
@@ -58,7 +65,7 @@ export function zonedToUtc(local, timeZone) {
 }
 
 function caller(account, { token, fetchImpl, allowed }) {
-  return async (method, url, body) => {
+  return async (method, url, body, extraHeaders = {}) => {
     if (!allowed(url)) throw fail('Der Anbieter verweist auf eine fremde Adresse.', 'task_sync_foreign_url');
     let res;
     try {
@@ -67,7 +74,8 @@ function caller(account, { token, fetchImpl, allowed }) {
         headers: {
           Authorization: `Bearer ${await token(account)}`,
           Accept: 'application/json',
-          ...(body ? { 'Content-Type': 'application/json' } : {})
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...extraHeaders
         },
         body: body ? JSON.stringify(body) : undefined
       });
@@ -87,6 +95,9 @@ function caller(account, { token, fetchImpl, allowed }) {
     return data;
   };
 }
+// Only well-formed ETags are sent (they come from the provider's own responses).
+const ifMatch = etag =>
+  typeof etag === 'string' && etag && etag.length < 300 && !/[\r\n]/.test(etag) ? { 'If-Match': etag } : {};
 const ignoreMissing = async fn => {
   try {
     await fn();
@@ -171,13 +182,16 @@ export function createGraphTasks({ accounts, token, fetchImpl = globalThis.fetch
   async function all(account, url) {
     const out = [];
     let next = url;
-    for (let page = 0; next && page < MAX_PAGES; page++) {
+    for (let page = 0; next; page++) {
+      if (page >= MAX_PAGES) throw incomplete();
       const data = await call(account)('GET', next);
-      out.push(...(Array.isArray(data.value) ? data.value : []));
-      if (out.length >= MAX_ITEMS) break;
+      if (!Array.isArray(data.value))
+        throw fail('Der Anbieter hat eine unerwartete Antwort geschickt.', 'task_sync_bad_response');
+      out.push(...data.value);
+      if (out.length > MAX_ITEMS) throw incomplete();
       next = typeof data['@odata.nextLink'] === 'string' ? data['@odata.nextLink'] : null;
     }
-    return out.slice(0, MAX_ITEMS);
+    return out;
   }
   return {
     caps: {
@@ -204,16 +218,20 @@ export function createGraphTasks({ accounts, token, fetchImpl = globalThis.fetch
     },
     async update(link, item, patch, all) {
       const account = accountOf(link.accountId);
+      // If-Match: a change made there since the pull is not overwritten (412 → next round merges).
       const t = await call(account)(
         'PATCH',
         `${listUrl(link.listId)}/${encodeURIComponent(item.remoteId)}`,
-        graphTaskOut(patch, all)
+        graphTaskOut(patch, all),
+        ifMatch(item.etag)
       );
       return { etag: t['@odata.etag'] || '' };
     },
-    async remove(link, remoteId) {
+    async remove(link, remoteId, etag) {
       const account = accountOf(link.accountId);
-      return ignoreMissing(() => call(account)('DELETE', `${listUrl(link.listId)}/${encodeURIComponent(remoteId)}`));
+      return ignoreMissing(() =>
+        call(account)('DELETE', `${listUrl(link.listId)}/${encodeURIComponent(remoteId)}`, undefined, ifMatch(etag))
+      );
     }
   };
 }
@@ -257,15 +275,20 @@ export function createGoogleTasks({ accounts, token, fetchImpl = globalThis.fetc
   async function all(account, url) {
     const out = [];
     let pageToken = '';
-    for (let page = 0; page < MAX_PAGES; page++) {
+    for (let page = 0; ; page++) {
+      if (page >= MAX_PAGES) throw incomplete();
       const u = new URL(url);
       if (pageToken) u.searchParams.set('pageToken', pageToken);
       const data = await call(account)('GET', u.toString());
-      out.push(...(Array.isArray(data.items) ? data.items : []));
-      if (out.length >= MAX_ITEMS || typeof data.nextPageToken !== 'string' || !data.nextPageToken) break;
+      // Google leaves "items" out when a list (or the last page) is empty.
+      if (data.items !== undefined && !Array.isArray(data.items))
+        throw fail('Der Anbieter hat eine unerwartete Antwort geschickt.', 'task_sync_bad_response');
+      out.push(...(data.items || []));
+      if (out.length > MAX_ITEMS) throw incomplete();
+      if (typeof data.nextPageToken !== 'string' || !data.nextPageToken) break;
       pageToken = data.nextPageToken;
     }
-    return out.slice(0, MAX_ITEMS);
+    return out;
   }
   return {
     caps: { fields: ['title', 'notes', 'due', 'done'], dueTime: false, advancesRepeats: false },
@@ -294,13 +317,16 @@ export function createGoogleTasks({ accounts, token, fetchImpl = globalThis.fetc
       const t = await call(account)(
         'PATCH',
         `${listUrl(link.listId)}/${encodeURIComponent(item.remoteId)}`,
-        googleTaskOut(patch)
+        googleTaskOut(patch),
+        ifMatch(item.etag)
       );
       return { etag: t.etag || '' };
     },
-    async remove(link, remoteId) {
+    async remove(link, remoteId, etag) {
       const account = accountOf(link.accountId);
-      return ignoreMissing(() => call(account)('DELETE', `${listUrl(link.listId)}/${encodeURIComponent(remoteId)}`));
+      return ignoreMissing(() =>
+        call(account)('DELETE', `${listUrl(link.listId)}/${encodeURIComponent(remoteId)}`, undefined, ifMatch(etag))
+      );
     }
   };
 }

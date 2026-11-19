@@ -79,6 +79,8 @@ export function registerAiRoutes(ctx) {
     );
   }
   async function loadThread(accountId, refs) {
+    // Mail content always belongs to one named account: the cloud check depends on it.
+    if (!accountId) throw Object.assign(new Error('Konto fehlt.'), { statusCode: 400, code: 'ai_invalid' });
     const list = (Array.isArray(refs) ? refs : []).slice(-MAX_REFS);
     if (!list.length)
       throw Object.assign(new Error('Keine Nachricht gewählt.'), { statusCode: 400, code: 'ai_invalid' });
@@ -166,7 +168,9 @@ export function registerAiRoutes(ctx) {
       case 'ask': {
         const question = clientText(input.question, 500).trim();
         if (!question) throw Object.assign(new Error('Bitte eine Frage eingeben.'), { statusCode: 400 });
-        const ids = accountId ? [accountId] : ctx.accounts().map(a => a.id);
+        // Accounts marked "No cloud AI" are left out before the search when a cloud model answers,
+        // so none of their text is ever part of the input.
+        const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
         const hits = await semantic.search(ids, question, { limit: 8 });
         body.sourceMap = hits.map(h => ({ accountId: h.accountId, folder: h.folder, uid: h.uid, subject: h.subject }));
         return {
@@ -225,12 +229,14 @@ export function registerAiRoutes(ctx) {
       return aiError(reply, err);
     }
   });
-  const semantic = createSemanticIndex({
-    localIndex: ctx.localIndex,
-    ai,
-    logger: ctx.logger,
-    stateFile: ctx.semanticState
-  });
+  const semantic =
+    ctx.semantic ||
+    createSemanticIndex({
+      localIndex: ctx.localIndex,
+      ai,
+      logger: ctx.logger,
+      stateFile: ctx.semanticState
+    });
   ctx.semantic = semantic;
   ctx.aiForgetHooks.push(() => semantic.forget());
   // Keep the vectors close to the index: every 10 minutes, only while AI search is switched on.
@@ -290,8 +296,11 @@ export function registerAiRoutes(ctx) {
     try {
       const accountId = body.account ? String(body.account) : null;
       ai.ensureAllowed(null, accountId);
+      delete body.sourceMap; // set by prepare() only, never taken from the client
       const input = await prepare(kind, body);
-      const result = await ai.run(kind, input, { accountId });
+      // Every account whose mail text is in the input is checked again, right before the model call.
+      const sources = Array.isArray(body.sourceMap) ? body.sourceMap.map(s => s.accountId) : [];
+      const result = await ai.run(kind, input, { accountId, sources });
       if (kind === 'ask' && Array.isArray(body.sourceMap))
         result.sources = (result.sources || [])
           .map(id => body.sourceMap[Number(String(id).slice(1)) - 1])

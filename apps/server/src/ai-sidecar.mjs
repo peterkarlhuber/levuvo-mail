@@ -65,7 +65,10 @@ export function createSidecar({
   logger = () => {},
   idleMs = 15 * 60 * 1000,
   timeoutMs = 180_000,
-  onStart = async () => {}
+  onStart = async () => {},
+  // Installed app: only the runtime shipped with it (hash-pinned packages), never a Python found
+  // on the computer.
+  requireBundled = false
 } = {}) {
   let child = null;
   let starting = null;
@@ -113,6 +116,7 @@ export function createSidecar({
     if (crashes.length >= 3) throw new SidecarError('crashed');
     starting = (async () => {
       const where = resolve({ env });
+      if (requireBundled && !where.bundled) throw new SidecarError('runtime_missing');
       let proc;
       try {
         proc = spawn(where.command, where.args, {

@@ -15,6 +15,9 @@ import {
 
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 const UNLOCK_MS = 30 * 60 * 1000;
+// Compressed OpenPGP data could unpack to far more than the 12 MiB a mail may have: decryption
+// stops at this size instead of filling the memory.
+const DECRYPT_CONFIG = { maxDecompressedMessageSize: 16 * 1024 * 1024 };
 
 const emailsOf = key => [
   ...new Set(
@@ -287,7 +290,8 @@ export function createPgp({ meta, vault }) {
             decryptionKeys: keys,
             verificationKeys: await verificationKeys(),
             format: 'binary',
-            expectSigned: false
+            expectSigned: false,
+            config: DECRYPT_CONFIG
           });
           const innerText = Buffer.from(inner).toString('binary');
           const nested = contentTypeOf(innerText);
@@ -355,7 +359,8 @@ export function createPgp({ meta, vault }) {
           const { data: plain, signatures } = await openpgp.decrypt({
             message: await openpgp.readMessage({ armoredMessage: armored }),
             decryptionKeys: keys,
-            verificationKeys: await verificationKeys()
+            verificationKeys: await verificationKeys(),
+            config: DECRYPT_CONFIG
           });
           return { encrypted: true, method: 'pgp', text: plain, signatures: await verifications(signatures) };
         } catch {

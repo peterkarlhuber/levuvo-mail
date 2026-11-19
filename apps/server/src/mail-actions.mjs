@@ -90,8 +90,24 @@ export function validateBatchInput(body) {
     uids,
     folder: body.folder,
     action,
-    destination: action === 'move' ? body.destination : null
+    destination: action === 'move' ? body.destination : null,
+    // Agents (MCP): a plain move must never reach the trash; that needs the user's approval.
+    ...(body.notToTrash === true ? { notToTrash: true } : {})
   };
+}
+
+/** True when `target` is a trash folder (SPECIAL-USE or a known name) or a folder inside one. */
+export function isTrashTarget(folders, target) {
+  if (!target) return false;
+  const names = /^(trash|deleted messages|deleted items|papierkorb|gelöscht|gelöschte elemente|bin)$/i;
+  const trashes = selectableFolders(folders).filter(
+    f => f.specialUse === '\\Trash' || names.test(f.name || '') || names.test(f.path.split(/[./]/).at(-1) || '')
+  );
+  return trashes.some(
+    t =>
+      target.path === t.path ||
+      ['.', '/', t.delimiter].filter(Boolean).some(d => target.path.startsWith(`${t.path}${d}`))
+  );
 }
 
 function targetFor(action, folders, destination) {
@@ -142,6 +158,8 @@ export async function performMessageAction(client, input) {
   if (input.action === 'trash' && !target) target = await createTrashFolder(client, folders);
   if (MOVING.has(input.action)) {
     if (!target) throw err(MISSING[input.action][0], 409, MISSING[input.action][1]);
+    if (input.notToTrash && input.action !== 'trash' && isTrashTarget(folders, target))
+      throw err('In den Papierkorb nur mit Freigabe.', 403, 'trash_needs_approval');
     if (target.path === source.path) throw err('Quelle und Ziel sind identisch.', 409, 'same_folder');
   }
   const lock = await client.getMailboxLock(source.path); // SELECT: modifications require write access.

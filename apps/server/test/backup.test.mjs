@@ -113,10 +113,13 @@ test('Backup: round trip to a new computer with other keychain keys', async t =>
   assert.equal(existsSync(join(target.dir, 'templates.json')), false, 'nothing applied before the restart');
   // Staged calendar and contacts are already encrypted with the new device's keys.
   assert.doesNotMatch(readFileSync(join(target.dir, 'restore-pending', 'contacts-local.json'), 'utf8'), /Berta/);
-  assert.equal(target.keys.get('crypto', 'pgp:ABCDEF0123456789'), 'armored-test-key-material');
+  // Private keys wait under a staging name until the restart (audit 2.3.0, H-06).
+  assert.equal(target.keys.get('crypto', 'pgp:ABCDEF0123456789'), '');
 
   const applied = await applyPendingRestore({ dir: target.dir, vault: target.keys });
   assert.ok(applied);
+  assert.equal(target.keys.get('crypto', 'pgp:ABCDEF0123456789'), 'armored-test-key-material');
+  assert.equal(target.keys.get('local', 'restore-pending-crypto-pgp:ABCDEF0123456789'), '');
   assert.equal(await pendingRestore(target.dir), null);
   const calendar = await createLocalCalendar({ filename: join(target.dir, 'calendar-local.json'), vault: target.keys });
   const events = calendar.events(Date.parse('2026-11-30T00:00:00Z'), Date.parse('2026-12-02T00:00:00Z')).events;

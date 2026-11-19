@@ -178,6 +178,7 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       }
   }
 
+  const isUnusableIndex = err => /^SQLITE_(NOTADB|CORRUPT)/.test(String(err?.code || ''));
   function connect(Database, id, key) {
     const db = new Database(dbFile(id));
     try {
@@ -209,8 +210,11 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
     let db;
     try {
       db = connect(Database, id, key);
-    } catch {
+    } catch (err) {
       // Wrong key (key lost or replaced) or a damaged file: the index is rebuilt from the server.
+      // Any other error (locked, no permission, disk) may pass: the file stays, the index is off
+      // for now and the next start tries again.
+      if (!isUnusableIndex(err)) return null;
       removeFiles(id);
       try {
         db = connect(Database, id, key);
@@ -453,9 +457,12 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
       const notIndexed = [...present].filter(uid => !known.has(uid));
       const missing = notIndexed.sort((a, b) => b - a).slice(0, Math.min(budget, room));
       const seen = { exists, uidNext, pending: notIndexed.length > missing.length };
+      // The checkpoint says "complete" only after the missing messages are in the database: until
+      // then it is saved as pending, so a crash or a failed FETCH never lets the next run skip them.
+      const checkpoint = missing.length ? { ...seen, pending: true } : seen;
       // Written only when something differs: an unchanged run leaves the file untouched.
-      if (reset || modseq !== (row?.modseq || null) || JSON.stringify(seen) !== JSON.stringify(last))
-        upsertFolder(entry, folderPath, uidValidity, modseq, seen);
+      if (reset || modseq !== (row?.modseq || null) || JSON.stringify(checkpoint) !== JSON.stringify(last))
+        upsertFolder(entry, folderPath, uidValidity, modseq, checkpoint);
       let added = 0;
       for (let i = 0; i < missing.length; i += BATCH) {
         const batch = missing.slice(i, i + BATCH);
@@ -514,6 +521,15 @@ export function createLocalIndex({ dir, getKey, getIdentity = () => null, maxPer
         entry.db.transaction(() => {
           for (const [uid, item] of items) if (insertMessage(entry, folderPath, uid, item)) added++;
         })();
+      }
+      if (missing.length) {
+        const have = new Set(
+          stmt(entry, 'SELECT uid FROM messages WHERE folder = ?')
+            .all(folderPath)
+            .map(r => r.uid)
+        );
+        const complete = missing.every(uid => have.has(uid));
+        upsertFolder(entry, folderPath, uidValidity, modseq, { ...seen, pending: seen.pending || !complete });
       }
       return { added, removed, reset, flagsChanged };
     } finally {

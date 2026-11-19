@@ -92,6 +92,8 @@ export const AI_EN: Record<string, string> = {
   'Für Cloud-KI fehlt die Einwilligung.': 'Consent for cloud AI is missing.',
   'Für dieses Konto ist Cloud-KI gesperrt.': 'Cloud AI is blocked for this account.',
   'API-Schlüssel fehlt oder ist ungültig.': 'The API key is missing or invalid.',
+  'Der KI-Anbieter ließ sich nicht umstellen. Bitte die KI-Einstellungen prüfen.':
+    'The AI provider could not be switched. Please check the AI settings.',
   'Das Modell hat zu lange gebraucht.': 'The model took too long.',
   'Diese KI-Funktion ist ausgeschaltet.': 'This AI feature is switched off.',
   'KI-Funktion fehlgeschlagen.': 'AI feature failed.',
@@ -107,6 +109,7 @@ export const AI_EN: Record<string, string> = {
   'Unbekannte KI-Funktion.': 'Unknown AI feature.',
   'Bitte bestätigen.': 'Please confirm.',
   'Konto unbekannt.': 'Unknown account.',
+  'Konto fehlt.': 'Account missing.',
   'Keine Nachricht gewählt.': 'No message selected.',
   'Nachricht an {to} senden: „{subject}“': 'Send message to {to}: “{subject}”',
   'Termin anlegen: „{summary}“ am {start}': 'Create event: “{summary}” on {start}',
