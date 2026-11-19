@@ -6,6 +6,7 @@ import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
+import { AUTO_REPLY_ENDPOINTS, createAutoReplyService } from './auto-reply-cloud.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
@@ -358,6 +359,26 @@ export async function createMailServer({
       )
   });
   const smtpConfigFor = account => withToken(account, account.smtp);
+  // Out-of-office reply of Microsoft 365 / Google accounts, stored with the provider. The editor
+  // content (may contain the user's own text) stays on this device encrypted.
+  const autoReply = createAutoReplyService({
+    fetchImpl,
+    endpoints: { ...AUTO_REPLY_ENDPOINTS, ...(cloudEndpoints || {}) },
+    logger: line => logger(line),
+    file: await createSealedJsonFile(
+      path.join(dir, 'auto-replies.json'),
+      { accounts: {} },
+      { vault: store, keyName: 'auto-replies-key' }
+    ),
+    token: account =>
+      oauth.accessToken(
+        account.id,
+        account.oauthProvider,
+        accountManager.getSecret(account.id, 'oauth'),
+        token => accountManager.setSecret(account.id, 'oauth', token),
+        { resource: account.oauthProvider === 'microsoft' ? 'settings' : 'cloud' }
+      )
+  });
 
   const watchers = createWatcherPool({
     clientFactory: watcherFactory,
@@ -523,7 +544,10 @@ export async function createMailServer({
         retryable: err.retryable === true
       });
     }
-    if (err.code && /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)) {
+    if (
+      err.code &&
+      /^(oauth|dav|sieve|autoreply|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task)_/.test(err.code)
+    ) {
       diagnostics.record(err.code.split('_')[0], err.code);
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
     }
@@ -653,6 +677,7 @@ export async function createMailServer({
     localContacts,
     localContactsError,
     cloud,
+    autoReply,
     fetchImpl,
     pgp,
     smime,

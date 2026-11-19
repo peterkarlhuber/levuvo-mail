@@ -6,6 +6,7 @@ import { useT } from './i18n';
 import { Section } from './Settings';
 import { FilterAssist } from './FilterAssist';
 import { RichTextField } from './editor';
+import { ProviderAutoReply } from './ProviderAutoReply';
 import type { AccountItem, Folder } from './types';
 
 type Condition = { field: 'from' | 'to' | 'subject' | 'any'; op: 'contains' | 'is' | 'not_contains'; value: string };
@@ -36,6 +37,7 @@ type SieveState = {
   config: { rules: Rule[]; vacation: Vacation };
   foreignActive: string | null;
   capabilities: string[];
+  viaProvider?: boolean;
 };
 
 const newRule = (n: number): Rule => ({
@@ -70,6 +72,8 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
       .catch(() => setFolders([]));
   }, [accountId]);
 
+  // Microsoft 365 / Google sign-in: no ManageSieve, the reply is stored with the provider.
+  const viaProvider = state?.viaProvider === true;
   const config = state?.config;
   const update = (patch: Partial<SieveState['config']>) => {
     if (!state) return;
@@ -159,6 +163,7 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
           </select>
         </label>
       )}
+      {viaProvider && <ProviderAutoReply key={accountId} accountId={accountId} onDirty={setDirty} />}
       {!state && !error && (
         <p className="muted">
           <LoaderCircle size={14} className="spin" /> {t('Verbinde mit dem Filterserver …')}
@@ -169,7 +174,7 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
           {error}
         </p>
       )}
-      {state && !state.available && (
+      {!viaProvider && state && !state.available && (
         <Section
           title={t('Nicht verfügbar')}
           description={state.reason || t('Dein Mailserver bietet keine Serverfilter (ManageSieve) an.')}
@@ -181,7 +186,7 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
           </p>
         </Section>
       )}
-      {state?.available && config && vacation && (
+      {!viaProvider && state?.available && config && vacation && (
         <>
           <Section
             title={t('Abwesenheitsnotiz')}
