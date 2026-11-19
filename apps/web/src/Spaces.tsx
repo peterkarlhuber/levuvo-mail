@@ -1467,8 +1467,32 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
   const [transferTo, setTransferTo] = useState('');
   const active = detail.status === 'active';
   const others = detail.members.filter(m => !m.removed && !m.me);
+  const canWrite = active && (detail.role === 'owner' || detail.role === 'editor');
   return (
     <div className="space-settings">
+      {canWrite && detail.ai.enabled && (
+        <>
+          <h4>{t('Assistent im Chat')}</h4>
+          <label className="space-check">
+            <input
+              type="checkbox"
+              checked={Boolean(detail.aiChatGrant)}
+              onChange={e =>
+                void run(
+                  () => spaces.post(`/${detail.id}/chat/grant`, { on: e.target.checked }),
+                  e.target.checked ? t('Erlaubt bis auf Widerruf.') : t('Zurückgenommen.')
+                )
+              }
+            />{' '}
+            {t(
+              'Der Assistent darf in diesem Raum ohne Rückfrage im Chat schreiben (bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten). Seine Nachrichten sind für alle als „KI-erstellt“ markiert.'
+            )}
+          </label>
+          {detail.aiChatGrant && (
+            <p className="muted small">{t('Erlaubt seit {date}', { date: fullDateLabel(detail.aiChatGrant.since) })}</p>
+          )}
+        </>
+      )}
       {detail.owner && active && (
         <>
           <form

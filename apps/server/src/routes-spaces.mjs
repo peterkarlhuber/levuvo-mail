@@ -152,6 +152,11 @@ export function registerSpaceRoutes(ctx, { dir }) {
     return { ok: true };
   });
 
+  // The assistant may write in this chat without asking (until revoked), or not.
+  guard('/api/spaces/:id/chat/grant', async (request, _reply, s) => ({
+    grant: await s.setChatGrant(request.params.id, request.body?.on === true)
+  }));
+
   guard('/api/spaces/create', async (request, _reply, s) => {
     const b = request.body || {};
     return s.create({ name: b.name, description: b.description || '', accountId: b.accountId, email: b.email });

@@ -297,8 +297,8 @@ export const AI_EN: Record<string, string> = {
     'The assistant is switched off. By default it works with a local model on this computer.',
   'KI-Einstellungen öffnen': 'Open AI settings',
   Routinen: 'Routines',
-  'Frag zum Beispiel „Wann kommt die Lieferung von Müller?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesendet wird nichts ohne deine Freigabe.':
-    'Ask for example “When does the delivery from Müller arrive?” or give a task like “Arrange a meeting with Anna next week”. Nothing is sent without your approval.',
+  'Frag zum Beispiel „Was hat Müller zum Angebot gesagt?“ oder gib eine Aufgabe wie „Kläre mit Anna einen Termin nächste Woche“. Gesucht wird auch in PDF- und Textanhängen, Rückfragen beziehen sich auf die vorige Antwort. Gesendet wird nichts ohne deine Freigabe.':
+    'Ask for example “What did Müller say about the offer?” or give a task like “Arrange a meeting with Anna next week”. PDF and text attachments are searched too, and follow-up questions refer to the previous answer. Nothing is sent without your approval.',
   'Sucht im Postfach…': 'Searching the mailbox…',
   'Arbeitet…': 'Working…',
   '(ohne Betreff)': '(no subject)',

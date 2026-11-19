@@ -94,6 +94,11 @@ permission-checked and delivered exactly like other content, and they work acros
 - **Assistant:** `read_room_chat` reads the chat (framed as untrusted data), `search_rooms` also
   searches it, and `room_chat_post` writes a message after the user's approval. Such messages
   carry `ai: true` and are shown to every member as „KI-erstellt“ (EU AI Act Art. 50).
+  The approval offers „Nur diese“ or „Für diesen Raum bis auf Widerruf“. The latter is a local
+  setting of this device for this one space (`aiChatGrant` in the space record, never synced):
+  until it is revoked in the space settings, chat messages of the assistant there go out without
+  asking, at most 10 in 10 minutes (beyond that each one is asked again). Only owners and editors
+  can grant it; it covers chat messages only, never other changes.
 - **Compatibility:** members on versions without chat keep chat operations unchanged and pass them
   on but do not show them. Spaces in which nobody has chatted fold (and digest) exactly as before.
 - **Later: a relay.** The service only hands envelopes to `transport.send` (with an `urgent` hint

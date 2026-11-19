@@ -774,11 +774,12 @@ export function createToolRegistry({ call = null } = {}) {
         tools.set(d.name, { ...d, readOnly: Boolean(d.readOnly) && !d.approval });
       }
     },
-    registerApproval(type, { summary, execute }) {
+    registerApproval(type, { summary, execute, auto = null }) {
       if (!TOOL_NAME.test(type) || approvalTypes.has(type)) throw new TypeError(`invalid approval type ${type}`);
       if (typeof summary !== 'function' || typeof execute !== 'function')
         throw new TypeError(`approval ${type}: summary and execute are required`);
-      approvalTypes.set(type, { summary, execute });
+      // `auto(payload, agent)`: true when the user granted this kind of change in advance.
+      approvalTypes.set(type, { summary, execute, auto: typeof auto === 'function' ? auto : null });
     },
     list: () => [...tools.values()],
     approval: type => approvalTypes.get(type) || null
@@ -825,11 +826,13 @@ export function createMcpHandler(ctx, { tools = buildTools(ctx), approvals, log,
     try {
       const result = await currentAgent.run(agent, () => tool.run(args && typeof args === 'object' ? args : {}, agent));
       if (tool.approval) {
-        const direct = tool.approval === 'send' && agent.autoSend;
+        const granted = registry.approval(tool.approval)?.auto;
+        const direct = (tool.approval === 'send' && agent.autoSend) || (granted ? await granted(result, agent) : false);
         if (direct) {
-          const out = await ctx.executeApproved('send', result);
+          const out = await ctx.executeApproved(tool.approval, result);
           void log.add({ type: 'tool', agent: agent.name, tool: name, ok: true, direct: true });
-          return { content: [{ type: 'text', text: JSON.stringify({ status: 'sent', ...out }) }] };
+          const status = tool.approval === 'send' ? 'sent' : 'done';
+          return { content: [{ type: 'text', text: JSON.stringify({ status, ...out }) }] };
         }
         const item = await approvals.add({
           agent,

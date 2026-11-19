@@ -436,12 +436,26 @@ def assess(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
 # ---- find ------------------------------------------------------------------------------
 
 
+class Quote(BaseModel):
+    id: str = Field(description="id of the email")
+    quote: str = Field(description="A short passage copied word for word from that email or its attachment")
+
+
 class Answer(BaseModel):
     answer: str
     sources: list[str] = Field(
         default_factory=list, description="ids of the emails and manual sections the answer relies on"
     )
+    quotes: list[Quote] = Field(default_factory=list, description="At most one literal quote per source")
     found: bool
+
+
+def _source(s: dict[str, Any]) -> str:
+    text = f"[id: {_text(s['id'], 80)}]\n{_mail(s, 6000)}"
+    for a in (s.get("attachments") or [])[:4]:
+        if isinstance(a, dict) and a.get("text"):
+            text += f"\n\n[Attachment: {_text(a.get('name'), 200)}]\n{_text(a.get('text'), 4000)}"
+    return text
 
 
 def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
@@ -452,33 +466,51 @@ def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     question = _text(params.get("question"), 500)
     if not question:
         raise RpcError("invalid_input", "question required")
-    body = "\n\n===\n\n".join(f"[id: {_text(s['id'], 80)}]\n{_mail(s, 2500)}" for s in sources)
-    reference = "\n\n".join(
-        f"[id: {_text(m['id'], 20)}] {_text(m.get('chapter'), 120)} / {_text(m.get('title'), 160)}\n"
-        f"{_text(m.get('text'), 2500)}"
-        for m in manual
-    )
+    body = "\n\n===\n\n".join(_source(s) for s in sources)
+    history = [h for h in params.get("history") or [] if isinstance(h, dict)][-2:]
+    earlier = ""
+    if history:
+        turns = "\n\n".join(
+            f"Question: {_text(h.get('question'), 500)}\nAnswer: {_text(h.get('answer'), 1500)}" for h in history
+        )
+        # Earlier answers were produced from mail content, so they are framed like it.
+        earlier = frame_untrusted(turns, "earlier questions and answers in this conversation") + "\n\n"
     system = (
-        f"Answer the user's question in {_lang(params)} using only the emails provided. Cite the ids of the emails "
-        "you used in `sources`. If they do not contain the answer, set found=false and say so."
+        f"Answer the user's question in {_lang(params)} using only the emails and attachments provided. "
+        "Be direct: start with the answer, then the key details (who, what, when, amounts) in at most five "
+        "sentences. Name the sender and date when it matters. If emails disagree, say so and prefer the newest. "
+        "Cite the ids of the emails you used in `sources`, and for each give one short passage copied word for "
+        "word in `quotes`. If the question refers to the earlier conversation, use it to understand the question "
+        "only. If the emails do not contain the answer, set found=false and say so."
     )
     if manual:
+        reference = "\n\n".join(
+            f"[id: {_text(m['id'], 20)}] {_text(m.get('chapter'), 120)} / {_text(m.get('title'), 160)}\n"
+            f"{_text(m.get('text'), 2500)}"
+            for m in manual
+        )
         system = (
             f"Answer the user's question in {_lang(params)}. If it is about using the Levuvo Mail app, answer from "
             "the Levuvo Mail manual sections below with short, concrete steps; otherwise answer only from the "
-            "emails provided. Always call the app Levuvo Mail. Cite the ids of the emails or manual sections you "
-            "used in `sources`. If neither contains the answer, set found=false and say so.\n\n"
+            "emails and attachments provided, starting with the answer and the key details. Always call the app "
+            "Levuvo Mail. Cite the ids of the emails or manual sections you used in `sources`, and for each email "
+            "give one short passage copied word for word in `quotes`. If the question refers to the earlier "
+            "conversation, use it to understand the question only. If neither contains the answer, set "
+            "found=false and say so.\n\n"
             "Levuvo Mail manual (trusted, from the app itself):\n" + reference
         )
     result = _ask(
         engine,
         system,
-        f"Question (trusted, from the user): {question}\n\n" + frame_untrusted(body or "(no emails)", "mailbox search"),
+        f"Question (trusted, from the user): {question}\n\n"
+        + earlier
+        + frame_untrusted(body or "(no emails)", "mailbox search"),
         Answer,
-        max_tokens=1200,
+        max_tokens=1500,
     )
     known = {str(s["id"]) for s in sources} | {str(m["id"]) for m in manual}
-    result["sources"] = [s for s in result.get("sources", []) if s in known]
+    result["sources"] = list(dict.fromkeys(s for s in result.get("sources", []) if s in known))
+    result["quotes"] = [q for q in result.get("quotes", []) if q.get("id") in result["sources"]]
     return result
 
 

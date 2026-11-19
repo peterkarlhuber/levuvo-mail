@@ -335,7 +335,11 @@ A rewritten text stays marked with "Changed by the assistant · Undo".
 folder", click "Suggest rule", review, save.
 
 **Assistant panel (✦ on the left or Ctrl/⌘ + J):**
-- **Question:** "When does the delivery from Müller arrive?" – answer with clickable source emails.
+- **Question:** "What did Müller say about the offer?" – a short answer with the source emails to click,
+  each with sender, date and a quoted passage (only passages that literally appear in the email). The
+  search combines meaning and exact words, so names, invoice numbers and rare terms are found too, and it
+  reads PDF and text attachments of the best hits. Follow-ups like "and the price?" refer to the previous
+  answer; the bin icon starts a new conversation.
 - **Task:** "Arrange a meeting with Anna next week" – the assistant finds free times and creates a draft.
   Nothing is sent.
 - **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
@@ -382,7 +386,8 @@ and files can be uploaded with the keyboard. In the **Chat** tab owners and edit
 (Enter sends, Shift+Enter starts a new line); readers follow along. Messages usually arrive within a few
 seconds because Levuvo watches the mailbox with IMAP IDLE. Reply, edit and delete with the buttons next
 to a message; deleting removes it for everyone. Only your device counts unread messages, and there are no
-read receipts. Messages written with the assistant are marked "AI-generated". The assistant and agents see
+read receipts. Messages written with the assistant are marked "AI-generated". When approving one you choose "Only this
+one" or "For this space until revoked"; revoke it in the space settings. The assistant and agents see
 a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving

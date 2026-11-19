@@ -1157,6 +1157,7 @@ export function createSpaceService({
       mySafetyCode: keys.safetyCode,
       dissolved: state.dissolved,
       ai: state.ai,
+      aiChatGrant: r.aiChatGrant ? { since: r.aiChatGrant.since } : null,
       members: Object.values(state.members).map(publicMember),
       invites:
         state.owner === keys.id
@@ -1414,10 +1415,54 @@ export function createSpaceService({
     });
   }
 
+  // Standing permission on this device: the assistant may write in this space's chat without
+  // asking, until the user revokes it. Its messages stay marked as AI-generated. At most
+  // GRANT_POSTS messages per GRANT_WINDOW go out that way; beyond that each one is asked again.
+  const GRANT_POSTS = 10;
+  const GRANT_WINDOW = 10 * 60_000;
+  const grantUse = new Map();
+  function chatGrant(spaceId) {
+    const r = record(spaceId);
+    return r.aiChatGrant ? { since: r.aiChatGrant.since } : null;
+  }
+  async function setChatGrant(spaceId, on) {
+    const r = record(spaceId);
+    if (on) {
+      writable(r);
+      if (!['owner', 'editor'].includes(stateOf(r).members[keys.id]?.role))
+        throw fail('Dafür fehlen in diesem Raum die Rechte oder der Eintrag existiert nicht.', 'spaces_forbidden', 403);
+      if (!r.aiChatGrant) r.aiChatGrant = { since: clock() };
+    } else delete r.aiChatGrant;
+    grantUse.delete(r.id);
+    await store.save(r);
+    changed(r.id);
+    return chatGrant(spaceId);
+  }
+  /** Whether one assistant message may go out without asking now (and counts it). */
+  function useChatGrant(spaceId) {
+    let r;
+    try {
+      r = record(spaceId);
+    } catch {
+      return false;
+    }
+    if (!r.aiChatGrant || r.status !== 'active') return false;
+    if (!['owner', 'editor'].includes(stateOf(r).members[keys.id]?.role)) return false;
+    const now = Date.now();
+    const recent = (grantUse.get(r.id) || []).filter(t => now - t < GRANT_WINDOW);
+    if (recent.length >= GRANT_POSTS) return false;
+    recent.push(now);
+    grantUse.set(r.id, recent);
+    return true;
+  }
+
   return {
     identity: { id: keys.id, safetyCode: keys.safetyCode },
     list,
     chat,
+    chatGrant,
+    setChatGrant,
+    useChatGrant,
     postChat,
     markChatRead,
     waitForChange,

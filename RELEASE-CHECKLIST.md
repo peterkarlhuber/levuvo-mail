@@ -97,3 +97,15 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] `release:manifest` and `release:verify` successful
 - [ ] Signed builds: update files uploaded, test update 2.5.0 → 2.5.1 run through once
 - [ ] Privacy notice reviewed legally, legal notice (Impressum) filled in
+
+## Compliance (every release)
+Required for every release, like the manual review. Not legal advice; see `docs/compliance/README.md`.
+- [ ] `docs/compliance/` reviewed and updated for this version: gap analyses (CRA, AI Act, GDPR, accessibility, other rules), AI system inventory, risk assessment, record of processing, user information; "Last reviewed" date set
+- [ ] Every new feature of this release that processes personal data, uses AI, opens a connection or stores a file is reflected in `PRIVACY.md`, the AI inventory and the data-rights coverage (export / delete all)
+- [ ] `npm run check:compliance` green (support period, required documents); end of support in `package.json` → `levuvo.supportUntil` still correct
+- [ ] Release assets contain the SBOM (`levuvo-mail-<version>.cdx.json`) and `THIRD-PARTY-NOTICES.txt`; `npm run check:licenses` green, no new licence outside the policy
+- [ ] No open security advisory with a missed deadline; fixed vulnerabilities listed under "Security" in `CHANGELOG.md` and published as advisories
+- [ ] Settings → About → "Security and support" shows the right version and end of support; "Open-source licences" opens the notices
+- [ ] Settings → Privacy: "Export my data" and "Delete all data on this device" tested in a fresh profile; "Install updates automatically" off → only a notification
+- [ ] AI: a mail written with the assistant has the header `X-Levuvo-AI-Assisted` at the recipient
+- [ ] `docs/compliance/OPEN-ITEMS.md` reviewed with Peter (certificates, support period, DOC-LEV-009, legal review)
