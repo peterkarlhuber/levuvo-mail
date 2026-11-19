@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.4.0 – 19 November 2026
+
+> **After updating:** the consent for cloud AI is asked again, because its text now lists every kind of content that is sent. Backups made with 2.4.0 cannot be restored in 2.3; to keep a way back, save a backup in 2.3 (Settings → Backup) before installing.
 
 ### Mail
 - **Follow-ups:** "Show in Sent" searches the subject in the sent folder again; it used to ask the server to search the follow-up view itself and found nothing.
@@ -22,10 +24,6 @@
 - **Agent calendar tools** report an invalid or too long range (more than 62 days) as an error instead of "no free time".
 - **Inbox bundles by AI:** messages the model skipped are not sent again on every list update; after errors the next try waits (30 s, doubling up to 30 min).
 - **Maintenance:** no more import cycle between the AI routes and the MCP server (`ai-payloads.mjs`); built-in approval types use the same registry as added ones; AI background timers start only with the app's background jobs and stop on close. The AI sidecar is tested against the pinned Orkexa API and installed in CI from the hashed locks.
-
-## 2.3.0 – 19 November 2026
-
-> **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.
 
 ### Release and supply chain
 - **Electron fuses:** installers switch off running Levuvo Mail as a plain Node runtime (ELECTRON_RUN_AS_NODE), NODE_OPTIONS and the --inspect debugger, load the app only from its archive and check the archive's integrity. Another program on the computer can no longer start the Levuvo binary with its own code and so read Levuvo's keychain entries. Every desktop build checks the fuses of the packaged binary.
@@ -67,6 +65,10 @@
 - **Shared spaces sync:** the inbox is no longer scanned and downloaded again every minute; mails with the space header that are no usable sync mail are read once, sync mails that could not be saved are retried with growing pauses. Sync mails another device of the same person moves at the same time are no longer skipped. A sync run no longer brings back an invitation that was accepted or declined meanwhile. Sync mails from a newer Levuvo version are kept until an update instead of being dropped, and the spaces view says an update is needed; changes this version cannot apply no longer cause an endless exchange of sync mails.
 - **Deleting in shared spaces really deletes:** a deleted mail, comment, task, event, note or file disappears from every member's copy with the owner's next checkpoint (usually within a minute), its file parts are removed from the disk, and it is never sent to people who join later; they get the current state instead of the whole history. The operation log of a space no longer grows forever: it is cut at each checkpoint, and members who fell behind catch up from it. Changes made within 20 seconds travel as one sync mail per member instead of one mail per change.
 - **Shared spaces, safer clicks:** deleting a task, event or comment and removing a mail from a space now ask first, like notes and files. Allowing cloud AI and external agents for a space asks for confirmation, names the providers and that it applies to all members; the activity says "allowed cloud AI" and the space header shows it. A damaged or deleted file is reported as such instead of "being fetched", and a download is no longer decrypted twice. Agent tools for spaces check dates before asking for approval and say which format they need.
+
+## 2.3.0 – 19 November 2026
+
+> **Before using Microsoft To Do or Google Tasks:** these need their own OAuth permissions. Add `Tasks.ReadWrite` to the Azure app registration and enable the Google Tasks API with the scope `https://www.googleapis.com/auth/tasks` in Google Cloud, see `docs/OAUTH-SETUP.md`. Until then, mail, calendar and contacts keep working and only the task sync for these accounts is unavailable.
 
 ### New
 - **Shared spaces:** a space collects everything about one topic, project or customer: notes several people edit at the same time (with checklists), pinned mails with internal comments, tasks and events with assignees, files with versions and an activity list. Members are invited by e-mail address and have the role owner, editor or reader. There is no Levuvo server: every member keeps an encrypted copy, and changes travel end-to-end encrypted (Ed25519/X25519, AES-256-GCM) as mails between the members' existing mailboxes, across providers. Removing a member rotates the space key. The assistant and agents see a space only if its owner allows it, and every change they propose waits for approval. Spaces are part of the encrypted backup. See `docs/SPACES.md`.

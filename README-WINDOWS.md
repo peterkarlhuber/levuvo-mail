@@ -1,4 +1,4 @@
-# Levuvo Mail 2.3.0 – Windows ARM64 and x64
+# Levuvo Mail 2.4.0 – Windows ARM64 and x64
 
 The keychain module is native: **always build on the target architecture**.
 
@@ -11,7 +11,7 @@ npm.cmd run ai:runtime -- --arch arm64             # AI runtime for the installe
 npm.cmd run desktop:win:arm64                      # or desktop:win:x64
 ```
 
-Result: `release\Levuvo-Mail-Setup-2.3.0-arm64.exe` or `-x64.exe`.
+Result: `release\Levuvo-Mail-Setup-2.4.0-arm64.exe` or `-x64.exe`.
 Build the project locally (e.g. `C:\Users\<Name>\Levuvo\levuvo-mail`), not from a network drive.
 
 Signed build with auto-update: `npm.cmd run release:signed:win:x64` – requirements in `RELEASE-KIT.md`.
