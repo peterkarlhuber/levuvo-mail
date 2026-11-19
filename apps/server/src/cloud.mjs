@@ -295,9 +295,13 @@ function graphAdapter(call) {
     async event(eventId) {
       return call('GET', `/me/events/${encodeURIComponent(eventId)}`);
     },
-    async create(cal, model) {
-      const e = await call('POST', `/me/calendars/${encodeURIComponent(cal.id)}/events`, body(model));
-      return { id: e.id, uid: e.iCalUId || e.id, invited: model.attendees.length };
+    async create(cal, model, { notify = true } = {}) {
+      // Graph sends invitations for every attendee of a new event and has no switch to stop it.
+      // Without notify the event is saved without attendees, so nobody gets a mail the user did
+      // not ask for (e.g. an event an AI agent proposed and the user approved).
+      const sent = notify ? model : { ...model, attendees: [] };
+      const e = await call('POST', `/me/calendars/${encodeURIComponent(cal.id)}/events`, body(sent));
+      return { id: e.id, uid: e.iCalUId || e.id, invited: sent.attendees.length };
     },
     async attachments(eventId) {
       const r = await call(

@@ -121,6 +121,15 @@ const CHANGE_LABELS = {
   set_role: s => `Rolle von ${s} ändern`
 };
 const changeLabel = (kind, subject) => CHANGE_LABELS[kind](subject);
+const CONTENT_FIELDS = ['name', 'title', 'description', 'text', 'notes', 'location', 'email', 'role', 'due', 'start'];
+function changeContent(p) {
+  const data = p?.data?.data && typeof p.data.data === 'object' ? p.data.data : p?.data || {};
+  const out = {};
+  for (const key of CONTENT_FIELDS)
+    if (typeof data[key] === 'string' && data[key].trim()) out[key] = data[key].slice(0, 20_000);
+  if (p?.action === 'add_mail') Object.assign(out, { account: data.account, folder: data.folder, uid: data.uid });
+  return out;
+}
 
 export function registerSpaceTools(ctx, { service, registry = null, frame = null }) {
   if (registry && frame) return register(registry, frame);
@@ -178,7 +187,9 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
         kind: p.kind || '',
         subject: p.subject || '',
         action: p.action,
-        details: p.preview
+        details: p.preview,
+        // What is written into the space, so the approval shows the content, not only its title.
+        content: changeContent(p)
       }),
       execute: async p => {
         const s = await service();
@@ -598,11 +609,15 @@ export function registerSpaceTools(ctx, { service, registry = null, frame = null
         run: async (a, agent) => {
           const { detail } = await room(a.room, agent);
           writable(detail);
+          // Accounts hidden from this agent ("No cloud AI") cannot be shared into a space either.
+          const account = a.account ? String(a.account) : ctx.accounts?.()[0]?.id;
+          if (!account || (agent?.hiddenAccounts || []).includes(account))
+            throw toolError('Unknown account. Use list_accounts.');
           return change(
             detail,
             'add_mail',
             ['add_mail'],
-            { account: a.account, folder: a.folder, uid: a.uid, withAttachments: a.with_attachments === true },
+            { account, folder: a.folder, uid: a.uid, withAttachments: a.with_attachments === true },
             { folder: a.folder, uid: a.uid }
           );
         }

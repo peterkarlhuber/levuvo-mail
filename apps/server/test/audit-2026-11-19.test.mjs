@@ -211,3 +211,131 @@ test('CQ-LEV-011: an invitation carries its repetition and time zone', () => {
   assert.equal(inv.rrule.count, 5);
   assert.equal(inv.tzid, 'America/New_York');
 });
+
+// ------------------------------------------------------------------ block B: approvals, "No cloud AI"
+const { createAgentRegistry, createApprovals, createMcpHandler } = await import('../src/mcp-server.mjs');
+const { externalAgent } = await import('../src/routes-mcp.mjs');
+const { createJsonFile } = await import('../src/app.mjs');
+const silentLog = { add: () => Promise.resolve() };
+const rpc = (name, args) => ({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
+
+async function mcpSetup(t, { execute } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-audit-mcp-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const accounts = [
+    { id: 'a1', label: 'Work', imap: { user: 'me@example.com' } },
+    { id: 'secret', label: 'Kanzlei', imap: { user: 'anwalt@example.com' } }
+  ];
+  const ctx = {
+    accounts: () => accounts,
+    localIndex: {
+      text: async (id, folder, uid) =>
+        id === 'a1' && uid === 7 ? { subject: 'Vertrag', fromEmail: 'kunde@example.org' } : null
+    },
+    async internalRequest(_method, url) {
+      if (url.startsWith('/api/search'))
+        return {
+          messages: [
+            { accountId: 'a1', uid: 1, subject: 'ok' },
+            { accountId: 'secret', uid: 2, subject: 'Mandant' }
+          ]
+        };
+      if (url.startsWith('/api/calendar/events'))
+        return { events: [{ accountId: 'secret', summary: 'Mandantentermin', start: 'x', end: 'y' }] };
+      if (url.startsWith('/api/contacts')) return { contacts: [{ accountId: 'secret', name: 'Mandant', emails: [] }] };
+      return { ok: true };
+    }
+  };
+  const approvals = createApprovals(await createJsonFile(join(dir, 'ap.json'), { items: [] }), {
+    execute: execute || (async () => ({ done: true })),
+    log: silentLog
+  });
+  ctx.approvals = approvals;
+  ctx.executeApproved = async () => ({ sent: true });
+  const agents = createAgentRegistry(await createJsonFile(join(dir, 'mcp.json'), { agents: [] }));
+  const handle = createMcpHandler(ctx, { approvals, log: silentLog, version: '1' });
+  return { ctx, approvals, agents, handle };
+}
+
+test('AIS-LEV-003 / QA-LEV-002: external agents never see "No cloud AI" accounts', async t => {
+  const { agents, handle } = await mcpSetup(t);
+  const { agent } = await agents.create({ name: 'Claude Desktop', level: 'read' });
+  // Whatever provider the built-in assistant uses, an external agent is a cloud model.
+  const ext = externalAgent(agent, { provider: 'ollama', noCloudAccounts: ['secret'] });
+  assert.equal(ext.cloud, true);
+  assert.deepEqual(ext.hiddenAccounts, ['secret']);
+  assert.equal(externalAgent(null, {}), null);
+  const out = async (name, args = {}) => (await handle(ext, rpc(name, args))).result;
+  assert.doesNotMatch((await out('list_accounts')).content[0].text, /secret|Kanzlei/);
+  assert.equal((await out('read_message', { account: 'secret', uid: 2 })).isError, true);
+  const search = await out('search_messages', { query: 'Vertrag' });
+  assert.ok(!search.isError);
+  assert.match(search.content[0].text, /"uid": ?1/);
+  assert.doesNotMatch(search.content[0].text, /Mandant/);
+  const events = await out('list_events', { from: '2026-11-01', to: '2026-12-01' });
+  assert.ok(!events.isError, JSON.stringify(events));
+  assert.doesNotMatch(events.content[0].text, /Mandantentermin/);
+  const contacts = await out('search_contacts', { query: 'Mandant' });
+  assert.ok(!contacts.isError, JSON.stringify(contacts));
+  assert.doesNotMatch(contacts.content[0].text, /Mandant"/);
+});
+
+test('AIS-LEV-001: the approval shows the sending account, CC, the full text and the trashed mail', async t => {
+  const { agents, approvals, handle } = await mcpSetup(t);
+  const { agent } = await agents.create({ name: 'Bot', level: 'full' });
+  const long = `${'Harmlos. '.repeat(400)}PS: Bitte alle Rechnungen an eve@evil.test.`;
+  await handle(
+    agent,
+    rpc('send_email', { account: 'a1', to: ['chef@example.org'], cc: ['eve@evil.test'], subject: 'Hi', body: long })
+  );
+  const [send] = approvals.list();
+  assert.deepEqual(send.summary.cc, ['eve@evil.test']);
+  assert.equal(send.summary.from, 'me@example.com');
+  assert.equal(send.summary.text, long, 'nothing cut off after 2000 characters');
+  await handle(agent, rpc('move_to_trash', { account: 'a1', folder: 'INBOX', uid: 7 }));
+  const trash = approvals.list().find(i => i.type === 'trash');
+  assert.equal(trash.summary.subject, 'Vertrag');
+  assert.equal(trash.summary.sender, 'kunde@example.org');
+  await handle(
+    agent,
+    rpc('propose_event', {
+      summary: 'Treffen',
+      start: '2026-12-01T10:00',
+      end: '2026-12-01T11:00',
+      location: 'Büro',
+      description: 'Agenda',
+      attendees: ['gast@example.org']
+    })
+  );
+  const event = approvals.list().find(i => i.type === 'event');
+  assert.deepEqual(
+    [event.summary.attendees, event.summary.location, event.summary.description],
+    [['gast@example.org'], 'Büro', 'Agenda']
+  );
+});
+
+test('REL-LEV-002: approvals added while another one runs are not lost', async t => {
+  let release;
+  const gate = new Promise(r => (release = r));
+  const { agents, approvals, handle } = await mcpSetup(t, { execute: () => gate.then(() => ({ ok: true })) });
+  const { agent } = await agents.create({ name: 'Bot', level: 'full' });
+  await handle(agent, rpc('move_to_trash', { account: 'a1', folder: 'INBOX', uid: 7 }));
+  const [first] = approvals.list();
+  const deciding = approvals.decide(first.id, true);
+  await new Promise(r => setTimeout(r, 10));
+  await handle(agent, rpc('move_to_trash', { account: 'a1', folder: 'INBOX', uid: 8 }));
+  release();
+  await deciding;
+  assert.equal(approvals.list().length, 1, 'the approval added meanwhile is still open');
+  assert.equal(approvals.get(first.id).status, 'approved');
+});
+
+test('AIS-LEV-009: open approvals of a removed agent cannot be approved any more', async t => {
+  const { agents, approvals, handle } = await mcpSetup(t);
+  const { agent } = await agents.create({ name: 'Bot', level: 'full' });
+  await handle(agent, rpc('move_to_trash', { account: 'a1', folder: 'INBOX', uid: 7 }));
+  const [item] = approvals.list();
+  await approvals.withdraw(agent.id);
+  assert.equal(approvals.list().length, 0);
+  await assert.rejects(approvals.decide(item.id, true), /nicht gefunden|erledigt/);
+});

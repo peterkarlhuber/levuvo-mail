@@ -1825,5 +1825,14 @@ export const EN: Record<string, string> = {
   '{subject} entfernen': 'Remove {subject}',
   'Rolle von {subject} ändern': 'Change the role of {subject}',
   'Raum „{room}“: {action}': 'Space “{room}”: {action}',
-  'Aufgaben filtern': 'Filter tasks'
+  'Aufgaben filtern': 'Filter tasks',
+  // Audit 2026-11-19
+  'Kopie (CC)': 'Copy (CC)',
+  Teilnehmende: 'Attendees',
+  'Es werden keine Einladungen verschickt.': 'No invitations are sent.',
+  'Vollständiger Text': 'Full text',
+  'Freigeben: {title}': 'Allow access: {title}',
+  'Ablehnen: {title}': 'Decline: {title}',
+  'Der Agent wurde entfernt oder hat diese Berechtigung nicht mehr.':
+    'The agent was removed or no longer has this permission.'
 };

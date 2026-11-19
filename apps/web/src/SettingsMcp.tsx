@@ -75,6 +75,90 @@ export function approvalTitle(a: Approval, t: (s: string, v?: Record<string, str
   }
 }
 
+type Tr = (s: string, v?: Record<string, string | number>) => string;
+const list = (v: unknown) => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
+const text = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
+
+/**
+ * Everything the approved action will do: every recipient and the sending account, the full text,
+ * attendees, place and description, the message to be deleted, the content written into a space.
+ * Nothing that matters may be hidden behind a shortened title.
+ */
+export function ApprovalDetails({ a, t }: { a: Approval; t: Tr }) {
+  const s = a.summary || {};
+  const rows: [string, string][] = [];
+  const add = (label: string, value: string) => value && rows.push([label, value]);
+  let body = '';
+  let note = '';
+  switch (a.type) {
+    case 'send':
+      add(t('Von'), text(s.from));
+      add(t('An'), list(s.to).join(', '));
+      add(t('Kopie (CC)'), list(s.cc).join(', '));
+      add(t('Betreff'), text(s.subject));
+      body = text(s.text);
+      break;
+    case 'event':
+      add(t('Beginn'), text(s.start));
+      add(t('Ende'), text(s.end));
+      add(t('Ort'), text(s.location));
+      add(t('Teilnehmende'), list(s.attendees).join(', '));
+      body = text(s.description);
+      if (list(s.attendees).length) note = t('Es werden keine Einladungen verschickt.');
+      break;
+    case 'contact':
+      add(t('E-Mail'), list(s.emails).join(', '));
+      add(t('Telefon'), list(s.phones).join(', '));
+      break;
+    case 'trash':
+      add(t('Absender'), text(s.sender));
+      add(t('Betreff'), text(s.subject));
+      add(t('Ordner'), text(s.folder));
+      add(t('Konto'), text(s.from));
+      break;
+    case 'room_change': {
+      const c = (s.content && typeof s.content === 'object' ? s.content : {}) as Record<string, unknown>;
+      const labels: Record<string, string> = {
+        name: t('Name'),
+        title: t('Titel'),
+        email: t('E-Mail'),
+        role: t('Rolle'),
+        due: t('Fällig'),
+        start: t('Beginn'),
+        location: t('Ort'),
+        folder: t('Ordner'),
+        account: t('Konto')
+      };
+      for (const [key, label] of Object.entries(labels)) add(label, text(c[key]));
+      body = [c.description, c.notes, c.text].map(text).filter(Boolean).join('\n\n');
+      break;
+    }
+    default:
+      break;
+  }
+  if (!rows.length && !body && !note) return null;
+  return (
+    <>
+      {rows.length > 0 && (
+        <dl className="ai-approval-fields">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {body && (
+        <pre className="ai-approval-text" tabIndex={0} aria-label={t('Vollständiger Text')}>
+          {body}
+        </pre>
+      )}
+      {note && <small>{note}</small>}
+    </>
+  );
+}
+
 export function ApprovalList({ onChange }: { onChange?: () => void }) {
   const { t } = useT();
   const { toast } = useUi();
@@ -117,15 +201,24 @@ export function ApprovalList({ onChange }: { onChange?: () => void }) {
           <div>
             <strong>{approvalTitle(a, t)}</strong>
             <small>{t('Vorgeschlagen von {agent}', { agent: a.agentName })}</small>
-            {a.type === 'send' && typeof a.summary.text === 'string' && (
-              <pre className="ai-approval-text">{a.summary.text}</pre>
-            )}
+            <ApprovalDetails a={a} t={t} />
           </div>
           <div className="settings-actions">
-            <Button size="sm" variant="primary" icon={<Check size={14} />} onClick={() => void decide(a.id, true)}>
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<Check size={14} />}
+              aria-label={t('Freigeben: {title}', { title: approvalTitle(a, t) })}
+              onClick={() => void decide(a.id, true)}
+            >
               {t('Freigeben')}
             </Button>
-            <Button size="sm" icon={<X size={14} />} onClick={() => void decide(a.id, false)}>
+            <Button
+              size="sm"
+              icon={<X size={14} />}
+              aria-label={t('Ablehnen: {title}', { title: approvalTitle(a, t) })}
+              onClick={() => void decide(a.id, false)}
+            >
               {t('Ablehnen')}
             </Button>
           </div>
