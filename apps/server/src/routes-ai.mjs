@@ -1,71 +1,36 @@
 // AI routes: settings, status, models and the AI functions. Message content is loaded here on the
 // server (the UI sends references), so the model gets the same text the reader shows and nothing else.
-import { htmlToText } from './html-mail.mjs';
 import { DEFAULT_AI_SETTINGS } from './ai-service.mjs';
-import { contactPayload, eventPayload } from './mcp-server.mjs';
+import { contactPayload, eventPayload, messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
+// Re-exported for existing callers; the mappers live in ai-payloads.mjs.
+export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 import { createSemanticIndex } from './ai-semantic.mjs';
 
 const ACTION = 'ai-v1';
 const MAX_REFS = 8;
 const MAX_CLIENT_TEXT = 60_000;
 const STYLE_TTL = 60 * 60 * 1000;
+const LOAD_PARALLEL = 3;
 
-const addr = list =>
-  (list || [])
-    .map(a => (a.name ? `${a.name} <${a.email}>` : a.email))
-    .filter(Boolean)
-    .join(', ');
+/** Runs `fn` over `items` with at most `limit` at once; results keep the order of `items`. */
+export async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
 
 function clientText(value, limit = MAX_CLIENT_TEXT) {
   return String(value ?? '').slice(0, limit);
 }
 
 const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
-
-export function messageForAi(detail) {
-  const text = detail.text?.trim() ? detail.text : htmlToText(detail.html || '');
-  return {
-    from: addr(detail.from),
-    to: addr([...(detail.to || []), ...(detail.cc || [])]),
-    date: detail.date || '',
-    subject: detail.subject || '',
-    text: String(text || '').slice(0, 20_000),
-    attachments: (detail.attachments || []).map(a => a.filename).slice(0, 20)
-  };
-}
-
-const AUTH_VALUES = /^(pass|fail|softfail|neutral|none|temperror|permerror|policy)$/;
-/**
- * Facts from Levuvo's own checks, given to the model as trusted: only ratings and fixed codes.
- * Everything the sender controls (link texts and targets, Reply-To, file names, domains) goes into
- * the untrusted part with the message (securityDetails), never next to the instructions.
- */
-export function securityFacts(detail) {
-  const sec = detail.security || {};
-  const facts = { client_rating: ['ok', 'info', 'warning', 'danger'].includes(sec.level) ? sec.level : 'unknown' };
-  for (const [k, v] of Object.entries(sec.auth || {}))
-    if (['spf', 'dkim', 'dmarc'].includes(k) && AUTH_VALUES.test(String(v))) facts[k] = v;
-  for (const c of (sec.checks || []).slice(0, 12))
-    if (/^[a-z_]{1,40}$/.test(String(c.code)) && ['ok', 'info', 'warning', 'danger'].includes(c.level))
-      facts[`check_${c.code}`] = c.level;
-  facts.attachments = (detail.attachments || []).length;
-  return facts;
-}
-/** The sender-controlled details of the checks, for the untrusted part of the prompt. */
-export function securityDetails(detail) {
-  const lines = [];
-  for (const c of (detail.security?.checks || []).slice(0, 12)) {
-    const extra = ['shown', 'actual', 'replyTo', 'filename', 'domain']
-      .map(k => c[k])
-      .filter(Boolean)
-      .map(v => String(v).slice(0, 300))
-      .join(' → ');
-    if (extra) lines.push(`${String(c.code).slice(0, 40)}: ${extra}`);
-  }
-  const files = (detail.attachments || []).map(a => String(a.filename || '').slice(0, 200)).slice(0, 10);
-  if (files.length) lines.push(`attachments: ${files.join(', ')}`);
-  return lines.join('\n');
-}
 
 export function registerAiRoutes(ctx) {
   const { api, ai, requireAction } = ctx;
@@ -98,9 +63,9 @@ export function registerAiRoutes(ctx) {
     const list = (Array.isArray(refs) ? refs : []).slice(-MAX_REFS);
     if (!list.length)
       throw Object.assign(new Error('Keine Nachricht gewählt.'), { statusCode: 400, code: 'ai_invalid' });
-    const details = [];
-    for (const ref of list) details.push(await loadDetail(accountId, ref));
-    return details;
+    // A few at a time instead of one after another (PERF-LEV-007): every load is its own IMAP
+    // session, and mail servers allow only a handful of parallel logins per account.
+    return mapLimit(list, LOAD_PARALLEL, ref => loadDetail(accountId, ref));
   }
   async function styleSamples(account) {
     const hit = styleCache.get(account.id);
@@ -112,8 +77,10 @@ export function registerAiRoutes(ctx) {
         'GET',
         `/api/messages?folder=${encodeURIComponent(folder)}&limit=8&account=${encodeURIComponent(account.id)}`
       );
-      for (const m of (listed.messages || []).slice(0, 5)) {
-        const d = await loadDetail(account.id, { folder, uid: m.uid }).catch(() => null);
+      const loaded = await mapLimit((listed.messages || []).slice(0, 5), LOAD_PARALLEL, m =>
+        loadDetail(account.id, { folder, uid: m.uid }).catch(() => null)
+      );
+      for (const d of loaded) {
         if (!d) continue;
         // Only the part the user wrote, not the quoted history.
         const own = messageForAi(d)
@@ -260,8 +227,7 @@ export function registerAiRoutes(ctx) {
   const syncAll = async () => {
     for (const a of ctx.accounts()) await semantic.sync(a.id).catch(() => null);
   };
-  setTimeout(() => void syncAll(), 60_000).unref?.();
-  setInterval(() => void syncAll(), 10 * 60_000).unref?.();
+  ctx.jobs?.register('semantic-index', syncAll, { every: 10 * 60_000, firstDelay: 60_000 });
   // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
   api.get('/api/ai/search', async (request, reply) => {
     const { q: query, account, folder } = request.query || {};

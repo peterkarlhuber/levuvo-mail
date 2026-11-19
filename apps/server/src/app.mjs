@@ -42,6 +42,7 @@ import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
+import { createBackgroundJobs } from './background-jobs.mjs';
 import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from './ai-service.mjs';
@@ -599,9 +600,12 @@ export async function createMailServer({
     logger
   });
 
+  const jobs = createBackgroundJobs({ logger });
+  jobs.register('ai-log-sweep', () => ai.log?.sweep?.(), { every: 12 * 3600_000 });
   const ctx = {
     api,
     ai,
+    jobs,
     internalRequest,
     aiForgetHooks: [],
     semanticState,
@@ -714,6 +718,7 @@ export async function createMailServer({
         `Levuvo Mail ${APP_VERSION} · API ${address} · ${desktop ? 'Desktop' : 'Browser'} · Konten: ${accounts.length} · Schlüsselbund ${accountManager.vaultAvailable ? 'verfügbar' : 'nicht verfügbar'}`
       );
       if (background) {
+        jobs.start();
         timers.push(...ctx.startBackgroundJobs());
         // Shared spaces: fetch and send sync mails.
         setTimeout(() => void ctx.spaces.tick(), 20_000).unref?.();
@@ -728,6 +733,7 @@ export async function createMailServer({
     },
     async close() {
       for (const t of timers) clearInterval(t);
+      jobs.stop();
       taskSchedule?.stop();
       watchers.stopAll();
       await sidecar.stop().catch(() => {});

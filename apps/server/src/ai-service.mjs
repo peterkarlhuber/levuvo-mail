@@ -156,8 +156,8 @@ export function createAiLog(filename) {
       .catch(() => {});
     return queue;
   };
+  // The twice-daily sweep is registered as a background job by the app (background-jobs.mjs).
   void sweep();
-  setInterval(sweep, 12 * 3600_000).unref?.();
   return {
     sweep,
     add(entry) {

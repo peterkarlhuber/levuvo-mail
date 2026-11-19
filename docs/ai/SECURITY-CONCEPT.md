@@ -82,7 +82,12 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
 
 ### Transparency and logging
 
-- Results are labelled "AI-generated" with the model name (Art. 50 AI Act).
+- Results are labelled "AI-generated" with the model name (Art. 50 AI Act). What an agent creates keeps a
+  lasting label: drafts carry the header `X-Levuvo-AI-Generated` (shown in the reader and the composer until
+  the user sends; the sent message does not carry it, the user reviewed it), events and contacts get a
+  closing line "KI-erstellt / AI-generated (Levuvo Mail, Agent: …)" in their description or note.
+- Ollama models served by Ollama's cloud (tags `cloud` or `…-cloud`) are refused as local models in the
+  settings, the model download and the model list: their content would leave the device.
 - The AI log stores no message content, stays on the device, is pruned after 30 days and to 5,000
   entries, and can be cleared at any time. It is not suitable for and not used for performance monitoring.
 - "Delete all AI data" removes settings, consents, keys, log, routines, approvals, agents and vectors.

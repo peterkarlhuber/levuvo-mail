@@ -89,6 +89,8 @@ export type Detail = {
   date: string | null;
   messageId?: string | null;
   draftId?: string | null;
+  /** Set on drafts an AI agent wrote: its label (X-Levuvo-AI-Generated). */
+  aiGenerated?: string;
   uidValidity?: string;
   text: string;
   html: string;
