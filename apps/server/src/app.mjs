@@ -5,6 +5,8 @@ import { createScreeningStore } from './screening.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
+import { createContactNotes, lockedContactNotes } from './contact-notes.mjs';
+import { registerContactHistoryRoutes } from './routes-contact-history.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
@@ -259,6 +261,21 @@ export async function createMailServer({
     localContactsError = err;
     return null;
   });
+  // Notes of the contact history: encrypted, fail closed like the address book on this device.
+  const contactNotes = await createContactNotes({
+    filename: path.join(dir, 'contact-notes.json'),
+    vault: store
+  }).catch(err => {
+    logger(`contact notes unavailable: ${err.code || err.message}`);
+    return lockedContactNotes(
+      err.statusCode === 423
+        ? err
+        : Object.assign(new Error('Die Notizen zu Kontakten sind gerade nicht verfügbar.'), {
+            code: 'contact_notes_locked',
+            statusCode: 423
+          })
+    );
+  });
   // Like the device calendar: a locked keychain must not stop the app, tasks are then unavailable.
   // Sync with connected lists (CalDAV, Microsoft To Do, Google Tasks) is optional; without
   // connected lists nothing leaves the device.
@@ -457,7 +474,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|contact-history|video)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -660,6 +677,7 @@ export async function createMailServer({
     followups,
     screening,
     templates,
+    contactNotes,
     tasks,
     taskSync,
     watchers,
@@ -703,6 +721,7 @@ export async function createMailServer({
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerContactHistoryRoutes(ctx);
 
   if (desktop) {
     api.get('/', async (_request, reply) => {

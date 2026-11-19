@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
+import ContactHistory from './ContactHistory';
 import { initials } from './format';
 import { useT } from './i18n';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
@@ -109,10 +110,12 @@ function EntryList({
 
 export default function ContactsModule({
   onCompose,
-  onOpenSettings
+  onOpenSettings,
+  onOpenMail
 }: {
   onCompose: (to: string) => void;
   onOpenSettings: () => void;
+  onOpenMail?: (mail: { accountId: string; folder: string; uid: number }) => void;
 }) {
   const { t, locale } = useT();
   const { confirm, toast } = useUi();
@@ -212,10 +215,26 @@ export default function ContactsModule({
     }
   }
   async function remove(c: Contact) {
-    if (!(await confirm({ title: t('Kontakt löschen?'), message: c.name, confirmLabel: t('Löschen'), danger: true })))
+    // Notes of the contact history belong to the address: they go with the last contact that has it.
+    const others = (data?.contacts || []).filter(o => key(o) !== key(c));
+    const orphaned = c.emails
+      .map(e => e.value.trim().toLowerCase())
+      .filter(e => e && !others.some(o => o.emails.some(x => x.value.trim().toLowerCase() === e)));
+    if (
+      !(await confirm({
+        title: t('Kontakt löschen?'),
+        message: orphaned.length
+          ? `${c.name} · ${t('Notizen zu diesem Kontakt auf diesem Gerät werden ebenfalls gelöscht.')}`
+          : c.name,
+        confirmLabel: t('Löschen'),
+        danger: true
+      }))
+    )
       return;
     try {
       await postJson('/api/contacts/delete', { accountId: c.accountId, url: c.url, etag: c.etag }, 'contacts-v1');
+      for (const email of orphaned)
+        await postJson('/api/contact-history/forget', { email }, 'contacts-v1').catch(() => {});
       setSelected(null);
       await load();
     } catch (e) {
@@ -545,6 +564,9 @@ export default function ContactsModule({
                 </div>
               )}
             </dl>
+            {current.emails.some(e => e.value.trim()) && (
+              <ContactHistory emails={current.emails.map(e => e.value)} name={current.name} onOpenMail={onOpenMail} />
+            )}
           </div>
         ) : (
           <div className="reader-empty">
