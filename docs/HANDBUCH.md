@@ -361,6 +361,13 @@ Assistent bei Antwortvorschlägen und „Stichpunkte zu fertiger Mail“ bis zu 
 Mails als Stilprobe (nur dein eigener Text, kein Training); bei einem Cloud-Modell gehen sie mit an den
 Anbieter. Eine Umformulierung bleibt mit „Vom Assistenten geändert · Rückgängig“ markiert.
 
+**Stil pro Kontakt lernen** (aus, zum Einschalten unter Schreibstil): Levuvo Mail liest deine gesendeten
+Mails im lokalen Suchindex und merkt sich je Kontakt Anrede („Hallo Anna,“), Gruß („LG“) und Du oder Sie.
+Dafür läuft kein KI-Modell; gespeichert wird verschlüsselt nur auf diesem Gerät, nicht im Backup. Ein
+Antwortvorschlag an Anna übernimmt dann ihre Anrede und eure Du/Sie-Form (vor der allgemeinen Einstellung)
+und nimmt deine Mails an sie als Stilprobe; der Entwurf zeigt „Im Stil deiner Mails an …“. Die Tabelle zeigt,
+was gelernt wurde; einzelne Kontakte oder alles lassen sich löschen, Ausschalten löscht ebenfalls alles.
+
 **Filter in Worten:** unter Einstellungen → Filter z. B. „Rechnungen von Lieferanten in den Ordner
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 
@@ -408,6 +415,16 @@ Google Tasks. Abgeglichen werden Titel, Notiz, Fälligkeit, Erinnerung, Priorit�
 (Google Tasks: nur Titel, Notiz, Tag und Status); der Link zur Mail bleibt auf diesem Gerät. Trennen
 beendet den Abgleich, auf dem Server wird nichts gelöscht. Aufgaben werden auf dem Gerät verschlüsselt
 gespeichert.
+
+**Aufgaben aus Räumen:** Raum-Aufgaben, die dir zugewiesen sind („Für mich“), stehen auch hier, mit dem
+Namen des Raums gekennzeichnet; links unter **Räume** filterst du nach einem Raum. Erledigen, Titel,
+Notiz, Fälligkeit und Priorität änderst du hier oder im Raum, die Änderung gilt überall und geht wie jede
+Raum-Änderung verschlüsselt an alle Mitglieder. Bist du im Raum Leser, siehst du die Aufgabe nur. Umgekehrt
+wählst du in einer Aufgabe unter **Raum** einen Raum (als Eigentümer oder Bearbeiter): Die Aufgabe wandert
+in den Raum, ist dir zugewiesen und alle Mitglieder sehen sie. Erinnerung, Wiederholung, Liste und der Link
+zur Mail entfallen dabei. Raum-Aufgaben werden nie mit CalDAV, Microsoft To Do oder Google Tasks
+abgeglichen; war die Aufgabe in einer verbundenen Liste, wird sie dort gelöscht. Raum-Aufgaben liegen nur
+im Raum (keine Kopie in deiner Aufgabenliste) und sind mit dem Raum in der Sicherung enthalten.
 
 ## 19 Räume
 
