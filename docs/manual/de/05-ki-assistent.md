@@ -55,9 +55,7 @@ Im Editor öffnet der Knopf **Assistent** diese Hilfen:
 - **Stichpunkte zu fertiger Mail** macht aus Notizen einen vollständigen Text.
 - **Umformulieren:** **Kürzer**, **Höflicher**, **Förmlicher**, **Lockerer**, **Rechtschreibung korrigieren**, **Auf Englisch** oder **Auf Deutsch**. Mit **Rückgängig** kommst du zum Original zurück.
 
-Vor dem Senden prüft der Assistent auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten. Du entscheidest, ob trotzdem gesendet wird.
-
-Unter **Schreibstil** legst du fest, wie der Assistent für dich schreibt: Tonfall, du oder Sie, Grußformel und eigene Hinweise.
+Unter **Schreibstil** legst du Tonfall, du oder Sie, Grußformel und eigene Hinweise fest. Mit **Stil pro Kontakt lernen** übernimmt der Assistent deine Anrede je Empfänger, verschlüsselt auf diesem Gerät. Vor dem Senden prüft er auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten; du entscheidest.
 
 ### Das Assistent-Fenster
 

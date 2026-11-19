@@ -55,9 +55,7 @@ In the editor, the **Assistant** button opens these helpers:
 - **Bullet points to email** turns notes into a complete text.
 - **Rewrite:** **Shorter**, **More polite**, **More formal**, **More casual**, **Fix spelling**, **In English** or **In German**. **Undo** takes you back to the original.
 
-Before sending, the assistant checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data. You decide whether to send anyway.
-
-Under **Writing style** you set how the assistant writes for you: tone, formal or informal address, sign-off and your own instructions.
+Under **Writing style** you set tone, formal or informal address, sign-off and your own instructions. With **Learn style per contact** the assistant adopts how you greet each recipient, encrypted on this device. Before sending, it checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data; you decide.
 
 ### The assistant window
 
