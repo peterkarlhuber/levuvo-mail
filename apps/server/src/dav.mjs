@@ -6,6 +6,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { DAVClient } from 'tsdav';
 import { expandObject } from './calendar-model.mjs';
 import { parseVCard } from './vcard.mjs';
+import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 const MAX_ACCOUNTS = 5;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -171,7 +172,8 @@ const xmlText = (xml, tag) => {
     : null;
 };
 
-export function createDavService({ store, fetchImpl = globalThis.fetch }) {
+export function createDavService({ store, fetchImpl: rawFetch = globalThis.fetch }) {
+  const fetchImpl = withTimeout(rawFetch, TIMEOUTS.dav);
   /** CalDAV calendar-query by UID (RFC 4791 §7.8.6). */
   async function uidQuery(account, calendarUrl, uid) {
     const body = `<?xml version="1.0" encoding="utf-8"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><d:getetag/><c:calendar-data/></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:prop-filter name="UID"><c:text-match collation="i;octet">${uid.replace(/[<>&"]/g, '')}</c:text-match></c:prop-filter></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;

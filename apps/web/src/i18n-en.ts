@@ -1833,6 +1833,8 @@ export const EN: Record<string, string> = {
   'Vollständiger Text': 'Full text',
   'Freigeben: {title}': 'Allow access: {title}',
   'Ablehnen: {title}': 'Decline: {title}',
+  'Die Planung konnte nicht aufgehoben werden. Die Nachricht wird weiterhin zum geplanten Zeitpunkt gesendet.':
+    'The schedule could not be removed. The message will still be sent at the scheduled time.',
   'Der Agent wurde entfernt oder hat diese Berechtigung nicht mehr.':
     'The agent was removed or no longer has this permission.'
 };

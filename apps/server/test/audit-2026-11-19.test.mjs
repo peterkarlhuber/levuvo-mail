@@ -339,3 +339,197 @@ test('AIS-LEV-009: open approvals of a removed agent cannot be approved any more
   assert.equal(approvals.list().length, 0);
   await assert.rejects(approvals.decide(item.id, true), /nicht gefunden|erledigt/);
 });
+
+// ------------------------------------------------------------------ block C: send later
+const { sendDue, RETRY_DELAY_MS } = await import('../src/scheduled.mjs');
+
+function scheduledClient(sources) {
+  const flags = new Map(Object.keys(sources).map(uid => [Number(uid), new Set(['\\Draft', '$LevuvoScheduled'])]));
+  return {
+    flags,
+    capabilities: new Set(['MOVE']),
+    list: async () => [
+      { path: 'INBOX', delimiter: '.', flags: new Set() },
+      { path: 'INBOX.Drafts', specialUse: '\\Drafts', flags: new Set() },
+      { path: 'INBOX.Trash', specialUse: '\\Trash', flags: new Set() }
+    ],
+    mailboxCreate: async path => ({ path, created: true }),
+    mailboxDelete: async path => ({ path }),
+    getMailboxLock: async () => ({ release() {} }),
+    search: async () => Object.keys(sources).map(Number),
+    async *fetch(uids, query) {
+      if (query.source) {
+        const uid = Number(uids);
+        yield { uid, flags: flags.get(uid), source: sources[uid] };
+        return;
+      }
+      for (const uid of Array.isArray(uids) ? uids : String(uids).split(',').map(Number))
+        yield {
+          uid,
+          envelope: { subject: `S${uid}`, to: [{ address: 'x@y.at' }] },
+          flags: flags.get(uid),
+          headers: Buffer.from(
+            sources[uid]
+              .toString()
+              .split('\r\n')
+              .find(l => l.startsWith('X-Levuvo'))
+          )
+        };
+    },
+    messageFlagsAdd: async (uid, f) => (f.forEach(x => flags.get(Number(uid)).add(x)), true),
+    messageFlagsRemove: async (uid, f) => (f.forEach(x => flags.get(Number(uid)).delete(x)), true),
+    messageMove: async () => true
+  };
+}
+const scheduledSource = (to = 'To: x@y.at\r\n') =>
+  Buffer.from(
+    `Date: Wed, 01 Jan 2020 08:00:00 +0000\r\nFrom: a@b.at\r\n${to}X-Levuvo-Send-At: 2026-11-19T09:59:00Z\r\nSubject: S\r\n\r\nHallo\r\n`
+  );
+
+test('CQ-LEV-007: a scheduled message goes out with the time of sending in its Date header', async () => {
+  const client = scheduledClient({ 5: scheduledSource() });
+  const submitted = [];
+  const now = Date.parse('2026-11-19T10:00:00Z');
+  await sendDue(client, { now, submit: async (_r, raw) => submitted.push(raw.toString()), saveSent: async () => {} });
+  assert.equal(submitted.length, 1);
+  const dates = submitted[0].match(/^Date: .*$/gim);
+  assert.deepEqual(dates, ['Date: Thu, 19 Nov 2026 10:00:00 +0000']);
+});
+
+test('REL-LEV-006 / CQ-LEV-009: failures before SMTP contact are retried, not left "unconfirmed"', async () => {
+  const client = scheduledClient({ 5: scheduledSource() });
+  const now = Date.parse('2026-11-19T10:00:00Z');
+  const token = Object.assign(new Error('token expired'), { beforeSmtp: true });
+  const result = await sendDue(client, {
+    now,
+    submit: async () => {
+      throw token;
+    },
+    saveSent: async () => {}
+  });
+  assert.deepEqual(result.results, [{ uid: 5, sent: false, retry: true }]);
+  assert.ok(!client.flags.get(5).has('$LevuvoSending'), 'claim released');
+  // REL-LEV-015: the next run follows the retry delay, not the 10-minute fallback.
+  assert.equal(result.next, new Date(now + RETRY_DELAY_MS).toISOString());
+
+  // A message without recipients (or unreadable) is "failed", never "unconfirmed".
+  const empty = scheduledClient({ 6: scheduledSource('') });
+  const out = await sendDue(empty, { now, submit: async () => assert.fail('must not send'), saveSent: async () => {} });
+  assert.deepEqual(out.results, [{ uid: 6, sent: false }]);
+  assert.ok(empty.flags.get(6).has('$LevuvoFailed'));
+  assert.ok(!empty.flags.get(6).has('$LevuvoSending'));
+});
+
+test(
+  'REL-LEV-003: a late exit of the old sidecar process does not cancel requests of the new one',
+  { timeout: 10_000 },
+  async () => {
+    const { spawn: nodeSpawn } = await import('node:child_process');
+    const { fileURLToPath } = await import('node:url');
+    const { createSidecar } = await import('../src/ai-sidecar.mjs');
+    const fake = fileURLToPath(new URL('./fixtures/fake-sidecar.mjs', import.meta.url));
+    let started = 0;
+    const spawn = (...args) => {
+      const proc = nodeSpawn(...args);
+      if (started++ === 0) {
+        // The first process's exit reaches the sidecar's own handler late (slow shutdown).
+        const on = proc.on.bind(proc);
+        let first = true;
+        proc.on = (event, fn) => {
+          if (event !== 'exit' || !first) return on(event, fn);
+          first = false;
+          return on(event, (...a) => setTimeout(() => fn(...a), 200));
+        };
+      }
+      return proc;
+    };
+    const sidecar = createSidecar({
+      spawn,
+      resolve: () => ({ command: process.execPath, args: [fake], cwd: process.cwd(), pythonPath: '' }),
+      timeoutMs: 3000
+    });
+    await sidecar.call('status');
+    await sidecar.stop();
+    const out = await sidecar.call('delay', { ms: 400 });
+    assert.equal(out.method, 'delay');
+    await sidecar.stop();
+  }
+);
+
+test('DB-LEV-004: a restore removes search index files and index key of accounts it does not have', async t => {
+  const { dropOrphanIndexes } = await import('../src/backup.mjs');
+  const { mkdirSync, writeFileSync, existsSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-audit-restore-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(join(dir, 'index'));
+  for (const f of ['gone.lvdb', 'gone.lvdb-wal', 'gone.lvx', 'kept.lvdb']) writeFileSync(join(dir, 'index', f), 'x');
+  const deleted = [];
+  const vault = { available: true, delete: (id, kind) => deleted.push(`${id}:${kind}`) };
+  await dropOrphanIndexes(dir, vault, [{ id: 'gone' }, { id: 'kept' }], [{ id: 'kept' }]);
+  assert.ok(!existsSync(join(dir, 'index', 'gone.lvdb')));
+  assert.ok(!existsSync(join(dir, 'index', 'gone.lvdb-wal')));
+  assert.ok(!existsSync(join(dir, 'index', 'gone.lvx')));
+  assert.ok(existsSync(join(dir, 'index', 'kept.lvdb')));
+  assert.deepEqual(deleted, ['gone:index-key']);
+});
+
+test('REL-LEV-008: pending space mails stay in the outbox while they are being sent', async t => {
+  const { openSpaceStore } = await import('../src/spaces/store.mjs');
+  const { createSpaceService } = await import('../src/spaces/service.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-audit-spaces-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const store = await openSpaceStore({ dir, vault: memoryVault() });
+  const seen = [];
+  let failNext = true;
+  const service = createSpaceService({
+    store,
+    transport: {
+      async send() {
+        // What another save would write right now: the item must still be there.
+        seen.push(store.all()[0].outbox.length);
+        if (failNext) {
+          failNext = false;
+          throw new Error('offline');
+        }
+      }
+    },
+    accounts: () => [{ id: 'acc', address: 'anna@example.org', name: 'Anna', addresses: ['anna@example.org'] }]
+  });
+  const space = await service.create({ name: 'Projekt', accountId: 'acc' });
+  await service.invite(space.id, { email: 'ben@example.org', role: 'editor' });
+  await service.flush();
+  assert.ok(seen.length >= 1 && seen.every(n => n >= 1), `outbox during sending: ${seen}`);
+  assert.equal(store.all()[0].outbox.length, 1, 'failed mail kept for a retry');
+  store.all()[0].outbox[0].nextAt = 0;
+  await service.flush();
+  assert.equal(store.all()[0].outbox.length, 0, 'sent mail leaves the outbox');
+});
+
+test('DB-LEV-008: follow-ups and screening lists are encrypted on disk and still part of a backup', async t => {
+  const { createSealedJsonFile } = await import('../src/sealed-json.mjs');
+  const { BACKUP_FILES, collectBackupContent } = await import('../src/backup.mjs');
+  const { readFileSync, writeFileSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-audit-sealed-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const keys = new Map();
+  const vault = {
+    available: true,
+    get: (i, k) => keys.get(`${i}:${k}`) || '',
+    set: (i, k, v) => keys.set(`${i}:${k}`, v),
+    delete: (i, k) => keys.delete(`${i}:${k}`)
+  };
+  assert.equal(BACKUP_FILES['followups.json'].encrypted, 'followups-key');
+  assert.equal(BACKUP_FILES['screening.json'].encrypted, 'screening-key');
+  // An older plain file is encrypted at the first start.
+  const filename = join(dir, 'followups.json');
+  writeFileSync(filename, JSON.stringify({ snoozed: [], followups: [{ subject: 'Angebot Müller' }] }));
+  const file = await createSealedJsonFile(
+    filename,
+    { snoozed: [], followups: [] },
+    { vault, keyName: 'followups-key' }
+  );
+  assert.equal(file.get().followups[0].subject, 'Angebot Müller');
+  assert.doesNotMatch(readFileSync(filename, 'utf8'), /Müller/);
+  const content = await collectBackupContent({ dir, vault });
+  assert.match(content.files['followups.json'], /Angebot Müller/);
+});

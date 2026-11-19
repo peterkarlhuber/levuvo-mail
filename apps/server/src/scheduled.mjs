@@ -31,6 +31,12 @@ export function validateSendAt(value, now = Date.now()) {
 }
 
 /** Removes Bcc and internal headers from a raw RFC 5322 message (folded lines included). */
+/** Puts a fresh Date header (RFC 5322) in front of the message. */
+export function withDate(raw, date) {
+  const text = Buffer.isBuffer(raw) ? raw.toString('binary') : String(raw);
+  return Buffer.from(`Date: ${date.toUTCString().replace('GMT', '+0000')}\r\n${text}`, 'binary');
+}
+
 export function stripHeaders(raw, names) {
   const text = Buffer.isBuffer(raw) ? raw.toString('binary') : String(raw);
   const split = text.search(/\r?\n\r?\n/);
@@ -205,9 +211,13 @@ export const RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const TAKEOVER_GRACE_MS = 2 * 60 * 1000;
 /** A claim without $LevuvoSending that stays this long belongs to a device that stopped. */
 export const CLAIM_LEASE_MS = 10 * 60 * 1000;
+/** A send that failed for a temporary reason is tried again after this long. */
+export const RETRY_DELAY_MS = 60 * 1000;
 // SMTP stages before the message content is transferred: a failure here means nothing was sent.
 const SAFE_STAGES = new Set(['CONN', 'EHLO', 'HELO', 'LHLO', 'STARTTLS', 'AUTH', 'MAIL FROM', 'RCPT TO']);
 const safeStage = err => {
+  // Errors before any SMTP contact (OAuth token, SMTP settings) are marked by the caller.
+  if (err?.beforeSmtp === true) return true;
   const stage = String(err?.command || '').toUpperCase();
   return SAFE_STAGES.has(stage) || stage.startsWith('AUTH');
 };
@@ -377,8 +387,21 @@ export async function sendDue(
 ) {
   const { folder, uidValidity = '', items } = await listScheduled(client, preferredDrafts);
   const results = [];
-  const nextAt = () =>
-    items.filter(i => i.state === 'scheduled' && Date.parse(i.sendAt) > now).map(i => i.sendAt)[0] || null;
+  // The next run: the next scheduled time, the end of another device's grace period, the end of
+  // a stale claim's lease, and soon again after a retry, so nothing waits for the 10-minute run.
+  const nextAt = () => {
+    const times = [];
+    for (const i of items) {
+      const at = Date.parse(i.sendAt);
+      if (!Number.isFinite(at)) continue;
+      const foreign = Boolean(i.owner) && i.owner !== instanceId;
+      if (i.state === 'scheduled') times.push(foreign ? at + TAKEOVER_GRACE_MS : at);
+      if (i.state === 'claimed') times.push(Math.max(at, now) + CLAIM_LEASE_MS);
+    }
+    if (results.some(r => r.retry)) times.push(now + RETRY_DELAY_MS);
+    const future = times.filter(ms => ms > now).sort((a, b) => a - b);
+    return future.length ? new Date(future[0]).toISOString() : null;
+  };
   const isDue = i => {
     if (!['scheduled', 'claimed'].includes(i.state)) return false;
     const at = Date.parse(i.sendAt);
@@ -432,12 +455,29 @@ export async function sendDue(
         .catch(() => {});
       return;
     }
-    const parsed = await PostalMime.parse(current.source);
-    const recipients = [...(parsed.to || []), ...(parsed.cc || []), ...(parsed.bcc || [])]
-      .flatMap(a => (a.group ? a.group : [a]))
-      .map(a => a.address)
-      .filter(Boolean);
-    const raw = stripHeaders(current.source, ['bcc', 'x-levuvo-*']);
+    let recipients;
+    let raw;
+    try {
+      const parsed = await PostalMime.parse(current.source);
+      recipients = [...(parsed.to || []), ...(parsed.cc || []), ...(parsed.bcc || [])]
+        .flatMap(a => (a.group ? a.group : [a]))
+        .map(a => a.address)
+        .filter(Boolean);
+      // The Date header is the moment of sending, not the moment the message was scheduled.
+      raw = withDate(stripHeaders(current.source, ['bcc', 'x-levuvo-*', 'date']), new Date(now));
+    } catch {
+      // Unreadable message: nothing was sent. Shown as failed instead of "unconfirmed".
+      await client.messageFlagsAdd(String(item.uid), [FAILED_FLAG], { uid: true }).catch(() => {});
+      await client.messageFlagsRemove(String(item.uid), [SENDING_FLAG], { uid: true }).catch(() => {});
+      results.push({ uid: item.uid, sent: false });
+      return;
+    }
+    if (!recipients.length) {
+      await client.messageFlagsAdd(String(item.uid), [FAILED_FLAG], { uid: true }).catch(() => {});
+      await client.messageFlagsRemove(String(item.uid), [SENDING_FLAG], { uid: true }).catch(() => {});
+      results.push({ uid: item.uid, sent: false });
+      return;
+    }
     try {
       await submit(recipients, raw);
     } catch (err) {

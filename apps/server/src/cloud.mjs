@@ -5,6 +5,7 @@
 
 import { stripTags } from './html-mail.mjs';
 import { base64Size, checkAttachmentTotal, safeFilename, safeMimeType, withoutId } from './calendar-model.mjs';
+import { TIMEOUTS, withTimeout } from './http-timeout.mjs';
 
 /** Microsoft Graph takes files up to 3 MB in one request (larger ones need an upload session). */
 const GRAPH_ATTACH_MAX = 3 * 1024 * 1024;
@@ -621,10 +622,11 @@ export function createCloudService({
   accounts,
   token,
   prefs,
-  fetchImpl = globalThis.fetch,
+  fetchImpl: rawFetch = globalThis.fetch,
   endpoints = DEFAULT_ENDPOINTS,
   logger = () => {}
 }) {
+  const fetchImpl = withTimeout(rawFetch, TIMEOUTS.api);
   const calendarCache = new Map(); // accountId → { at, list }
   const cloudAccounts = () =>
     accounts()

@@ -289,10 +289,10 @@ export default function Composer({
   );
 
   const saveDraft = useCallback(
-    async (sig: string) => {
+    async (sig: string): Promise<boolean> => {
       if (!draftsEnabled || saving.current || uncertain.current) {
         if (saving.current) pending.current = true;
-        return;
+        return false;
       }
       saving.current = true;
       setSaveStatus('saving');
@@ -317,12 +317,16 @@ export default function Composer({
           'draft-v1',
           accountId
         );
+        const hadPrevious = draftMeta.current.uid != null;
         draftMeta.current = { uid: saved.uid, uidValidity: saved.uidValidity };
         savedSignature.current = sig;
         setSaveStatus('saved');
+        // True only when the earlier version (e.g. the scheduled one) is gone as well.
+        return !hadPrevious || saved.previousRemoved !== false;
       } catch (err) {
         if (err instanceof ApiError && err.code === 'draft_save_uncertain') uncertain.current = true;
         setSaveStatus(uncertain.current ? 'uncertain' : 'error');
+        return false;
       } finally {
         saving.current = false;
         if (pending.current) {
@@ -346,8 +350,18 @@ export default function Composer({
   useEffect(() => {
     if (!initial.scheduledFor || unscheduled.current || !draftsEnabled) return;
     unscheduled.current = true;
-    void saveDraft(signature).then(() =>
-      toast({ text: t('Planung aufgehoben – die Nachricht ist wieder ein Entwurf.'), kind: 'info' })
+    // Only a confirmed save removes the schedule; otherwise the message would still go out.
+    void saveDraft(signature).then(ok =>
+      toast(
+        ok
+          ? { text: t('Planung aufgehoben – die Nachricht ist wieder ein Entwurf.'), kind: 'info' }
+          : {
+              text: t(
+                'Die Planung konnte nicht aufgehoben werden. Die Nachricht wird weiterhin zum geplanten Zeitpunkt gesendet.'
+              ),
+              kind: 'error'
+            }
+      )
     );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
