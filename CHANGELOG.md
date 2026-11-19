@@ -6,6 +6,11 @@
 
 ### Release and supply chain
 - **Electron fuses:** installers switch off running Levuvo Mail as a plain Node runtime (ELECTRON_RUN_AS_NODE), NODE_OPTIONS and the --inspect debugger, load the app only from its archive and check the archive's integrity. Another program on the computer can no longer start the Levuvo binary with its own code and so read Levuvo's keychain entries. Every desktop build checks the fuses of the packaged binary.
+- **Python runtime under watch:** Dependabot now also covers the hashed Python locks of the bundled AI runtime, every CI run scans them with pip-audit, and a weekly supply-chain run also checks the Electron support window and whether a newer CPython patch release exists. The first scan found a TLS root issue in the build tool uv (PYSEC-2026-4321): uv is now 0.13.7, and the bundled CPython moves from 3.13.14 to 3.13.18.
+- **Reproducible AI runtime:** Tabrion, Orkexa and the sidecar are built against hash-locked build backends instead of whatever PyPI serves at build time; the backends are removed from the runtime afterwards.
+- **Signed builds (prepared, no certificates yet):** macOS and Windows each receive only their own certificate (`CSC_LINK` / `WIN_CSC_LINK`); the Windows publisher name keeps its spaces (no shell), and the build stops if `app-update.yml` would carry another name, which would make installed apps reject every update. The local signed path refuses to build without the AI runtime for the target and checks architectures and fuses.
+- **Tests in the real runtime:** CI also runs all tests in the Node of Electron (24.x), in which the server actually runs.
+- **Release gate:** `release:check` fails when CHANGELOG entries are still under "Unreleased" or the version has no CHANGELOG section of its own.
 
 ### Security and reliability (external audits of 2.3.0)
 - **Cloud AI block holds for questions across all accounts:** accounts marked "No cloud AI" are left out of the search before a cloud model answers, and every account whose text is in the model input is checked again right before the call.

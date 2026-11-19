@@ -40,8 +40,8 @@ LEVUVO_UPDATE_URL=https://…/mail/
 # macOS
 CSC_LINK=/path/developer-id.p12   CSC_KEY_PASSWORD=…
 APPLE_ID=…   APPLE_APP_SPECIFIC_PASSWORD=…   APPLE_TEAM_ID=…
-# Windows
-CSC_LINK=C:\path\codesign.pfx   CSC_KEY_PASSWORD=…
+# Windows (own certificate; CSC_LINK on Windows also works locally)
+WIN_CSC_LINK=C:\path\codesign.pfx   WIN_CSC_KEY_PASSWORD=…
 LEVUVO_WIN_PUBLISHER="Exact name from the certificate (CN)"
 ```
 
@@ -50,14 +50,18 @@ LEVUVO_WIN_PUBLISHER="Exact name from the certificate (CN)"
 ```bash
 npm ci
 npm run release:check
+# Bundled AI runtime for the machine's architecture (needs Python 3.13 for uv):
+python -m pip install --require-hashes -r apps/ai/requirements-build.txt
+npm run ai:runtime -- --arch arm64  # or x64; the signed build refuses to run without it
 npm run release:signed:mac          # on the Mac
 npm run release:signed:win:x64      # on Windows x64
 npm run release:signed:win:arm64    # on Windows ARM64
 npm run release:manifest -- --signed
 ```
 
-Then upload **all** files from `release/` (installers, `.zip`, `.blockmap`, `latest.yml`, `latest-mac.yml`)
-to the `LEVUVO_UPDATE_URL` folder. Installed signed versions find the update within six hours
+Then upload **all** files from `release/` (installers, `.zip`, `.blockmap`, `latest-mac.yml`, `latest-x64.yml`, `latest-arm64.yml`)
+to the `LEVUVO_UPDATE_URL` folder. `release:signed:*` already checked architectures, Electron fuses and the
+Windows publisher name of the update feed. Installed signed versions find the update within six hours
 (or immediately via “Check for updates …”) and install it on restart after asking.
 
 Signed macOS builds use `build/entitlements.mac.release.plist` (library validation active),
@@ -65,10 +69,12 @@ test builds use `build/entitlements.mac.plist`.
 
 ## C) Via GitHub Actions
 
-- `ci.yml` runs on every push: `npm ci` + `npm run release:check`.
+- `ci.yml` runs on every push and pull request (quality, security, AI runtime with pip-audit, tests in the Node of
+  Electron, unsigned desktop builds); `release.yml` creates drafts; `supply-chain.yml` scans weekly.
 - `build-desktop.yml` is started manually. Without the “signed” checkbox it produces test installers; with it,
   signed releases. For that, create the values from section B as **repository secrets**
-  (`CSC_LINK` as Base64 of the certificate). All actions are pinned to fixed commits.
+  in the environment `release-signing` (`CSC_LINK` = Base64 of the macOS .p12, `WIN_CSC_LINK` = Base64 of the
+  Windows .pfx; each job receives only its own certificate). All actions are pinned to fixed commits.
 - Artifacts remain private Actions artifacts (14 days).
 
 ## D) Fill in before the first public release

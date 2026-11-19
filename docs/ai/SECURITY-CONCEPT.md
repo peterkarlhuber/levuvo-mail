@@ -42,7 +42,10 @@ Untrusted inputs: every email, calendar entry and contact from third parties, an
 - Line limit 16 MiB, timeouts, idle stop after 15 minutes, crash back-off.
 - Supply chain: Python from python-build-standalone via uv (SHA-256 verified), third-party wheels only from
   a hash-locked file (`apps/ai/requirements-lock.txt`, `--require-hashes --only-binary`), Tabrion and Orkexa
-  from exact commits, the build tool uv itself hash-locked (`requirements-build.txt`). The runtime is
+  from exact commits, built (with levuvo-ai) without build isolation against hash-locked build backends
+  (`requirements-backends.txt`, removed from the runtime afterwards), the build tool uv itself hash-locked
+  (`requirements-build.txt`). Dependabot watches the locks; `pip-audit` scans them in every CI run and weekly,
+  and `check-python-runtime.mjs` reports a newer CPython patch release. The runtime is
   smoke-tested and its CPU architecture verified in CI (`scripts/build-ai-runtime.mjs`,
   `scripts/verify-app-arch.mjs`). On macOS it is signed and notarized with the app (hardened runtime,
   library validation on in release builds).

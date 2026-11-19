@@ -16,7 +16,10 @@ import { messageForAi, securityDetails, securityFacts } from '../src/routes-ai.m
 import { createJsonFile } from '../src/app.mjs';
 
 const FAKE = fileURLToPath(new URL('./fixtures/fake-sidecar.mjs', import.meta.url));
-const fakeResolve = () => ({ command: process.execPath, args: [FAKE], cwd: process.cwd(), pythonPath: '' });
+// Under Electron's Node (CI job "tests in the Node of Electron") process.execPath is the Electron binary,
+// which only acts as Node with ELECTRON_RUN_AS_NODE – and the sidecar environment drops that on purpose.
+const NODE = process.versions.electron ? process.env.LEVUVO_TEST_NODE || 'node' : process.execPath;
+const fakeResolve = () => ({ command: NODE, args: [FAKE], cwd: process.cwd(), pythonPath: '' });
 
 function vault() {
   const m = new Map();
