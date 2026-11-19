@@ -22,6 +22,7 @@ import { Row, Section, Segmented, Toggle } from './Settings';
 import { McpSettings } from './SettingsMcp';
 import { LocalModelSettings } from './SettingsLocalModels';
 import { StyleProfileSettings } from './SettingsStyle';
+import { SpeechSettings } from './SettingsSpeech';
 import type { AccountItem } from './types';
 
 type LogEntry = {
@@ -58,7 +59,8 @@ const FEATURES: { id: AiFeature; label: string; hint: string }[] = [
   },
   { id: 'assess', label: 'Phishing- & Betrugseinschätzung', hint: 'Begründung zusätzlich zu den festen Prüfregeln' },
   { id: 'search', label: 'Semantische Suche & Fragen', hint: 'Suche nach Bedeutung, Antworten mit Quellnachricht' },
-  { id: 'agents', label: 'Agenten & Routinen', hint: 'Bereitet Entwürfe vor, die du freigibst' }
+  { id: 'agents', label: 'Agenten & Routinen', hint: 'Bereitet Entwürfe vor, die du freigibst' },
+  { id: 'dictation', label: 'Diktieren', hint: 'Sprache wird auf diesem Gerät zu Text, mit Whisper' }
 ];
 
 const PROVIDER_NAMES: Record<AiProvider, string> = { ollama: 'Ollama', anthropic: 'Anthropic', openai: 'OpenAI' };
@@ -390,6 +392,15 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
           />
         </Row>
         <StyleProfileSettings onToggle={on => save({ profile: { learnStyle: on } })} />
+      </Section>
+
+      <Section
+        title={t('Diktieren')}
+        description={t(
+          'Im Editor auf „Diktieren“ klicken, sprechen, „Fertig“: der Text erscheint an der Schreibmarke.'
+        )}
+      >
+        <SpeechSettings />
       </Section>
 
       <Section

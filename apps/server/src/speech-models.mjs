@@ -127,11 +127,13 @@ export function createSpeechModels({
       job.state = cancelled ? 'cancelled' : 'error';
       job.error = cancelled ? null : err.kind || 'download_failed';
       if (err.kind === 'checksum_mismatch') await rm(path.join(dir, entry.id), { recursive: true, force: true });
-      if (!cancelled) void log?.add({ type: 'download', kind: 'speech-model', model: entry.id, ok: false, error: job.error });
+      if (!cancelled)
+        void log?.add({ type: 'download', kind: 'speech-model', model: entry.id, ok: false, error: job.error });
     }
   }
 
-  const publicJob = j => (j ? { state: j.state, completed: j.completed, total: j.total, error: j.error || null } : null);
+  const publicJob = j =>
+    j ? { state: j.state, completed: j.completed, total: j.total, error: j.error || null } : null;
 
   return {
     async list() {
@@ -148,7 +150,9 @@ export function createSpeechModels({
           device: m.device,
           dtype: m.dtype,
           installed: await installed(m),
-          job: publicJob(jobs.get(m.id)?.state === 'running' || jobs.get(m.id)?.state === 'error' ? jobs.get(m.id) : null)
+          job: publicJob(
+            jobs.get(m.id)?.state === 'running' || jobs.get(m.id)?.state === 'error' ? jobs.get(m.id) : null
+          )
         });
       return { models };
     },
@@ -156,7 +160,13 @@ export function createSpeechModels({
       const entry = entryOf(id);
       const running = jobs.get(id);
       if (running?.state === 'running') return publicJob(running);
-      const job = { state: 'running', completed: 0, total: totalSize(entry), error: null, abort: new AbortController() };
+      const job = {
+        state: 'running',
+        completed: 0,
+        total: totalSize(entry),
+        error: null,
+        abort: new AbortController()
+      };
       jobs.set(id, job);
       job.done = run(entry, job);
       return publicJob(job);

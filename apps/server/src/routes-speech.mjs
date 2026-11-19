@@ -65,7 +65,14 @@ export function registerSpeechRoutes(ctx) {
     if (!requireAction(request, reply, ACTION)) return;
     const seconds = Math.max(0, Math.min(3600, Math.round(Number(request.body?.seconds) || 0)));
     const model = String(ai.get().speechModel || '').slice(0, 80);
-    void ai.log?.add({ type: 'task', kind: 'dictate', provider: 'local', model, seconds, ok: request.body?.ok !== false });
+    void ai.log?.add({
+      type: 'task',
+      kind: 'dictate',
+      provider: 'local',
+      model,
+      seconds,
+      ok: request.body?.ok !== false
+    });
     return { logged: true };
   });
 }

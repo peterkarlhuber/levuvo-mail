@@ -122,7 +122,8 @@ export function validateAiSettings(input, current, { managed = false } = {}) {
   }
   if (input.speechModel !== undefined) {
     const id = String(input.speechModel || '');
-    if (id && !SPEECH_CATALOG.some(m => m.id === id)) throw invalid('Dieses Modell steht nicht in der Liste.', 'ai_not_in_catalog');
+    if (id && !SPEECH_CATALOG.some(m => m.id === id))
+      throw invalid('Dieses Modell steht nicht in der Liste.', 'ai_not_in_catalog');
     next.speechModel = id;
   }
   if (input.features && typeof input.features === 'object') {

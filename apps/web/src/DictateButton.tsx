@@ -70,7 +70,10 @@ export function DictateButton({ onText }: { onText: (text: string) => void }) {
       const text = await transcribe(audio, lang === 'en' ? 'english' : 'german');
       if (text) {
         onText(text);
-        toast({ text: t('Diktiert mit {model}, auf diesem Gerät. Bitte vor dem Senden prüfen.', { model: model.name }), kind: 'info' });
+        toast({
+          text: t('Diktiert mit {model}, auf diesem Gerät. Bitte vor dem Senden prüfen.', { model: model.name }),
+          kind: 'info'
+        });
       } else toast({ text: t('Es wurde keine Sprache erkannt.'), kind: 'info' });
       void logDictation(length, true);
     } catch {
