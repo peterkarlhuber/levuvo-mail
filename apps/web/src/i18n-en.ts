@@ -1614,6 +1614,22 @@ export const EN: Record<string, string> = {
   'Die Datei ist beschädigt.': 'The file is damaged.',
   'Ein Mitglied nutzt eine neuere Levuvo-Version. Einige Abgleich-Mails werden erst nach einem Update gelesen; sie bleiben bis dahin aufbewahrt.':
     'A member uses a newer version of Levuvo. Some sync mails can only be read after an update; they are kept until then.',
+  'hat Cloud-KI und externe Agenten für den Raum erlaubt': 'allowed cloud AI and external agents for the space',
+  'hat Cloud-KI und externe Agenten für den Raum wieder ausgeschlossen':
+    'excluded cloud AI and external agents from the space again',
+  'Cloud-KI erlaubt': 'Cloud AI allowed',
+  'Kommentar löschen?': 'Delete comment?',
+  'Der Kommentar wird für alle Mitglieder gelöscht.': 'The comment will be deleted for all members.',
+  'Mail aus dem Raum entfernen?': 'Remove mail from the space?',
+  'Die Mail und ihre Kommentare werden für alle Mitglieder aus dem Raum entfernt. In deinem Postfach bleibt sie.':
+    'The mail and its comments will be removed from the space for all members. It stays in your mailbox.',
+  'Die Aufgabe wird für alle Mitglieder gelöscht.': 'The task will be deleted for all members.',
+  'Der Termin wird für alle Mitglieder gelöscht.': 'The event will be deleted for all members.',
+  'Cloud-KI für diesen Raum erlauben?': 'Allow cloud AI for this space?',
+  'Dann dürfen alle Inhalte dieses Raums, auch die der anderen Mitglieder, an das Cloud-Modell gehen, das in den KI-Einstellungen gewählt ist (Anthropic oder OpenAI), und an verbundene externe Agenten. Das gilt für alle Mitglieder, und alle sehen die Änderung in der Aktivität.':
+    'All content of this space, including that of the other members, may then go to the cloud model chosen in the AI settings (Anthropic or OpenAI) and to connected external agents. This applies to all members, and everyone sees the change in the activity.',
+  'Cloud-KI für den Raum erlaubt.': 'Cloud AI allowed for the space.',
+  'Cloud-KI für den Raum ausgeschlossen.': 'Cloud AI excluded from the space.',
   'Räume brauchen den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':
     'Spaces need the system keychain. It is not available right now.',
   'Die Räume lassen sich mit dem Schlüssel aus dem Schlüsselbund nicht öffnen.':

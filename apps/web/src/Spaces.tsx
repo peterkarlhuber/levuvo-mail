@@ -52,7 +52,12 @@ function useActivityText() {
       'space.update': t('hat den Raum umbenannt oder beschrieben'),
       'space.transfer': t('hat den Raum übergeben'),
       'space.dissolve': t('hat den Raum aufgelöst'),
-      'ai.settings': t('hat die Assistent-Einstellungen geändert'),
+      'ai.settings':
+        a.detail === 'cloud_on'
+          ? t('hat Cloud-KI und externe Agenten für den Raum erlaubt')
+          : a.detail === 'cloud_off'
+            ? t('hat Cloud-KI und externe Agenten für den Raum wieder ausgeschlossen')
+            : t('hat die Assistent-Einstellungen geändert'),
       'member.add': t('hat {name} aufgenommen', { name: a.label }),
       'member.role': t('hat die Rolle von {name} geändert', { name: a.label }),
       'member.remove': t('hat {name} entfernt', { name: a.label }),
@@ -461,6 +466,7 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
                 ? t('Leser')
                 : ''}
           {detail.pendingMails > 0 && ` · ${t('{n} Abgleich-Mails warten', { n: detail.pendingMails })}`}
+          {detail.ai.enabled && detail.ai.cloudAllowed && ` · ${t('Cloud-KI erlaubt')}`}
         </span>
       </header>
       {detail.status === 'joining' && (
@@ -675,6 +681,7 @@ function CommentThread({
   op: Op;
 }) {
   const { t } = useT();
+  const ui = useUi();
   const [text, setText] = useState('');
   const comments = detail.comments.filter(c => c.target.kind === target.kind && c.target.id === target.id);
   const names = Object.fromEntries(detail.members.map(m => [m.id, m.me ? t('Du') : m.name || m.email]));
@@ -692,7 +699,20 @@ function CommentThread({
           </span>
           <p>{c.text}</p>
           {(isMine(c) || detail.owner) && canEdit && (
-            <button className="link-button small" onClick={() => void op('comment.delete', { id: c.id })}>
+            <button
+              className="link-button small"
+              onClick={async () => {
+                if (
+                  await ui.confirm({
+                    title: t('Kommentar löschen?'),
+                    message: t('Der Kommentar wird für alle Mitglieder gelöscht.'),
+                    confirmLabel: t('Löschen'),
+                    danger: true
+                  })
+                )
+                  void op('comment.delete', { id: c.id });
+              }}
+            >
               {t('Löschen')}
             </button>
           )}
@@ -735,6 +755,7 @@ function Mails({
   op: Op;
 }) {
   const { t } = useT();
+  const ui = useUi();
   const [open, setOpen] = useState<string | null>(null);
   if (!detail.mails.length)
     return <p className="muted">{t('Noch keine Mails. Öffne eine Mail und wähle im Menü „In Raum legen“.')}</p>;
@@ -772,7 +793,23 @@ function Mails({
                 </ul>
               )}
               {canEdit && (
-                <Button variant="ghost" size="sm" onClick={() => void op('mail.remove', { id: m.id })}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    if (
+                      await ui.confirm({
+                        title: t('Mail aus dem Raum entfernen?'),
+                        message: t(
+                          'Die Mail und ihre Kommentare werden für alle Mitglieder aus dem Raum entfernt. In deinem Postfach bleibt sie.'
+                        ),
+                        confirmLabel: t('Entfernen'),
+                        danger: true
+                      })
+                    )
+                      void op('mail.remove', { id: m.id });
+                  }}
+                >
                   <X size={13} /> {t('Aus dem Raum entfernen')}
                 </Button>
               )}
@@ -823,6 +860,7 @@ function Tasks({
   op: Op;
 }) {
   const { t } = useT();
+  const ui = useUi();
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
   const [assignee, setAssignee] = useState<string | null>(null);
@@ -929,7 +967,17 @@ function Tasks({
                     </select>
                     <IconButton
                       label={t('Aufgabe löschen')}
-                      onClick={() => void op('task.delete', { id: x.id })}
+                      onClick={async () => {
+                        if (
+                          await ui.confirm({
+                            title: t('Aufgabe löschen?'),
+                            message: t('Die Aufgabe wird für alle Mitglieder gelöscht.'),
+                            confirmLabel: t('Löschen'),
+                            danger: true
+                          })
+                        )
+                          void op('task.delete', { id: x.id });
+                      }}
                       icon={<Trash2 size={14} />}
                     />
                   </div>
@@ -957,6 +1005,7 @@ function Events({
   op: Op;
 }) {
   const { t } = useT();
+  const ui = useUi();
   const [title, setTitle] = useState('');
   const [day, setDay] = useState('');
   const [from, setFrom] = useState('');
@@ -1035,7 +1084,17 @@ function Events({
             {canEdit && (
               <IconButton
                 label={t('Termin löschen')}
-                onClick={() => void op('event.delete', { id: ev.id })}
+                onClick={async () => {
+                  if (
+                    await ui.confirm({
+                      title: t('Termin löschen?'),
+                      message: t('Der Termin wird für alle Mitglieder gelöscht.'),
+                      confirmLabel: t('Löschen'),
+                      danger: true
+                    })
+                  )
+                    void op('event.delete', { id: ev.id });
+                }}
                 icon={<Trash2 size={14} />}
               />
             )}
@@ -1092,18 +1151,19 @@ function Files({
   };
   const fetchFile = (fileId: string, v?: number) => {
     // The server answers 409 while parts are still on their way from another member.
-    void fetch(`/api/spaces/${detail.id}/files/${fileId}${v ? `?v=${v}` : ''}`, {
+    void fetch(`/api/spaces/${detail.id}/files/${fileId}?check=1${v ? `&v=${v}` : ''}`, {
       method: 'GET',
       cache: 'no-store'
     }).then(async res => {
-      if (res.ok) download(`/api/spaces/${detail.id}/files/${fileId}${v ? `?v=${v}` : ''}`);
-      else
+      if (res.ok) return download(`/api/spaces/${detail.id}/files/${fileId}${v ? `?v=${v}` : ''}`);
+      const body = (await res.json().catch(() => null)) as { code?: string; error?: string } | null;
+      // Only "parts are on their way" is temporary; anything else (damaged, gone, locked) is said as it is.
+      if (body?.code === 'spaces_file_pending')
         ui.toast({
           kind: 'info',
-          text: (await res.json().catch(() => null))?.error
-            ? t('Die Datei wird gerade von einem anderen Mitglied geholt. Bitte gleich noch einmal versuchen.')
-            : t('Aktion fehlgeschlagen.')
+          text: t('Die Datei wird gerade von einem anderen Mitglied geholt. Bitte gleich noch einmal versuchen.')
         });
+      else ui.toast({ kind: 'error', text: body?.error ? t(body.error) : t('Aktion fehlgeschlagen.') });
     });
   };
   return (
@@ -1414,7 +1474,26 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
             <input
               type="checkbox"
               checked={detail.ai.cloudAllowed}
-              onChange={e => void op('ai.settings', { cloudAllowed: e.target.checked })}
+              onChange={async e => {
+                const on = e.target.checked;
+                // Sharing content with cloud models is a decision for everyone in the space: ask first.
+                if (
+                  on &&
+                  !(await ui.confirm({
+                    title: t('Cloud-KI für diesen Raum erlauben?'),
+                    message: t(
+                      'Dann dürfen alle Inhalte dieses Raums, auch die der anderen Mitglieder, an das Cloud-Modell gehen, das in den KI-Einstellungen gewählt ist (Anthropic oder OpenAI), und an verbundene externe Agenten. Das gilt für alle Mitglieder, und alle sehen die Änderung in der Aktivität.'
+                    ),
+                    confirmLabel: t('Erlauben')
+                  }))
+                )
+                  return;
+                void op(
+                  'ai.settings',
+                  { cloudAllowed: on },
+                  on ? t('Cloud-KI für den Raum erlaubt.') : t('Cloud-KI für den Raum ausgeschlossen.')
+                );
+              }}
             />{' '}
             {t('Inhalte dürfen auch an Cloud-Modelle und externe Agenten gehen (sonst nur lokales Modell)')}
           </label>

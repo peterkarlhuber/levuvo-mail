@@ -408,6 +408,13 @@ const summarize = (state, op) => {
     case 'folder.create':
     case 'folder.delete':
       return { target: { kind: 'space', id: '' }, label: d.path };
+    case 'ai.settings':
+      // Shown as "allowed cloud AI" / "excluded cloud AI" so every member notices the change.
+      return {
+        target: { kind: 'space', id: '' },
+        label: '',
+        detail: d.cloudAllowed === true ? 'cloud_on' : d.cloudAllowed === false ? 'cloud_off' : ''
+      };
     default:
       return { target: { kind: 'space', id: '' }, label: d.name || '' };
   }
