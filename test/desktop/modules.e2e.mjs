@@ -53,8 +53,11 @@ test(
       cwd: root,
       env: {
         ...process.env,
-        // Own profile: never the developer's or runner's real Levuvo data.
-        HOME: home,
+        // Own profile: never the developer's or runner's real Levuvo data. On macOS the app data
+        // folder is under HOME, but so is the login keychain (a new HOME locks the task store),
+        // so the profile is moved only where the keychain stays reachable; on macOS the test
+        // runs on a fresh CI runner or needs LEVUVO_DESKTOP_TEST_HOME=1 to isolate.
+        ...(process.platform === 'linux' || process.env.LEVUVO_DESKTOP_TEST_HOME === '1' ? { HOME: home } : {}),
         ...(process.platform === 'win32' ? { APPDATA: home } : {})
       },
       timeout: 60_000
@@ -75,7 +78,7 @@ test(
     let tasksOverride = null;
     let staleTasksChunk = false;
     const context = app.context();
-    await context.route(/\/assets\/Tasks-[\w-]+\.js$/, route =>
+    await context.route(/\/assets\/TasksModule-[\w-]+\.js$/, route =>
       staleTasksChunk
         ? route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"Datei nicht gefunden."}' })
         : route.continue()

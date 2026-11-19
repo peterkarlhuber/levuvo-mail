@@ -1034,3 +1034,20 @@ test('Tasks: an unreadable due or reminder value is shown as text instead of cra
   assert.match(formatTaskDate('de-AT', '2026-11-19T15:30:00.000Z'), /\d{2}:\d{2}/);
   assert.equal(reminderChoice('garbage', '2026-11-19'), 'custom');
 });
+
+test('No two source files differ only in case (macOS and Windows build on case-insensitive disks)', async () => {
+  // "./Tasks" once resolved to tasks.ts instead of Tasks.tsx on macOS/Windows builds: the lazy
+  // Tasks module had no default export and the whole window went black.
+  const { readdirSync } = await import('node:fs');
+  for (const dir of ['apps/web/src', 'apps/server/src', 'apps/desktop']) {
+    const seen = new Map();
+    for (const f of readdirSync(join(root, dir), { recursive: true })) {
+      if (!/\.(m?[jt]sx?)$/.test(String(f))) continue;
+      const key = String(f)
+        .replace(/\.[^./\\]+$/, '')
+        .toLowerCase();
+      assert.ok(!seen.has(key) || seen.get(key) === String(f), `${dir}: ${seen.get(key)} and ${f} collide`);
+      seen.set(key, String(f));
+    }
+  }
+});

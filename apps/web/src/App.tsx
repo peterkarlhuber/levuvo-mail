@@ -31,7 +31,7 @@ import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './
 // Lazy modules reload the page once when their chunk is gone (app updated while it ran).
 const CalendarModule = lazyModule(() => import('./Calendar'));
 const ContactsModule = lazyModule(() => import('./Contacts'));
-const TasksModule = lazyModule(() => import('./Tasks'));
+const TasksModule = lazyModule(() => import('./TasksModule'));
 const SettingsModule = lazyModule(() => import('./Settings'));
 const RestoreOnWelcome = lazyModule(() =>
   import('./SettingsBackup').then(m => ({ default: () => <m.BackupSettings restoreOnly /> }))
