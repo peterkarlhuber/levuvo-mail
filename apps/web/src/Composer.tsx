@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { weakPassword } from './password-rules';
 import { EXTENSIONS, htmlToPlain, normalize, plainToHtml, SIGNATURE_SEPARATOR, Toolbar } from './editor';
 import {
   BellRing,
@@ -23,6 +24,7 @@ import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api'
 import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
 import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
+import { complianceIssues } from './compliance-checks';
 import { useUi } from './ConfirmDialog';
 import RecipientInput from './RecipientInput';
 import { useT } from './i18n';
@@ -86,7 +88,13 @@ export type OutgoingPayload = {
   security: Security;
   replaceDraft?: { uid: number; uidValidity: string; draftId: string };
   followUp?: string;
+  /** Text written by the assistant or an agent: becomes the header X-Levuvo-AI-Assisted (AI Act Art. 50(2)). */
+  aiAssisted?: string;
 };
+
+/** Header value (printable ASCII) naming who wrote the text. */
+export const aiAssistedLabel = (who: string, model = '') =>
+  `${who}${model ? `; model=${model}` : ''}`.replace(/[^\x20-\x7e]/g, '').slice(0, 150);
 
 type Props = {
   accountId: string;
@@ -134,6 +142,10 @@ export default function Composer({
   const imageInput = useRef<HTMLInputElement>(null);
   const textArea = useRef<HTMLTextAreaElement>(null);
   const [security, setSecurity] = useState<Security>(initial.security || { method: null, sign: false, encrypt: false });
+  // Who wrote (part of) the text: the assistant (model) or an agent; cleared by the assistant's undo.
+  const [aiAssisted, setAiAssisted] = useState(
+    initial.aiGenerated ? aiAssistedLabel('agent', initial.aiGenerated) : ''
+  );
   const [missing, setMissing] = useState<{ recipients: string[]; own: boolean } | null>(null);
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
@@ -277,6 +289,7 @@ export default function Composer({
       references: initial.references,
       attachments: await Promise.all(files.map(fileToBase64)),
       security,
+      ...(aiAssisted ? { aiAssisted } : {}),
       ...(draftMeta.current.uid && draftMeta.current.uidValidity
         ? {
             replaceDraft: {
@@ -287,7 +300,21 @@ export default function Composer({
           }
         : {})
     }),
-    [toList, ccList, bccList, subject, from, format, html, text, initial.inReplyTo, initial.references, files, security]
+    [
+      toList,
+      ccList,
+      bccList,
+      subject,
+      from,
+      format,
+      html,
+      text,
+      initial.inReplyTo,
+      initial.references,
+      files,
+      security,
+      aiAssisted
+    ]
   );
 
   const saveDraft = useCallback(
@@ -425,6 +452,10 @@ export default function Composer({
       return t('Für die Verschlüsselung fehlen Schlüssel – Details oben.');
     if (security.method === 'password') {
       if ((security.password || '').length < 10) return t('Das Passwort muss mindestens 10 Zeichen lang sein.');
+      if (weakPassword(security.password || ''))
+        return t(
+          'Dieses Passwort ist zu leicht zu erraten. Bitte das vorgeschlagene Passwort verwenden oder ein anderes wählen.'
+        );
       if (totalBytes > 5 * 1024 * 1024) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.');
     }
     return '';
@@ -449,11 +480,27 @@ export default function Composer({
       },
       lang
     ).finally(() => setChecking(false));
+    // Local rules (no AI, nothing logged) come first; the AI notes follow and are marked as AI.
+    const local = complianceIssues({
+      from,
+      to: toList,
+      cc: ccList,
+      bcc: bccList,
+      subject,
+      text: getDraft(),
+      encrypted: security.method === 'password' || (!!security.method && security.encrypt)
+    }).map(i => t(i.text, { ...i.vars, ...(i.items ? { what: i.items.map(w => t(w)).join(', ') } : {}) }));
+    const notes = [
+      ...local.map(m => `• ${m}`),
+      ...(issues.length
+        ? ['', t('Hinweise des Levuvo Mail Assistant (KI):'), ...issues.map(i => `• ${i.message}`)]
+        : [])
+    ];
     if (
-      issues.length &&
+      notes.length &&
       !(await confirm({
         title: t('Vor dem Senden prüfen'),
-        message: `${issues.map(i => `• ${i.message}`).join('\n')}\n\n${t('Hinweise des Levuvo Mail Assistant (KI). Trotzdem senden?')}`,
+        message: `${notes.join('\n').trim()}\n\n${t('Du entscheidest. Trotzdem senden?')}`,
         confirmLabel: sendAt ? t('Trotzdem planen') : t('Trotzdem senden')
       }))
     )
@@ -732,6 +779,15 @@ export default function Composer({
                 setDraft={setDraft}
                 subject={subject}
                 setSubject={setSubject}
+                onAssisted={model =>
+                  setAiAssisted(
+                    model
+                      ? aiAssistedLabel('Levuvo Mail Assistant', model)
+                      : initial.aiGenerated
+                        ? aiAssistedLabel('agent', initial.aiGenerated)
+                        : ''
+                  )
+                }
               />
               <Segmented
                 size="sm"
@@ -974,7 +1030,30 @@ function PasswordPanel({
   const { t } = useT();
   const { toast } = useUi();
   const [visible, setVisible] = useState(true);
-  const strength = password.length >= 16 ? 'strong' : password.length >= 10 ? 'ok' : 'weak';
+  const strength =
+    password.length < 10 ? 'short' : weakPassword(password) ? 'weak' : password.length >= 16 ? 'strong' : 'ok';
+  // The copied password is removed from the clipboard after a minute, if it is still there.
+  const clearTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(clearTimer.current), []);
+  function copyPassword() {
+    void navigator.clipboard
+      .writeText(password)
+      .then(() => {
+        toast({
+          text: t('Passwort kopiert. Es wird nach einer Minute aus der Zwischenablage entfernt.'),
+          kind: 'success'
+        });
+        window.clearTimeout(clearTimer.current);
+        const copied = password;
+        clearTimer.current = window.setTimeout(() => {
+          void navigator.clipboard
+            .readText()
+            .then(current => (current === copied ? navigator.clipboard.writeText('') : undefined))
+            .catch(() => {});
+        }, 60_000);
+      })
+      .catch(() => toast({ text: t('Kopieren nicht möglich.'), kind: 'error' }));
+  }
   return (
     <div className="password-panel">
       <div className="password-row">
@@ -1013,22 +1092,19 @@ function PasswordPanel({
               className="icon-button"
               aria-label={t('Passwort kopieren')}
               title={t('Passwort kopieren')}
-              onClick={() =>
-                void navigator.clipboard
-                  .writeText(password)
-                  .then(() => toast({ text: t('Passwort kopiert.'), kind: 'success' }))
-                  .catch(() => toast({ text: t('Kopieren nicht möglich.'), kind: 'error' }))
-              }
+              onClick={copyPassword}
             >
               <Copy size={15} />
             </button>
           </span>
           <span className={`password-strength ${strength}`}>
-            {strength === 'weak'
+            {strength === 'short'
               ? t('Zu kurz (mindestens 10 Zeichen)')
-              : strength === 'ok'
-                ? t('Ausreichend')
-                : t('Stark')}
+              : strength === 'weak'
+                ? t('Zu leicht zu erraten')
+                : strength === 'ok'
+                  ? t('Ausreichend')
+                  : t('Stark')}
           </span>
         </label>
         <label>
@@ -1045,7 +1121,7 @@ function PasswordPanel({
       <p className="password-help" id="password-help">
         <KeyRound size={13} />{' '}
         {t(
-          'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar.'
+          'Text und Anhänge werden mit dem Passwort verschlüsselt (AES-256). Der Empfänger öffnet die angehängte Datei in jedem Browser. Teile das Passwort auf einem anderen Weg mit – z. B. per SMS oder Telefon. Der Betreff bleibt lesbar, und automatisch gespeicherte Entwürfe liegen bis zum Senden unverschlüsselt in deinem Entwürfe-Ordner.'
         )}
       </p>
     </div>

@@ -40,6 +40,9 @@ with an optional AI assistant.
 - AI and agents: keep cloud AI off for accounts with confidential content ("No cloud AI"), give
   agents the lowest level that suffices, read every approval like an outgoing mail.
 - Backups: protect the backup file and its password like the computer itself.
+- Before sending, Levuvo Mail may show hints (open recipient lists, unencrypted sensitive or health
+  data, and with the AI check discriminatory wording). They are hints: you decide, and nothing is
+  recorded or reported.
 
 ### Risks of reasonably foreseeable use (Annex II no. 5)
 
@@ -64,7 +67,7 @@ asking; sending data to a cloud model may breach professional secrecy.
 - Every AI result is marked ("AI-generated", "Written by the assistant", "AI-created") with the model.
 - Mails whose text the assistant wrote or rewrote carry a machine-readable header
   `X-Levuvo-AI-Assisted` when sent; drafts from external agents carry `X-Levuvo-AI-Generated`. You
-  can switch the header for assistant texts off (Settings → AI & agents), which may be appropriate
+  can switch the header off (Settings → AI & agents → "Mark AI-written mails"), which may be appropriate
   only if you have substantially rewritten the text yourself.
 - The local model runs on your computer; a cloud model is used only after your consent per provider.
 - What AI can and cannot do: [docs/ai/AI-LITERACY.md](../ai/AI-LITERACY.md).

@@ -11,7 +11,7 @@ T = transparency obligation Art. 50, M = minimal). **Output** = what the user ge
 | --- | --- | --- | --- | --- | --- |
 | Summary, key points, translation (reader) | text shown in the reader | T | "AI-generated" marker with model name | read only | yes |
 | Reply suggestion, rewrite, bullet points to mail (composer) | draft text | T | in-app marker "Written/changed by the assistant", undo; header `X-Levuvo-AI-Assisted` on the sent mail | user edits and sends | yes |
-| Pre-send check (tone, recipients, sensitive data, forgotten attachment) | notes | M (assistive) | "Notes from Levuvo Mail Assistant (AI)" | user decides to send | yes |
+| Pre-send check (tone, recipients, sensitive data, forgotten attachment, discriminatory or unlawful wording) | notes | M (assistive) | "Notes from Levuvo Mail Assistant (AI)" | user decides to send | yes |
 | Phishing / fraud assessment | hint | M | marked as AI hint, "a hint, not a verdict" | user decides | yes |
 | Bundles / screening / prioritisation | grouping, order | M | marked, rule-based fallback | user can move mails; never deletes | **no** (local only) |
 | Semantic search, questions to the mailbox | answer with sources | T | AI marker, source mails linked | read only | yes (answer), embeddings local |

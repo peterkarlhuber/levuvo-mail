@@ -1277,6 +1277,213 @@
       "changed": false
     }
   },
+  "GET /api/privacy/overview": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "days": 30,
+      "blocked": {
+        "trackers": 60,
+        "perDay": [
+          {
+            "day": "2026-10-21",
+            "trackers": 0
+          },
+          {
+            "day": "2026-10-22",
+            "trackers": 2
+          },
+          {
+            "day": "2026-10-23",
+            "trackers": 4
+          },
+          {
+            "day": "2026-10-24",
+            "trackers": 1
+          },
+          {
+            "day": "2026-10-25",
+            "trackers": 3
+          },
+          {
+            "day": "2026-10-26",
+            "trackers": 0
+          },
+          {
+            "day": "2026-10-27",
+            "trackers": 2
+          },
+          {
+            "day": "2026-10-28",
+            "trackers": 4
+          },
+          {
+            "day": "2026-10-29",
+            "trackers": 1
+          },
+          {
+            "day": "2026-10-30",
+            "trackers": 3
+          },
+          {
+            "day": "2026-10-31",
+            "trackers": 0
+          },
+          {
+            "day": "2026-11-01",
+            "trackers": 2
+          },
+          {
+            "day": "2026-11-02",
+            "trackers": 4
+          },
+          {
+            "day": "2026-11-03",
+            "trackers": 1
+          },
+          {
+            "day": "2026-11-04",
+            "trackers": 3
+          },
+          {
+            "day": "2026-11-05",
+            "trackers": 0
+          },
+          {
+            "day": "2026-11-06",
+            "trackers": 2
+          },
+          {
+            "day": "2026-11-07",
+            "trackers": 4
+          },
+          {
+            "day": "2026-11-08",
+            "trackers": 1
+          },
+          {
+            "day": "2026-11-09",
+            "trackers": 3
+          },
+          {
+            "day": "2026-11-10",
+            "trackers": 0
+          },
+          {
+            "day": "2026-11-11",
+            "trackers": 2
+          },
+          {
+            "day": "2026-11-12",
+            "trackers": 4
+          },
+          {
+            "day": "2026-11-13",
+            "trackers": 1
+          },
+          {
+            "day": "2026-11-14",
+            "trackers": 3
+          },
+          {
+            "day": "2026-11-15",
+            "trackers": 0
+          },
+          {
+            "day": "2026-11-16",
+            "trackers": 2
+          },
+          {
+            "day": "2026-11-17",
+            "trackers": 4
+          },
+          {
+            "day": "2026-11-18",
+            "trackers": 1
+          },
+          {
+            "day": "2026-11-19",
+            "trackers": 3
+          }
+        ]
+      },
+      "remoteImages": 3,
+      "unsubscribe": {
+        "oneClick": 2,
+        "mail": 1
+      },
+      "ai": {
+        "local": 41,
+        "cloud": 2,
+        "failed": 0,
+        "kinds": {
+          "classify": {
+            "local": 30,
+            "cloud": 0,
+            "sources": {
+              "bundles": 30
+            }
+          },
+          "digest": {
+            "local": 9,
+            "cloud": 2,
+            "sources": {
+              "user": 11
+            }
+          },
+          "ask": {
+            "local": 2,
+            "cloud": 0,
+            "sources": {
+              "user": 2
+            }
+          }
+        },
+        "providers": {
+          "anthropic": 2
+        },
+        "lastAt": "2026-11-19T08:30:00.000Z",
+        "lastCloudAt": "2026-11-19T08:30:00.000Z",
+        "indexRuns": 4
+      },
+      "agents": [
+        {
+          "name": "Claude Desktop",
+          "calls": 5,
+          "denied": 0,
+          "tools": {
+            "search_mail": 4,
+            "list_events": 1
+          },
+          "lastAt": "2026-11-19T08:30:00.000Z"
+        }
+      ],
+      "downloads": [
+        {
+          "at": "2026-11-19T08:30:00.000Z",
+          "kind": "model",
+          "model": "qwen3.5:4b"
+        }
+      ],
+      "recent": [
+        {
+          "at": "2026-11-19T08:30:00.000Z",
+          "kind": "digest",
+          "where": "cloud",
+          "provider": "anthropic",
+          "source": "user",
+          "ok": true
+        },
+        {
+          "at": "2026-11-19T08:30:00.000Z",
+          "kind": "search_mail",
+          "where": "agent",
+          "agent": "Claude Desktop",
+          "ok": true
+        }
+      ]
+    }
+  },
   "GET /api/automations": {
     "status": 200,
     "contentType": "application/json",

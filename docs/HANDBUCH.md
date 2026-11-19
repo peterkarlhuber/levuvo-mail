@@ -390,7 +390,11 @@ Anbieter. Eine Umformulierung bleibt mit „Vom Assistenten geändert · Rückg�
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 
 **Assistent-Fenster (✦ links oder Strg/⌘ + J):**
-- **Frage:** „Wann kommt die Lieferung von Müller?“ – Antwort mit den Quell-Mails zum Anklicken.
+- **Frage:** „Was hat Müller zum Angebot gesagt?“ – kurze Antwort mit den Quell-Mails zum Anklicken, jeweils
+  mit Absender, Datum und einer zitierten Stelle (nur Stellen, die wörtlich in der Mail stehen). Die Suche
+  verbindet Bedeutung und genaue Wörter, findet also auch Namen, Rechnungsnummern und seltene Begriffe, und
+  liest PDF- und Textanhänge der besten Treffer. Rückfragen wie „Und der Preis?“ beziehen sich auf die
+  vorige Antwort; das Papierkorb-Symbol beginnt ein neues Gespräch.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche“ – der Assistent sucht freie Zeiten und legt
   einen Entwurf an. Gesendet wird nichts.
 - **Routinen:** Tagesbriefing, Offene Antworten, Newsletter aufräumen, Meeting vorbereiten, Termin

@@ -41,6 +41,7 @@ export const AI_FEATURES = [
 ];
 const TASK_FEATURE = {
   digest: 'digest',
+  newsletters: 'digest',
   translate: 'translate',
   reply: 'reply',
   rewrite: 'rewrite',

@@ -40,6 +40,9 @@ import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
 import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
+import { PrivacyDataSettings } from './SettingsPrivacyData';
+import { AboutCompliance } from './AboutCompliance';
+import { PrivacyCockpit } from './PrivacyCockpit';
 import type { SettingsTab } from './App';
 import type { AccountItem, ApiStatus, Runtime } from './types';
 
@@ -486,7 +489,7 @@ function SearchIndex() {
   );
 }
 
-function Privacy() {
+function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
   const { t } = useT();
   const [settings, setSettings] = useState<{ crashReports: boolean } | null>(null);
   useEffect(() => {
@@ -499,6 +502,7 @@ function Privacy() {
   }
   return (
     <>
+      <PrivacyCockpit onOpenAiLog={onOpenAiLog} />
       <Section
         title={t('Datenschutz')}
         description={t(
@@ -528,6 +532,7 @@ function Privacy() {
           </button>
         </Row>
       </Section>
+      <PrivacyDataSettings />
       <Section title={t('Gespeicherte Daten auf diesem Gerät')}>
         <ul className="plain-list">
           <li>
@@ -674,13 +679,7 @@ function About({ runtime }: { runtime: Runtime }) {
           [Firmenbuchnummer · Firmenbuchgericht · UID]
         </address>
       </Section>
-      <Section title={t('Lizenzen')}>
-        <p className="settings-description">
-          {t(
-            'Levuvo Mail verwendet Open-Source-Komponenten, u. a. Electron, React, Fastify, ImapFlow, Nodemailer, OpenPGP.js, PKI.js, ical.js, tsdav, TipTap und Lucide. Die vollständigen Lizenztexte liegen der Installation bei (THIRD-PARTY-NOTICES).'
-          )}
-        </p>
-      </Section>
+      <AboutCompliance />
     </>
   );
 }
@@ -759,7 +758,7 @@ export default function Settings(props: Props) {
             onCheckNow={props.onCheckNow}
           />
         )}
-        {props.tab === 'privacy' && <Privacy />}
+        {props.tab === 'privacy' && <Privacy onOpenAiLog={() => props.onTab('ai')} />}
         {props.tab === 'backup' && <BackupSettings />}
         {props.tab === 'help' && <Help />}
         {props.tab === 'about' && <About runtime={props.runtime} />}

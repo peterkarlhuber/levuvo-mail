@@ -40,7 +40,10 @@ import { registerAccountRoutes } from './routes-accounts.mjs';
 import { registerMailRoutes } from './routes-mail.mjs';
 import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
+import { registerPrivacyRoutes } from './routes-privacy.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
+import { registerDataRightsRoutes } from './routes-data-rights.mjs';
+import { applyPendingWipe, pendingWipe } from './data-rights.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
 import { createBackgroundJobs } from './background-jobs.mjs';
@@ -202,6 +205,15 @@ export async function createMailServer({
   const api = Fastify({ logger: false, bodyLimit: 16 * 1024 });
   let activePort = desktop ? 0 : browserPort;
   const allowedBrowserOrigins = new Set(['http://127.0.0.1:5173', 'http://localhost:5173']);
+  // "Delete all data on this device" staged before the last restart: remove everything first.
+  const wipeState = { pending: false, done: null };
+  try {
+    const wiped = await applyPendingWipe({ dir, accountsPath, vault: store, logger });
+    if (wiped) wipeState.done = { ...wiped, at: new Date().toISOString() };
+  } catch (err) {
+    logger(`delete all data could not be completed: ${err.code || err.message}`);
+  }
+  wipeState.pending = Boolean(await pendingWipe(dir));
   // A restore staged before the last restart replaces the data files before any store reads them.
   const backupState = { pending: false, restored: null };
   try {
@@ -459,7 +471,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -701,10 +713,13 @@ export async function createMailServer({
 
   api.get('/api/runtime', async () => ({ desktop, version: APP_VERSION, platform: process.platform }));
   registerAccountRoutes(ctx);
+  // Before the mail routes: unsubscribing counts into the cockpit (ctx.privacy).
+  await registerPrivacyRoutes(ctx, { createJsonFile, file: path.join(dir, 'privacy-stats.json') });
   registerMailRoutes(ctx);
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
+  registerDataRightsRoutes(ctx, { wipeState, supportUntil: PACKAGE.levuvo?.supportUntil || '' });
   registerAiRoutes(ctx);
   const mcp = await setupMcp(ctx, { createJsonFile, dir });
   ctx.mcp = mcp;
