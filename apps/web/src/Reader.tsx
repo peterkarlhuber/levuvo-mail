@@ -66,6 +66,7 @@ import type {
 } from './types';
 import { ReaderAssist } from './ReaderAssist';
 import { remoteImageKey } from './trackers';
+import { reportRemoteImages, reportTrackers } from './privacy-events';
 
 export type ReaderAction =
   'markRead' | 'markUnread' | 'flag' | 'unflag' | 'archive' | 'trash' | 'move' | 'spam' | 'notSpam';
@@ -836,6 +837,9 @@ export default function Reader(props: Props) {
   );
   const htmlDocument = rendered?.html || '';
   const trackers = rendered?.trackers || [];
+  useEffect(() => {
+    reportTrackers(remoteKey, rendered?.trackers.length || 0);
+  }, [remoteKey, rendered]);
   // The calendar part of an invitation is shown as the invitation card, not as a file.
   const visibleAttachments =
     detail?.attachments.filter(
@@ -1316,7 +1320,13 @@ export default function Reader(props: Props) {
                       </span>
                     )}
                     {detail.remoteContent && !allowRemote && (
-                      <button className="text-button" onClick={() => setRemoteFor(remoteKey)}>
+                      <button
+                        className="text-button"
+                        onClick={() => {
+                          setRemoteFor(remoteKey);
+                          reportRemoteImages(remoteKey);
+                        }}
+                      >
                         <Image size={13} /> {t('Bilder laden')}
                       </button>
                     )}

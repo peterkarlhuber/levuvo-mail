@@ -115,7 +115,7 @@
   --radius-lg: 10px;
   --radius-full: 999px;
   /* Desktop window frame (styles/window-frame.css). Must match apps/desktop/main.mjs. */
-  --titlebar-h-mac: 28px;
+  --titlebar-h-mac: 40px;
   --titlebar-h-win: 32px;
   --window-controls-w: 138px;
   /* Layers – keep the order, never use raw z-index numbers. */
