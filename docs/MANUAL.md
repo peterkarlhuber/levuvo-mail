@@ -136,6 +136,10 @@ work when Levuvo Mail is closed. Requirement: your provider offers ManageSieve (
 sign-in, set up rules in the provider's webmail instead).
 
 - **Vacation reply:** enable, optional from/until date, subject, text, “at most every … days” per sender.
+  The text is formatted like the signature (bold, links, images). **“Append the account's signature
+  (with logo)”** adds the signature when saving – save again after changing the signature. The reply is
+  stored with a plain-text version; images travel inside the reply (no loading from the internet).
+  If your mail server can only send plain-text replies, Levuvo Mail saves the text version and says so.
 - **Rules:** “If all/any of the conditions match” (From, To/CC, Subject, Headers – contains, is exactly,
   does not contain) → actions (move to folder, mark as read, star, trash). Order with the arrows;
   “do not apply further rules afterwards” is available.

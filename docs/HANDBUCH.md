@@ -150,6 +150,11 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
 ManageSieve an (bei Microsoft- und Google-Anmeldung stattdessen im Webmail einrichten).
 
 - **Abwesenheitsnotiz:** aktivieren, optional Von/Bis-Datum, Betreff, Text, „höchstens alle … Tage“ je Absender.
+  Der Text lässt sich wie die Signatur formatieren (fett, Links, Bilder). **„Signatur des Kontos anhängen
+  (mit Logo)“** fügt die Signatur beim Speichern an – nach einer Änderung an der Signatur bitte erneut
+  speichern. Die Notiz wird mit einer Textversion gespeichert; Bilder reisen in der Antwort mit (nichts wird
+  aus dem Internet nachgeladen). Kann dein Mailserver nur Text-Antworten senden, speichert Levuvo Mail die
+  Textversion und weist darauf hin.
 - **Regeln:** „Wenn alle/eine der Bedingungen zutreffen“ (Von, An/CC, Betreff, Kopfzeilen – enthält,
   ist genau, enthält nicht) → Aktionen (in Ordner verschieben, als gelesen markieren, markieren,
   Papierkorb). Reihenfolge mit den Pfeilen, „danach keine weiteren Regeln anwenden“ möglich.

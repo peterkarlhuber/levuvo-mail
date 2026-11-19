@@ -438,7 +438,8 @@ test(
         .selectOption(peter.id)
         .catch(() => {});
       await page.locator('label.toggle', { hasText: 'Abwesenheitsnotiz aktiv' }).locator('input').check();
-      await page.locator('textarea').first().fill('Bin auf Urlaub.');
+      await page.getByRole('textbox', { name: 'Text der Abwesenheitsnotiz' }).fill('Bin auf Urlaub.');
+      await page.locator('label.toggle', { hasText: 'Signatur des Kontos anhängen' }).locator('input').check();
       await page.getByRole('button', { name: 'Regel hinzufügen' }).click();
       await page.locator('.rule-card').last().getByLabel('Wert').fill(`newsletter-${stamp}@`);
       await page.locator('.rule-card').last().getByLabel('Aktion', { exact: true }).selectOption('markRead');
@@ -446,6 +447,8 @@ test(
       await toast('auf dem Mailserver aktiv').waitFor({ timeout: 20_000 });
       const sieve = await call('GET', `/api/sieve?account=${peter.id}`);
       assert.equal(sieve.body.config.vacation.enabled, true);
+      assert.match(sieve.body.config.vacation.bodyHtml, /Bin auf Urlaub\./);
+      assert.equal(sieve.body.config.vacation.includeSignature, true);
       assert.ok(
         sieve.body.config.rules.some(
           r => r.conditions[0].value === `newsletter-${stamp}@` && r.actions[0].type === 'markRead'

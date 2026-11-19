@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Vacation reply
+- **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving.
+
 ### Window
 - **No separate title bar:** on macOS the app reaches the top edge and the traffic lights sit in the top of the left rail; on Windows minimize, maximize and close are drawn in the top right corner in the app's colours and follow its light or dark theme. The top strip still moves the window and maximizes it on double click. Linux and the browser keep their normal frame.
 - **One logo:** the mark stays only in the rail, the sidebar shows the wordmark "Levuvo mail."; the vertical line between mark and name is gone (also on the welcome screen and in Settings → About).

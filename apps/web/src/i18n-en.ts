@@ -844,6 +844,16 @@ export const EN: Record<string, string> = {
   'Bis (optional)': 'Until (optional)',
   Abwesend: 'Out of office',
   'Höchstens alle … Tage': 'At most every … days',
+  'Gespeichert. Dein Mailserver kann Abwesenheitsnotizen nur als reinen Text senden – Formatierung und Bilder entfallen dort.':
+    'Saved. Your mail server can only send vacation replies as plain text – formatting and images are left out there.',
+  'Text der Abwesenheitsnotiz': 'Vacation reply text',
+  'Signatur des Kontos anhängen (mit Logo)': "Append the account's signature (with logo)",
+  'Formatierung und Bilder werden mit einer Textversion gespeichert. Die Signatur wird beim Speichern übernommen – nach einer Änderung an der Signatur bitte hier erneut speichern.':
+    'Formatting and images are stored together with a plain-text version. The signature is taken over when saving – after changing the signature, please save here again.',
+  'Die Abwesenheitsnotiz ist für deinen Mailserver zu groß. Bitte ein kleineres Logo verwenden oder die Signatur weglassen.':
+    'The vacation reply is too large for your mail server. Please use a smaller logo or leave out the signature.',
+  'Die Abwesenheitsnotiz enthält zu viele oder zu große Bilder (höchstens 4 Bilder, zusammen 400 KB).':
+    'The vacation reply contains too many or too large images (at most 4 images, 400 KB in total).',
   'Danke für deine Nachricht. Ich bin bis … nicht erreichbar. In dringenden Fällen …':
     'Thank you for your message. I am not available until … In urgent cases …',
   Filterregeln: 'Filter rules',
