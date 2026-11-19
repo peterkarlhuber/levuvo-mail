@@ -897,3 +897,40 @@ test('Mail list: visible rows, next selection after removal, count line', async 
   assert.equal(countLabel(t, c), '120 Nachrichten · 3 ungelesen');
   assert.equal(countLabel(t, { ...c, folderTotal: null, folderUnseen: 0 }), '4 Nachrichten');
 });
+
+test('Mail search: reducer, search mode and request paths', async () => {
+  const {
+    initialSearchState: s0,
+    searchReducer: reduce,
+    searchMode,
+    searchPath
+  } = await import('../src/mail/search-state.ts');
+  let s = reduce(s0, { type: 'pending' });
+  s = reduce(s, { type: 'typed', query: 'Rechnung' });
+  assert.deepEqual([s.query, s.busy], ['Rechnung', false], 'typing cancels the running search');
+  s = reduce(reduce(s, { type: 'pending' }), { type: 'results', total: 3 });
+  s = reduce(s, { type: 'cursor', cursor: 'c2' });
+  assert.deepEqual([s.busy, s.total, s.cursor], [true, 3, 'c2']);
+  s = reduce(reduce(s, { type: 'settled' }), { type: 'scope', scope: 'everywhere' });
+  assert.deepEqual([s.busy, s.scope], [false, 'everywhere']);
+  assert.equal(reduce(s, { type: 'totalCleared' }).total, null);
+  const reset = reduce(reduce(s, { type: 'pending' }), { type: 'reset' });
+  assert.deepEqual(reset, { query: '', scope: 'folder', total: null, cursor: 'c2', busy: false });
+
+  assert.deepEqual(searchMode('a', 'everywhere', false), { everywhere: false, searching: false });
+  assert.deepEqual(searchMode(' ab ', 'folder', false), { everywhere: false, searching: true });
+  assert.deepEqual(searchMode('ab', 'everywhere', false), { everywhere: true, searching: true });
+  assert.deepEqual(searchMode('ab', 'folder', true), { everywhere: false, searching: false });
+
+  const base = { term: 'a&b', folder: 'Projekte/Ä', limit: 40 };
+  assert.equal(searchPath({ ...base, scope: 'folder' }), '/api/search?folder=Projekte%2F%C3%84&q=a%26b&limit=40');
+  assert.equal(
+    searchPath({ ...base, scope: 'folder' }, { beforeUid: 17 }),
+    '/api/search?folder=Projekte%2F%C3%84&q=a%26b&limit=40&beforeUid=17'
+  );
+  assert.equal(searchPath({ ...base, scope: 'everywhere' }), '/api/search/local?q=a%26b&limit=40');
+  assert.equal(
+    searchPath({ ...base, scope: 'everywhere' }, { cursor: 'x/y' }),
+    '/api/search/local?q=a%26b&limit=40&cursor=x%2Fy'
+  );
+});

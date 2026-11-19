@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Mail view split into modules (internal audit of 19 November 2026, ARC-LEV-005)
-- **No visible change.** The message list (loaded messages, paging, checkboxes, filter chip) is one reducer in `mail/list-state.ts`; toolbar and column resizer are their own components. A Playwright regression test pins list, filters, search, reader and bulk actions.
+- **No visible change.** The message list (loaded messages, paging, checkboxes, filter chip) is one reducer in `mail/list-state.ts`; toolbar and column resizer are their own components. The search (query, scope, hit count, index cursor) is a reducer in `mail/search-state.ts` with the debounced requests in `useMailSearch` and the field in `SearchBar`. A Playwright regression test pins list, filters, search, reader and bulk actions.
 
 ### Spaces storage (internal audit of 19 November 2026, ARC-LEV-003)
 - **Spaces use the shared storage layer** of the other local files (`local-store.mjs`): one encryption format, one atomic write and one write queue. Each file stays bound to its own name, so a space file copied over another one does not open.

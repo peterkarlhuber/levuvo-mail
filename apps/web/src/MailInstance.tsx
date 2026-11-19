@@ -10,7 +10,7 @@ import {
 } from 'react';
 import DOMPurify from 'dompurify';
 import { isRemoteSrc } from './trackers';
-import { CloudOff, Globe2, Keyboard, Menu, PenSquare, RefreshCcw, Search, X } from 'lucide-react';
+import { CloudOff, Keyboard, Menu, PenSquare, RefreshCcw, X } from 'lucide-react';
 import Composer, { type ComposeInitial, type OutgoingPayload } from './Composer';
 import { plainToHtml, SIGNATURE_SEPARATOR } from './editor';
 import MessageList, { DRAG_TYPE } from './MessageList';
@@ -55,6 +55,9 @@ import {
 } from './mail/list-state';
 import ListToolbar from './mail/ListToolbar';
 import ColumnResizer from './mail/ColumnResizer';
+import SearchBar from './mail/SearchBar';
+import { useMailSearch } from './mail/useMailSearch';
+import { searchPath } from './mail/search-state';
 export { ATTACHMENTS, FOLLOWUPS, UNIFIED };
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -126,15 +129,7 @@ export default function MailInstance({
   const { messages, hasMore, nextBeforeUid, loadingMore, stale, busy, error, checkedUids, filter } = list;
   const [selectedUid, setSelectedUid] = useState<number | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [scope, setScope] = useState<'folder' | 'everywhere'>('folder');
   const [bundle, setBundle] = useState<Bundle | null>(null);
-  const [searchTotal, setSearchTotal] = useState<number | null>(null);
-  // Paging cursor of the local index search ("everywhere"); null when there is no further page.
-  const [localCursor, setLocalCursor] = useState<string | null>(null);
-  const [searchBusy, setSearchBusy] = useState(false);
-  const searchTimer = useRef<number | null>(null);
-  const searchAbort = useRef<AbortController | null>(null);
   const requestSeq = useRef(0);
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
@@ -158,9 +153,22 @@ export default function MailInstance({
   // The last real folder: the attachment overview starts there.
   const lastRealFolder = useRef('INBOX');
   if (!folder.startsWith('\u0000')) lastRealFolder.current = folder;
-  const everywhere = scope === 'everywhere' && query.trim().length >= 2;
-  const searching = query.trim().length >= 2 && !unified;
   const accountReady = Boolean(status?.configured);
+  // The list loader is defined further down; the search reloads the folder through this ref.
+  const loadMessagesRef = useRef<(path: string) => Promise<void>>(async () => {});
+  const search = useMailSearch({
+    accountId,
+    folder,
+    accountReady,
+    unified,
+    list,
+    dispatchList,
+    requestSeq,
+    reload: path => void loadMessagesRef.current(path)
+  });
+  const { query, scope, everywhere, searching } = search;
+  const searchTotal = search.total;
+  const searchBusy = search.busy;
   const writeEnabled = Boolean(status?.configured && status?.writeEnabled) && !unified && !everywhere;
   const currentFolder = folders.find(f => f.path === folder);
   const archiveExists = folders.some(
@@ -302,6 +310,7 @@ export default function MailInstance({
     },
     [accountId, applyPage, selectUid]
   );
+  loadMessagesRef.current = loadMessages;
 
   const loadFolders = useCallback(
     async (select = true) => {
@@ -368,35 +377,13 @@ export default function MailInstance({
   }, [accountId]);
 
   const loadMore = useCallback(async () => {
-    if (everywhere) {
-      if (!hasMore || loadingMore || localCursor === null) return;
-      dispatchList({ type: 'loadingMore', value: true });
-      const seq = requestSeq.current;
-      try {
-        const data = await getJson<{ messages: Message[]; total: number; nextCursor?: string | null }>(
-          `/api/search/local?q=${encodeURIComponent(query.trim())}&limit=${PAGE}&cursor=${encodeURIComponent(localCursor)}`
-        );
-        if (seq !== requestSeq.current) return;
-        dispatchList({
-          type: 'localPageLoaded',
-          messages: data.messages,
-          hasMore: Boolean(data.nextCursor),
-          append: true
-        });
-        setLocalCursor(data.nextCursor ?? null);
-      } catch (e) {
-        dispatchList({ type: 'error', error: (e as Error).message });
-      } finally {
-        dispatchList({ type: 'loadingMore', value: false });
-      }
-      return;
-    }
+    if (everywhere) return search.loadMoreLocal();
     if (!hasMore || loadingMore || nextBeforeUid === null || unified) return;
     dispatchList({ type: 'loadingMore', value: true });
     const seq = requestSeq.current;
     try {
       const path = searching
-        ? `/api/search?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(query.trim())}&limit=${PAGE}&beforeUid=${nextBeforeUid}`
+        ? searchPath({ scope: 'folder', term: query.trim(), folder, limit: PAGE }, { beforeUid: nextBeforeUid })
         : `/api/messages?folder=${encodeURIComponent(folder)}&limit=${PAGE}&beforeUid=${nextBeforeUid}`;
       const page = await getJson<MessagePage>(path, accountId);
       if (seq === requestSeq.current) applyPage(page, true);
@@ -411,7 +398,7 @@ export default function MailInstance({
     nextBeforeUid,
     unified,
     everywhere,
-    localCursor,
+    search,
     searching,
     folder,
     query,
@@ -531,16 +518,8 @@ export default function MailInstance({
     return () => window.clearTimeout(timer);
   }, [detail, prefs.markReadOnOpen, writeEnabled, isDraftFolder, folder, accountId, messages, actionBusy]);
 
-  const stopSearch = () => {
-    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
-    searchTimer.current = null;
-    searchAbort.current?.abort();
-    searchAbort.current = null;
-  };
-  useEffect(() => () => stopSearch(), []);
-
   const chooseFolder = (path: string) => {
-    stopSearch();
+    search.reset();
     ++requestSeq.current;
     dispatchList({ type: 'checkedSet', uids: [] });
     setReaderOpen(false);
@@ -548,75 +527,12 @@ export default function MailInstance({
     setFolder(path);
     setBundle(null);
     setScreener(false);
-    setQuery('');
-    setScope('folder');
-    setSearchTotal(null);
-    setSearchBusy(false);
     setMobileSidebar(false);
     void loadMessages(path);
   };
 
-  // Server-side search after a short typing pause: this folder (IMAP) or everywhere (local index).
-  const search = (value: string, nextScope = scope) => {
-    dispatchList({ type: 'checkedSet', uids: [] });
-    setQuery(value);
-    ++requestSeq.current;
-    dispatchList({ type: 'busy', value: false });
-    stopSearch();
-    setSearchBusy(false);
-    if (!accountReady || unified) return;
-    const term = value.trim();
-    if (term.length < 2) {
-      dispatchList({ type: 'error', error: '' });
-      if (searchTotal !== null) {
-        setSearchTotal(null);
-        void loadMessages(folder);
-      }
-      return;
-    }
-    setSearchBusy(true);
-    const seq = requestSeq.current;
-    searchTimer.current = window.setTimeout(async () => {
-      searchTimer.current = null;
-      const controller = new AbortController();
-      searchAbort.current = controller;
-      try {
-        if (nextScope === 'everywhere') {
-          const data = await getJson<{ messages: Message[]; total: number; nextCursor?: string | null }>(
-            `/api/search/local?q=${encodeURIComponent(term)}&limit=${PAGE}`,
-            undefined,
-            controller.signal
-          );
-          if (controller.signal.aborted || seq !== requestSeq.current) return;
-          setSearchTotal(data.total);
-          dispatchList({
-            type: 'localPageLoaded',
-            messages: data.messages,
-            hasMore: Boolean(data.nextCursor),
-            append: false
-          });
-          setLocalCursor(data.nextCursor ?? null);
-        } else {
-          const data = await getJson<MessagePage>(
-            `/api/search?folder=${encodeURIComponent(folder)}&q=${encodeURIComponent(term)}&limit=${PAGE}`,
-            accountId,
-            controller.signal
-          );
-          if (controller.signal.aborted || seq !== requestSeq.current) return;
-          setSearchTotal(data.total);
-          applyPage(data, false);
-        }
-      } catch (err) {
-        if (!controller.signal.aborted && seq === requestSeq.current)
-          dispatchList({ type: 'error', error: (err as Error).message });
-      } finally {
-        if (seq === requestSeq.current) setSearchBusy(false);
-      }
-    }, 350);
-  };
-
   const refresh = () => {
-    if (searching) search(query);
+    if (searching) search.run(query);
     else void loadMessages(folder);
     void loadFolders(false);
   };
@@ -1264,49 +1180,15 @@ export default function MailInstance({
               </button>
             </div>
             {!unified && !panelView && (
-              <div className="search-row">
-                <label className="searchbox">
-                  <Search size={16} />
-                  <input
-                    type="search"
-                    aria-label={t('Suchen')}
-                    disabled={!accountReady}
-                    placeholder={
-                      scope === 'everywhere'
-                        ? t('Alle Ordner und Konten durchsuchen (auch offline)')
-                        : t('In „{folder}“ suchen', { folder: folderLabel(currentFolder) })
-                    }
-                    value={query}
-                    maxLength={120}
-                    onChange={e => search(e.target.value)}
-                  />
-                  {query && (
-                    <button
-                      aria-label={t('Suche löschen')}
-                      onClick={() => {
-                        setScope('folder');
-                        search('', 'folder');
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </label>
-                <button
-                  className={`scope-toggle ${scope === 'everywhere' ? 'active' : ''}`}
-                  aria-pressed={scope === 'everywhere'}
-                  title={t('Überall suchen (lokaler, verschlüsselter Suchindex)')}
-                  onClick={() => {
-                    const next = scope === 'everywhere' ? 'folder' : 'everywhere';
-                    setScope(next);
-                    if (query.trim().length >= 2) search(query, next);
-                    else if (next === 'folder' && searchTotal !== null) void loadMessages(folder);
-                  }}
-                >
-                  <Globe2 size={15} />
-                  <span>{t('Überall')}</span>
-                </button>
-              </div>
+              <SearchBar
+                query={query}
+                scope={scope}
+                disabled={!accountReady}
+                folderName={folderLabel(currentFolder)}
+                onChange={value => search.run(value)}
+                onClear={search.clear}
+                onToggleScope={search.toggleScope}
+              />
             )}
             {!panelView && (
               <ListToolbar
@@ -1380,7 +1262,7 @@ export default function MailInstance({
                 }
                 if (sent) {
                   chooseFolder(sent.path);
-                  window.setTimeout(() => search(subject.slice(0, 80)), 50);
+                  window.setTimeout(() => search.run(subject.slice(0, 80)), 50);
                 }
               }}
             />
