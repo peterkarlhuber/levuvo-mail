@@ -88,6 +88,7 @@ export const NOT_BACKED_UP = {
   'instance.json': 'installation ID of this device',
   'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
   'mcp-approvals.json': 'short-lived approvals that expire',
+  'ai-style.json': 'writing-style profile; learned again from the sent mail in the index',
   // Levuvo's own Ollama: models (gigabytes, pinned by digest, downloaded again from the fixed list)
   // and the key pair the server creates for itself.
   'ollama/': 'models of the own Ollama; downloaded again from the fixed model list',

@@ -23,6 +23,7 @@ export type AiProfile = {
   address: 'auto' | 'du' | 'sie';
   signoff: string;
   instructions: string;
+  learnStyle?: boolean;
 };
 export type AiSettings = {
   enabled: boolean;

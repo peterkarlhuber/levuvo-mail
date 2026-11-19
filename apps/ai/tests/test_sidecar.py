@@ -113,6 +113,30 @@ def test_ask_reads_attachments_and_frames_history() -> None:
     assert prompt.index("Was hat Müller") > prompt.index("<untrusted_data")
 
 
+def test_reply_uses_habits_with_the_recipient() -> None:
+    engine = StubEngine({"subject": "", "body": "Hallo Anna, passt. LG"})
+    tasks.reply(
+        engine,
+        {
+            **THREAD,
+            "contactStyle": {"greeting": "Hallo Anna,", "closing": "LG", "address": "du", "words": 40, "count": 9},
+            "styleSamples": ["Hallo Anna, danke dir! LG"],
+        },
+    )
+    system = engine.calls[0]["system"]
+    assert "greeting: Hallo Anna," in system and "closing: LG" in system and "address: du" in system
+    assert "habits with this recipient" in system
+    engine.calls.clear()
+    tasks.reply(engine, {**THREAD, "profile": {"address": "sie"}, "contactStyle": {"address": "du"}})
+    assert "formally with 'Sie'" not in engine.calls[0]["system"]
+    engine.calls.clear()
+    tasks.reply(engine, {**THREAD, "profile": {"address": "sie"}})
+    assert "formally with 'Sie'" in engine.calls[0]["system"]
+    engine.calls.clear()
+    tasks.reply(engine, {**THREAD, "contactStyle": {"address": "evil"}})
+    assert "habits with this recipient" not in engine.calls[0]["system"]
+
+
 def test_other_tasks_run() -> None:
     engine = StubEngine({"subject": "", "body": "Hallo"})
     assert tasks.reply(engine, {**THREAD, "styleSamples": ["Lg Peter"], "instruction": "zusagen"})["body"] == "Hallo"

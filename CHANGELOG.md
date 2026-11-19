@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Replies in your own style
+- **Style per contact (opt-in):** Settings → AI & agents → Writing style → "Learn style per contact". Levuvo Mail reads your sent emails in the local search index and remembers per recipient the greeting, the closing and du or Sie, without any AI model. Reply suggestions and "bullet points to email" (to the first recipient typed) use these habits, put your emails to that person first as style samples, and show "In the style of your emails to …". A learned du/Sie for a contact wins over the general setting.
+- **Stays on the device:** the profile is encrypted with a keychain key (memory only without a keychain), not part of backups, relearned every six hours from the index, and can be deleted per contact (stays deleted until you write to them again) or as a whole; switching it off or "Delete all AI data" deletes it.
+- **Consent text updated:** the cloud consent now names attachment text and follow-ups in questions and the per-contact habits; existing cloud consents are asked again once.
+
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built.
 - **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off.

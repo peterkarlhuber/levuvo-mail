@@ -331,6 +331,13 @@ for reply suggestions and "Bullet points to email" the assistant gets up to five
 emails as a style sample (only your own text, no training); with a cloud model they go to the provider too.
 A rewritten text stays marked with "Changed by the assistant · Undo".
 
+**Learn style per contact** (off; switch it on under Writing style): Levuvo Mail reads your sent emails in
+the local search index and remembers, per contact, the greeting ("Hallo Anna,"), the closing ("LG") and du or
+Sie. No AI model runs for this; it is stored encrypted on this device only, not in backups. A reply
+suggestion to Anna then uses her greeting and your du/Sie form (before the general setting) and takes your
+emails to her as style samples; the draft shows "In the style of your emails to …". The table shows what was
+learned; single contacts or everything can be deleted, and switching it off deletes everything too.
+
 **Filters in words:** under Settings → Filters type e.g. "invoices from suppliers to the Accounting
 folder", click "Suggest rule", review, save.
 

@@ -135,7 +135,10 @@ ADDRESS = {
 def _profile(params: dict[str, Any]) -> str:
     """The user's own writing preferences from the settings. They shape style only, never the rules."""
     profile = params.get("profile") if isinstance(params.get("profile"), dict) else {}
-    parts = [TONES.get(str(profile.get("tone")), ""), ADDRESS.get(str(profile.get("address")), "")]
+    habits = params.get("contactStyle") if isinstance(params.get("contactStyle"), dict) else {}
+    # A form of address learned for this one recipient wins over the general setting.
+    address = "" if habits.get("address") in ("du", "sie") else ADDRESS.get(str(profile.get("address")), "")
+    parts = [TONES.get(str(profile.get("tone")), ""), address]
     signoff = _text(profile.get("signoff"), 200).strip()
     if signoff:
         parts.append(f"End the email with this closing line: {signoff}")
@@ -148,18 +151,43 @@ def _profile(params: dict[str, Any]) -> str:
     return " ".join(p for p in parts if p)
 
 
+def _habits(params: dict[str, Any]) -> str:
+    """How the user usually writes to this recipient, learned locally from their sent mail."""
+    habits = params.get("contactStyle") if isinstance(params.get("contactStyle"), dict) else {}
+    parts = []
+    if habits.get("greeting"):
+        parts.append(f"greeting: {_text(habits['greeting'], 80)}")
+    if habits.get("closing"):
+        parts.append(f"closing: {_text(habits['closing'], 60)}")
+    if habits.get("address") in ("du", "sie"):
+        parts.append(f"German form of address: {habits['address']}")
+    if isinstance(habits.get("words"), int) and habits["words"] > 0:
+        parts.append(f"typical length: about {habits['words']} words")
+    return "\n".join(parts)
+
+
 def _style(params: dict[str, Any]) -> str:
     samples = [s for s in params.get("styleSamples") or [] if isinstance(s, str)][:5]
     profile = _profile(params)
-    if not samples:
+    habits = _habits(params)
+    if not samples and not habits:
         return profile or "Write in a friendly, clear and concise business tone."
-    joined = "\n\n---\n\n".join(_text(s, 1200) for s in samples)
-    return (
+    out = (
         "Match the user's own writing style (greeting, tone, length, formality) as shown in these emails "
         "the user wrote. Use them only for style, never copy facts from them. "
         + (f"Where the samples and these preferences differ, follow the preferences: {profile}\n" if profile else "\n")
-        + frame_untrusted(joined, "user's sent emails (style samples)")
     )
+    if habits:
+        # Habits with this one recipient win over the general samples and the general form of address.
+        out += (
+            "With this recipient the user usually writes as follows; use the same greeting (with the "
+            "recipient's name as in the thread), closing line and form of address, unless the user's instruction "
+            "for this email says otherwise:\n" + frame_untrusted(habits, "user's habits with this recipient") + "\n"
+        )
+    if samples:
+        joined = "\n\n---\n\n".join(_text(s, 1200) for s in samples)
+        out += frame_untrusted(joined, "user's sent emails (style samples)")
+    return out
 
 
 def reply(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
