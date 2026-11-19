@@ -12,7 +12,20 @@ export function updateFeedConfigured(app, resourcesPath = process.resourcesPath)
   return Boolean(app.isPackaged && resourcesPath && existsSync(path.join(resourcesPath, 'app-update.yml')));
 }
 
-export async function createUpdater({ app, dialog, getWindow, beforeInstall, logger = () => {}, t = key => key }) {
+/**
+ * `autoInstall()` reads the user's choice (Settings → Privacy → "Install updates automatically",
+ * on by default, CRA Annex I Part I (2)(c)). Off: Levuvo Mail still checks and asks before it
+ * downloads; "Later" postpones in both modes.
+ */
+export async function createUpdater({
+  app,
+  dialog,
+  getWindow,
+  beforeInstall,
+  autoInstall = async () => true,
+  logger = () => {},
+  t = key => key
+}) {
   if (!updateFeedConfigured(app)) {
     return { enabled: false, check: async () => ({ status: 'disabled' }) };
   }
@@ -33,8 +46,33 @@ export async function createUpdater({ app, dialog, getWindow, beforeInstall, log
   autoUpdater.on('update-not-available', () => {
     lastStatus = 'current';
   });
-  autoUpdater.on('update-available', () => {
-    lastStatus = 'downloading';
+  let offered = '';
+  autoUpdater.on('update-available', async info => {
+    if (autoUpdater.autoDownload) {
+      lastStatus = 'downloading';
+      return;
+    }
+    lastStatus = 'available';
+    const version = info?.version || '';
+    if (offered === version) return;
+    offered = version;
+    const result = await dialog.showMessageBox(getWindow() || undefined, {
+      type: 'info',
+      buttons: [t('later'), t('download')],
+      defaultId: 1,
+      cancelId: 0,
+      title: t('updateAvailable'),
+      message: `Levuvo Mail ${version}`.trim(),
+      detail: t('updateAvailableDetail')
+    });
+    if (result.response === 1) {
+      lastStatus = 'downloading';
+      // Chosen by the user: install at the next quit like an automatic update.
+      autoUpdater.autoInstallOnAppQuit = true;
+      autoUpdater.downloadUpdate().catch(() => {
+        lastStatus = 'error';
+      });
+    }
   });
   autoUpdater.on('update-downloaded', async info => {
     lastStatus = 'ready';
@@ -57,6 +95,15 @@ export async function createUpdater({ app, dialog, getWindow, beforeInstall, log
 
   const check = async () => {
     try {
+      let automatic = true;
+      try {
+        automatic = (await autoInstall()) !== false;
+      } catch {
+        /* settings unreadable: keep the secure default */
+      }
+      autoUpdater.autoDownload = automatic;
+      if (automatic) autoUpdater.autoInstallOnAppQuit = true;
+      else if (lastStatus !== 'ready' && lastStatus !== 'downloading') autoUpdater.autoInstallOnAppQuit = false;
       await autoUpdater.checkForUpdates();
     } catch {
       lastStatus = 'error';

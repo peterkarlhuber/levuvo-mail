@@ -1,3 +1,4 @@
+import { AiMarkingSetting } from './SettingsPrivacyData';
 import { useCallback, useEffect, useState } from 'react';
 import { Bot, Download, LoaderCircle, RefreshCcw, ShieldCheck, Trash2 } from 'lucide-react';
 import { getJson, postJson } from './api';
@@ -413,6 +414,8 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
       </Section>
 
       <McpSettings />
+
+      <AiMarkingSetting />
 
       <Section
         title={t('KI-Protokoll')}

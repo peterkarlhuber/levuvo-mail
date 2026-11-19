@@ -3,6 +3,7 @@ import { ArrowLeft, Bell, CheckCheck, LoaderCircle, MailX, Newspaper, Receipt } 
 import { getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
+import { NewsletterDigest } from './NewsletterDigest';
 import type { Bundle, Detail, Message } from './types';
 
 export const BUNDLE_ORDER: Bundle[] = ['invoice', 'notification', 'newsletter'];
@@ -81,7 +82,8 @@ export function BundleHeader({
   folder,
   writeEnabled,
   onBack,
-  onAction
+  onAction,
+  onOpenMessage
 }: {
   bundle: Bundle;
   messages: Message[];
@@ -90,6 +92,7 @@ export function BundleHeader({
   writeEnabled: boolean;
   onBack: () => void;
   onAction: (action: 'markRead' | 'trash', uids: number[]) => void;
+  onOpenMessage?: (message: Message) => void;
 }) {
   const { t } = useT();
   const { confirm, toast } = useUi();
@@ -98,7 +101,9 @@ export function BundleHeader({
   const [done, setDone] = useState<string[]>([]);
   const members = useMemo(() => messages.filter(m => m.bundle === bundle), [messages, bundle]);
   const unread = members.filter(m => m.unread).map(m => m.uid);
-  const groups = useMemo(() => (bundle === 'newsletter' ? senders(members).slice(0, 12) : []), [bundle, members]);
+  const [allSenders, setAllSenders] = useState(false);
+  const allGroups = useMemo(() => (bundle === 'newsletter' ? senders(members) : []), [bundle, members]);
+  const groups = allSenders ? allGroups : allGroups.slice(0, 12);
 
   async function unsubscribe(group: SenderGroup) {
     setBusy(group.email);
@@ -185,6 +190,14 @@ export function BundleHeader({
             </li>
           ))}
         </ul>
+      )}
+      {allGroups.length > 12 && (
+        <button className="text-button bundle-more" onClick={() => setAllSenders(!allSenders)}>
+          {allSenders ? t('Weniger Absender') : t('Alle {count} Absender', { count: allGroups.length })}
+        </button>
+      )}
+      {bundle === 'newsletter' && (
+        <NewsletterDigest messages={members} accountId={accountId} folder={folder} onOpenMessage={onOpenMessage} />
       )}
     </div>
   );
