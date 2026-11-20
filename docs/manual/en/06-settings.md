@@ -8,21 +8,21 @@ Open the settings with the slider icon at the bottom left or with `Alt` + `,`.
 
 | Section | What you set there |
 |---|---|
-| General | Language, light or dark design, list density, undo send, review new senders first, Jitsi server for video calls |
-| Accounts | Add and remove accounts, signatures, additional sender addresses |
-| Templates | Text snippets for recurring emails |
-| Filters & vacation | Rules on the mail server and vacation reply |
-| Automations | Rules Levuvo Mail applies to new email, also creating tasks |
-| Calendar & contacts | Connect other providers' calendars, colours, import and export |
-| Booking links | Links others use to book a meeting with you |
-| Security | Keys and certificates for encrypted email |
+| General | **Display** (language, theme, density), **Reading** (bundles, review new senders), **Writing** (undo send), **Calendar**, **Video calls** (Jitsi server) |
+| Accounts | Accounts, signatures, sender addresses, **Connection status** |
+| Templates | **Snippets and templates** |
+| Filters & vacation | **Filter rules** on the mail server and **Vacation reply** |
+| Automations | **Automations**: rules for new email, also creating tasks, with a **Log** |
+| Calendar & contacts | **Server accounts** of other providers, colours, import and export |
+| Booking links | **Booking links** others use to book a meeting with you |
+| Security | Keys and certificates (OpenPGP, S/MIME) |
 | Search & offline | Status of the search index, rebuild |
-| AI & agents | Assistant, language models, cloud consent, agents |
+| AI & agents | **AI assistant**, **Features**, **Writing style**, **AI log**, agents and **Approvals** |
 | Notifications | Allow and test notifications |
-| Privacy | Crash reports (optional), diagnostic report |
-| Backup | Create and restore backups |
-| Help | This manual with search, quick help, keyboard shortcuts |
-| About | Version, imprint, licences |
+| Privacy | Privacy cockpit, **Your data**, crash reports, diagnostic report, **Data stored on this device** |
+| Backup | **Create backup**, **Restore or move to a new computer** |
+| Help | **Manual** (this guide) with search, **Quick help**, keyboard shortcuts |
+| About | Version, **Security and support**, **Legal notice**, open-source licences |
 
 ### Signature and additional sender addresses
 
@@ -45,6 +45,16 @@ Under **Settings → Automations**, **New automation** creates rules for new ema
 - **Only reachable from your device.** The app doesn't accept connections from other computers.
 - **Crash reports only if you want.** Under **Settings → Privacy** you decide whether a technical report is sent after a crash. It may contain parts of open emails or addresses. That is why it is off by default.
 
+### Export or delete your data
+
+Under **Settings → Privacy** the **Privacy cockpit** shows the last 30 days: blocked trackers, AI calls and what left your computer. Below it, under **Your data**:
+
+- **Export my data** saves a readable copy (JSON) of the data that exists only on this device., without passwords and private keys.
+- **Delete all data on this device** removes everything Levuvo Mail stored here at the next start, including its entries in the Keychain or Credential Manager. Until then you can cancel; emails on the servers stay.
+- **Install updates automatically** is on. If you switch it off, Levuvo Mail asks before each update. Then please install security updates promptly.
+
+Under **Settings → About**, **Security and support** shows until when this version gets free security updates and how to report a vulnerability. **Open-source licences** shows the licence texts of all included components.
+
 ![Security: keys and certificates](settings-security.png)
 
 ## When something doesn't work
@@ -65,7 +75,9 @@ Under **Settings → Automations**, **New automation** creates rules for new ema
 
 ## Get help
 
-1. Open **Settings → Privacy** and click **Download** next to **Diagnostic report**.
-2. Send the report with a short description to your support or IT team.
+This manual is also in the app, with search: **Settings → Help** or the question mark on the left. Or ask the assistant, for example "How do I make a backup?"; it answers from the manual.
 
-The diagnostic report contains no email content and no addresses. Never share your password, not even with support.
+If you are still stuck:
+
+1. Open **Settings → Privacy** and click **Download** next to **Diagnostic report**. It contains no email content and no addresses.
+2. Send it with a short description to your support or IT team. Never share your password, not even with support.

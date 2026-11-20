@@ -9,6 +9,7 @@ import { createTemplateStore } from './templates.mjs';
 import { createContactNotes, lockedContactNotes } from './contact-notes.mjs';
 import { registerContactHistoryRoutes } from './routes-contact-history.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
+import { AUTO_REPLY_ENDPOINTS, createAutoReplyService } from './auto-reply-cloud.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
 import { createCaldavTasks } from './task-sync-caldav.mjs';
 import { createGoogleTasks, createGraphTasks, TASK_ENDPOINTS } from './task-sync-cloud.mjs';
@@ -391,6 +392,26 @@ export async function createMailServer({
       )
   });
   const smtpConfigFor = account => withToken(account, account.smtp);
+  // Out-of-office reply of Microsoft 365 / Google accounts, stored with the provider. The editor
+  // content (may contain the user's own text) stays on this device encrypted.
+  const autoReply = createAutoReplyService({
+    fetchImpl,
+    endpoints: { ...AUTO_REPLY_ENDPOINTS, ...(cloudEndpoints || {}) },
+    logger: line => logger(line),
+    file: await createSealedJsonFile(
+      path.join(dir, 'auto-replies.json'),
+      { accounts: {} },
+      { vault: store, keyName: 'auto-replies-key' }
+    ),
+    token: account =>
+      oauth.accessToken(
+        account.id,
+        account.oauthProvider,
+        accountManager.getSecret(account.id, 'oauth'),
+        token => accountManager.setSecret(account.id, 'oauth', token),
+        { resource: account.oauthProvider === 'microsoft' ? 'settings' : 'cloud' }
+      )
+  });
 
   const watchers = createWatcherPool({
     clientFactory: watcherFactory,
@@ -558,7 +579,7 @@ export async function createMailServer({
     }
     if (
       err.code &&
-      /^(oauth|dav|sieve|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task|scheduling|automation)_/.test(
+      /^(oauth|dav|sieve|autoreply|smime|pgp|cloud|unsubscribe|calendar|protected|spaces|task|scheduling|automation)_/.test(
         err.code
       )
     ) {
@@ -699,6 +720,7 @@ export async function createMailServer({
     localContacts,
     localContactsError,
     cloud,
+    autoReply,
     fetchImpl,
     pgp,
     smime,

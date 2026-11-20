@@ -82,6 +82,8 @@ Next to the folder name a small badge shows the connection: **Live** means new m
 
 Press `Ctrl` + `K`. The command palette opens. Type a few letters, such as "dra" for Drafts or "new" for a new message, and press `Enter`. This takes you to any folder, account or setting without hunting for it.
 
+It also runs commands such as **Write new email**, **Search emails**, **Follow-up: awaiting replies** (emails still waiting for an answer), **Attachments: all files in a folder** and **Show keyboard shortcuts**. Switch the look with **Dark theme**, **Light theme** or **Theme like system**.
+
 ![The command palette finds folders, commands and settings.](palette.png)
 
 ### Levuvo Mail in the background

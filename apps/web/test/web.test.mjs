@@ -1212,6 +1212,28 @@ test('Protect with password: the composer refuses the same weak passwords as the
     assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
 });
 
+test('Assistant panel width: limits, saved value check and keyboard steps', async () => {
+  const { ASSISTANT_WIDTH, clampAssistantWidth, maxAssistantWidth, validAssistantWidth, assistantWidthForKey } =
+    await import('../src/assistant-width.ts');
+  assert.equal(clampAssistantWidth(100), ASSISTANT_WIDTH.min);
+  assert.equal(clampAssistantWidth(5000), ASSISTANT_WIDTH.max);
+  assert.equal(clampAssistantWidth(Number.NaN), ASSISTANT_WIDTH.initial);
+  // A small window keeps part of the app visible, but never goes below the minimum.
+  assert.equal(maxAssistantWidth(1000), 840);
+  assert.equal(maxAssistantWidth(300), ASSISTANT_WIDTH.min);
+  assert.equal(clampAssistantWidth(900, 1000), 840);
+  assert.ok(validAssistantWidth(500));
+  assert.ok(!validAssistantWidth(10));
+  assert.ok(!validAssistantWidth('500'));
+  // The handle is on the left edge: ArrowLeft makes the panel wider.
+  assert.equal(assistantWidthForKey('ArrowLeft', 420, 1600), 440);
+  assert.equal(assistantWidthForKey('ArrowRight', 420, 1600), 400);
+  assert.equal(assistantWidthForKey('ArrowLeft', 420, 1600, true), 520);
+  assert.equal(assistantWidthForKey('Home', 600, 1600), ASSISTANT_WIDTH.min);
+  assert.equal(assistantWidthForKey('End', 420, 1600), ASSISTANT_WIDTH.max);
+  assert.equal(assistantWidthForKey('Enter', 420, 1600), null);
+});
+
 test('Newsletter hub: the weekly overview reads the newest 20 newsletters of the last seven days', async () => {
   const { weekOfNewsletters } = await import('../src/newsletter-week.ts');
   const now = Date.parse('2026-11-19T12:00:00Z');

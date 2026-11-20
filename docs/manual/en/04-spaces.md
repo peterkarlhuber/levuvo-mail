@@ -30,7 +30,7 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Tab | What for |
 |---|---|
 | Overview | What happened recently |
-| Chat | Short messages to all members; **Start video call** sends everyone a Jitsi link |
+| Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line; **Start video call** sends everyone a Jitsi link |
 | Notes | Texts that several people edit at the same time |
 | Mails | Emails on the topic with internal comments |
 | Tasks | Tasks with owners and due dates |
@@ -38,6 +38,8 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Files | Files with earlier versions |
 | Members | Who is in and which role they have |
 | Settings | Name and description; allow the assistant and cloud AI to see the space |
+
+Chat messages usually arrive within a few seconds. Levuvo Mail counts unread ones on the left bar, in the list of spaces and on the tab, on this device only: there are no read receipts.
 
 To put an email into a space, open it, click **Add to space** in the **…** menu and choose the space.
 
