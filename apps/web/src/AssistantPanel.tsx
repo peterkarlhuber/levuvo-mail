@@ -1,7 +1,10 @@
 // The collapsible panel of the Levuvo Mail Assistant (Ctrl/⌘+J): ask the mailbox, give the assistant a
 // task, start a routine, and approve what agents prepared. Every answer is marked as AI-generated.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useFocusTrap } from './ui/focus';
+import { usePrefs } from './prefs';
+import { AssistantResizer } from './AssistantResizer';
+import { clampAssistantWidth } from './assistant-width';
 import { BookOpen, CircleCheck, LoaderCircle, Mail, Paperclip, Play, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { ApiError, getJson, postJson } from './api';
 import { aiEnabled, aiErrorText, runAi } from './ai';
@@ -83,6 +86,18 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
   const seq = useRef(0);
   const input = useRef<HTMLTextAreaElement>(null);
   const trap = useFocusTrap<HTMLDivElement>(open);
+  const [prefs, setPrefs] = usePrefs();
+  // Live width while dragging; saved to the preferences when the drag ends.
+  const [width, setWidth] = useState(prefs.assistantWidth);
+  useEffect(() => setWidth(prefs.assistantWidth), [prefs.assistantWidth]);
+  const [viewport, setViewport] = useState(() => window.innerWidth);
+  useEffect(() => {
+    if (!open) return;
+    const onResize = () => setViewport(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [open]);
+  const shownWidth = clampAssistantWidth(width, viewport);
 
   useEffect(() => {
     if (!open) return;
@@ -188,7 +203,9 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
       <div className="assistant-scrim" role="presentation" onMouseDown={onClose} />
       <div
         ref={trap}
+        id="assistant-panel"
         className="assistant-panel"
+        style={{ '--assistant-width': `${shownWidth}px` } as CSSProperties}
         role="dialog"
         aria-modal="true"
         aria-labelledby="assistant-title"
@@ -200,6 +217,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
           }
         }}
       >
+        <AssistantResizer width={shownWidth} onResize={setWidth} onCommit={w => setPrefs({ assistantWidth: w })} />
         <header className="assistant-head">
           <Sparkles size={16} aria-hidden="true" />
           <h2 id="assistant-title" className="assistant-title">

@@ -253,6 +253,15 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await axe(page, 'assistant');
       // UX-LEV-011: the drawer keeps the focus, Escape closes it and focus returns to the rail button.
       assert.ok(await page.evaluate(() => !!document.activeElement?.closest('.assistant-panel')));
+      // The panel width can be changed with the keyboard on its separator and is kept.
+      const panelWidth = () => page.locator('.assistant-panel').evaluate(el => el.getBoundingClientRect().width);
+      const before = await panelWidth();
+      await page.locator('.assistant-resizer').focus();
+      await page.keyboard.press('ArrowLeft');
+      assert.equal(await panelWidth(), before + 20);
+      assert.equal(await page.locator('.assistant-resizer').getAttribute('aria-valuenow'), String(before + 20));
+      await page.locator('.assistant-resizer').dblclick();
+      assert.equal(await panelWidth(), before);
       await page.keyboard.press('Escape');
       await page.locator('.assistant-panel').waitFor({ state: 'detached' });
       assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Assistent');
