@@ -82,6 +82,8 @@ Oben neben dem Ordnernamen zeigt ein kleines Feld die Verbindung: **Live** heiß
 
 Drücke `Strg` + `K`. Es öffnet sich die Befehlspalette. Tippe ein paar Buchstaben, etwa „entw“ für Entwürfe oder „neue“ für eine neue Nachricht, und drücke `Enter`. So erreichst du jeden Ordner, jedes Konto und jede Einstellung, ohne zu suchen.
 
+Dazu kommen Befehle wie **Neue E-Mail schreiben**, **E-Mails durchsuchen**, **Nachfassen: offene Antworten** (Mails, auf die noch eine Antwort fehlt), **Anhänge: alle Dateien eines Ordners** und **Tastenkürzel anzeigen**. Das Aussehen wechselst du mit **Dunkles Design**, **Helles Design** oder **Design wie System**.
+
 ![Die Befehlspalette findet Ordner, Befehle und Einstellungen.](palette.png)
 
 ### Levuvo Mail im Hintergrund

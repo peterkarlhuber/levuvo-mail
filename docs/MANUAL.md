@@ -133,8 +133,10 @@ without opening it.
 ## 8 Filters & vacation reply
 
 **Settings → Filters & vacation** (per account). Rules run **on your mail server** (Sieve) and therefore also
-work when Levuvo Mail is closed. Requirement: your provider offers ManageSieve (for Microsoft and Google
-sign-in, set up rules in the provider's webmail instead).
+work when Levuvo Mail is closed. Requirement: your provider offers ManageSieve. For accounts signed in
+with Microsoft or Google, Levuvo Mail stores the **vacation reply** with the provider (Microsoft 365 /
+Gmail) – formatted, with the signature if you choose, but without embedded images (an uploaded logo is
+left out); set up rules in the provider's webmail. The first time, “Approve” asks for a one-time consent.
 
 - **Vacation reply:** enable, optional from/until date, subject, text, “at most every … days” per sender.
   The text is formatted like the signature (bold, links, images). **“Append the account's signature
@@ -385,6 +387,11 @@ folder", click "Suggest rule", review, save.
   meeting, prepare reply drafts.
 - **Approvals:** what agents prepared (send an email, event with attendees, contact, task, trash) – "Approve" or
   "Reject".
+- **Change the width:** drag the handle on the left edge of the panel to the left (wider) or right
+  (narrower), 340 to 960 pixels; part of the app always stays visible. With the keyboard: Tab to the
+  handle, then Left/Right arrow (with Shift in bigger steps), Home for the narrowest, End for the widest
+  width. A double click resets it to 420 pixels. The width is saved, also in the backup. On a phone the
+  assistant fills the screen.
 
 **Agents (MCP server):** under Settings → AI & agents switch on the MCP server, create an agent (level
 read, drafts, organize or everything incl. sending) and enter the token shown once, or the ready-made

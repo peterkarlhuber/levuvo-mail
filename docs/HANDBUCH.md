@@ -147,7 +147,10 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
 
 **Einstellungen → Filter & Abwesenheit** (je Konto). Die Regeln laufen **auf deinem Mailserver**
 (Sieve) und wirken daher auch, wenn Levuvo Mail geschlossen ist. Voraussetzung: dein Anbieter bietet
-ManageSieve an (bei Microsoft- und Google-Anmeldung stattdessen im Webmail einrichten).
+ManageSieve an. Bei Konten mit Microsoft- oder Google-Anmeldung speichert Levuvo Mail die
+**Abwesenheitsnotiz** beim Anbieter (Microsoft 365 / Gmail) – formatiert und auf Wunsch mit Signatur, aber
+ohne eingebettete Bilder (ein hochgeladenes Logo entfällt); Regeln richtest du dort im Webmail ein. Beim
+ersten Mal fragt „Freigeben“ einmalig nach der Erlaubnis.
 
 - **Abwesenheitsnotiz:** aktivieren, optional Von/Bis-Datum, Betreff, Text, „höchstens alle … Tage“ je Absender.
   Der Text lässt sich wie die Signatur formatieren (fett, Links, Bilder). **„Signatur des Kontos anhängen
@@ -417,6 +420,11 @@ Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
   vereinbaren, Antwortentwürfe vorbereiten.
 - **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt, Aufgabe,
   Papierkorb) – „Freigeben“ oder „Ablehnen“.
+- **Breite ändern:** den Griff am linken Rand des Fensters nach links (breiter) oder rechts (schmaler)
+  ziehen, 340 bis 960 Pixel; ein Teil der App bleibt immer sichtbar. Mit der Tastatur: Tab auf den Griff,
+  dann Pfeil links/rechts (mit Umschalt in größeren Schritten), Pos1 für die schmalste, Ende für die
+  breiteste Breite. Doppelklick setzt auf 420 Pixel zurück. Die Breite bleibt gespeichert, auch in der
+  Sicherung. Auf dem Handy füllt der Assistent den Bildschirm.
 
 **Agenten (MCP-Server):** Unter Einstellungen → KI & Agenten den MCP-Server einschalten, einen Agenten
 anlegen (Stufe Lesen, Entwürfe, Ordnen oder Alles inkl. Senden) und den einmal angezeigten Token bzw. die

@@ -437,5 +437,8 @@ export const AI_EN: Record<string, string> = {
   stalled: 'stalled',
   Schnell: 'Fast',
   Ausgewogen: 'Balanced',
-  'Am genauesten': 'Most accurate'
+  'Am genauesten': 'Most accurate',
+  // Width of the assistant panel
+  'Breite des Assistenten ändern': 'Change width of the assistant',
+  '{n} Pixel breit': '{n} pixels wide'
 };

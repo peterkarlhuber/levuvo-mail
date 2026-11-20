@@ -90,6 +90,8 @@ export const BACKUP_FILES = {
  */
 export const NOT_BACKED_UP = {
   'instance.json': 'installation ID of this device',
+  // The out-of-office reply itself lives with Microsoft/Google; this is only the editor copy.
+  'auto-replies.json': 'editor copy of the out-of-office reply; the reply is stored with the provider',
   'ai-semantic.json': 'progress of the semantic index; vectors are rebuilt',
   'mcp-approvals.json': 'short-lived approvals that expire',
   'ai-style.json': 'writing-style profile; learned again from the sent mail in the index',
