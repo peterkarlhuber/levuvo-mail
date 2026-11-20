@@ -138,7 +138,7 @@ export function AiAdvancedSettings({ settings, save }: Props) {
         <Row
           label={t('Thinking')}
           hint={t(
-            'Ob das Modell vor der Antwort nachdenkt. Gilt nur für Modelle, die das können (z. B. Qwen 3.5). Automatisch: aus bei Fragen ans Postfach, damit sie schnell bleiben.'
+            'Ob das Modell vor der Antwort nachdenkt. Gilt nur für Modelle, die das können (z. B. Qwen 3.5). Automatisch: aus, damit Antworten schnell kommen und nicht abbrechen. Niedrig bis Hoch schalten es ein.'
           )}
         >
           <select value={draft.thinking} onChange={e => store({ thinking: e.target.value as typeof draft.thinking })}>

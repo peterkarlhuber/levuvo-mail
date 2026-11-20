@@ -411,8 +411,8 @@ export const AI_EN: Record<string, string> = {
   'Niedrig (0 bis 0,3) antwortet sachlich und gleichbleibend, höher (bis 2) abwechslungsreicher. Automatisch: 0,2 für Fragen ans Postfach, sonst der Standard des Modells.':
     'Low (0 to 0.3) answers factually and consistently, higher (up to 2) more varied. Automatic: 0.2 for questions to the mailbox, otherwise the model default.',
   Thinking: 'Thinking',
-  'Ob das Modell vor der Antwort nachdenkt. Gilt nur für Modelle, die das können (z. B. Qwen 3.5). Automatisch: aus bei Fragen ans Postfach, damit sie schnell bleiben.':
-    'Whether the model thinks before it answers. Only for models that can (e.g. Qwen 3.5). Automatic: off for questions to the mailbox, so they stay fast.',
+  'Ob das Modell vor der Antwort nachdenkt. Gilt nur für Modelle, die das können (z. B. Qwen 3.5). Automatisch: aus, damit Antworten schnell kommen und nicht abbrechen. Niedrig bis Hoch schalten es ein.':
+    'Whether the model thinks before it answers. Only for models that can (e.g. Qwen 3.5). Automatic: off, so answers come quickly and are not cut off. Low to High turn it on.',
   Zurücksetzen: 'Reset',
   'Unbekannte Thinking-Stufe.': 'Unknown thinking level.',
   'Kontextlänge außerhalb der Grenzen.': 'Context length out of range.',
