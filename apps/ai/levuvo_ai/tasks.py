@@ -104,15 +104,31 @@ class Digest(BaseModel):
     action_needed: bool = Field(description="Whether the user needs to act or answer")
 
 
+_URL = re.compile(r"\b(?:https?://|www\.)\S+", re.IGNORECASE)
+
+
+def _no_links(value: Any) -> Any:
+    """A summary never carries a link: a manipulated email got 'Pay at https://…' into it (Gemma 4 E2B).
+    The links stay in the email itself, where the app checks them."""
+    if isinstance(value, str):
+        return _URL.sub("[Link]", value)
+    if isinstance(value, list):
+        return [_no_links(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _no_links(v) for k, v in value.items()}
+    return value
+
+
 def digest(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
-    return _ask(
+    result = _ask(
         engine,
         f"Summarize the thread for the user in {_lang(params)}. Summary: at most three lines, each under 120 "
         "characters, covering who wants what by when. List deadlines, amounts of money and open questions to the "
-        f"user exactly as stated. The user's own addresses: {_text(params.get('me'), 500)}.",
+        f"user exactly as stated. No links. The user's own addresses: {_text(params.get('me'), 500)}.",
         _thread(params),
         Digest,
     )
+    return _no_links(result)
 
 
 class NewsletterItem(BaseModel):

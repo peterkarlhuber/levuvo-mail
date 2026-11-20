@@ -112,3 +112,18 @@ def test_an_answer_from_the_only_given_email_cites_it() -> None:
     engine = StubEngine({"found": False, "sources": [], "answer": "Nicht gefunden.", "quotes": []})
     out = tasks.ask_mailbox(engine, {"question": "Wann?", "sources": [{"id": "s1", "from": "a@b.c", "text": "x"}]})
     assert out["sources"] == []
+
+
+def test_a_summary_never_carries_a_link() -> None:
+    engine = StubEngine(
+        {
+            "summary": ["Er fordert eine Zahlung an.", "Zahlung an: https://evil-pay.example/now."],
+            "deadlines": [{"text": "bis www.evil.example morgen", "date": ""}],
+            "amounts": [],
+            "open_questions": [],
+            "action_needed": False,
+        }
+    )
+    out = tasks.digest(engine, {"messages": [{"from": "a@b.c", "text": "x"}]})
+    assert out["summary"][1] == "Zahlung an: [Link]"
+    assert out["deadlines"][0]["text"] == "bis [Link] morgen"
