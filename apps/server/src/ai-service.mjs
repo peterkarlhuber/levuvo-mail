@@ -371,6 +371,33 @@ export function createAiService({
     }
     return s;
   }
+
+  // A local model answers one request at a time, and without a graphics card one request can take
+  // minutes. Work the app starts by itself (My day ranking, promise tracker, sorting into bundles)
+  // therefore runs one at a time and waits while the user waits for an answer, a draft or a
+  // routine; otherwise the user's request queued behind it and timed out (seen in the test with a
+  // 3B model on a laptop processor). Cloud models are not held back.
+  const BACKGROUND = new Set(['briefing-auto', 'commitments', 'background']);
+  let userCalls = 0;
+  const idle = [];
+  let backgroundTail = Promise.resolve();
+  const userSlot = () => {
+    userCalls += 1;
+    return () => {
+      userCalls -= 1;
+      if (userCalls === 0) for (const wake of idle.splice(0)) wake();
+    };
+  };
+  const backgroundSlot = async () => {
+    const before = backgroundTail;
+    let release = () => {};
+    backgroundTail = new Promise(resolve => (release = resolve));
+    await before;
+    while (userCalls > 0) await new Promise(resolve => idle.push(resolve));
+    return release;
+  };
+  const slot = (local, source) => (!local ? () => {} : BACKGROUND.has(source) ? backgroundSlot() : userSlot());
+
   return {
     get,
     publicSettings,
@@ -449,6 +476,8 @@ export function createAiService({
       // Embeddings always run on the local Ollama, also when a cloud model writes the answers, so the
       // per-account cloud block does not apply to them.
       const s = kind === 'embed' ? ensureAllowed(feature, null) : ensureAllowed(feature, accountId, sources);
+      // Embeddings are short and part of every search, so they never wait.
+      const release = await slot(kind !== 'embed' && s.provider === 'ollama', source);
       const started = Date.now();
       try {
         await ensureConfigured();
@@ -480,10 +509,13 @@ export function createAiService({
           error: err.kind || 'internal'
         });
         throw err;
+      } finally {
+        release();
       }
     },
     async agent(params, { accountId = null, source = 'routine' } = {}) {
       const s = ensureAllowed('agents', accountId);
+      const release = await slot(s.provider === 'ollama', source);
       const started = Date.now();
       try {
         await ensureConfigured();
@@ -509,6 +541,8 @@ export function createAiService({
           error: err.kind || 'internal'
         });
         throw err;
+      } finally {
+        release();
       }
     },
     /** Removes keys, consents and the log (the "forget everything" button). */

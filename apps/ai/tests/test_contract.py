@@ -304,6 +304,12 @@ def test_classify_uses_the_type_hierarchy() -> None:
     assert classify(OllamaError("disk_full", "no space")).kind == "disk_full"
     assert classify(OllamaError("something_new", "x")).kind == "ollama"
 
+    unreachable = _instance(e.ProviderConnectionError)
+    assert classify(unreachable).kind == "unreachable"
+    slow = _instance(e.ProviderConnectionError)
+    slow.__cause__ = TimeoutError("read timed out")
+    assert classify(slow).kind == "timeout", "a slow model is not 'Ollama not running'"
+
     class FutureProviderError(e.ProviderError):
         pass
 
@@ -418,8 +424,38 @@ def test_ask_without_tool_support_always_searches() -> None:
         fake.capabilities = ["completion"]
         engine = configured(url)
         out = tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
-        assert out == {"search": "hi", "tool": "search_mailbox"}
+        assert out == {"search": "hi", "tool": "search_mailbox", "fallback": True}
         assert not [p for p, _ in fake.requests if p == "/v1/chat/completions"]
+
+
+def test_ask_answer_takes_source_ids_out_of_longer_text() -> None:
+    """Small local models write 'From: Lufthansa (id: s1) ...' instead of the id: the id still counts."""
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append(
+            {
+                "role": "assistant",
+                "content": json.dumps(
+                    {
+                        "found": True,
+                        "sources": ["From: Lufthansa (id: s1) Hinflug 07:05", "s9", "m1"],
+                        "answer": "Dein Flug geht am 8. Dezember um 07:05.",
+                        "quotes": [],
+                    }
+                ),
+            }
+        )
+        mail = {
+            "id": "s1",
+            "from": "Lufthansa <x@example.com>",
+            "date": "2026-11-10",
+            "subject": "Flug",
+            "text": "07:05",
+        }
+        out = tasks.ask_mailbox(
+            engine, {"lang": "de", "question": "Wann geht mein Flug?", "assistant": ASSISTANT, "sources": [mail]}
+        )
+        assert out["sources"] == ["s1"], "unknown ids (s9, m1 without manual) are dropped"
 
 
 def test_user_model_options_reach_the_request() -> None:
@@ -458,3 +494,18 @@ def test_cut_off_answer_is_reported_and_can_get_more_room() -> None:
         tasks.ask_mailbox(engine, {"lang": "de", "question": "Erzähl alles", "assistant": ASSISTANT, "minTokens": 1200})
         last = [body for path, body in fake.requests if path == "/v1/chat/completions"][-1]
         assert last["max_tokens"] == 1200
+
+
+def test_agent_report_drops_internal_ids_and_a_closing_question() -> None:
+    """Seen with a real 3B model: 'UID 50' in the briefing and 'Shall I read UIDs 46, 42?' at the end."""
+    from levuvo_ai.agents import clean_report
+
+    report = (
+        "Heute wichtig:\n\n- Paketdienst (Ihre Sendung kommt heute), UID 50 - Zustellung 13-15 Uhr\n"
+        "- Konto managed-a812e0662c77: Rechnung 4471\n\n"
+        "Möchtest du die Inhalte der E-Mails mit den UIDs 46, 42 auslesen?"
+    )
+    assert clean_report(report) == (
+        "Heute wichtig:\n\n- Paketdienst (Ihre Sendung kommt heute) - Zustellung 13-15 Uhr\n- Konto: Rechnung 4471"
+    )
+    assert clean_report("Nichts Neues.") == "Nichts Neues."

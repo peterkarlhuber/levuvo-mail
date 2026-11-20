@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fuse, questionTerms, readSources, retrieve, verifiedQuote } from '../src/ask-mailbox.mjs';
-import { askSources, mapLimit } from '../src/routes-ai.mjs';
+import { answerSources, askSources, mapLimit } from '../src/routes-ai.mjs';
 import { attachmentText, attachmentTexts, textKind } from '../src/attachment-text.mjs';
 
 /** A one-page PDF with the given text (valid xref offsets). */
@@ -133,5 +133,48 @@ test('attachment text: text, HTML and PDF are read, other files and oversize are
   assert.deepEqual(
     files.map(f => [f.index, f.text]),
     [[1, 'Notiz']]
+  );
+});
+
+test('no source named by the model: the mails whose details are in the answer are shown', () => {
+  const map = [
+    {
+      accountId: 'a',
+      folder: 'INBOX',
+      uid: 1,
+      subject: 'Vertrag Wartung 2027',
+      fromName: 'Sarah König',
+      text: 'Rückmeldung bis 4. Dezember'
+    },
+    {
+      accountId: 'a',
+      folder: 'INBOX',
+      uid: 2,
+      subject: 'Buchung Wien–Hamburg',
+      fromName: 'Lufthansa',
+      text: 'Dezember 2026, VIE 07:05, LH 6321'
+    },
+    {
+      accountId: 'a',
+      folder: 'INBOX',
+      uid: 3,
+      subject: 'Zahnarzt',
+      fromName: 'Praxis',
+      text: 'Mittwoch, 2. Dezember 2026'
+    },
+    { accountId: 'a', folder: 'INBOX', uid: 4, subject: 'Fotos', fromName: 'Anna', text: 'Attersee' }
+  ];
+  assert.deepEqual(answerSources('Dein Flug geht am 8. Dezember 2026 um 07:05 (LH 6321).', map), ['s2']);
+  assert.deepEqual(answerSources('Du sollst dich bis 4. Dezember bei Sarah König melden.', map), ['s1']);
+  assert.deepEqual(answerSources('Die Hauptstadt ist Canberra.', map), [], 'nothing in common: no source');
+  const out = askSources({ answer: 'Abflug 07:05 mit LH 6321.', sources: [] }, map);
+  assert.deepEqual(
+    out.map(s => s.uid),
+    [2]
+  );
+  assert.deepEqual(
+    askSources({ answer: 'Abflug 07:05 mit LH 6321.', sources: ['s4'] }, map).map(s => s.uid),
+    [4],
+    'sources named by the model win'
   );
 });

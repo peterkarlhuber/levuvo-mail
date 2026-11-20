@@ -77,6 +77,17 @@ def _orkexa_kinds() -> list[tuple[type[BaseException], str]]:
 _KINDS: list[tuple[type[BaseException], str]] | None = None
 
 
+def _timed_out(exc: BaseException) -> bool:
+    seen: BaseException | None = exc
+    for _ in range(5):
+        if seen is None:
+            break
+        if isinstance(seen, TimeoutError) or "timeout" in type(seen).__name__.lower():
+            return True
+        seen = seen.__cause__ or seen.__context__
+    return "did not answer in time" in str(exc)
+
+
 def classify(exc: BaseException) -> RpcError:
     """Maps library errors to stable kinds without leaking prompts, keys or mail content.
 
@@ -90,6 +101,10 @@ def classify(exc: BaseException) -> RpcError:
         _KINDS = _orkexa_kinds()
     for cls, kind in _KINDS:
         if isinstance(exc, cls):
+            # A model that answers too slowly is reported by Orkexa as a connection error; the user
+            # should read "took too long", not "is Ollama running?" (seen with a 3B model on a CPU).
+            if kind == "unreachable" and _timed_out(exc):
+                return RpcError("timeout")
             if kind == "ollama":
                 return RpcError(_OLLAMA_CODES.get(str(getattr(exc, "code", "") or ""), "ollama"))
             return RpcError(kind)

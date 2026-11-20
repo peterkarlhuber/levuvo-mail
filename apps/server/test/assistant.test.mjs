@@ -284,3 +284,103 @@ test('"how do I …": the model calls search_manual, only manual sections reach 
   assert.equal(out.result.sources[0].manual, true);
   assert.equal(out.result.sources[0].section, '6.2');
 });
+
+test('a mailbox question gets no manual sections; a model without tool calls gets both', async t => {
+  for (const [first, withManual] of [
+    [{ search: 'Angebot', tool: 'search_mailbox' }, false],
+    [{ search: 'Angebot', tool: 'search_mailbox', fallback: true }, true]
+  ]) {
+    const dir = mkdtempSync(join(tmpdir(), 'lv-assistant-nomanual-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const calls = [];
+    const ai = createAiService({
+      settingsFile: await createJsonFile(join(dir, 'ai.json'), DEFAULT_AI_SETTINGS),
+      vault: { available: false },
+      sidecar: {
+        running: true,
+        async call(method, params) {
+          calls.push({ method, params });
+          if (method !== 'task') return { ok: true };
+          return 'sources' in params.input ? { answer: '4.250 EUR', found: true, sources: ['s1'] } : first;
+        },
+        async stop() {},
+        diagnostics: () => ({})
+      },
+      log: createAiLog(join(dir, 'log.jsonl')),
+      totalmem: () => 16 * GIB
+    });
+    await ai.save({ enabled: true, provider: 'ollama', model: 'ministral-3:3b' });
+    const handlers = {};
+    registerAiRoutes({
+      api: { get: () => {}, post: (p, ...rest) => (handlers[p] = rest.at(-1)) },
+      ai,
+      manual: {
+        search: async () => [
+          { chapterId: 'mail', number: '3.1', title: 'Lesen', chapter: 'Mail', text: 'So liest du.' }
+        ]
+      },
+      requireAction: () => true,
+      accounts: () => [{ id: 'a1' }],
+      ownAddresses: () => [],
+      aiForgetHooks: [],
+      semantic: {
+        search: async () => [
+          { accountId: 'a1', folder: 'INBOX', uid: 7, subject: 'Angebot', text: 'Preis 4.250 EUR', score: 0.8 }
+        ],
+        sync: async () => null,
+        forget: async () => {}
+      }
+    });
+    const reply = { code: () => reply, send: x => x };
+    await handlers['/api/ai/run'](
+      { body: { kind: 'ask', lang: 'de', input: { question: 'Was kostet das Angebot?' } } },
+      reply
+    );
+    const last = tasks(calls).at(-1);
+    assert.equal(last.sources.length, 1);
+    assert.equal(last.manual.length, withManual ? 1 : 0);
+  }
+});
+
+test('a local model: background work waits while the user waits, and runs one at a time', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-assistant-queue-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const order = [];
+  const pending = new Map();
+  const ai = createAiService({
+    settingsFile: await createJsonFile(join(dir, 'ai.json'), DEFAULT_AI_SETTINGS),
+    vault: { available: false },
+    sidecar: {
+      running: true,
+      async call(method, params) {
+        if (method !== 'task') return { ok: true };
+        order.push(`start ${params.input.name}`);
+        await new Promise(resolve => pending.set(params.input.name, resolve));
+        order.push(`end ${params.input.name}`);
+        return { items: [] };
+      },
+      async stop() {},
+      diagnostics: () => ({})
+    },
+    log: createAiLog(join(dir, 'log.jsonl')),
+    totalmem: () => 16 * GIB
+  });
+  await ai.save({ enabled: true, provider: 'ollama', model: 'ministral-3:3b' });
+  const tick = () => new Promise(resolve => setTimeout(resolve, 20));
+  const user = ai.run('classify', { name: 'user' });
+  await tick();
+  const bg1 = ai.run('prioritize', { name: 'bg1' }, { source: 'briefing-auto' });
+  const bg2 = ai.run('classify', { name: 'bg2' }, { source: 'background' });
+  await tick();
+  assert.deepEqual(order, ['start user'], 'background waits for the user request');
+  pending.get('user')();
+  await user;
+  await tick();
+  assert.deepEqual(order, ['start user', 'end user', 'start bg1'], 'then one background call at a time');
+  pending.get('bg1')();
+  await bg1;
+  await tick();
+  pending.get('bg2')();
+  await bg2;
+  assert.deepEqual(order.slice(-2), ['start bg2', 'end bg2']);
+});

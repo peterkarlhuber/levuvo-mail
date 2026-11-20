@@ -112,9 +112,11 @@ export function LocalModelSettings({
     };
   }, [enabled, active, state, load]);
 
-  async function act(action: 'download' | 'cancel' | 'delete', model: string) {
+  async function act(action: 'download' | 'cancel' | 'delete', model: string, activate = false) {
     try {
-      await postJson(`/api/ai/local-models/${action}`, { model }, 'ai-v1');
+      // `activate`: the model chosen in the list becomes active once it is verified, also when this
+      // page is closed during the download (the server switches it, not this component).
+      await postJson(`/api/ai/local-models/${action}`, activate ? { model, activate } : { model }, 'ai-v1');
     } catch (err) {
       toast({ text: aiErrorText((err as ApiError).code, t), kind: 'error' });
     }
@@ -405,7 +407,7 @@ function ModelStatus({
   extra
 }: {
   model: LocalModel;
-  act: (action: 'download' | 'cancel' | 'delete', id: string) => Promise<void>;
+  act: (action: 'download' | 'cancel' | 'delete', id: string, activate?: boolean) => Promise<void>;
   remove: (m: LocalModel) => Promise<void>;
   freeBytes: number | null;
   /** Shown next to the download button, e.g. "stay with the current model". */
@@ -475,7 +477,7 @@ function ModelStatus({
           variant={job?.status ? 'default' : 'primary'}
           disabled={tooLittleSpace}
           icon={job?.status === 'canceled' ? <Play size={14} /> : <Download size={14} />}
-          onClick={() => void act('download', model.id)}
+          onClick={() => void act('download', model.id, true)}
         >
           {job?.status === 'canceled'
             ? t('Fortsetzen')

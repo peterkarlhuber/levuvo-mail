@@ -32,6 +32,7 @@ export function useBundleAssist() {
           const res = await runAi<{ items: { id: string; bundle: string; from_person: boolean }[] }>('classify', {
             account: accountId,
             lang,
+            background: true,
             input: {
               messages: fresh.map(m => ({
                 id: String(m.uid),

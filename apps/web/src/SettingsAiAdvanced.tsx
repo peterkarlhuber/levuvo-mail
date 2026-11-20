@@ -96,8 +96,8 @@ export function AiAdvancedSettings({ settings, save }: Props) {
       <Row
         label={t('Max. Antwortlänge (Tokens)')}
         hint={t(
-          'Obergrenze für eine Antwort (Max Tokens). Automatisch: passend zur Funktion, z. B. 1.500 für Fragen ans Postfach. Erlaubt {min} bis {max}.',
-          { min: fmt(limits.maxTokens.min), max: fmt(limits.maxTokens.max) }
+          'Obergrenze für eine Antwort (Max Tokens). Automatisch: passend zur Funktion, z. B. {example} für Fragen ans Postfach. Erlaubt {min} bis {max}.',
+          { example: fmt(1500), min: fmt(limits.maxTokens.min), max: fmt(limits.maxTokens.max) }
         )}
       >
         <input

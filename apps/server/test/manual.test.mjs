@@ -156,8 +156,8 @@ test('ask: matching manual sections go to the model and come back as manual sour
       async call(method, params) {
         calls.push({ method, params });
         if (method !== 'task') return { ok: true };
-        // Step 1: the model asks for a search; step 2 answers from the mails and manual sections.
-        if (!params.input.sources) return { search: 'Sicherung erstellen', tool: 'search_mailbox' };
+        // Step 1: a model without tool calls always searches (fallback): mails and manual sections.
+        if (!params.input.sources) return { search: 'Sicherung erstellen', tool: 'search_mailbox', fallback: true };
         return { answer: 'ok', found: true, sources: ['m1', 's1'] };
       },
       async stop() {},
