@@ -16,7 +16,8 @@ export type AiFeature =
   | 'extract'
   | 'assess'
   | 'search'
-  | 'agents';
+  | 'agents'
+  | 'commitments';
 
 export type AiProfile = {
   tone: 'auto' | 'friendly' | 'formal' | 'casual' | 'brief';

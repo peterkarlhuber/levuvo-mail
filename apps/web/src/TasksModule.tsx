@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { postAction, postJson } from './api';
 import { useTasks } from './task-reminders';
+import { CommitmentList, useCommitments } from './Commitments';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import TaskDialog, { tasksChanged, type TaskDraft } from './TaskDialog';
@@ -54,6 +55,7 @@ const readArchivePref = () => {
 };
 
 export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMailRef) => void }) {
+  const { data: promises } = useCommitments();
   const { t, locale } = useT();
   const { toast, confirm } = useUi();
   const { tasks, error, reload } = useTasks();
@@ -375,6 +377,24 @@ export default function TasksModule({ onOpenMail }: { onOpenMail: (mail: TaskMai
               onChange={e => setQuick(e.target.value)}
             />
           </form>
+        )}
+        {view !== 'done' && !!promises?.items.length && (
+          <section className="tasks-promises" aria-label={t('Versprechen aus deinen Mails')}>
+            <h2>{t('Versprechen aus deinen Mails')}</h2>
+            <CommitmentList
+              items={promises.items}
+              onOpenMail={c =>
+                onOpenMail({
+                  accountId: c.accountId,
+                  folder: c.folder,
+                  uid: c.uid,
+                  messageId: null,
+                  subject: c.subject,
+                  from: c.who
+                })
+              }
+            />
+          </section>
         )}
         {error && (
           <div className="reader-alert" role="alert">

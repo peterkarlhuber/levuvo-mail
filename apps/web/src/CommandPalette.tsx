@@ -3,6 +3,7 @@ import {
   BellRing,
   Paperclip,
   ArchiveRestore,
+  CalendarClock,
   CalendarDays,
   CircleHelp,
   Contact2,
@@ -18,17 +19,19 @@ import {
   Settings2,
   ShieldCheck,
   Sun,
+  Sunrise,
   UserRound,
   Sparkles,
   Users,
   Workflow,
-  CalendarClock,
   type LucideIcon
 } from 'lucide-react';
 import { currentFolders, matchScore, sendMailCommand } from './command-bus';
 import { useT } from './i18n';
 import { useFocusTrap } from './ui/focus';
 import { usePrefs } from './prefs';
+import { openBriefing } from './Briefing';
+import { openMeetingPrep } from './MeetingPrep';
 import type { Module, SettingsTab } from './App';
 import type { AccountItem } from './types';
 
@@ -123,6 +126,22 @@ export default function CommandPalette({
         icon: Search,
         keywords: 'finden suche',
         run: mail(() => sendMailCommand({ type: 'search' }))
+      },
+      {
+        id: 'briefing',
+        group: go,
+        label: t('Mein Tag: Überblick für heute'),
+        icon: Sunrise,
+        keywords: 'briefing morgen heute tag überblick today morning',
+        run: openBriefing
+      },
+      {
+        id: 'meeting-prep',
+        group: go,
+        label: t('Nächsten Termin vorbereiten'),
+        icon: CalendarClock,
+        keywords: 'meeting termin vorbereitung prepare next',
+        run: () => openMeetingPrep()
       },
       {
         id: 'followups',

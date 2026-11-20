@@ -18,6 +18,10 @@ export type Prefs = {
   sendDelay: number;
   calendarView: 'month' | 'week' | 'day' | 'agenda';
   composeMode: 'html' | 'text';
+  /** "Mein Tag" (morning briefing) opens by itself the first time the app is used on a day. */
+  briefingOnStart: boolean;
+  /** Minutes before a meeting with others that its preparation card appears; 0 = off. */
+  meetingPrep: 0 | 5 | 10 | 15;
 };
 
 export const PREFS_KEY = 'levuvo-mail-prefs-v2';
@@ -34,7 +38,9 @@ export const DEFAULT_PREFS: Prefs = {
   assistantWidth: ASSISTANT_WIDTH.initial,
   sendDelay: 10,
   calendarView: 'week',
-  composeMode: 'html'
+  composeMode: 'html',
+  briefingOnStart: true,
+  meetingPrep: 10
 };
 
 function read(): Prefs {
@@ -57,7 +63,9 @@ function read(): Prefs {
       calendarView: ['month', 'week', 'day', 'agenda'].includes(v.calendarView as string)
         ? (v.calendarView as Prefs['calendarView'])
         : 'week',
-      composeMode: v.composeMode === 'text' ? 'text' : 'html'
+      composeMode: v.composeMode === 'text' ? 'text' : 'html',
+      briefingOnStart: v.briefingOnStart !== false,
+      meetingPrep: [0, 5, 10, 15].includes(v.meetingPrep as number) ? (v.meetingPrep as Prefs['meetingPrep']) : 10
     };
   } catch {
     return { ...DEFAULT_PREFS };

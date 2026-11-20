@@ -57,6 +57,10 @@ import { createOllamaRuntime } from './ollama-runtime.mjs';
 import { createModelManager } from './ollama-models.mjs';
 import { registerSpaceRoutes, spacesDir, SPACES_TICK_MS } from './routes-spaces.mjs';
 import { registerTaskRoutes } from './routes-tasks.mjs';
+import { registerBriefingRoutes } from './routes-briefing.mjs';
+import { createCommitmentStore } from './commitments.mjs';
+import { registerCommitmentRoutes } from './routes-commitments.mjs';
+import { registerMeetingPrepRoutes } from './routes-meeting-prep.mjs';
 import { EMPTY_SCHEDULING, registerSchedulingRoutes } from './routes-scheduling.mjs';
 import { EMPTY_AUTOMATIONS, registerAutomationRoutes } from './routes-automations.mjs';
 
@@ -248,6 +252,14 @@ export async function createMailServer({
       { vault: store, keyName: 'followups-key' }
     )
   );
+  // Commitments found in mail (short quotes): encrypted like follow-ups.
+  const commitments = createCommitmentStore(
+    await createSealedJsonFile(
+      path.join(dir, 'commitments.json'),
+      { since: {}, scanned: [], items: [] },
+      { vault: store, keyName: 'commitments-key' }
+    )
+  );
   const screening = createScreeningStore(
     await createSealedJsonFile(
       path.join(dir, 'screening.json'),
@@ -406,7 +418,10 @@ export async function createMailServer({
   let accounts = [];
   let identities = new Map(); // account id → mailboxIdentity
   // A removed mail account (or a new mailbox behind it) disconnects its task lists; tasks stay.
-  const accountChangeHooks = [id => void taskSync?.forgetAccount(id).catch(() => {})];
+  const accountChangeHooks = [
+    id => void taskSync?.forgetAccount(id).catch(() => {}),
+    id => void commitments.forgetAccount(id).catch(() => {})
+  ];
   /** Drops every cached piece of an account's mailbox (removed account or new identity). */
   function forgetAccountData(id, { identityChanged = false } = {}) {
     listCache.deleteWhere(key => key.startsWith(`${id}|`));
@@ -494,7 +509,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|manual)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|briefing|commitments|meeting-prep|manual)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -709,6 +724,7 @@ export async function createMailServer({
     smime,
     localIndex,
     followups,
+    commitments,
     screening,
     templates,
     tasks,
@@ -779,6 +795,9 @@ export async function createMailServer({
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerBriefingRoutes(ctx);
+  registerCommitmentRoutes(ctx);
+  registerMeetingPrepRoutes(ctx);
   registerSchedulingRoutes(ctx, {
     file: await createSealedJsonFile(path.join(dir, 'scheduling.json'), EMPTY_SCHEDULING, {
       vault: store,

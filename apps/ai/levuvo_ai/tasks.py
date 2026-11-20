@@ -651,6 +651,60 @@ def filter_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+# ---- commitments -----------------------------------------------------------------------
+
+
+class Commitment(BaseModel):
+    id: str = Field(description="id of the email, exactly as given")
+    direction: Literal["mine", "theirs"] = Field(
+        description="mine: the user promised something; theirs: the other person promised the user something"
+    )
+    what: str = Field(description="What was promised, as a short task title, at most 80 characters")
+    who: str = Field(default="", description="Email address of the other person, exactly as given")
+    due: str = Field(default="", description="ISO 8601 date (YYYY-MM-DD) if a deadline is stated, else empty")
+    quote: str = Field(default="", description="The sentence of the email with the promise, copied exactly")
+
+
+class Commitments(BaseModel):
+    items: list[Commitment] = Field(default_factory=list)
+
+
+def commitments(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
+    """Finds concrete promises in emails: what the user promised (in sent mail) or what others promised the user."""
+    messages = [m for m in params.get("messages") or [] if isinstance(m, dict) and m.get("id")][:8]
+    if not messages:
+        raise RpcError("invalid_input", "messages required")
+    now = _text(params.get("now") or datetime.now().isoformat(timespec="minutes"), 40)
+    me = _text(params.get("me"), 500)
+    body = "\n\n===\n\n".join(f"[id: {_text(m['id'], 80)}]\n{_mail(m, 3000)}" for m in messages)
+    result = _ask(
+        engine,
+        f"Find concrete promises in the emails. Today is {now} "
+        f"(time zone {_text(params.get('timeZone'), 60) or 'local'}). "
+        f"The user's own addresses: {me}. An email from the user can contain promises of the user (direction mine), "
+        "for example 'I will send you the offer by Friday'. An email to the user can contain promises of the sender "
+        "to the user (direction theirs), for example 'I will get back to you next week'. Only clear, concrete "
+        "commitments to do or deliver something; not wishes, questions, politeness ('let me know if you need "
+        "anything'), past actions or promises in quoted older messages. Resolve relative deadlines against today; "
+        f"leave due empty when no deadline is stated. Write `what` in {_lang(params)}. For `who`, use the other "
+        "person's email address from the From or To line. Return an empty list when there is nothing.",
+        frame_untrusted(body, "emails"),
+        Commitments,
+        max_tokens=1500,
+    )
+    known = {str(m["id"]) for m in messages}
+    items = []
+    for item in result.get("items", []):
+        if item.get("id") not in known or not str(item.get("what") or "").strip():
+            continue
+        due = str(item.get("due") or "")
+        item["due"] = due[:10] if len(due) >= 10 and due[4] == "-" and due[7] == "-" else ""
+        item["what"] = str(item["what"])[:120]
+        item["quote"] = str(item.get("quote") or "")[:300]
+        items.append(item)
+    return {"items": items[:20]}
+
+
 # ---- automations in words -------------------------------------------------------------------
 
 
@@ -741,4 +795,5 @@ TASKS = {
     "assess": assess,
     "ask": ask_mailbox,
     "embed": embed,
+    "commitments": commitments,
 }
