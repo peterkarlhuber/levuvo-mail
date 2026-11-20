@@ -7,8 +7,8 @@ AI. Placeholders in [brackets] are filled in before Levuvo Mail is made availabl
 
 ## 1. Manufacturer and contact (Annex II no. 1–2)
 
-- Manufacturer: [Company name, legal form], [address], Austria – see the imprint in Settings → About.
-- Contact: [kontakt@levuvo.at]
+- Manufacturer: Levuvo (start-up project), Peter Karlhuber, Laussastraße 24, 4460 Losenstein, Austria (legal form after founding) – see the imprint in Settings → About.
+- Contact: office@levuvo.at
 - Reporting a vulnerability: GitHub "Report a vulnerability" on the Levuvo Mail repository or
   [security@levuvo.at]; policy in [SECURITY.md](../../SECURITY.md).
 
