@@ -5,7 +5,7 @@
 
 ## Controller
 
-[Company name, legal form] · [Address] · [Email for privacy requests] · [Data protection officer, if applicable]
+Levuvo (start-up project), Peter Karlhuber · Laussastraße 24, 4460 Losenstein, Austria · office@levuvo.at · No data protection officer required at the moment
 
 ## Principle
 

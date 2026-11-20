@@ -781,8 +781,9 @@ export const EN: Record<string, string> = {
   'Desktop-App': 'Desktop app',
   'Browser (Entwicklung)': 'Browser (development)',
   Impressum: 'Legal notice',
-  'Angaben gemäß § 5 ECG / § 25 MedienG – bitte vor der Veröffentlichung mit den Firmendaten ersetzen (siehe docs/IMPRESSUM.md).':
-    'Information pursuant to § 5 ECG / § 25 MedienG – please replace with your company details before publishing (see docs/IMPRESSUM.md).',
+  'Angaben gemäß § 5 ECG und § 25 MedienG': 'Information pursuant to § 5 ECG and § 25 MedienG (Austria)',
+  'Levuvo (Gründungsprojekt)': 'Levuvo (start-up project)',
+  Österreich: 'Austria',
   Lizenzen: 'Licenses',
   'Levuvo Mail verwendet Open-Source-Komponenten, u. a. Electron, React, Fastify, ImapFlow, Nodemailer, OpenPGP.js, PKI.js, ical.js, tsdav, TipTap und Lucide. Die vollständigen Lizenztexte liegen der Installation bei (THIRD-PARTY-NOTICES).':
     'Levuvo Mail uses open-source components, including Electron, React, Fastify, ImapFlow, Nodemailer, OpenPGP.js, PKI.js, ical.js, tsdav, TipTap and Lucide. The full license texts are included with the installation (THIRD-PARTY-NOTICES).',

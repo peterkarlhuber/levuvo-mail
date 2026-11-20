@@ -9,7 +9,7 @@ legal assessments in this folder must be confirmed by a lawyer before Levuvo Mai
 | --- | --- | --- | --- |
 | P1 | **Code signing certificates**: Apple Developer ID Application (+ notarization) and Windows code signing (EV or Azure Trusted Signing) | Secure automatic updates (CRA Annex I Part I (2)(c), Part II (7)); no SmartScreen/Gatekeeper warnings | [RELEASING.md](../../RELEASING.md), `scripts/release-signed.mjs`, environment `release-signing` |
 | P2 | **Support period** (proposal: 5 years per major version, 2.x until 2031-11-30) | CRA Art. 13(8) | [cra/SUPPORT-PERIOD.md](cra/SUPPORT-PERIOD.md), `package.json` → `levuvo.supportUntil` |
-| P3 | **Manufacturer details** (company, address, register number, VAT ID) in the imprint, privacy notice and app | CRA Art. 13(16), ECG § 5, GDPR Art. 13 | [docs/IMPRESSUM.md](../IMPRESSUM.md), PRIVACY.md, About |
+| P3 | **Manufacturer details**: name, address and email filled in (20 Nov 2026, start-up project); register number, VAT ID and legal form follow after founding | CRA Art. 13(16), ECG § 5, GDPR Art. 13 | [docs/IMPRESSUM.md](../IMPRESSUM.md), PRIVACY.md, About |
 | P4 | **Security contact**: a monitored `security@` address and `https://levuvo.at/.well-known/security.txt` (RFC 9116) | CRA Annex I Part II (6), Art. 13(17) | [SECURITY.md](../../SECURITY.md) |
 | P5 | Name a **security owner and deputy** who can report to the CSIRT within 24 h | CRA Art. 14 | [cra/VULNERABILITY-HANDLING.md](cra/VULNERABILITY-HANDLING.md) § 7 |
 | P6 | Register for the **ENISA single reporting platform** once available | CRA Art. 14, 16 | [cra/INCIDENT-REPORTING.md](cra/INCIDENT-REPORTING.md) |
