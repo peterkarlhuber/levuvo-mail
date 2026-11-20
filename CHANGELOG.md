@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Search by meaning
+- **Qwen3-Embedding 0.6B is the new preset search model:** half the download of BGE-M3 (0.6 instead of 1.2 GB) at the same speed. BGE-M3 stays in the list; it is a little more accurate on German mail. If you had the old preset BGE-M3, Levuvo Mail downloads the new model once in the background, switches when it is verified and rebuilds the search index; until then search keeps working with BGE-M3. A search model you chose yourself afterwards is kept. (Manual: Switch on the assistant)
+- **EU search model mDenseOn still not available:** checked again; the bundled Ollama 0.40.16 is still the newest release and cannot load it, and there is no reviewed download of it yet. (Manual: none)
+
 ## 2.6.0 – 20 November 2026
 
 > **User manual included:** the German and English user manual are attached to this release as PDFs (`Levuvo-Mail-Handbuch-2.6.0.pdf`, `Levuvo-Mail-Manual-2.6.0.pdf`) and are also in the app under Settings → Help.

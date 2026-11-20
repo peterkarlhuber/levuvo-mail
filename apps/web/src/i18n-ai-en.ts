@@ -28,8 +28,9 @@ export const AI_EN: Record<string, string> = {
   'Standard, ab 16 GB RAM (Apache 2.0)': 'Default, 16 GB RAM or more (Apache 2.0)',
   'Klein, ab 8 GB RAM (Apache 2.0)': 'Small, 8 GB RAM or more (Apache 2.0)',
   'Groß, ab 32 GB RAM (Apache 2.0)': 'Large, 32 GB RAM or more (Apache 2.0)',
-  'Standard, mehrsprachig, am besten bei deutschen Mails (MIT)': 'Default, multilingual, best on German emails (MIT)',
-  'Klein und mehrsprachig (Apache 2.0)': 'Small and multilingual (Apache 2.0)',
+  'Standard, klein und mehrsprachig (Apache 2.0)': 'Default, small and multilingual (Apache 2.0)',
+  'Mehrsprachig, etwas genauer bei deutschen Mails, doppelt so groß (MIT)':
+    'Multilingual, a little more accurate on German emails, twice the size (MIT)',
   'Läuft immer lokal, auch bei Cloud-KI. {note}': 'Always runs locally, even with cloud AI. {note}',
   'Suchmodell wechseln?': 'Change the search model?',
   'Der Suchindex wird mit {model} im Hintergrund neu aufgebaut. Bis dahin findet die semantische Suche weniger.':

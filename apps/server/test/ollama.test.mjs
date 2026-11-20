@@ -11,6 +11,7 @@ import {
   MODEL_CATALOG,
   DEFAULT_CHAT_MODEL,
   DEFAULT_EMBED_MODEL,
+  LEGACY_EMBED_MODEL,
   catalogEntry,
   defaultModel,
   fitFor,
@@ -23,6 +24,7 @@ import { createOllamaRuntime, ollamaEnv, ollamaPaths, resolveOllama } from '../s
 import { createModelManager, progressTracker, DISK_RESERVE } from '../src/ollama-models.mjs';
 import { createAiService, validateAiSettings, DEFAULT_AI_SETTINGS } from '../src/ai-service.mjs';
 import { NOT_BACKED_UP } from '../src/backup.mjs';
+import { adoptSearchDefault } from '../src/routes-ai.mjs';
 import { NODE_BIN } from './fixtures/node-bin.mjs';
 
 const GiB = 1024 ** 3;
@@ -47,9 +49,11 @@ test('catalog: every model is pinned by digest and size, with a permissive licen
   assert.ok(MODEL_CATALOG.some(m => m.eu && m.tier === 'standard'));
   assert.ok(MODEL_CATALOG.some(m => m.eu && m.tier === 'large'));
   assert.equal(DEFAULT_CHAT_MODEL, 'qwen3.5:9b');
-  // The German comparison (docs/ai/MODELS.md) made bge-m3 the default search model.
-  assert.equal(DEFAULT_EMBED_MODEL, 'bge-m3');
-  assert.equal(DEFAULT_AI_SETTINGS.embedModel, 'bge-m3');
+  // Since 2.7.0 the small Qwen3-Embedding is the default search model (docs/ai/MODELS.md).
+  assert.equal(DEFAULT_EMBED_MODEL, 'qwen3-embedding:0.6b');
+  assert.equal(DEFAULT_AI_SETTINGS.embedModel, 'qwen3-embedding:0.6b');
+  assert.equal(LEGACY_EMBED_MODEL, 'bge-m3');
+  assert.equal(DEFAULT_AI_SETTINGS.embedDefault, undefined);
 });
 
 test('catalog: tier by memory, fit, names and search instructions', () => {
@@ -517,7 +521,11 @@ test('settings with the own runtime: only catalog models, the right kind for eac
   assert.throws(() => validateAiSettings({ embedModel: 'qwen3.5:9b' }, current, { managed: true }), {
     code: 'ai_not_in_catalog'
   });
-  assert.equal(validateAiSettings({ embedModel: 'bge-m3:latest' }, current, { managed: true }).embedModel, 'bge-m3');
+  const chosen = validateAiSettings({ embedModel: 'bge-m3:latest' }, current, { managed: true });
+  assert.equal(chosen.embedModel, 'bge-m3');
+  // A search model saved on purpose is marked, so a later default change keeps it.
+  assert.equal(chosen.embedDefault, DEFAULT_EMBED_MODEL);
+  assert.equal(validateAiSettings({ model: 'qwen3.5:4b' }, current, { managed: true }).embedDefault, undefined);
   assert.equal(validateAiSettings({ model: 'ministral-3:8b' }, current, { managed: true }).model, 'ministral-3:8b');
   // A cloud model name is fine while a cloud provider is chosen.
   assert.equal(
@@ -647,4 +655,69 @@ test('supply chain: signed builds refuse a missing or foreign Ollama, installers
   assert.match(read('.github/workflows/supply-chain.yml'), /check-ollama-runtime\.mjs/);
   assert.match(read('.github/workflows/supply-chain.yml'), /check-catalog\.mjs/);
   assert.match(read('.github/workflows/ci.yml'), /test\/ollama-live/);
+});
+
+test('the old default search model moves to the new one once, without losing search meanwhile', async () => {
+  const setup = (stored, { ready = false, failDownload = false } = {}) => {
+    let settings = { ...DEFAULT_AI_SETTINGS, ...stored };
+    const calls = [];
+    const ai = {
+      get: () => settings,
+      save: async input => {
+        settings = validateAiSettings(input, settings, { managed: true });
+        calls.push(['save', input.embedModel]);
+      }
+    };
+    const localModels = {
+      isReady: async id => (calls.push(['isReady', id]), ready),
+      download: async id => {
+        calls.push(['download', id]);
+        if (failDownload) throw Object.assign(new Error('full'), { kind: 'disk_full' });
+        return { status: 'downloading' };
+      }
+    };
+    const activateOnReady = new Map();
+    let synced = 0;
+    const run = () => adoptSearchDefault({ ai, localModels, activateOnReady, syncAll: async () => synced++ });
+    return { run, calls, activateOnReady, settings: () => settings, synced: () => synced };
+  };
+  const on = { enabled: true, features: { search: true } };
+
+  // Search on, new model not there yet: download first, switch once verified (activateOnReady).
+  let t = setup({ ...on, embedModel: 'bge-m3' });
+  assert.equal(await t.run(), 'downloading');
+  assert.equal(t.settings().embedModel, 'bge-m3');
+  assert.equal(t.activateOnReady.get(DEFAULT_EMBED_MODEL), 'embed');
+  assert.deepEqual(t.calls.at(-1), ['download', DEFAULT_EMBED_MODEL]);
+
+  // New model already downloaded: switch now and rebuild the index.
+  t = setup({ ...on, embedModel: 'bge-m3' }, { ready: true });
+  assert.equal(await t.run(), 'switched');
+  assert.equal(t.settings().embedModel, DEFAULT_EMBED_MODEL);
+  assert.equal(t.settings().embedDefault, DEFAULT_EMBED_MODEL);
+  assert.equal(t.synced(), 1);
+  assert.equal(await t.run(), 'none');
+
+  // AI off: only the setting changes; nothing is downloaded.
+  t = setup({ enabled: false, embedModel: 'bge-m3' });
+  assert.equal(await t.run(), 'switched');
+  assert.equal(t.settings().embedModel, DEFAULT_EMBED_MODEL);
+  assert.equal(
+    t.calls.some(c => c[0] === 'download'),
+    false
+  );
+  assert.equal(t.synced(), 0);
+
+  // bge-m3 chosen by hand after the change, or another search model: never touched.
+  t = setup({ ...on, embedModel: 'bge-m3', embedDefault: DEFAULT_EMBED_MODEL });
+  assert.equal(await t.run(), 'none');
+  t = setup({ ...on, embedModel: 'qwen3-embedding:4b' });
+  assert.equal(await t.run(), 'none');
+  assert.deepEqual(t.calls, []);
+
+  // A failed download keeps bge-m3 and leaves the move for the next start.
+  t = setup({ ...on, embedModel: 'bge-m3' }, { failDownload: true });
+  await assert.rejects(t.run(), { kind: 'disk_full' });
+  assert.equal(t.settings().embedModel, 'bge-m3');
+  assert.equal(t.settings().embedDefault, undefined);
 });
