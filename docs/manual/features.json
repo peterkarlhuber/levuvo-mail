@@ -389,6 +389,14 @@
     "settings-section:Videocalls": {
       "de": "03-kalender-kontakte-aufgaben.md#Videocalls",
       "en": "03-calendar-contacts-tasks.md#Video calls"
+    },
+    "command:briefing": {
+      "de": "03-kalender-kontakte-aufgaben.md#Mein Tag",
+      "en": "03-calendar-contacts-tasks.md#My day"
+    },
+    "command:meeting-prep": {
+      "de": "03-kalender-kontakte-aufgaben.md#Termin-Vorbereitung",
+      "en": "03-calendar-contacts-tasks.md#Meeting preparation"
     }
   }
 }

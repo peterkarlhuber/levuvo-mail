@@ -94,3 +94,31 @@ Der Verlauf bleibt auf diesem Computer. Notizen werden verschlüsselt gespeicher
 **Aufgaben aus Räumen:** Raum-Aufgaben, die dir zugewiesen sind, stehen auch hier, mit dem Namen des Raums. Unter **Räume** links filterst du nach einem Raum. Erledigen, Titel, Notiz, Fälligkeit und Priorität änderst du hier oder im Raum, die Änderung gilt überall und geht verschlüsselt an alle Mitglieder. Bist du im Raum Leser, siehst du die Aufgabe nur.
 
 **Aufgabe in einen Raum verschieben:** Wähl in einer Aufgabe unter **Raum** einen Raum, in dem du Eigentümer oder Bearbeiter bist. Die Aufgabe wandert in den Raum, ist dir zugewiesen, und alle Mitglieder sehen sie. Erinnerung, Wiederholung, Liste und der Link zur Mail entfallen dabei. Raum-Aufgaben werden nie mit Microsoft To Do, Google Tasks oder CalDAV abgeglichen; war die Aufgabe in einer verbundenen Liste, wird sie dort gelöscht.
+
+## Mein Tag
+
+Beim ersten Öffnen am Tag zeigt Levuvo Mail **Mein Tag**: einen Überblick über alles, was heute ansteht.
+
+- **Termine heute** mit Ort und Zahl der Teilnehmenden.
+- **Aufgaben für heute**, auch überfällige. Mit dem Kreis hakst du sie gleich ab.
+- **Wartet auf deine Antwort:** Mails von Menschen aus den letzten drei Tagen, auf die du noch nicht geantwortet hast. Newsletter und automatische Mails fehlen hier.
+- **Keine Antwort erhalten:** gesendete Mails, bei denen dein Nachfassen fällig ist.
+- **Versprechen:** Vorschläge des Versprechen-Trackers (siehe Kapitel „KI-Assistent“), falls eingeschaltet.
+- **Neues in deinen Räumen** und offene Einladungen.
+
+Ein Klick auf einen Eintrag öffnet die Mail, den Kalender oder die Aufgaben. Der Überblick entsteht auf diesem Computer, ganz ohne KI. Ist der Assistent eingeschaltet, ordnet **Mit KI ordnen: was braucht heute eine Antwort?** die wartenden Mails nach Wichtigkeit. Die KI ändert nur die Reihenfolge, sie blendet nichts aus, und das Ergebnis ist als **Reihenfolge KI-generiert** gekennzeichnet.
+
+**Mein Tag** erscheint nur, wenn es etwas zu zeigen gibt. Jederzeit öffnest du es über die Befehlspalette (`Strg` + `K`, **Mein Tag: Überblick für heute**). Abschalten kannst du es im Fenster selbst oder unter **Einstellungen → Allgemein → Lesen** mit **„Mein Tag“ beim ersten Öffnen am Tag zeigen**.
+
+## Termin-Vorbereitung
+
+Kurz vor einem Termin mit anderen Menschen erscheint unten rechts eine Karte **Termin-Vorbereitung**. Sie zeigt:
+
+- die **Teilnehmenden** mit ihrem Eintrag im Adressbuch und ob sie zugesagt haben,
+- die **Letzte Mails** mit ihnen oder zum Thema des Termins,
+- **Dateien**: Anhänge des Termins und dieser Mails,
+- **Offene Punkte**: Aufgaben, Mails ohne Antwort und Versprechen, die diese Menschen betreffen.
+
+Ein Klick öffnet die Mail. Mit eingeschaltetem Assistenten fasst **Worum geht es? Mit KI zusammenfassen** die Mails zusammen. Die Zusammenfassung ist als KI-Ergebnis gekennzeichnet. Die Karte verdeckt nichts und schließt mit `Esc`.
+
+Wann die Karte erscheint, stellst du unter **Einstellungen → Allgemein → Lesen** bei **Termin-Vorbereitung** ein: 5, 10 oder 15 Minuten vorher oder **Aus**. Für den nächsten Termin öffnest du sie jederzeit über die Befehlspalette mit **Nächsten Termin vorbereiten**.

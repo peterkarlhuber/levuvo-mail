@@ -94,3 +94,31 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 **Tasks from spaces:** Space tasks assigned to you also show here, with the space's name. Under **Spaces** on the left you filter by space. Complete them or change title, note, due date and priority here or in the space: the change applies everywhere and goes encrypted to all members. If you are a reader in the space, you only see the task.
 
 **Move a task into a space:** In a task, pick a space under **Space** where you are owner or editor. The task moves into the space, is assigned to you, and all members see it. Reminder, repeat, list and the link to the email are dropped. Space tasks are never synced with Microsoft To Do, Google Tasks or CalDAV; if the task was in a connected list, it is deleted there.
+
+## My day
+
+The first time you open Levuvo Mail on a day, it shows **My day**: an overview of everything that is on today.
+
+- **Today’s events** with place and number of attendees.
+- **Tasks for today**, overdue ones too. Tick them off right there with the circle.
+- **Waiting for your answer:** emails from people from the last three days that you have not answered yet. Newsletters and automatic emails are left out.
+- **No answer received:** sent emails whose follow-up is due.
+- **Promises:** suggestions of the promise tracker (see the chapter "AI assistant"), if it is switched on.
+- **New in your spaces** and open invitations.
+
+Click an entry to open the email, the calendar or the tasks. The overview is put together on this computer, without any AI. With the assistant on, **Sort with AI: what needs an answer today?** orders the waiting emails by importance. The AI only changes the order, it hides nothing, and the result is labelled **Order AI-generated**.
+
+**My day** only appears when there is something to show. You can open it at any time from the command palette (`Ctrl` + `K`, **My day: overview for today**). Switch it off in the window itself or under **Settings → General → Reading** with **Show “My day” when first opened each day**.
+
+## Meeting preparation
+
+Shortly before an event with other people, a **Meeting preparation** card appears at the bottom right. It shows:
+
+- the **attendees** with their address book entry and whether they accepted,
+- the **Latest emails** with them or about the topic of the event,
+- **files**: attachments of the event and of these emails,
+- **Open points**: tasks, emails without an answer and promises that involve these people.
+
+Click to open an email. With the assistant on, **What is it about? Summarize with AI** summarizes the emails. The summary is labelled as an AI result. The card covers nothing and closes with `Esc`.
+
+Under **Settings → General → Reading**, **Meeting preparation** sets when the card appears: 5, 10 or 15 minutes before, or **Off**. You can open it for the next event at any time from the command palette with **Prepare the next meeting**.
