@@ -61,3 +61,35 @@ def test_commitments_need_messages() -> None:
 
 def test_commitments_are_registered() -> None:
     assert tasks.TASKS["commitments"] is tasks.commitments
+
+
+def test_ids_written_loosely_by_small_models_are_mapped_back() -> None:
+    mails = [
+        {"id": "m1", "from": "Anna Berger <anna@example.com>", "subject": "Angebot"},
+        {"id": "m2", "from": "shop@news.test", "subject": "Sale"},
+        {"id": "m12", "from": "anna@example.com", "subject": "Noch was"},
+    ]
+    engine = StubEngine(
+        {
+            "items": [
+                {"id": "[m1]", "priority": "high", "needs_reply": True},
+                {"id": "shop@news.test", "priority": "low", "needs_reply": False},
+                {"id": "anna@example.com", "priority": "high", "needs_reply": True},
+                {"id": "id: m12", "priority": "normal", "needs_reply": False},
+                {"id": "m1", "priority": "low", "needs_reply": False},
+                {"id": "m3", "priority": "low", "needs_reply": False},
+            ]
+        }
+    )
+    out = tasks.prioritize(engine, {"messages": mails, "lang": "de"})
+    # anna@example.com sent two of the mails, so that item is ambiguous; m1 is only taken once
+    assert [(i["id"], i["priority"]) for i in out["items"]] == [("m1", "high"), ("m2", "low"), ("m12", "normal")]
+    assert "e.g. m1" in engine.calls[0]["system"]
+
+
+def test_rewrite_keeps_the_draft_language_unless_it_translates() -> None:
+    engine = StubEngine({"subject": "", "body": "x"})
+    tasks.rewrite(engine, {"mode": "formal", "text": "Hallo Robert"})
+    assert "do not translate" in engine.calls[-1]["system"]
+    tasks.rewrite(engine, {"mode": "english", "text": "Hallo Robert"})
+    assert "do not translate" not in engine.calls[-1]["system"]
