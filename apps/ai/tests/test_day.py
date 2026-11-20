@@ -93,3 +93,22 @@ def test_rewrite_keeps_the_draft_language_unless_it_translates() -> None:
     assert "do not translate" in engine.calls[-1]["system"]
     tasks.rewrite(engine, {"mode": "english", "text": "Hallo Robert"})
     assert "do not translate" not in engine.calls[-1]["system"]
+
+
+def test_compose_moves_a_subject_line_out_of_the_body() -> None:
+    engine = StubEngine({"subject": "", "body": "Betreff: Lieferung 4471\n\nSehr geehrte Damen und Herren,"})
+    out = tasks.compose(engine, {"bullets": "- 3 Halterungen fehlen"})
+    assert out == {"subject": "Lieferung 4471", "body": "Sehr geehrte Damen und Herren,"}
+    engine = StubEngine({"subject": "Eigener", "body": "Betreff: bleibt\nText"})
+    assert tasks.compose(engine, {"bullets": "x"})["body"].startswith("Betreff: bleibt")
+
+
+def test_an_answer_from_the_only_given_email_cites_it() -> None:
+    engine = StubEngine({"found": True, "sources": [], "answer": "Am 3. Dezember.", "quotes": []})
+    out = tasks.ask_mailbox(
+        engine, {"question": "Wann?", "sources": [{"id": "s1", "from": "a@b.c", "text": "3. Dezember"}]}
+    )
+    assert out["sources"] == ["s1"]
+    engine = StubEngine({"found": False, "sources": [], "answer": "Nicht gefunden.", "quotes": []})
+    out = tasks.ask_mailbox(engine, {"question": "Wann?", "sources": [{"id": "s1", "from": "a@b.c", "text": "x"}]})
+    assert out["sources"] == []

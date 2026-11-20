@@ -295,14 +295,26 @@ def compose(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     prompt = f"Bullet points from the user (trusted):\n{_text(params.get('bullets'), 3000)}"
     if isinstance(context, list) and context:
         prompt += "\n\nThe email being answered:\n" + _thread(params)
-    return _ask(
+    result = _ask(
         engine,
         f"Turn the user's bullet points into a complete email in {_lang(params)}. {_style(params)} "
-        "Cover every bullet, add nothing factual. No signature block. Suggest a subject if none is given.",
+        "Cover every bullet, add nothing factual. No signature block. Put a suggested subject in `subject`, "
+        "not in the body.",
         prompt,
         Draft,
         max_tokens=2000,
     )
+    return _subject_out_of_body(result)
+
+
+def _subject_out_of_body(draft: dict[str, Any]) -> dict[str, Any]:
+    """Some models write 'Betreff: …' as the first body line instead of filling `subject`."""
+    body = str(draft.get("body") or "")
+    first, _, rest = body.lstrip().partition("\n")
+    label = re.match(r"(?i)\s*(betreff|subject)\s*:\s*(.+)", first)
+    if label and not str(draft.get("subject") or "").strip():
+        return {**draft, "subject": label.group(2).strip()[:200], "body": rest.lstrip("\n")}
+    return draft
 
 
 class AttachmentCheck(BaseModel):
@@ -805,6 +817,8 @@ def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     # Small models often write more than the id ("From: Anna (id: s1) ..."): the ids are taken from it.
     cited = [i for s in result.get("sources", []) for i in re.findall(r"\b[sm]\d+\b", str(s))]
     result["sources"] = list(dict.fromkeys(i for i in cited if i in known))
+    if not result["sources"] and result.get("found") and len(known) == 1:
+        result["sources"] = list(known)  # only one email or section was given, so the answer came from it
     result["quotes"] = [q for q in result.get("quotes", []) if q.get("id") in result["sources"]]
     return result
 
@@ -931,11 +945,15 @@ class AutomationAction(BaseModel):
 
 
 class AutomationRule(BaseModel):
+    # `unclear` comes first: small models filled it only when it was the first thing they had to decide.
+    unclear: str = Field(
+        default="",
+        description="What of the description cannot be done (e.g. deleting, forwarding), empty if everything fits",
+    )
     name: str
     match: Literal["all", "any"] = "all"
     conditions: list[AutomationCondition] = Field(min_length=1, max_length=10)
     actions: list[AutomationAction] = Field(min_length=1, max_length=5)
-    unclear: str = Field(default="", description="What could not be expressed, empty if everything fits")
 
 
 def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
