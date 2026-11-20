@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Reliability and privacy (audit of 20 November 2026)
+- **A scheduled mail without a copy in "Sent" stays in "Drafts":** if a scheduled mail went out but its copy could not be saved in "Sent", the draft was moved to the trash anyway and nothing told you. It now stays in "Drafts" with the note "Sent, but the copy in Sent could not be saved", so you can see what went out; delete it when you no longer need it. It is never sent again. (Manual: Write and reply)
+- **A follow-up reminder that could not be saved is reported:** if saving the reminder failed, the app still said it was set. You now get a message after sending. (Manual: Write and reply)
+- **Snoozed mails are never forgotten:** with more than 2,000 snoozed mails and reminders, the oldest were silently dropped and their mails never came back. Levuvo Mail now keeps all of them and asks you to deal with some first before snoozing more. (Manual: none)
+- **Removing an account also deletes its writing style:** the learned greeting, closing and form of address per contact stayed on the device after the account was removed and could no longer be deleted per account. (Manual: What the assistant can do)
+- **"Delete all data" also removes leftovers:** temporary files of interrupted saves and set-aside copies of damaged files were kept. They are now deleted too. (Manual: none)
+- **No built-in mail server in browser mode:** without IMAP_HOST or SMTP_HOST, test accounts sent their password to a fixed provider. The host is now required. The desktop app was not affected. (Manual: none)
+- **Better error reports:** the diagnostic report now names the kind of an unexpected error (for example "disk full"), never its text. (Manual: none)
+- **Privacy notice completed:** it now lists the promise tracker's suggestions and the writing-style profiles, the calendar and contacts of Microsoft 365 and Google accounts, and the "send without approval" option for agents. The AI system inventory has rows for the promise tracker and the writing style. (Manual: none)
+
 ### Assistant
 - **The assistant knows today's date:** asked "What is the date today?", it answered "today is the current day" or a date from 2023, and "Did I get new mail today?" showed mails from three days ago. Every question now carries today's date, the time and your time zone. When a question names a time ("today", "yesterday", "this week"), the model passes those days to the mailbox search, and only mails of those days in your time zone reach the answer. Mail dates are given to the model in your local time instead of UTC. The model still decides itself whether to search. (Manual: The assistant window)
 

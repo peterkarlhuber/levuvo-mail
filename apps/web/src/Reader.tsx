@@ -1229,6 +1229,14 @@ export default function Reader(props: Props) {
               )}
             </div>
           )}
+          {detail?.scheduledFor && detail.scheduleState === 'sent_no_copy' && (
+            <div className="reader-security warning" role="status">
+              <AlertTriangle size={14} />{' '}
+              {t(
+                'Gesendet, aber die Kopie in „Gesendet“ konnte nicht gespeichert werden. Diese Nachricht bleibt deshalb in „Entwürfe“ als Nachweis. Du kannst sie löschen, wenn du sie nicht mehr brauchst.'
+              )}
+            </div>
+          )}
           {detail?.scheduledFor && detail.scheduleState === 'sent' && (
             <div className="reader-security scheduled">
               <CalendarClock size={14} /> {t('Gesendet. Die geplante Kopie wird gleich aus „Entwürfe“ entfernt.')}

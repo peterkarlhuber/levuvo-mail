@@ -1238,6 +1238,8 @@ export const EN: Record<string, string> = {
   'Der Filterserver (ManageSieve) ist nicht erreichbar. Dein Anbieter bietet ihn eventuell nicht an.':
     'The filter server (ManageSieve) is not reachable. Your provider may not offer it.',
   'Ungültiger Sendezeitpunkt.': 'Invalid send time.',
+  'Höchstens 2000 Einträge möglich. Bitte zuerst zurückgestellte Nachrichten oder Erinnerungen erledigen.':
+    'At most 2000 entries are possible. Please deal with snoozed messages or reminders first.',
   'Der Sendezeitpunkt muss in der Zukunft liegen.': 'The send time must be in the future.',
   'Höchstens ein Jahr im Voraus planen.': 'Schedule at most one year in advance.',
   'Entwürfe-Ordner fehlt. Geplante Nachrichten werden dort gespeichert.':
@@ -1507,6 +1509,9 @@ export const EN: Record<string, string> = {
     'Sending not confirmed: the connection dropped while sending. Please check “Sent” or with the recipient. Levuvo Mail does not resend this message automatically – “Edit” turns it back into a draft, deleting discards it.',
   'Geplanter Versand fehlgeschlagen: Der Server hat die Nachricht abgelehnt, sie wurde nicht gesendet. „Bearbeiten“ macht sie wieder zum Entwurf.':
     'Scheduled sending failed: the server refused the message, it was not sent. “Edit” turns it back into a draft.',
+  'Gesendet, aber die Kopie in „Gesendet“ konnte nicht gespeichert werden. Diese Nachricht bleibt deshalb in „Entwürfe“ als Nachweis. Du kannst sie löschen, wenn du sie nicht mehr brauchst.':
+    'Sent, but the copy in “Sent” could not be saved. This message therefore stays in “Drafts” as a record. You can delete it when you no longer need it.',
+  'Die Erinnerung zum Nachfassen konnte nicht gespeichert werden.': 'The follow-up reminder could not be saved.',
   'Gesendet. Die geplante Kopie wird gleich aus „Entwürfe“ entfernt.':
     'Sent. The scheduled copy will be removed from “Drafts” shortly.',
   'Der lokale Kalender braucht den Schlüsselbund des Systems. Er ist gerade nicht verfügbar.':

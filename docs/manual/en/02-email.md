@@ -32,11 +32,11 @@ After sending, "Sending in 10 s" with **Undo** shows briefly at the bottom. Clic
 
 ### Send later
 
-Click the small arrow next to **Send** and choose a time, such as **Tomorrow morning**, or your own date. Until then the message waits in **Drafts**. Levuvo Mail has to be running at that time; running in the background is enough. Otherwise the message goes out at the next start.
+Click the small arrow next to **Send** and choose a time, such as **Tomorrow morning**, or your own date. Until then the message waits in **Drafts**. Levuvo Mail has to be running at that time; running in the background is enough. Otherwise the message goes out at the next start. If no copy could be saved in **Sent** after sending, the message stays in **Drafts** with a note, so you can see what went out. You can delete it afterwards.
 
 ### Get reminded about a reply
 
-At the bottom left of the editor choose, for example, **Follow up after 3 days**. If no reply arrives by then, the message shows up in the folder bar under **Follow-up** and you get a notification. If the recipient replies before that, the reminder disappears by itself.
+At the bottom left of the editor choose, for example, **Follow up after 3 days**. If no reply arrives by then, the message shows up in the folder bar under **Follow-up** and you get a notification. If the recipient replies before that, the reminder disappears by itself. If the reminder could not be saved, Levuvo Mail tells you after sending.
 
 ### Templates for recurring texts
 

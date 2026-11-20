@@ -15,12 +15,14 @@ export function smtpConfig(env = process.env) {
   const user = String(env.SMTP_USER || inboundUser).trim();
   const password = String(env.SMTP_PASSWORD || inboundPassword);
   const port = Number(env.SMTP_PORT || 587);
+  // No built-in default host: credentials only ever go to a server the user named (F-FUN-004).
+  const host = String(env.SMTP_HOST || '').trim();
   return {
-    host: String(env.SMTP_HOST || 'mail.your-server.de').trim(),
+    host,
     port,
     user,
     password,
-    configured: Boolean(user && password && isEmail(user) && [465, 587].includes(port)),
+    configured: Boolean(host && user && password && isEmail(user) && [465, 587].includes(port)),
     enabled: env.ENABLE_SEND === 'true'
   };
 }

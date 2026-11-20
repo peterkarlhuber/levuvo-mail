@@ -459,6 +459,7 @@ function Shell() {
           rejectedCount: number;
           savedToSent: boolean;
           sentCopyError?: string;
+          followUpError?: string | null;
           partial: boolean;
         }>('/api/messages/send', { ...payload, requestId, confirm: 'SEND' }, 'send-v1', accountId)
           .then(r => {
@@ -478,6 +479,12 @@ function Shell() {
                   ? t('Nachricht gesendet.')
                   : t('Gesendet, aber nicht im Ordner „Gesendet“ abgelegt.'),
                 kind: r.savedToSent ? 'success' : 'info'
+              });
+            if (r.followUpError)
+              toast({
+                text: t('Die Erinnerung zum Nachfassen konnte nicht gespeichert werden.'),
+                kind: 'error',
+                timeout: 0
               });
             notifyChanged();
           })

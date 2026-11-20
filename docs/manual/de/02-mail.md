@@ -32,11 +32,11 @@ Nach dem Senden steht unten kurz „Wird in 10 s gesendet“ mit **Rückgängig*
 
 ### Später senden
 
-Klicke auf den kleinen Pfeil neben **Senden** und wähle einen Zeitpunkt, etwa **Morgen früh**, oder ein eigenes Datum. Bis dahin wartet die Nachricht in **Entwürfe**. Levuvo Mail muss zu diesem Zeitpunkt laufen, im Hintergrund reicht. Sonst geht die Nachricht beim nächsten Start hinaus.
+Klicke auf den kleinen Pfeil neben **Senden** und wähle einen Zeitpunkt, etwa **Morgen früh**, oder ein eigenes Datum. Bis dahin wartet die Nachricht in **Entwürfe**. Levuvo Mail muss zu diesem Zeitpunkt laufen, im Hintergrund reicht. Sonst geht die Nachricht beim nächsten Start hinaus. Konnte nach dem Senden keine Kopie in **Gesendet** abgelegt werden, bleibt die Nachricht mit einem Hinweis in **Entwürfe**, damit du nachsehen kannst, was hinausging. Du kannst sie danach löschen.
 
 ### An eine Antwort erinnern lassen
 
-Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt bis dahin keine Antwort, erscheint die Nachricht in der Ordnerleiste unter **Nachfassen** und du bekommst eine Mitteilung. Antwortet der Empfänger vorher, verschwindet die Erinnerung von selbst.
+Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt bis dahin keine Antwort, erscheint die Nachricht in der Ordnerleiste unter **Nachfassen** und du bekommst eine Mitteilung. Antwortet der Empfänger vorher, verschwindet die Erinnerung von selbst. Konnte die Erinnerung nicht gespeichert werden, sagt Levuvo Mail es dir nach dem Senden.
 
 ### Vorlagen für wiederkehrende Texte
 

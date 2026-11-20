@@ -8,7 +8,7 @@ import { findSpecialFolder, selectableFolders } from './mail-actions.mjs';
 import { isRequestedFetchResult, uidSet } from './imap-fetch.mjs';
 
 export const SNOOZE_FOLDER_NAMES = ['Zurückgestellt', 'Snoozed'];
-const MAX_ENTRIES = 2000;
+export const MAX_ENTRIES = 2000;
 const MAX_AHEAD_MS = 366 * 86_400_000;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 
@@ -182,13 +182,23 @@ export async function hasReply(client, messageId) {
 /** The followups.json store (snoozed messages and follow-up reminders). */
 export function createFollowupStore(file) {
   const data = () => ({ snoozed: [], followups: [], ...file.get() });
-  const save = next =>
-    file.save({ snoozed: next.snoozed.slice(-MAX_ENTRIES), followups: next.followups.slice(-MAX_ENTRIES) });
+  // Never trims: a dropped snooze entry would leave its message in "Zurückgestellt" for good
+  // (F-FUN-001). New entries are refused at the limit instead (see `assertRoom`).
+  const save = next => file.save({ snoozed: next.snoozed, followups: next.followups });
+  const assertRoom = (list, adding) => {
+    if (list.length + adding > MAX_ENTRIES)
+      throw fail(
+        'Höchstens 2000 Einträge möglich. Bitte zuerst zurückgestellte Nachrichten oder Erinnerungen erledigen.',
+        'followups_limit',
+        409
+      );
+  };
   return {
     snoozed: accountId => data().snoozed.filter(s => !accountId || s.accountId === accountId),
     followups: accountId => data().followups.filter(f => !accountId || f.accountId === accountId),
     async addSnoozed(accountId, originalFolder, result, until, extra = {}) {
       const d = data();
+      assertRoom(d.snoozed, result.items.length);
       const added = result.items.map(i => ({
         id: randomUUID(),
         accountId,
@@ -229,6 +239,7 @@ export function createFollowupStore(file) {
     },
     async addFollowup(entry) {
       const d = data();
+      assertRoom(d.followups, 1);
       const item = { id: randomUUID(), state: 'waiting', createdAt: new Date().toISOString(), ...entry };
       await save({ ...d, followups: [...d.followups, item] });
       return item;

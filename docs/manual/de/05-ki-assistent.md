@@ -73,7 +73,7 @@ Im Editor öffnet der Knopf **Assistent** diese Hilfen:
 
 Unter **Schreibstil** legst du Tonfall, du oder Sie, Grußformel und eigene Hinweise fest. Mit **Stil pro Kontakt lernen** übernimmt der Assistent deine Anrede je Empfänger, verschlüsselt auf diesem Gerät. Vor dem Senden prüft er auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten; du entscheidest.
 
-**Stil pro Kontakt lernen** (unter Schreibstil, anfangs aus): Levuvo Mail liest deine gesendeten Mails im lokalen Suchindex und merkt sich je Kontakt Anrede, Gruß und du oder Sie. Dafür läuft kein KI-Modell; gespeichert wird verschlüsselt nur auf diesem Gerät. Ein Antwortvorschlag an diese Person übernimmt dann ihre Anrede und eure Du/Sie-Form und zeigt „Im Stil deiner Mails an …“. In der Tabelle siehst du, was gelernt wurde, und kannst einzelne Kontakte oder alles löschen.
+**Stil pro Kontakt lernen** (unter Schreibstil, anfangs aus): Levuvo Mail liest deine gesendeten Mails im lokalen Suchindex und merkt sich je Kontakt Anrede, Gruß und du oder Sie. Dafür läuft kein KI-Modell; gespeichert wird verschlüsselt nur auf diesem Gerät. Ein Antwortvorschlag an diese Person übernimmt dann ihre Anrede und eure Du/Sie-Form und zeigt „Im Stil deiner Mails an …“. In der Tabelle siehst du, was gelernt wurde, und kannst einzelne Kontakte oder alles löschen. Entfernst du ein Mailkonto, wird auch sein gelernter Stil gelöscht.
 
 ### Diktieren
 

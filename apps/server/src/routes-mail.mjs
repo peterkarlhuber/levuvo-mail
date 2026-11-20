@@ -759,20 +759,27 @@ export function registerMailRoutes(ctx) {
         if (replaceDraft) forgetCached(k => k.startsWith(`${account.id}|`));
 
         const messageId = messageIdOf(raw);
-        if (followUp && messageId)
-          await followups
-            .addFollowup({
+        // The mail is out either way; a reminder that could not be stored is reported, not hidden.
+        let followUpSaved = false;
+        if (followUp && messageId) {
+          try {
+            await followups.addFollowup({
               accountId: account.id,
               messageId,
               subject: input.subject,
               to: [...input.to, ...input.cc],
               due: followUp
-            })
-            .catch(() => {});
+            });
+            followUpSaved = true;
+          } catch (err) {
+            diagnostics.record('followups', 'save_failed', err);
+          }
+        }
         return {
           status: 200,
           body: {
-            followUp: Boolean(followUp && messageId),
+            followUp: followUpSaved,
+            followUpError: followUp && !followUpSaved ? 'followup_not_saved' : null,
             draftRemoved: retired.removed,
             sent: submitted.accepted.length > 0,
             acceptedCount: submitted.accepted.length,
@@ -1356,11 +1363,21 @@ export function registerMailRoutes(ctx) {
         for (const r of result.results)
           diagnostics.record(
             'scheduled',
-            r.confirmed ? 'confirmed' : r.sent ? 'sent' : r.retry ? 'retry' : r.uncertain ? 'uncertain' : 'failed'
+            r.confirmed
+              ? 'confirmed'
+              : r.sent && r.savedToSent === false
+                ? 'sent_no_copy'
+                : r.sent
+                  ? 'sent'
+                  : r.retry
+                    ? 'retry'
+                    : r.uncertain
+                      ? 'uncertain'
+                      : 'failed'
           );
         if (result.next) next = Math.min(next, Date.parse(result.next));
-      } catch {
-        diagnostics.record('scheduled', 'check_failed');
+      } catch (err) {
+        diagnostics.record('scheduled', 'check_failed', err);
       }
     }
     nextSchedulerRun = next;
