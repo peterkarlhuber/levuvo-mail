@@ -390,8 +390,9 @@ einem Ollama, das du selbst installiert hast. Modelle sind nicht im Installer: W
 **Sprachmodell** eines aus der Liste (klein ab 8 GB RAM, Standard ab 16 GB, groß ab 32 GB; die passende
 Größe für diesen Computer ist vorgeschlagen, z. B. **Qwen3.5 9B**), dann lädt Levuvo es mit
 Fortschrittsbalken herunter. „Abbrechen“ hält an, „Fortsetzen“ macht später weiter, „Löschen“ gibt den
-Platz wieder frei. Für die Suche nach Bedeutung ist **BGE-M3** voreingestellt (auf deutschen Mails am
-genauesten); ein anderes Suchmodell baut den Suchindex im Hintergrund neu auf. Jedes Modell wird nach dem
+Platz wieder frei. Für die Suche nach Bedeutung ist **Qwen3-Embedding 0.6B** voreingestellt (klein und schnell;
+BGE-M3 ist auf deutschen Mails etwas genauer, aber doppelt so groß); wer bisher das alte voreingestellte
+BGE-M3 hatte, bekommt das neue Suchmodell einmal im Hintergrund, danach wird der Index neu aufgebaut; ein anderes Suchmodell baut den Suchindex im Hintergrund neu auf. Jedes Modell wird nach dem
 Download mit seiner festgelegten Prüfsumme verglichen. Cloud-Modelle (Anthropic, OpenAI) gehen nur nach einer Einwilligung und nie für
 Konten mit „Keine Cloud-KI“. Alle Ergebnisse sind als **KI-generiert** gekennzeichnet; im Lesebereich
 und beim Schreiben wird nur nach deinem Klick gesendet, gespeichert oder verschoben. Was bei einem

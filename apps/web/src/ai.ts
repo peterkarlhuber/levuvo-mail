@@ -88,10 +88,10 @@ export const LOCAL_MODELS = [
   { id: 'qwen3.5:27b', note: 'Groß, ab 32 GB RAM (Apache 2.0)' },
   { id: 'mistral-small3.2', note: 'Groß, ab 32 GB RAM (Apache 2.0)' }
 ];
-export const DEFAULT_EMBED_MODEL = 'bge-m3';
+export const DEFAULT_EMBED_MODEL = 'qwen3-embedding:0.6b';
 export const EMBED_MODELS = [
-  { id: 'bge-m3', note: 'Standard, mehrsprachig, am besten bei deutschen Mails (MIT)' },
-  { id: 'qwen3-embedding:0.6b', note: 'Klein und mehrsprachig (Apache 2.0)' }
+  { id: 'qwen3-embedding:0.6b', note: 'Standard, klein und mehrsprachig (Apache 2.0)' },
+  { id: 'bge-m3', note: 'Mehrsprachig, etwas genauer bei deutschen Mails, doppelt so groß (MIT)' }
 ];
 
 export const aiSettings = () => getJson<AiSettings>('/api/ai/settings');

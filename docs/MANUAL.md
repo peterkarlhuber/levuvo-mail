@@ -355,7 +355,9 @@ model on this computer. Levuvo brings its **own Ollama** for this, separate from
 Models are not part of the installer: choose one under **Language model** (small from 8 GB RAM, standard
 from 16 GB, large from 32 GB; the size that fits this computer is suggested, e.g. **Qwen3.5 9B**) and
 Levuvo downloads it with a progress bar. "Cancel" pauses, "Resume" continues later, "Delete" frees the space
-again. **BGE-M3** is preset for search by meaning (the most accurate on German mail); another search model
+again. **Qwen3-Embedding 0.6B** is preset for search by meaning (small and fast; BGE-M3 is a little more
+accurate on German mail but twice the size); whoever had the old preset BGE-M3 gets the new search model
+once in the background, then the index is rebuilt; another search model
 rebuilds the search index in the background. Every model is compared with its fixed checksum after the
 download. Cloud models
 (Anthropic, OpenAI) are used only after consent and never for accounts marked "No cloud AI". All

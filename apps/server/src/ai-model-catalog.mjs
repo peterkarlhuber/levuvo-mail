@@ -176,7 +176,9 @@ export const MODEL_CATALOG = Object.freeze([
     licenseUrl: 'https://huggingface.co/Qwen/Qwen3-Embedding-0.6B',
     size: 639_150_858,
     digest: 'sha256:ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d',
-    queryPrefix: QWEN_QUERY
+    queryPrefix: QWEN_QUERY,
+    // Default since 2.7.0: half the download of bge-m3 at the same speed (docs/ai/MODELS.md).
+    default: true
   },
   {
     id: 'qwen3-embedding:4b',
@@ -205,8 +207,7 @@ export const MODEL_CATALOG = Object.freeze([
     size: 1_157_672_605,
     digest: 'sha256:7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab',
     // Best of the three on the German test mailbox (docs/ai/MODELS.md), without an instruction.
-    queryPrefix: '',
-    default: true
+    queryPrefix: ''
   }
 ]);
 
@@ -236,6 +237,8 @@ export const defaultModel = (tier = 'standard') =>
 
 export const DEFAULT_CHAT_MODEL = defaultModel('standard');
 export const DEFAULT_EMBED_MODEL = defaultModel('search');
+/** The default search model up to 2.6; settings that still carry it move to the new default once. */
+export const LEGACY_EMBED_MODEL = 'bge-m3';
 
 /**
  * The tier for a computer with `totalBytes` of memory. Thresholds sit a little below the nominal

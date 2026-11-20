@@ -356,7 +356,11 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
         colorScheme,
         setup: async context => {
           const status = structuredClone(fixtures['GET /api/ai/status'].body);
-          Object.assign(status.settings, { enabled: true, localRuntime: 'bundled', embedModel: 'bge-m3' });
+          Object.assign(status.settings, {
+            enabled: true,
+            localRuntime: 'bundled',
+            embedModel: 'qwen3-embedding:0.6b'
+          });
           await context.route(
             url => url.pathname === '/api/ai/status',
             route => route.fulfill(json(status))
@@ -371,13 +375,13 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
                   recommendedTier: 'standard',
                   freeBytes: 120e9,
                   runtime: { version: '0.40.16', running: true },
-                  selected: { model: 'qwen3.5:9b', embedModel: 'bge-m3', provider: 'ollama' },
+                  selected: { model: 'qwen3.5:9b', embedModel: 'qwen3-embedding:0.6b', provider: 'ollama' },
                   index: [{ accountId: 'acc', messages: 1200, vectors: 300, running: true }],
                   models: MODEL_CATALOG.map(m => ({
                     ...m,
                     default: Boolean(m.default),
                     fit: fitFor(m, ram),
-                    installed: m.id === 'bge-m3' || m.id === 'ministral-3:3b',
+                    installed: m.id === 'qwen3-embedding:0.6b' || m.id === 'ministral-3:3b',
                     mismatch: false,
                     job:
                       m.id === 'qwen3.5:9b'
