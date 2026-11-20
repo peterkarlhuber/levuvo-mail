@@ -132,7 +132,12 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
         truncated?: boolean;
         maxTokens?: number;
       }>('ask', {
-        input: { question, history, ...(again ? { minTokens: again.minTokens } : {}) },
+        input: {
+          question,
+          history,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...(again ? { minTokens: again.minTokens } : {})
+        },
         lang
       });
       update(id, {

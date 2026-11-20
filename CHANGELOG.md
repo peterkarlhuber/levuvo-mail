@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Assistant
+- **The assistant knows today's date:** asked "What is the date today?", it answered "today is the current day" or a date from 2023, and "Did I get new mail today?" showed mails from three days ago. Every question now carries today's date, the time and your time zone. When a question names a time ("today", "yesterday", "this week"), the model passes those days to the mailbox search, and only mails of those days in your time zone reach the answer. Mail dates are given to the model in your local time instead of UTC. The model still decides itself whether to search. (Manual: The assistant window)
+
 ### Search by meaning
 - **Qwen3-Embedding 0.6B is the new preset search model:** half the download of BGE-M3 (0.6 instead of 1.2 GB) at the same speed. BGE-M3 stays in the list; it is a little more accurate on German mail. If you had the old preset BGE-M3, Levuvo Mail downloads the new model once in the background, switches when it is verified and rebuilds the search index; until then search keeps working with BGE-M3. A search model you chose yourself afterwards is kept. (Manual: Switch on the assistant)
 - **EU search model mDenseOn still not available:** checked again; the bundled Ollama 0.40.16 is still the newest release and cannot load it, and there is no reviewed download of it yet. (Manual: none)

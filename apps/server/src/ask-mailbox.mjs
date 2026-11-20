@@ -155,3 +155,88 @@ export function verifiedQuote(quote, source) {
   const hay = fold([source.text, ...(source.attachments || []).map(a => a.text)].join('\n'));
   return hay.includes(q) ? String(quote).trim().slice(0, 300) : '';
 }
+
+// ---- questions about a time ("today", "yesterday") ----------------------------------------
+// The model passes the days it means (search_mailbox since/until, local dates). Mails are matched by
+// their local calendar day in the user's time zone, not by meaning: "new mail today" has no words
+// that a search by meaning could find.
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const HOUR = 3_600_000;
+
+/** A valid IANA time zone, else the computer's own. */
+export function userTimeZone(tz) {
+  const zone = String(tz || '').slice(0, 60);
+  if (zone)
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: zone });
+      return zone;
+    } catch {
+      /* unknown zone: the computer's own */
+    }
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
+function localParts(ms, timeZone) {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    })
+      .formatToParts(new Date(ms))
+      .map(p => [p.type, p.value])
+  );
+}
+
+/** "2026-11-20T19:10" in the user's time zone: what "now" means for the model. */
+export function localNow(timeZone, now = Date.now()) {
+  const p = localParts(now, timeZone);
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+/** The local date and time of a mail ("2026-11-17 19:17"), so the model never has to convert UTC. */
+export function localDate(iso, timeZone) {
+  const ms = Date.parse(String(iso || ''));
+  if (!Number.isFinite(ms)) return String(iso || '');
+  const p = localParts(ms, timeZone);
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+
+/** The days the model asked for, or null when it did not ask for any (or they are not dates). */
+export function dayRange(since, until) {
+  const a = DAY.test(String(since || '')) ? String(since) : '';
+  const b = DAY.test(String(until || '')) ? String(until) : '';
+  if (!a && !b) return null;
+  const [from, to] = [a || b, b || a].sort();
+  return { since: from, until: to };
+}
+
+/** Whether a mail's local calendar day lies in the range (both ends included). */
+export function inDays(iso, range, timeZone) {
+  const day = localDate(iso, timeZone).slice(0, 10);
+  return DAY.test(day) && day >= range.since && day <= range.until;
+}
+
+/**
+ * Mails of those days, newest first: from the index in a UTC window wide enough for every time
+ * zone, then exactly by local day.
+ */
+export async function mailsOfDays({ localIndex, ids, range, timeZone, limit = 8 }) {
+  if (!localIndex?.between || !ids.length) return [];
+  const from = new Date(Date.parse(`${range.since}T00:00:00Z`) - 15 * HOUR).toISOString();
+  const to = new Date(Date.parse(`${range.until}T23:59:59Z`) + 15 * HOUR).toISOString();
+  const rows = await localIndex.between(ids, from, to, { limit: 200 }).catch(() => []);
+  const out = [];
+  for (const h of rows) {
+    if (!inDays(h.date, range, timeZone)) continue;
+    const item = await localIndex.text?.(h.accountId, h.folder, h.uid).catch(() => null);
+    out.push({ ...h, ...(item || {}), dayHit: true });
+    if (out.length >= limit) break;
+  }
+  return out;
+}

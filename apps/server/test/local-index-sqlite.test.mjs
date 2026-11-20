@@ -149,6 +149,27 @@ test('Search: word beginnings anywhere, substrings in subject and sender, umlaut
   assert.equal((await index.searchPage(['acc'], 'rechnung', { folder: 'Other' })).total, 0);
 });
 
+test('Mails of a time span, newest first ("today" in the assistant)', async t => {
+  const dir = tempDir(t);
+  const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 9) });
+  await index.sync(
+    mailbox([
+      { uid: 1, subject: 'Alt', date: '2026-11-17T18:17:00Z' },
+      { uid: 2, subject: 'Heute früh', date: '2026-11-20T06:00:00Z' },
+      { uid: 3, subject: 'Heute Abend', date: '2026-11-20T18:00:00Z' }
+    ]),
+    'acc',
+    INBOX
+  );
+  const hits = await index.between(['acc'], '2026-11-20T00:00:00.000Z', '2026-11-21T00:00:00.000Z');
+  assert.deepEqual(
+    hits.map(h => h.uid),
+    [3, 2]
+  );
+  assert.equal(hits[0].subject, 'Heute Abend');
+  assert.deepEqual(await index.between(['acc', 'none'], '2026-12-01', '2026-12-02'), []);
+});
+
 test('Vectors: stored per model, nearest first, removed with their message', async t => {
   const dir = tempDir(t);
   const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 4) });

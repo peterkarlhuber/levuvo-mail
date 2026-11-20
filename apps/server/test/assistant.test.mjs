@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { createJsonFile } from '../src/app.mjs';
 import { createAiService, createAiLog, DEFAULT_AI_SETTINGS } from '../src/ai-service.mjs';
 import { registerAiRoutes, notFound } from '../src/routes-ai.mjs';
-import { relevant, MIN_COSINE } from '../src/ask-mailbox.mjs';
+import { relevant, MIN_COSINE, dayRange, inDays, localDate, localNow } from '../src/ask-mailbox.mjs';
 import {
   effectiveModelOptions,
   mailBudget,
@@ -108,6 +108,79 @@ test('a mailbox question: the model calls the search, only relevant mails reach 
   );
   assert.equal(out.result.sources[0].uid, 7);
   assert.equal(out.generated, true);
+});
+
+test('a question about today: the model knows the date, only mails of that local day reach the answer', async t => {
+  const { ai, calls } = await setup(t, input =>
+    input.sources
+      ? { answer: 'Ja, eine Mail von Anna.', found: true, sources: ['s1'], quotes: [] }
+      : { search: 'neue Mails', since: '2026-11-20', until: '2026-11-20' }
+  );
+  const mails = {
+    7: { subject: 'Angebot', date: '2026-11-17T18:17:00.000Z', text: 'Preis 4.250 EUR' },
+    // 23:30 UTC on the 19th is already the 20th in Vienna.
+    9: { subject: 'Frühstück', date: '2026-11-19T23:30:00.000Z', text: 'Bis gleich, Anna' },
+    10: { subject: 'Gestern', date: '2026-11-19T12:00:00.000Z', text: 'x' }
+  };
+  const handlers = {};
+  registerAiRoutes({
+    api: { get: () => {}, post: (p, ...rest) => (handlers[p] = rest.at(-1)) },
+    ai,
+    requireAction: () => true,
+    accounts: () => [{ id: 'a1' }],
+    ownAddresses: () => [],
+    aiForgetHooks: [],
+    semantic: {
+      // The search by meaning only finds the old offer.
+      search: async () => [{ accountId: 'a1', folder: 'INBOX', uid: 7, ...mails[7], score: 0.8 }],
+      sync: async () => null,
+      forget: async () => {}
+    },
+    localIndex: {
+      search: async () => [],
+      async between(_ids, from, to) {
+        return Object.entries(mails)
+          .filter(([, m]) => m.date >= from && m.date < to)
+          .sort((a, b) => b[1].date.localeCompare(a[1].date))
+          .map(([uid, m]) => ({
+            accountId: 'a1',
+            folder: 'INBOX',
+            uid: Number(uid),
+            subject: m.subject,
+            date: m.date
+          }));
+      },
+      text: async (_id, _folder, uid) => ({ text: mails[uid].text })
+    }
+  });
+  const reply = { code: () => reply, send: x => x };
+  const out = await handlers['/api/ai/run'](
+    { body: { kind: 'ask', lang: 'de', input: { question: 'Habe ich heute neue Mails?', timeZone: 'Europe/Vienna' } } },
+    reply
+  );
+  const [first, second] = tasks(calls);
+  assert.match(first.now, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'local date and time for the model');
+  assert.equal(first.timeZone, 'Europe/Vienna');
+  assert.deepEqual(
+    second.sources.map(s => s.subject),
+    ['Frühstück'],
+    "the old offer and yesterday's mail are left out"
+  );
+  assert.equal(second.sources[0].date, '2026-11-20 00:30', "the date in the user's time zone");
+  assert.equal(out.result.sources[0].uid, 9);
+});
+
+test('days and local dates', () => {
+  assert.equal(dayRange('', ''), null);
+  assert.equal(dayRange('heute', undefined), null);
+  assert.deepEqual(dayRange('2026-11-20', ''), { since: '2026-11-20', until: '2026-11-20' });
+  assert.deepEqual(dayRange('2026-11-20', '2026-11-16'), { since: '2026-11-16', until: '2026-11-20' });
+  assert.equal(localDate('2026-11-17T18:17:00.000Z', 'Europe/Vienna'), '2026-11-17 19:17');
+  assert.equal(localDate('kein Datum', 'Europe/Vienna'), 'kein Datum');
+  assert.equal(localNow('Europe/Vienna', Date.parse('2026-11-20T18:10:00Z')), '2026-11-20T19:10');
+  const day = { since: '2026-11-20', until: '2026-11-20' };
+  assert.equal(inDays('2026-11-19T23:30:00Z', day, 'Europe/Vienna'), true);
+  assert.equal(inDays('2026-11-19T23:30:00Z', day, 'America/New_York'), false);
 });
 
 test('relevance: a word of the question in the mail, or close enough in meaning', () => {

@@ -419,6 +419,86 @@ def test_ask_question_suspends_on_the_search_tool_call() -> None:
         assert chats[0]["reasoning_effort"] == "none", "thinking off for a short decision"
 
 
+def test_ask_knows_today_and_passes_the_days_of_a_question() -> None:
+    """The model has no clock: today's date is in the system text, and "today" becomes since/until."""
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                            "name": "search_mailbox",
+                            "arguments": json.dumps({"query": "neue Mails", "since": "2026-11-20", "until": ""}),
+                        },
+                    }
+                ],
+            }
+        )
+        out = tasks.ask_mailbox(
+            engine,
+            {
+                "lang": "de",
+                "question": "habe ich heute neue Mails bekommen?",
+                "assistant": ASSISTANT,
+                "now": "2026-11-20T19:10",
+                "timeZone": "Europe/Vienna",
+            },
+        )
+        assert out == {"search": "neue Mails", "tool": "search_mailbox", "since": "2026-11-20", "until": "2026-11-20"}
+        chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
+        system = chat["messages"][0]["content"]
+        assert "Today is Friday, 2026-11-20, the time is 19:10 (Europe/Vienna)" in system
+        assert "Yesterday was 2026-11-19" in system and "Monday 2026-11-16" in system
+        params = chat["tools"][0]["function"]["parameters"]
+        assert set(params["properties"]) == {"query", "since", "until"} and params["required"] == ["query"]
+
+
+def test_ask_drops_days_that_are_not_dates() -> None:
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                            "name": "search_mailbox",
+                            "arguments": json.dumps({"query": "Angebot", "since": "today", "until": "2026-02-30"}),
+                        },
+                    }
+                ],
+            }
+        )
+        out = tasks.ask_mailbox(engine, {"lang": "de", "question": "Angebot heute?", "assistant": ASSISTANT})
+        assert out == {"search": "Angebot", "tool": "search_mailbox"}
+
+
+def test_ask_answer_step_knows_today() -> None:
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append({"role": "assistant", "content": json.dumps({"answer": "Ja.", "found": True})})
+        tasks.ask_mailbox(
+            engine,
+            {
+                "lang": "de",
+                "question": "Neue Mails heute?",
+                "assistant": ASSISTANT,
+                "now": "2026-11-20T08:00",
+                "sources": [{"id": "s1", "from": "A <a@x>", "date": "2026-11-20 07:12", "subject": "Hi", "text": "x"}],
+            },
+        )
+        chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
+        assert "Today is Friday, 2026-11-20" in chat["messages"][0]["content"]
+
+
 def test_ask_without_tool_support_always_searches() -> None:
     with fake_ollama() as (fake, url):
         fake.capabilities = ["completion"]
