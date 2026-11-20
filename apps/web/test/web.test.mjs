@@ -12,6 +12,8 @@ import { missingTranslations, loadDictionary } from '../../../scripts/check-i18n
 import { detectWindowFrame } from '../src/window-frame.ts';
 import { inlineTokens, parseBlocks } from '../src/markdown-parse.ts';
 import { uniqueSources } from '../src/assistant-sources.ts';
+import { findVideoLink, splitLinks, withVideoLink } from '../src/video-call.ts';
+import { buildTimeline, countKinds, eventInvolves, historyAddresses } from '../src/contact-history.ts';
 import { COMPLIANCE_TEXTS, austrianSvnr, complianceIssues, luhn } from '../src/compliance-checks.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -1070,6 +1072,83 @@ test('Window frame: only the desktop app on macOS and Windows draws its own titl
   assert.equal(detectWindowFrame('Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0 Electron/45.3.1 Safari/537.36'), null);
 });
 
+test('Video calls: links are found in text and placed in an appointment', () => {
+  const own = 'https://jitsi.example.org/meet';
+  assert.equal(
+    findVideoLink('Ort: https://meet.ffmuc.net/levuvo-abcde-fghij.'),
+    'https://meet.ffmuc.net/levuvo-abcde-fghij'
+  );
+  assert.equal(
+    findVideoLink('siehe https://jitsi.example.org/meet/raum1', [own]),
+    'https://jitsi.example.org/meet/raum1'
+  );
+  assert.equal(
+    findVideoLink('https://jitsi.example.org/meet/a/b', [own]),
+    '',
+    'only one path segment after the server'
+  );
+  assert.equal(findVideoLink('https://example.org/x http://meet.jit.si/x'), '');
+  assert.equal(findVideoLink(''), '');
+  const empty = { location: '', description: 'Agenda', summary: 'Weekly' };
+  assert.deepEqual(withVideoLink(empty, 'https://m.example/r', 'Videocall'), {
+    ...empty,
+    location: 'https://m.example/r'
+  });
+  const room = { location: 'Raum 3', description: 'Agenda' };
+  assert.equal(
+    withVideoLink(room, 'https://m.example/r', 'Videocall').description,
+    'Videocall: https://m.example/r\n\nAgenda'
+  );
+  assert.equal(withVideoLink({ location: 'Raum 3', description: '' }, 'u', 'V').description, 'V: u');
+});
+
+test('Chat: https links are split out, trailing punctuation stays text', () => {
+  assert.deepEqual(splitLinks('Call: https://meet.ffmuc.net/x. Bis gleich'), [
+    { text: 'Call: ' },
+    { text: 'https://meet.ffmuc.net/x', href: 'https://meet.ffmuc.net/x' },
+    { text: '. Bis gleich' }
+  ]);
+  assert.deepEqual(splitLinks('kein link http://x.example'), [{ text: 'kein link http://x.example' }]);
+  assert.deepEqual(splitLinks(''), []);
+});
+
+test('Contact history: one timeline of mails, appointments, tasks and notes, newest first', () => {
+  const addresses = historyAddresses([' Anna@Example.org', 'anna@example.org', '', 'kein']);
+  assert.deepEqual(addresses, ['anna@example.org']);
+  const ev = (uid, start, email) => ({
+    uid,
+    url: uid,
+    start,
+    end: start,
+    allDay: false,
+    summary: uid,
+    organizer: { email: 'me@example.org' },
+    attendees: [{ email }]
+  });
+  assert.ok(eventInvolves(ev('a', '2026-01-01T10:00:00Z', 'ANNA@example.org'), addresses));
+  const items = buildTimeline(
+    {
+      mails: [
+        { accountId: 'x', folder: 'INBOX', uid: 1, subject: 'Hallo', date: '2026-11-01T08:00:00Z' },
+        { accountId: 'x', folder: 'INBOX', uid: 1, subject: 'Hallo', date: '2026-11-01T08:00:00Z' },
+        { accountId: 'x', folder: 'INBOX', uid: 2, subject: 'ohne Datum', date: null }
+      ],
+      events: [
+        ev('e1', '2026-11-20T09:00:00Z', 'anna@example.org'),
+        ev('e2', '2026-11-05T09:00:00Z', 'ben@example.org')
+      ],
+      tasks: [{ id: 't1', title: 'Angebot', createdAt: '2026-11-10T00:00:00Z' }],
+      notes: [{ id: 'n1', email: 'anna@example.org', text: 'x', createdAt: '2026-11-15T00:00:00Z', updatedAt: '' }]
+    },
+    addresses
+  );
+  assert.deepEqual(
+    items.map(i => i.key),
+    ['event|e1|2026-11-20T09:00:00Z', 'note|n1', 'task|t1', 'mail|x|INBOX|1']
+  );
+  assert.deepEqual(countKinds(items), { mail: 1, event: 1, task: 1, note: 1 });
+});
+
 test('Guardrails before sending: open circulars, sensitive data unencrypted, health data; all translated', () => {
   const base = {
     from: 'Peter <peter@firma.at>',
@@ -1163,6 +1242,15 @@ test('Assistant: the same mail or notification shows one source chip', () => {
     uniqueSources([a, b, c]).map(s => s.uid),
     [3, 2]
   );
+});
+
+test('Page titles: every view heading goes through PageTitle, so it carries the brand full stop', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const src = join(root, 'apps/web/src');
+  const bare = readdirSync(src, { recursive: true })
+    .filter(f => /\.tsx$/.test(f) && !f.endsWith('PageTitle.tsx'))
+    .filter(f => /<h1[\s>]/.test(readFileSync(join(src, f), 'utf8').replace(/`[^`]*`/g, '')));
+  assert.deepEqual(bare, [], 'use <PageTitle> from ./ui instead of <h1>');
 });
 
 test('Assistant panel width: limits, saved value check and keyboard steps', async () => {

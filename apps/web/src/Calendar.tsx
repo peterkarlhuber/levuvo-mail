@@ -25,12 +25,14 @@ import AttachmentPreview from './AttachmentPreview';
 import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
-import { Segmented, useFocusTrap } from './ui';
+import { Segmented, useFocusTrap, PageTitle } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
 import { FindTimeDialog } from './FindTime';
 import { SchedulingPollsDialog } from './SchedulingPolls';
+import { AddVideoCallButton, JoinVideoCall, useVideoServers } from './VideoCall';
+import { findVideoLink, withVideoLink } from './video-call';
 import { useTasks } from './task-reminders';
 import { dueDay, type Task } from './tasks';
 import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo, EventAttachment } from './types';
@@ -140,7 +142,7 @@ function draftFrom(e: CalendarEvent | null, start: Date, allDay: boolean, calend
   };
 }
 
-const MB = 1024 * 1024;
+const MB = 1_000_000; // decimal, like every size shown in the app
 const ATTACH_MAX_COUNT = 20;
 const ATTACH_MAX_TOTAL = 10 * MB;
 const PREVIEWABLE = /^(image\/(png|jpeg|gif|webp)|application\/pdf|text\/plain)$/i;
@@ -431,6 +433,9 @@ function EventEditor({
   );
   const readOnly = Boolean(cal?.readOnly) || invitedByOther;
   const set = (patch: Partial<Draft>) => setD(old => ({ ...old, ...patch }));
+  // A call link already in the appointment (known Jitsi hosts or the configured server).
+  const videoServers = useVideoServers();
+  const videoInText = Boolean(findVideoLink(`${d.location}\n${d.description}`, videoServers));
   // Loading the Microsoft attachment list is not an edit; everything else the user typed is.
   const dirty =
     JSON.stringify({ ...d, attachments: d.attachmentsChanged ? d.attachments : null }) !==
@@ -716,6 +721,13 @@ function EventEditor({
             {t('Ort')}
             <input value={d.location} maxLength={500} onChange={ev => set({ location: ev.target.value })} />
           </label>
+          <div className="event-video">
+            {videoInText ? (
+              <JoinVideoCall text={`${d.location}\n${d.description}`} />
+            ) : (
+              <AddVideoCallButton onLink={link => setD(old => withVideoLink(old, link.url, t('Videocall')))} />
+            )}
+          </div>
           <div className="event-grid">
             <label>
               {t('Wiederholung')}
@@ -1521,10 +1533,7 @@ export default function CalendarModule({
           <button className="icon-button" aria-label={t('Weiter')} onClick={() => step(1)}>
             <ChevronRight size={18} />
           </button>
-          <h1>
-            {title}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{title}</PageTitle>
           <button className="icon-button" aria-label={t('Aktualisieren')} onClick={() => void load()} disabled={busy}>
             <RefreshCcw size={16} className={busy ? 'spin' : ''} />
           </button>

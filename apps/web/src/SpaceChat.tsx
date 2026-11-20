@@ -10,6 +10,25 @@ import { useUi } from './ConfirmDialog';
 import { fullDateLabel } from './format';
 import { useT } from './i18n';
 import { spaces, type ChatMessage, type ChatPage, type SpaceDetail } from './spaces-api';
+import { AddVideoCallButton } from './VideoCall';
+import { splitLinks } from './video-call';
+
+/** Message text with https links that can be opened (the desktop app asks before it opens one). */
+function MessageText({ text }: { text: string }) {
+  return (
+    <p>
+      {splitLinks(text).map((part, i) =>
+        part.href ? (
+          <a key={i} href={part.href} target="_blank" rel="noopener noreferrer">
+            {part.text}
+          </a>
+        ) : (
+          <Fragment key={i}>{part.text}</Fragment>
+        )
+      )}
+    </p>
+  );
+}
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const MAX = 10_000;
@@ -114,6 +133,21 @@ export default function SpaceChat({ detail, onRead }: { detail: SpaceDetail; onR
       if (!more.more) setPage(p => (p ? { ...p, more: false } : p));
     } catch (err) {
       ui.toast({ kind: 'error', text: errorText(err) });
+    }
+  };
+
+  /** Posts an invitation to a new video call for all members. */
+  const startCall = async (url: string) => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await spaces.post(`/${id}/chat/post`, { text: `${t('Videocall beitreten:')} ${url}`, replyTo: null });
+      stick.current = true;
+      await load();
+    } catch (err) {
+      ui.toast({ kind: 'error', text: errorText(err) });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -230,7 +264,7 @@ export default function SpaceChat({ detail, onRead }: { detail: SpaceDetail; onR
                 <div className="space-chat-row">
                   <div className="space-chat-bubble">
                     {quote(m)}
-                    <p>{m.text}</p>
+                    <MessageText text={m.text} />
                     <span className="space-chat-flags small muted">
                       {m.ai && (
                         <span className="space-chat-ai" title={t('Mit dem Assistenten geschrieben')}>
@@ -338,6 +372,13 @@ export default function SpaceChat({ detail, onRead }: { detail: SpaceDetail; onR
                 }
               }}
             />
+            {!editing && (
+              <AddVideoCallButton
+                className="btn small ghost"
+                label={t('Videocall starten')}
+                onLink={link => void startCall(link.url)}
+              />
+            )}
             <Button type="submit" variant="primary" size="sm" disabled={!text.trim() || sending}>
               <Send size={14} /> {editing ? t('Speichern') : t('Senden')}
             </Button>

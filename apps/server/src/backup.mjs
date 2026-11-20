@@ -71,6 +71,10 @@ export const BACKUP_FILES = {
   'calendar-local.json': { kind: 'json', encrypted: 'calendar-key' },
   'contacts-local.json': { kind: 'json', encrypted: 'contacts-key' },
   'tasks-local.json': { kind: 'json', encrypted: 'tasks-key' },
+  // Notes of the contact history (text about other people), encrypted like the address book.
+  'contact-notes.json': { kind: 'json', encrypted: 'contact-notes-key' },
+  // Promises found in mail (suggested tasks and reminders, short quotes), encrypted.
+  'commitments.json': { kind: 'json', encrypted: 'commitments-key' },
   // Scheduling polls, offers and booking links (addresses, times), encrypted.
   'scheduling.json': { kind: 'json', encrypted: 'scheduling-key' },
   // Automations (rules with addresses) and their short log, encrypted.

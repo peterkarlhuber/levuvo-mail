@@ -30,17 +30,21 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Tab | What for |
 |---|---|
 | Overview | What happened recently |
-| Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line |
+| Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line; **Start video call** sends everyone a Jitsi link |
 | Notes | Texts that several people edit at the same time |
 | Mails | Emails on the topic with internal comments |
 | Tasks | Tasks with owners and due dates |
 | Events | Shared events |
 | Files | Files with earlier versions |
-| Members | Who is in and which role they have |
-| Settings | Name and description; allow the assistant and cloud AI to see the space |
+| Members | Who is in and which role they have; your safety code to compare and copy |
+| Settings | Name and description, assistant and cloud AI, sync, danger zone |
 
 Chat messages usually arrive within a few seconds. Levuvo Mail counts unread ones on the left bar, in the list of spaces and on the tab, on this device only: there are no read receipts.
 
 To put an email into a space, open it, click **Add to space** in the **…** menu and choose the space.
 
 The AI assistant only sees a space if its owner allows it in the space's **Settings** tab. Cloud AI needs a separate, additional permission there.
+
+The **Settings** tab is laid out like the app settings: cards for **General**, **Levuvo Mail Assistant in this space** and **Sync**. Everything saves automatically as soon as you leave a field or flip a switch. At the bottom sits the red-framed **Danger zone** with **Hand over space**, **Dissolve space**, **Leave space** or **Delete copy**. Each of these asks first.
+
+Your **safety code** is in the **Safety codes** card of the **Members** tab. It is the fingerprint of your space key, the same in all spaces and not secret. **Copy** puts it on the clipboard, for example to paste into a message.

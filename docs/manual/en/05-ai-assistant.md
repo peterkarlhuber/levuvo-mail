@@ -34,6 +34,21 @@ After the download each model is compared with a fixed checksum, a kind of digit
 
 Small runs from 8 GB of memory (RAM), Standard from 16 GB, Large from 32 GB. Levuvo Mail shows how much your computer has under **Local AI**. Larger models answer better but more slowly. Models marked **EU** come from Mistral AI in France. With a local model the origin doesn't matter for your data, because it never leaves your computer.
 
+### Keeping an eye on the index for search by meaning
+
+For search by meaning to work, the search model computes an entry for every message in the search index. This happens in the background and only on your computer. You can see how far it has got under **Settings → AI & agents**, right below the search model, and under **Settings → Search & offline**:
+
+| Display | Meaning |
+|---|---|
+| **Not there** | There is no index yet. The reason is shown with it, for example: AI switched off, search model not downloaded yet, or local search index switched off. |
+| **Running** | The index is being built, with "x of y messages" and the estimated time left. |
+| **Paused** | You stopped building with **Pause**. **Resume** continues where it stopped. What has been computed is kept. |
+| **Incomplete** | A part is still missing, such as new mail. It is added in the next run, within 10 minutes at the latest, or right away with **Index now**. |
+| **Done** | All messages are searchable, with the number and the time. |
+| **Error** | The search model did not answer. **Try again** starts building again. |
+
+**Index again** discards all entries and computes them anew. You only need it when search by meaning finds noticeably poorly. While you search, a slim line below the search field shows when the index is not finished yet.
+
 ## What the assistant can do
 
 ### In a message
@@ -80,6 +95,17 @@ Under **Settings → AI & agents → Advanced** you set for the selected model:
 - **Thinking:** whether the model thinks before answering, if it can.
 
 Empty fields mean "Automatic". **Reset** restores the defaults.
+
+## Promise tracker
+
+The promise tracker finds promises in your emails, so nothing gets lost. It is off by default. Switch it on under **Settings → AI & agents → Features** with **Promise tracker**. It only runs with a local model, never with a cloud model.
+
+- **Your promises:** If you write "I'll send you the offer by Friday", Levuvo Mail suggests a task with a due date and a link to the email (**As a task**).
+- **Promises of others:** If someone writes "I'll get back to you next week", Levuvo Mail suggests a reminder (**Remind me if nothing arrives**). It fires the morning after the promised day and clears itself as soon as an answer arrives.
+
+The suggestions show in **My day** and above the task list under **Promises from your emails**. They are labelled as AI results. Nothing is created until you click. The cross discards a suggestion.
+
+Only new emails from the moment you switch it on are read (at most two days back), each only once, and only the part the sender wrote. The suggestions are stored encrypted on this computer for 60 days, are part of backups and are deleted with **Delete all AI data**.
 
 ## Connect external agents
 

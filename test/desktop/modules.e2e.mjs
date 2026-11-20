@@ -78,6 +78,16 @@ test(
     let tasksOverride = null;
     let staleTasksChunk = false;
     const context = app.context();
+    // "Mein Tag" would open on the first start of the day and cover the modules under test.
+    await context.addInitScript(() => {
+      try {
+        const key = 'levuvo-mail-prefs-v2';
+        const prefs = JSON.parse(globalThis.localStorage.getItem(key) || '{}');
+        globalThis.localStorage.setItem(key, JSON.stringify({ ...prefs, briefingOnStart: false }));
+      } catch {
+        /* documents without storage (about:blank) */
+      }
+    });
     await context.route(/\/assets\/TasksModule-[\w-]+\.js$/, route =>
       staleTasksChunk
         ? route.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"Datei nicht gefunden."}' })

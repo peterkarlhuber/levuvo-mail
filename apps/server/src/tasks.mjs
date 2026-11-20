@@ -76,6 +76,15 @@ function validMail(m) {
   };
 }
 
+/** Optional link to the person the task is about (contact history): address and display name. */
+function validContact(c) {
+  if (!c || typeof c !== 'object') return null;
+  const email = text(c.email, 320, 'Kontakt').trim().toLowerCase();
+  if (!email) return null;
+  if (!/^[^\s@<>"]+@[^\s@<>"]+$/.test(email)) throw fail('Ungültiger Verweis auf den Kontakt.');
+  return { email, name: text(c.name, 200, 'Name').trim() };
+}
+
 export function validateTask(input) {
   if (!input || typeof input !== 'object') throw fail('Ungültige Aufgabe.');
   const title = text(input.title, 300, 'Titel').trim();
@@ -96,6 +105,7 @@ export function validateTask(input) {
     repeat,
     done: input.done === true,
     mail,
+    contact: validContact(input.contact),
     source
   };
 }
@@ -288,6 +298,7 @@ export function createTaskStore(file, { now = () => new Date(), onChange = () =>
         ...clean,
         // The mail link and the origin are set when the task is made and kept on later edits.
         mail: clean.mail || existing?.mail || null,
+        contact: clean.contact || existing?.contact || null,
         source: existing?.source || clean.source,
         doneAt: clean.done ? existing?.doneAt || stamp : null,
         // A changed reminder time rings again.

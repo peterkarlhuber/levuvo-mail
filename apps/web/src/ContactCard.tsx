@@ -1,9 +1,10 @@
-// Contact card in the reader: who the sender is (address book), the latest mails with them,
-// shared appointments and the files exchanged (from the attachment overview). Everything is read from this computer
+// Contact card in the reader: who the sender is (address book), notes and tasks about them
+// (contact history), the latest mails with them, shared appointments and the files exchanged (from the attachment overview). Everything is read from this computer
 // (encrypted search index, connected calendars and address books); nothing is looked up online.
 import { useEffect, useState } from 'react';
 import { Building2, CalendarDays, Mail, Paperclip, Phone, X } from 'lucide-react';
 import { getJson } from './api';
+import ContactHistory from './ContactHistory';
 import { useT } from './i18n';
 import type { AttachmentItem } from './AttachmentOverview';
 import { prettySize } from './format';
@@ -132,6 +133,8 @@ export default function ContactCard({
           <X size={15} />
         </button>
       </header>
+
+      <ContactHistory compact emails={[email]} name={displayName} />
 
       <section>
         <h4>

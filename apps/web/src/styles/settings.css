@@ -71,8 +71,20 @@
   gap: var(--space-3);
   background: var(--surface);
 }
-.settings-section h2 {
+.settings-section h2,
+.settings-section .settings-section-title {
   font-size: var(--text-lg);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  margin-top: 0;
+}
+/* Danger zone: irreversible actions, always the last card of a page. */
+.settings-section--danger {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.settings-section--danger .settings-section-title {
+  color: var(--danger);
 }
 .settings-section h3 {
   font-size: var(--text-sm);
@@ -476,6 +488,26 @@
   width: 10rem;
 }
 
+/* Settings → Privacy: where the data lives on this computer. */
+.storage-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.storage-item > div {
+  min-width: 0;
+}
+.storage-path {
+  display: block;
+  margin: var(--space-1) 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+}
+.storage-hint {
+  display: block;
+  color: var(--muted);
+}
 /* Writing style learned per contact (Settings → AI & agents → Writing style). */
 .style-profile {
   display: grid;

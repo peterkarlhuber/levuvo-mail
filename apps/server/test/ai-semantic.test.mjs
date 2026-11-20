@@ -171,3 +171,76 @@ test('with the encrypted local index: vectors are stored there and found by mean
   // A restart reuses the stored vectors.
   assert.deepEqual(await createSemanticIndex({ localIndex: index, ai, stateFile }).sync('acc'), { embedded: 0 });
 });
+
+test('overview tells none, running with remaining time, paused, done and error apart', async t => {
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { createLocalIndex } = await import('../src/local-index.mjs');
+  const { syntheticMailbox } = await import('./helpers/synthetic-mailbox.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'lv-sem-'));
+  const index = createLocalIndex({ dir, getKey: async () => Buffer.alloc(32, 7) });
+  t.after(() => {
+    index.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  await index.sync(syntheticMailbox(100, { textChars: 40 }), 'acc', [{ path: 'INBOX', flags: new Set() }]);
+  const calls = [];
+  const ai = fakeAi(calls);
+  let clock = 1_000_000;
+  let saved = { accounts: {} };
+  const stateFile = { get: () => saved, save: async v => (saved = v) };
+  const semantic = createSemanticIndex({ localIndex: index, ai, stateFile, now: () => clock });
+
+  ai.settings.enabled = false;
+  assert.equal((await semantic.overview(['acc'])).reason, 'ai_off');
+  ai.settings.enabled = true;
+  assert.equal((await semantic.overview(['acc'], { modelInstalled: false })).reason, 'model_missing');
+  assert.equal((await semantic.overview([])).reason, 'index_off');
+  const before = await semantic.overview(['acc']);
+  assert.equal(before.state, 'none');
+  assert.equal(before.reason, 'not_started');
+  assert.equal(before.messages, 100);
+
+  // Running: each batch takes 2 s on the fake clock; seen during the third batch: 64 stored in 6 s.
+  let seen = null;
+  const realRun = ai.run;
+  ai.run = async (kind, input, opts) => {
+    clock += 2000;
+    const r = await realRun(kind, input, opts);
+    if (!seen && calls.filter(c => c.embedded).length === 3) seen = await semantic.overview(['acc']);
+    return r;
+  };
+  await semantic.sync('acc');
+  assert.equal(seen.state, 'running');
+  assert.equal(seen.vectors, 64);
+  assert.equal(seen.etaSeconds, Math.ceil(36 / (64 / 6)));
+  const done = await semantic.overview(['acc']);
+  assert.equal(done.state, 'done');
+  assert.equal(done.vectors, 100);
+  assert.equal(done.finishedAt, clock);
+
+  // Paused: survives a restart, stops a run and nothing is embedded meanwhile.
+  await semantic.pause();
+  assert.equal(saved.paused, true);
+  const restarted = createSemanticIndex({ localIndex: index, ai, stateFile, now: () => clock });
+  assert.equal((await restarted.overview(['acc'])).state, 'paused');
+  assert.deepEqual(await restarted.sync('acc'), { skipped: true, paused: true });
+
+  // Rebuild: vectors gone, pause lifted, the next run starts from zero.
+  await restarted.rebuild(['acc']);
+  assert.equal(saved.paused, false);
+  assert.equal((await restarted.overview(['acc'])).vectors, 0);
+  assert.deepEqual(await restarted.sync('acc'), { embedded: 100 });
+
+  // Error: the model fails every batch; only the code is kept, never a message text.
+  await restarted.rebuild(['acc']);
+  ai.run = async () => {
+    throw Object.assign(new Error('secret mail text'), { code: 'ai_unavailable' });
+  };
+  await assert.rejects(restarted.sync('acc'));
+  const failed = await restarted.overview(['acc']);
+  assert.equal(failed.state, 'error');
+  assert.equal(failed.error.code, 'ai_unavailable');
+  assert.ok(!JSON.stringify(saved).includes('secret'));
+});

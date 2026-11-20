@@ -364,7 +364,7 @@ export const AI_EN: Record<string, string> = {
   '{name} ist noch nicht auf diesem Computer ({size}).': '{name} is not on this computer yet ({size}).',
   Fortsetzen: 'Resume',
   'Dieses Modell steht nicht in der Liste.': 'This model is not in the list.',
-  'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.':
+  'Das eigene Ollama von Levuvo Mail ist in dieser Installation nicht enthalten.':
     "Levuvo Mail's own Ollama is not included in this installation.",
   'Klein, ab 8 GB Arbeitsspeicher': 'Small, from 8 GB memory',
   'Standard, ab 16 GB Arbeitsspeicher': 'Standard, from 16 GB memory',
@@ -407,6 +407,74 @@ export const AI_EN: Record<string, string> = {
   'Kontextlänge außerhalb der Grenzen.': 'Context length out of range.',
   'Temperatur außerhalb der Grenzen.': 'Temperature out of range.',
   'Antwortlänge außerhalb der Grenzen.': 'Response length out of range.',
+  // Status of the index for search by meaning
+  'noch weniger als 1 Minute': 'less than a minute left',
+  'noch etwa 1 Minute': 'about 1 minute left',
+  'noch etwa {n} Minuten': 'about {n} minutes left',
+  'noch etwa {h} Std. {m} Min.': 'about {h} h {m} min left',
+  'noch etwa 1 Stunde': 'about 1 hour left',
+  'noch etwa {h} Stunden': 'about {h} hours left',
+  'Nicht vorhanden: Die KI-Funktionen sind ausgeschaltet (Einstellungen → KI & Agenten).':
+    'Not there: the AI functions are switched off (Settings → AI & agents).',
+  'Nicht vorhanden: Die Suche nach Bedeutung ist ausgeschaltet (KI & Agenten → Funktionen).':
+    'Not there: search by meaning is switched off (AI & agents → Functions).',
+  'Nicht vorhanden: Das Modell für die Suche ist noch nicht heruntergeladen.':
+    'Not there: the search model has not been downloaded yet.',
+  'Nicht vorhanden: Der lokale Suchindex ist ausgeschaltet (Einstellungen → Suche & Offline).':
+    'Not there: the local search index is switched off (Settings → Search & offline).',
+  'Noch nicht vorhanden: Der lokale Suchindex hat noch keine Nachrichten. Er wird im Hintergrund aufgebaut.':
+    'Not there yet: the local search index has no messages yet. It is being built in the background.',
+  'Noch nicht vorhanden. Der Aufbau startet automatisch in den nächsten Minuten.':
+    'Not there yet. Building starts automatically within the next few minutes.',
+  'Suchindex neu aufbauen?': 'Rebuild the search index?',
+  'Alle Einträge für die Suche nach Bedeutung werden verworfen und mit dem gewählten Modell neu berechnet. Bis dahin findet die Suche nach Bedeutung weniger.':
+    'All entries for search by meaning are discarded and computed again with the selected model. Until then, search by meaning finds less.',
+  'Läuft: {done} von {total} Nachrichten ({pct} %)': 'Running: {done} of {total} messages ({pct} %)',
+  'Restzeit wird berechnet …': 'estimating the time left …',
+  'Pausiert bei {done} von {total} Nachrichten.': 'Paused at {done} of {total} messages.',
+  'Unvollständig: {done} von {total} Nachrichten. Der Rest folgt beim nächsten Durchlauf.':
+    'Incomplete: {done} of {total} messages. The rest follows in the next run.',
+  'Fertig: {total} Nachrichten durchsuchbar · Stand {time}': 'Done: {total} messages searchable · as of {time}',
+  'Fertig: {total} Nachrichten durchsuchbar': 'Done: {total} messages searchable',
+  'Fehler: {reason} Bisher {done} von {total} Nachrichten.': 'Error: {reason} So far {done} of {total} messages.',
+  'Suche nach Bedeutung': 'Search by meaning',
+  'Suchindex für die Suche nach Bedeutung': 'Index for search by meaning',
+  Pausieren: 'Pause',
+  'Jetzt indexieren': 'Index now',
+  'Neu indexieren': 'Index again',
+  'Index aktualisiert, aber ein Konto war nicht erreichbar.': 'Index updated, but one account could not be reached.',
+  'Index aktualisiert, aber {count} Konten waren nicht erreichbar.':
+    'Index updated, but {count} accounts could not be reached.',
+  'Index aktualisiert: {added} neu, {removed} entfernt.': 'Index updated: {added} new, {removed} removed.',
+  'Index ist aktuell. Nichts Neues gefunden.': 'The index is up to date. Nothing new found.',
+  'Index konnte nicht aktualisiert werden.': 'The index could not be updated.',
+  'wird aktualisiert …': 'updating …',
+  'letzte Aktualisierung fehlgeschlagen': 'last update failed',
+  'Wird aktualisiert …': 'Updating …',
+  'Mit eingeschalteter KI berechnet das lokale Modell für die Suche aus jeder Nachricht im Suchindex einen Eintrag, damit der Assistent Nachrichten auch ohne die genauen Wörter findet. Das passiert immer auf diesem Computer.':
+    'With AI switched on, the local search model computes an entry for every message in the search index, so the assistant finds messages even without the exact words. This always happens on this computer.',
+  'Unbekannte Aktion.': 'Unknown action.',
+  // Where the data is stored (Settings → Privacy)
+  'Wo Levuvo Mail Daten auf diesem Computer speichert. Der Speicherort lässt sich nicht ändern.':
+    'Where Levuvo Mail stores data on this computer. The location cannot be changed.',
+  'Der Ordner konnte nicht geöffnet werden.': 'The folder could not be opened.',
+  'Im Finder zeigen': 'Show in Finder',
+  'Im Explorer zeigen': 'Show in Explorer',
+  'E-Mails bleiben auf dem Mailserver. Zuletzt geladene Listen und Nachrichten für die Offline-Ansicht liegen nur im Arbeitsspeicher.':
+    'Emails stay on the mail server. Recently loaded lists and messages for the offline view are only kept in memory.',
+  'Nur in der Desktop-App möglich.': 'Only possible in the desktop app.',
+  'Unbekannter Ordner.': 'Unknown folder.',
+  'Einstellungen und Konten ohne Passwörter (z. B. app-settings.json, ai.json, accounts.json), öffentliche Schlüssel und Zertifikate, CalDAV/CardDAV-Konten, Vorlagen sowie lokale Kontakte, Kalender und Aufgaben (verschlüsselt).':
+    'Settings and accounts without passwords (e.g. app-settings.json, ai.json, accounts.json), public keys and certificates, CalDAV/CardDAV accounts, templates and local contacts, calendar and tasks (encrypted).',
+  'KI-Modelle': 'AI models',
+  'Die Modelle des eigenen Ollama von Levuvo Mail. Getrennt von einem anderen installierten Ollama.':
+    "The models of Levuvo Mail's own Ollama. Separate from any other Ollama installed.",
+  'Verschlüsselter Suchindex pro Konto (Betreff, Absender, die ersten 3.000 Zeichen Text) samt den Einträgen für die Suche nach Bedeutung. Lässt sich jederzeit neu aufbauen.':
+    'Encrypted search index per account (subject, sender, the first 3,000 characters of text) including the entries for search by meaning. Can be rebuilt at any time.',
+  'Inhalte der gemeinsamen Räume, Ende-zu-Ende-verschlüsselt.': 'Content of the shared spaces, end-to-end encrypted.',
+  Sicherheitskopien: 'Safety copies',
+  'Der vorherige Stand nach einer Wiederherstellung. Sicherungen selbst speicherst du an einem Ort deiner Wahl.':
+    'The previous state after a restore. Backups themselves are saved wherever you choose.',
   'Stil lernen ausschalten?': 'Turn off style learning?',
   'Der gelernte Stil aller Kontakte wird gelöscht. Antwortvorschläge nutzen dann nur noch deine Einstellungen und die letzten gesendeten Mails.':
     'The learned style of all contacts is deleted. Reply suggestions then only use your settings and your most recent sent emails.',

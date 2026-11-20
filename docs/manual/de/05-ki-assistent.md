@@ -34,6 +34,21 @@ Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen, eine
 
 Klein läuft ab 8 GB Arbeitsspeicher (RAM), Standard ab 16 GB, Groß ab 32 GB. Wie viel dein Computer hat, zeigt Levuvo Mail unter **Lokale KI** an. Größere Modelle antworten besser, aber langsamer. Mit **EU** markierte Modelle stammen von Mistral AI aus Frankreich. Bei einem lokalen Modell spielt die Herkunft für deine Daten keine Rolle, denn sie verlassen deinen Computer nicht.
 
+### Den Suchindex für die Suche nach Bedeutung im Blick
+
+Damit die Suche nach Bedeutung funktioniert, berechnet das Suchmodell für jede Nachricht im Suchindex einen Eintrag. Das passiert im Hintergrund und nur auf deinem Computer. Wie weit es ist, siehst du unter **Einstellungen → KI & Agenten** direkt unter dem Modell für die Suche und unter **Einstellungen → Suche & Offline**:
+
+| Anzeige | Bedeutung |
+|---|---|
+| **Nicht vorhanden** | Es gibt noch keinen Index. Der Grund steht dabei, zum Beispiel: KI ausgeschaltet, Suchmodell noch nicht heruntergeladen oder lokaler Suchindex ausgeschaltet. |
+| **Läuft** | Der Index wird aufgebaut, mit „x von y Nachrichten“ und der geschätzten Restzeit. |
+| **Pausiert** | Du hast den Aufbau mit **Pausieren** angehalten. **Fortsetzen** macht dort weiter. Bereits Berechnetes bleibt erhalten. |
+| **Unvollständig** | Ein Teil fehlt noch, etwa neue Mails. Er wird beim nächsten Durchlauf ergänzt, spätestens nach 10 Minuten, oder sofort mit **Jetzt indexieren**. |
+| **Fertig** | Alle Nachrichten sind durchsuchbar, mit Anzahl und Zeitpunkt. |
+| **Fehler** | Das Suchmodell hat nicht geantwortet. **Erneut versuchen** startet den Aufbau wieder. |
+
+**Neu indexieren** verwirft alle Einträge und berechnet sie neu. Das brauchst du nur, wenn die Suche nach Bedeutung auffällig schlecht findet. Während du suchst, zeigt eine schmale Zeile unter dem Suchfeld an, wenn der Index noch nicht fertig ist.
+
 ## Was der Assistent kann
 
 ### In einer Nachricht
@@ -80,6 +95,17 @@ Unter **Einstellungen → KI & Agenten → Erweitert** stellst du für das gewä
 - **Thinking:** ob das Modell vor der Antwort nachdenkt, falls es das kann.
 
 Leere Felder bedeuten „Automatisch“. **Zurücksetzen** stellt die Standardwerte wieder her.
+
+## Versprechen-Tracker
+
+Der Versprechen-Tracker findet Zusagen in deinen Mails, damit nichts untergeht. Er ist standardmäßig aus. Du schaltest ihn unter **Einstellungen → KI & Agenten → Funktionen** mit **Versprechen-Tracker** ein. Er läuft nur mit einem lokalen Modell, nie mit einem Cloud-Modell.
+
+- **Deine Zusagen:** Schreibst du „Ich schicke Ihnen das Angebot bis Freitag“, schlägt Levuvo Mail eine Aufgabe mit Fälligkeit und Link zur Mail vor (**Als Aufgabe**).
+- **Zusagen anderer:** Schreibt dir jemand „Ich melde mich nächste Woche“, schlägt Levuvo Mail eine Erinnerung vor (**Erinnern, falls nichts kommt**). Sie meldet sich am Morgen nach dem versprochenen Tag und verschwindet von selbst, sobald eine Antwort kommt.
+
+Die Vorschläge erscheinen in **Mein Tag** und über der Aufgabenliste unter **Versprechen aus deinen Mails**. Sie sind als KI-Ergebnis gekennzeichnet. Erst dein Klick legt etwas an. Mit dem Kreuz verwirfst du einen Vorschlag.
+
+Gelesen werden nur neue Mails ab dem Einschalten (höchstens zwei Tage zurück), jede nur einmal, und nur der Teil, den die Absenderin oder der Absender selbst geschrieben hat. Die Vorschläge liegen 60 Tage verschlüsselt auf diesem Computer, gehören zur Datensicherung und werden mit **Alle KI-Daten löschen** gelöscht.
 
 ## Externe Agenten anbinden
 
