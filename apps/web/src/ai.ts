@@ -105,10 +105,22 @@ export function runAi<T>(
     account,
     refs,
     input,
-    lang
-  }: { account?: string; refs?: MessageRef[]; input?: Record<string, unknown>; lang: string }
+    lang,
+    background
+  }: {
+    account?: string;
+    refs?: MessageRef[];
+    input?: Record<string, unknown>;
+    lang: string;
+    /** Started by the app, not by a click: waits while the user waits for a local model. */
+    background?: boolean;
+  }
 ) {
-  return postJson<AiResult<T>>('/api/ai/run', { kind, account, refs, input, lang }, 'ai-v1');
+  return postJson<AiResult<T>>(
+    '/api/ai/run',
+    { kind, account, refs, input, lang, ...(background ? { background } : {}) },
+    'ai-v1'
+  );
 }
 
 let cached: { at: number; value: AiSettings | null } = { at: 0, value: null };

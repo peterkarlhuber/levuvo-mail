@@ -341,3 +341,46 @@ test('a mailbox question gets no manual sections; a model without tool calls get
     assert.equal(last.manual.length, withManual ? 1 : 0);
   }
 });
+
+test('a local model: background work waits while the user waits, and runs one at a time', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'lv-assistant-queue-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const order = [];
+  const pending = new Map();
+  const ai = createAiService({
+    settingsFile: await createJsonFile(join(dir, 'ai.json'), DEFAULT_AI_SETTINGS),
+    vault: { available: false },
+    sidecar: {
+      running: true,
+      async call(method, params) {
+        if (method !== 'task') return { ok: true };
+        order.push(`start ${params.input.name}`);
+        await new Promise(resolve => pending.set(params.input.name, resolve));
+        order.push(`end ${params.input.name}`);
+        return { items: [] };
+      },
+      async stop() {},
+      diagnostics: () => ({})
+    },
+    log: createAiLog(join(dir, 'log.jsonl')),
+    totalmem: () => 16 * GIB
+  });
+  await ai.save({ enabled: true, provider: 'ollama', model: 'ministral-3:3b' });
+  const tick = () => new Promise(resolve => setTimeout(resolve, 20));
+  const user = ai.run('classify', { name: 'user' });
+  await tick();
+  const bg1 = ai.run('prioritize', { name: 'bg1' }, { source: 'briefing-auto' });
+  const bg2 = ai.run('classify', { name: 'bg2' }, { source: 'background' });
+  await tick();
+  assert.deepEqual(order, ['start user'], 'background waits for the user request');
+  pending.get('user')();
+  await user;
+  await tick();
+  assert.deepEqual(order, ['start user', 'end user', 'start bg1'], 'then one background call at a time');
+  pending.get('bg1')();
+  await bg1;
+  await tick();
+  pending.get('bg2')();
+  await bg2;
+  assert.deepEqual(order.slice(-2), ['start bg2', 'end bg2']);
+});

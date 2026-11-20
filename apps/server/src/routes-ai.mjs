@@ -638,17 +638,12 @@ export function registerAiRoutes(ctx) {
       const accountId = body.account ? String(body.account) : null;
       ai.ensureAllowed(null, accountId);
       const input = await prepare(kind, body);
-      let result = await ai.run(kind, input, { accountId });
+      // Background work the UI starts by itself (sorting into bundles) waits for the user's requests.
+      let result = await ai.run(kind, input, {
+        accountId,
+        ...(body.background === true ? { source: 'background' } : {})
+      });
       if (kind === 'ask') {
-        console.log(
-          '[ask1]',
-          JSON.stringify({
-            q: input.question,
-            search: result.search,
-            tool: result.tool,
-            answer: result.answer?.slice(0, 60)
-          })
-        );
         let sourceMap = [];
         let manualMap = [];
         if (typeof result.search === 'string')
@@ -660,15 +655,6 @@ export function registerAiRoutes(ctx) {
             result.fallback === true
           ));
         // Without an answer in the mails or the manual there is no source to show.
-        console.log(
-          '[ask2]',
-          JSON.stringify({
-            found: result.found,
-            hits: sourceMap.map(x => x.subject),
-            cited: result.sources,
-            manual: manualMap.map(m => m.title)
-          })
-        );
         result.sources = result.found === false ? [] : askSources(result, sourceMap, manualMap);
         delete result.quotes;
       }

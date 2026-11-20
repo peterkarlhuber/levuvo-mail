@@ -11,6 +11,8 @@
 - **A chosen model becomes active after its download, also when you leave the page:** before, choosing a model, starting the download and opening another page left the old model active. (Manual: Advanced model settings)
 - **Routine reports without internal references:** reports of routines such as Daily briefing or Open replies no longer show internal numbers like "UID 50" and do not end with a question the routine cannot act on. (Manual: The assistant window)
 - **"Took too long" instead of "Is Ollama running?":** when a local model answers more slowly than the time limit, the message now says so, instead of suggesting that Ollama is not running. (Manual: none)
+- **Your request first:** with a local model, work the app starts by itself (ranking in My day, the promise tracker, sorting into bundles) now runs one request at a time and waits while you wait for an answer, a draft or a routine. On a computer without a graphics card, a question used to queue behind it and time out. (Manual: none)
+- **Max response length shows numbers in your language format** in Settings → AI & agents → Advanced (e.g. "1 500" next to "16 384", not "1.500"). (Manual: none)
 - **Check cases for every AI function:** `python -m levuvo_ai.evals` now also checks summaries, translation, replies, rewriting, filters and automations in words, prioritisation, bundles, event and promise detection, the newsletter overview, phishing assessment and the assistant, with realistic fictional mail; used to compare local models. (Manual: none)
 
 ### Dictation

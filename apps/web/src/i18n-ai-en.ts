@@ -404,8 +404,8 @@ export const AI_EN: Record<string, string> = {
   'Diese Kontextlänge braucht etwa {gib} GB zusätzlichen Arbeitsspeicher neben dem Modell (dieser Computer hat {ram} GB). Bei zu wenig Speicher wird das Modell langsam.':
     'This context length needs about {gib} GB of memory in addition to the model (this computer has {ram} GB). With too little memory the model gets slow.',
   'Max. Antwortlänge (Tokens)': 'Max response length (tokens)',
-  'Obergrenze für eine Antwort (Max Tokens). Automatisch: passend zur Funktion, z. B. 1.500 für Fragen ans Postfach. Erlaubt {min} bis {max}.':
-    'Upper limit for one answer (max tokens). Automatic: suited to each function, e.g. 1,500 for questions to the mailbox. Allowed {min} to {max}.',
+  'Obergrenze für eine Antwort (Max Tokens). Automatisch: passend zur Funktion, z. B. {example} für Fragen ans Postfach. Erlaubt {min} bis {max}.':
+    'Upper limit for one answer (max tokens). Automatic: suited to each function, e.g. {example} for questions to the mailbox. Allowed {min} to {max}.',
   Automatisch: 'Automatic',
   Temperatur: 'Temperature',
   'Niedrig (0 bis 0,3) antwortet sachlich und gleichbleibend, höher (bis 2) abwechslungsreicher. Automatisch: 0,2 für Fragen ans Postfach, sonst der Standard des Modells.':
