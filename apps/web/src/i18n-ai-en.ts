@@ -475,5 +475,8 @@ export const AI_EN: Record<string, string> = {
   'Stil für {email} löschen': 'Delete style for {email}',
   'Weitere {count} Kontakte, über die Suche zu finden.': '{count} more contacts, find them with the search.',
   'Im Stil deiner Mails an {email}': 'In the style of your emails to {email}',
-  'Stil lernen ist ausgeschaltet.': 'Style learning is switched off.'
+  'Stil lernen ist ausgeschaltet.': 'Style learning is switched off.',
+  // Width of the assistant panel
+  'Breite des Assistenten ändern': 'Change width of the assistant',
+  '{n} Pixel breit': '{n} pixels wide'
 };

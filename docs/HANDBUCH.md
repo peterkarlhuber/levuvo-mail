@@ -411,6 +411,11 @@ Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
   vereinbaren, Antwortentwürfe vorbereiten.
 - **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt, Aufgabe,
   Papierkorb) – „Freigeben“ oder „Ablehnen“.
+- **Breite ändern:** den Griff am linken Rand des Fensters nach links (breiter) oder rechts (schmaler)
+  ziehen, 340 bis 960 Pixel; ein Teil der App bleibt immer sichtbar. Mit der Tastatur: Tab auf den Griff,
+  dann Pfeil links/rechts (mit Umschalt in größeren Schritten), Pos1 für die schmalste, Ende für die
+  breiteste Breite. Doppelklick setzt auf 420 Pixel zurück. Die Breite bleibt gespeichert, auch in der
+  Sicherung. Auf dem Handy füllt der Assistent den Bildschirm.
 
 **Agenten (MCP-Server):** Unter Einstellungen → KI & Agenten den MCP-Server einschalten, einen Agenten
 anlegen (Stufe Lesen, Entwürfe, Ordnen oder Alles inkl. Senden) und den einmal angezeigten Token bzw. die

@@ -386,6 +386,14 @@
       "de": "07-tastenkuerzel.md#Tastenkürzel",
       "en": "07-shortcuts.md#Keyboard shortcuts"
     },
+    "command:briefing": {
+      "de": "03-kalender-kontakte-aufgaben.md#Mein Tag",
+      "en": "03-calendar-contacts-tasks.md#My day"
+    },
+    "command:meeting-prep": {
+      "de": "03-kalender-kontakte-aufgaben.md#Termin-Vorbereitung",
+      "en": "03-calendar-contacts-tasks.md#Meeting preparation"
+    },
     "settings-section:Suche nach Bedeutung": {
       "de": "05-ki-assistent.md#Den Suchindex für die Suche nach Bedeutung im Blick",
       "en": "05-ai-assistant.md#Keeping an eye on the index for search by meaning"
