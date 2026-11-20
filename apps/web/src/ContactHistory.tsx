@@ -104,7 +104,7 @@ export default function ContactHistory({
       Promise.all(
         addresses.map(a =>
           getJson<{ messages: HistoryMail[] }>(`/api/search/local?q=${encodeURIComponent(a)}&limit=50`)
-            .then(d => d.messages)
+            .then(d => d.messages || [])
             .catch(() => [] as HistoryMail[])
         )
       ).then(list => live && setMails(list.flat()));

@@ -1027,7 +1027,7 @@ export default function Composer({
               title={t('Strg/⌘ + Enter')}
             >
               {checking ? <LoaderCircle className="spin" size={15} /> : <Send size={15} />}{' '}
-              {checking ? t('Wird geprüft…') : t('Senden')}
+              {checking ? t('Wird geprüft …') : t('Senden')}
             </button>
             <button
               className="btn primary split-toggle"

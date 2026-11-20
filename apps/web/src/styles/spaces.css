@@ -164,11 +164,15 @@
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--muted);
-  padding: var(--space-2-5) var(--space-3);
+  padding: var(--space-2-5) var(--space-2);
   min-height: 2.75rem;
   font-weight: var(--weight-semibold);
   font-size: var(--text-md);
   white-space: nowrap;
+}
+.space-tabs .space-tab-settings {
+  margin-left: auto;
+  padding-inline: var(--space-2-5);
 }
 .space-tabs button.active {
   color: var(--text);
@@ -231,6 +235,7 @@
 .space-members h4,
 .space-overview h3 {
   margin-top: var(--space-4);
+  font-size: var(--text-lg);
 }
 label.space-check {
   display: flex;
@@ -315,6 +320,9 @@ label.space-check {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.space-note-head h3 {
+  font-size: var(--text-lg);
 }
 .space-note {
   border: 1px solid var(--border);
@@ -716,4 +724,14 @@ label.btn.disabled {
 }
 .space-code {
   white-space: nowrap;
+}
+@media (max-width: 640px) {
+  /* Phone: the message field gets the full width, the buttons go below it. */
+  .space-chat-input {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .space-chat-input textarea {
+    flex-basis: 100%;
+  }
 }

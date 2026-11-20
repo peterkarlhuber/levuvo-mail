@@ -496,10 +496,7 @@ export default function AccountSettings({
     <section className="managed-accounts" aria-label={t('Kontenverwaltung')}>
       {!onboarding && (
         <div className="managed-accounts-head">
-          <h2>
-            {t('E-Mail-Konten')}
-            <span className="period">.</span>
-          </h2>
+          <h2>{t('E-Mail-Konten')}</h2>
           <button
             className="btn"
             disabled={busy || !info?.vaultAvailable || Boolean(edit) || (info?.accounts.length || 0) >= 5}

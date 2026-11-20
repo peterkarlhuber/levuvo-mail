@@ -415,7 +415,6 @@ export const EN: Record<string, string> = {
   Suche: 'Search',
   'Strg/⌘': 'Ctrl/⌘',
   'Senden (im Editor)': 'Send (in the editor)',
-  'E-Mail · Kalender · Kontakte': 'Email · Calendar · Contacts',
   'Schließen / Auswahl aufheben': 'Close / clear selection',
   'Diese Übersicht': 'This overview',
   'Absender nicht bestätigt: Die Domain {domain} lehnt diese Nachricht ab (DMARC). Vorsicht – möglicherweise gefälscht.':
@@ -1927,5 +1926,16 @@ export const EN: Record<string, string> = {
   'App neu laden': 'Reload app',
   'Technische Details': 'Technical details',
   'Levuvo Mail konnte nicht angezeigt werden.': 'Levuvo Mail could not be shown.',
-  'Deine Daten sind davon nicht betroffen. Lade die App neu.': 'Your data is not affected. Reload the app.'
+  'Deine Daten sind davon nicht betroffen. Lade die App neu.': 'Your data is not affected. Reload the app.',
+  // QA walkthrough 2026-11-20: singular forms
+  'Neue Aktivität · 1 offene Aufgabe': 'New activity · 1 open task',
+  '1 Tag vorher': '1 day before',
+  '1 Kontakt': '1 contact',
+  '1 Abgleich-Mail wartet': '1 sync mail waiting',
+  'ungelesene Nachricht': 'unread message',
+  'offene Aufgabe': 'open task',
+  'kommender Termin': 'upcoming event',
+  Datei: 'File',
+  'In den nächsten 24 Stunden steht kein Termin mit anderen an.': 'No meeting with others in the next 24 hours.',
+  'Der Kalender ist gerade nicht erreichbar.': 'The calendar cannot be reached right now.'
 };

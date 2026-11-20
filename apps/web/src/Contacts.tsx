@@ -319,7 +319,9 @@ export default function ContactsModule({
           />
         </label>
         <div className="contacts-tools">
-          <span className="muted">{t('{count} Kontakte', { count: contacts.length })}</span>
+          <span className="muted">
+            {contacts.length === 1 ? t('1 Kontakt') : t('{count} Kontakte', { count: contacts.length })}
+          </span>
           <button
             className="icon-button"
             title={t('Importieren (.vcf)')}

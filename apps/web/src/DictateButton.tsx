@@ -108,6 +108,7 @@ export function DictateButton({ onText }: { onText: (text: string) => void }) {
   return (
     <Button
       size="sm"
+      variant="ghost"
       disabled={phase === 'working'}
       aria-busy={phase === 'working' || undefined}
       title={t('Diktieren (lokal mit {model})', { model: model.name })}
@@ -116,8 +117,8 @@ export function DictateButton({ onText }: { onText: (text: string) => void }) {
     >
       {phase === 'working'
         ? loadPct !== null && loadPct < 100
-          ? t('Modell lädt… {pct} %', { pct: Math.round(loadPct) })
-          : t('Wird umgewandelt…')
+          ? t('Modell lädt … {pct} %', { pct: Math.round(loadPct) })
+          : t('Wird umgewandelt …')
         : t('Diktieren')}
     </Button>
   );

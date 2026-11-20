@@ -473,7 +473,8 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
               : detail.role === 'reader'
                 ? t('Leser')
                 : ''}
-          {detail.pendingMails > 0 && ` · ${t('{n} Abgleich-Mails warten', { n: detail.pendingMails })}`}
+          {detail.pendingMails > 0 &&
+            ` · ${detail.pendingMails === 1 ? t('1 Abgleich-Mail wartet') : t('{n} Abgleich-Mails warten', { n: detail.pendingMails })}`}
           {detail.ai.enabled && detail.ai.cloudAllowed && ` · ${t('Cloud-KI erlaubt')}`}
         </span>
       </header>
@@ -529,10 +530,13 @@ function SpaceView({ id, onChanged, onGone }: { id: string; onChanged: () => voi
             aria-selected={tab === x.id}
             aria-controls="space-tabpanel"
             tabIndex={tab === x.id ? 0 : -1}
-            className={tab === x.id ? 'active' : ''}
+            className={`${tab === x.id ? 'active' : ''} ${x.id === 'settings' ? 'space-tab-settings' : ''}`}
             onClick={() => setTab(x.id)}
+            title={x.id === 'settings' ? x.label : undefined}
+            aria-label={x.id === 'settings' ? x.label : undefined}
           >
-            <x.icon size={14} /> {x.label}
+            <x.icon size={14} aria-hidden="true" />
+            {x.id !== 'settings' && ` ${x.label}`}
             {x.count ? <span className="space-count">{x.count}</span> : null}
           </button>
         ))}
@@ -585,21 +589,21 @@ function Overview({
       <div className="space-cards">
         <button className="space-card" onClick={() => onTab('chat')}>
           <strong>{detail.unreadChat}</strong>
-          <span>{t('ungelesene Nachrichten')}</span>
+          <span>{detail.unreadChat === 1 ? t('ungelesene Nachricht') : t('ungelesene Nachrichten')}</span>
         </button>
         <button className="space-card" onClick={() => onTab('tasks')}>
           <strong>{open.length}</strong>
-          <span>{t('offene Aufgaben')}</span>
+          <span>{open.length === 1 ? t('offene Aufgabe') : t('offene Aufgaben')}</span>
           {mine.length > 0 && <small>{t('{n} für dich', { n: mine.length })}</small>}
         </button>
         <button className="space-card" onClick={() => onTab('events')}>
           <strong>{upcoming.length}</strong>
-          <span>{t('kommende Termine')}</span>
+          <span>{upcoming.length === 1 ? t('kommender Termin') : t('kommende Termine')}</span>
           {upcoming[0] && <small>{upcoming[0].title}</small>}
         </button>
         <button className="space-card" onClick={() => onTab('files')}>
           <strong>{detail.files.length}</strong>
-          <span>{t('Dateien')}</span>
+          <span>{detail.files.length === 1 ? t('Datei') : t('Dateien')}</span>
         </button>
       </div>
       <h3>{t('Aktivität')}</h3>
@@ -611,7 +615,9 @@ function Overview({
           <li key={a.op}>
             <span className="muted">{dateLabel(a.at)}</span> <strong>{names[a.by] || t('Unbekannt')}</strong> {text(a)}
             {a.label && a.type !== 'member.add' && a.type !== 'member.remove' && a.type !== 'member.role' && (
-              <em> {t('„{label}“', { label: a.label })}</em>
+              <>
+                : <em>{t('„{label}“', { label: a.label })}</em>
+              </>
             )}
           </li>
         ))}

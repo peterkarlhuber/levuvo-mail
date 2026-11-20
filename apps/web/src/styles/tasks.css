@@ -185,6 +185,14 @@
   background: transparent;
   color: var(--text-2);
 }
+.event-chip.task-chip svg {
+  flex: none;
+}
+.task-chip-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .event-chip.task-chip.prio-high {
   --c: var(--danger);
 }
@@ -381,4 +389,13 @@
 .task-check:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+.task-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.task-dialog-head h2 {
+  margin: 0;
 }

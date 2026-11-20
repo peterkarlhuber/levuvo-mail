@@ -69,7 +69,9 @@ export function conditionText(c: AutoCondition, t: T) {
 export function actionText(a: AutoAction, t: T) {
   switch (a.type) {
     case 'move':
-      return t('in den Ordner „{folder}“ verschieben', { folder: a.folder || '?' });
+      return t('in den Ordner „{folder}“ verschieben', {
+        folder: a.folder?.toUpperCase() === 'INBOX' ? t('Posteingang') : a.folder || '?'
+      });
     case 'markRead':
       return t('als gelesen markieren');
     case 'flag':

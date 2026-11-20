@@ -78,7 +78,7 @@ export function StyleProfileSettings({ onToggle }: { onToggle: (on: boolean) => 
     });
   }
 
-  const addressLabel = (a: Habit['address']) => (a === 'du' ? t('Du') : a === 'sie' ? t('Sie') : '–');
+  const addressLabel = (a: Habit['address']) => (a === 'du' ? t('Du-Form') : a === 'sie' ? t('Sie-Form') : '–');
   const enabled = Boolean(state?.enabled);
   return (
     <>
@@ -126,8 +126,8 @@ export function StyleProfileSettings({ onToggle }: { onToggle: (on: boolean) => 
             <input
               type="search"
               className="style-profile-filter"
-              placeholder={t('Kontakt suchen…')}
-              aria-label={t('Kontakt suchen…')}
+              placeholder={t('Kontakt suchen …')}
+              aria-label={t('Kontakt suchen …')}
               value={filter}
               onChange={e => setFilter(e.target.value)}
             />

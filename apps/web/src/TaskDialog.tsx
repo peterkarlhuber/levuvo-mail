@@ -1,5 +1,6 @@
 // Create or edit a task; from the reader it is prefilled with the mail's subject and linked to it.
 import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import { getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
@@ -204,9 +205,19 @@ export default function TaskDialog({
             void save();
           }}
         >
-          <h2 id="task-dialog-title">
-            {readOnly ? t('Aufgabe') : draft.id ? t('Aufgabe bearbeiten') : t('Neue Aufgabe')}
-          </h2>
+          <div className="task-dialog-head">
+            <h2 id="task-dialog-title">
+              {readOnly ? t('Aufgabe') : draft.id ? t('Aufgabe bearbeiten') : t('Neue Aufgabe')}
+            </h2>
+            <button
+              type="button"
+              className="icon-button ui-dialog-close"
+              aria-label={t('Schließen')}
+              onClick={() => void requestClose()}
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
           {readOnly && (
             <p className="task-dialog-note" role="note">
               {t('Nur lesen: In diesem Raum hast du die Rolle Leser.')}

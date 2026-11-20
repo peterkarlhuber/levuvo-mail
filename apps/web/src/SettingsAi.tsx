@@ -376,8 +376,8 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             aria-label={t('Anrede')}
           >
             <option value="auto">{t('Wie in der Unterhaltung')}</option>
-            <option value="du">{t('Du')}</option>
-            <option value="sie">{t('Sie')}</option>
+            <option value="du">{t('Du-Form')}</option>
+            <option value="sie">{t('Sie-Form')}</option>
           </select>
         </Row>
         <Row

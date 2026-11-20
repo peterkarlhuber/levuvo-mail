@@ -3,7 +3,8 @@
 import { internalApi } from './internal-api.mjs';
 import { buildMeetingPrep, peopleOf } from './meeting-prep.mjs';
 
-const MAX_AHEAD_MIN = 60;
+// The card asks a few minutes ahead; "prepare next meeting" looks up to a day ahead.
+const MAX_AHEAD_MIN = 24 * 60;
 const fail = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
 
 /** Events that start within the next `minutes` and have other people in them (not all-day, not cancelled). */
@@ -21,7 +22,8 @@ export function upcomingMeetings(events, { now = Date.now(), minutes = 10, own =
       end: e.end,
       summary: String(e.summary || ''),
       location: e.location || ''
-    }));
+    }))
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 }
 
 export function registerMeetingPrepRoutes(ctx) {

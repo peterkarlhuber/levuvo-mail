@@ -123,6 +123,7 @@ export function ComposerAssist({
       <Button
         ref={trigger}
         size="sm"
+        variant="ghost"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={Boolean(busy)}
@@ -153,7 +154,7 @@ export function ComposerAssist({
           {features.reply && source && (
             <button
               role="menuitem"
-              onClick={() => void run('reply', { instruction: draft() }, t('Antwort wird geschrieben…'))}
+              onClick={() => void run('reply', { instruction: draft() }, t('Antwort wird geschrieben …'))}
             >
               {draft() ? t('Antwort aus meinen Stichworten') : t('Antwort vorschlagen')}
             </button>
@@ -162,7 +163,7 @@ export function ComposerAssist({
             <button
               role="menuitem"
               disabled={!draft()}
-              onClick={() => void run('compose', { bullets: draft() }, t('Mail wird geschrieben…'))}
+              onClick={() => void run('compose', { bullets: draft() }, t('Mail wird geschrieben …'))}
             >
               {t('Stichpunkte zu fertiger Mail')}
             </button>
@@ -173,7 +174,7 @@ export function ComposerAssist({
                 key={r.mode}
                 role="menuitem"
                 disabled={!draft()}
-                onClick={() => void run('rewrite', { mode: r.mode, text: draft() }, t('Wird umformuliert…'))}
+                onClick={() => void run('rewrite', { mode: r.mode, text: draft() }, t('Wird umformuliert …'))}
               >
                 {t(r.label)}
               </button>

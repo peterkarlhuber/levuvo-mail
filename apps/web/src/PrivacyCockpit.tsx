@@ -58,7 +58,7 @@ function useKindLabel() {
     briefing: t('Morgen-Briefing'),
     commitments: t('Versprechen-Tracker'),
     meeting_prep: t('Termin-Vorbereitung'),
-    dictate: t('Diktieren'),
+    dictate: t('Diktat'),
     newsletters: t('Newsletter-Überblick')
   };
   return (kind: string) => labels[kind] || kind;
