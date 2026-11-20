@@ -39,6 +39,7 @@ import { BookingSettings } from './SettingsBooking';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
+import { VideoSettings } from './SettingsVideo';
 import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
 import { SemanticIndexStatus } from './SemanticIndexStatus';
@@ -311,6 +312,7 @@ function General() {
           />
         </Row>
       </Section>
+      <VideoSettings />
     </>
   );
 }

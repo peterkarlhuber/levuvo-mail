@@ -60,6 +60,11 @@ export function StorageLocations() {
           'Schlüsselbund des Betriebssystems: Passwörter, OAuth-Token, private Schlüssel (PGP/S/MIME), Indexschlüssel.'
         )}
       </li>
+      <li>
+        {t(
+          'Verschlüsselt (AES-256-GCM, Schlüssel im Schlüsselbund): Aufgaben, Kontakte und Kalender auf diesem Gerät sowie die Notizen im Kontaktverlauf.'
+        )}
+      </li>
       {(Array.isArray(storage?.folders) ? storage.folders : [])
         .filter(f => f.id !== 'restore' || f.exists)
         .map(f => (

@@ -23,6 +23,7 @@ import {
 import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api';
 import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
+import { AddVideoCallButton } from './VideoCall';
 import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
 import { complianceIssues } from './compliance-checks';
 import { useUi } from './ConfirmDialog';
@@ -573,6 +574,26 @@ export default function Composer({
       toast({ text: t('Bitte die markierten Platzhalter ergänzen.'), kind: 'info' });
   }
   expandShortcut.current = tpl => void insertTemplate(tpl);
+  /** Inserts an invitation to a video call at the cursor (before the signature in an empty mail). */
+  function insertVideoLink(url: string) {
+    const intro = t('Videocall beitreten:');
+    if (format === 'text') {
+      const el = textArea.current;
+      const at = el ? el.selectionStart : 0;
+      const line = `${intro} ${url}\n`;
+      setText(old => old.slice(0, at) + line + old.slice(at));
+      const caret = at + line.length;
+      requestAnimationFrame(() => textArea.current?.setSelectionRange(caret, caret));
+      return;
+    }
+    if (!editor) return;
+    const safe = url.replace(/"/g, '%22').replace(/</g, '%3C');
+    editor
+      .chain()
+      .focus()
+      .insertContent(`<p>${intro.replace(/</g, '&lt;')} <a href="${safe}">${safe}</a></p>`)
+      .run();
+  }
   async function saveAsTemplate() {
     const name = await prompt({
       title: t('Als Vorlage speichern'),
@@ -771,6 +792,11 @@ export default function Composer({
 
             <div className="compose-options">
               <TemplateMenu onInsert={tpl => void insertTemplate(tpl)} onSaveCurrent={() => void saveAsTemplate()} />
+              <AddVideoCallButton
+                className="btn small ghost"
+                label={t('Videocall')}
+                onLink={link => insertVideoLink(link.url)}
+              />
               <ComposerAssist
                 accountId={accountId}
                 source={initial.mode === 'reply' || initial.mode === 'replyAll' ? initial.source : undefined}

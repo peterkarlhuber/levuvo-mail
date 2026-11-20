@@ -23,6 +23,18 @@ To **move** an event, drag it with the mouse to another place. If the event has 
 
 At the top right you switch between **Day**, **Week**, **Month** and **Agenda** (a list of upcoming events). **Today** jumps to the current day.
 
+### Video calls
+
+An event can get a video call. Levuvo Mail uses Jitsi Meet for it, which runs in the browser without an account.
+
+1. Open the event and click **Add video call** below **Location**.
+2. Levuvo Mail enters a link with a random room name that nobody can guess. If the location is already set, for example to a meeting room, the link goes in the first line of the description.
+3. Save the event. All attendees get the link with the invitation.
+
+An event with a video call shows **Join video call** and **Copy link**. The call opens in the browser; Levuvo Mail asks first, as for every link.
+
+The default server is meet.ffmuc.net, run by Freifunk München in Germany. Enter your own Jitsi server under **Settings → General → Video calls**. Everyone who has the link can join, so share it only with the people who should be there.
+
 ### Invitations
 
 - **Invite:** Enter the attendees' email addresses in the event and choose **Send invitation by email**. Outlook, Apple Calendar and Google understand the invitation too.
@@ -53,6 +65,18 @@ Open contacts with `Alt` + `3`.
 - **Import and export:** The arrow icons above the list read a `.vcf` file (for example from Outlook or Google) or save all contacts as a file.
 
 Contacts from Microsoft 365 and Google appear automatically once you allowed access. Local contacts stay encrypted on this computer.
+
+### Contact history
+
+Below a contact's details, **History** shows everything about the person on one timeline: emails from all accounts and folders, shared events, tasks and your notes.
+
+- **Save note:** record what was discussed. Edit a note with the pencil and delete it with the bin.
+- **Add task:** the task belongs to this person and also appears under Tasks. Tasks you made from one of the person's emails show up as well.
+- **Filter:** **Everything**, **Emails**, **Events**, **Tasks** and **Notes** hide the rest. Click an email to open it.
+
+You also see notes and open tasks while reading: click the sender to open the contact card. You can add notes and tasks there too, also for people who are not in an address book.
+
+The history stays on this computer. Notes are stored encrypted and are part of the backup. Nothing is looked up online and no AI is used. Deleting the last contact with an address also deletes the notes about it.
 
 ## Tasks
 

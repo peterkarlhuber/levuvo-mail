@@ -763,6 +763,10 @@ function Shell() {
                   composeTo(to);
                 }}
                 onOpenSettings={() => openSettings('dav')}
+                onOpenMail={mail => {
+                  setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                  setModule('mail');
+                }}
               />
             </Suspense>
           </ModuleBoundary>
