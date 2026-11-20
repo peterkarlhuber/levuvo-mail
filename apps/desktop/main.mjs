@@ -358,6 +358,10 @@ async function boot() {
     sessionSecret: secret,
     env: process.env,
     packaged: app.isPackaged,
+    openFolder: async folder => {
+      const failed = await shell.openPath(folder);
+      if (failed) throw new Error(failed);
+    },
     // After a restore was staged: start again so the restored data is loaded from the beginning.
     // "Delete all data on this device": also clear the window's own storage (view preferences).
     onRestartRequested: ({ clearBrowserData = false } = {}) => {

@@ -114,6 +114,8 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
   Nachricht als Vorlage speichern“. Platzhalter wie {Vorname}, {Name}, {Datum} und {Absender} werden beim
   Einfügen ersetzt; was sich nicht ermitteln lässt, bleibt markiert stehen. Verwalten unter
   Einstellungen → Vorlagen.
+- **Videocall:** Schaltfläche **Videocall** über dem Text fügt an der Cursorposition „Videocall beitreten:“
+  mit einem neuen Jitsi-Link ein (siehe Kapitel 9, „Videocalls“).
 - **Verschlüsselung:** siehe Kapitel 11.
 
 ## 6 Ordnung halten
@@ -203,6 +205,15 @@ liegt im Schlüsselbund.
   Antworten auf deine eigenen Einladungen übernimmst du mit „Im Kalender übernehmen“ (Teilnahmestatus),
   Absagen mit „Aus dem Kalender entfernen“.
 - Links: Kalender ein-/ausblenden; Farben und neue Kalender unter „Kalender verwalten“.
+- **Videocalls (Jitsi Meet):** Im Termin **„Videocall hinzufügen“** wählen. Levuvo Mail erzeugt einen Link mit
+  einem zufälligen Raumnamen, den niemand erraten kann, und trägt ihn als Ort ein (ist der Ort schon belegt,
+  z. B. mit einem Besprechungsraum, steht der Link als erste Zeile in der Beschreibung). Mit der Einladung
+  bekommen alle Teilnehmenden den Link. Enthält ein Termin einen Jitsi-Link, erscheinen **„Videocall
+  beitreten“** und **„Link kopieren“**. Der Call läuft im Browser; die App fragt vorher, wie bei jedem Link.
+  Standard ist der Server **meet.ffmuc.net** (Freifunk München, Deutschland, ohne Konto). Einen eigenen
+  Jitsi-Server trägst du unter **Einstellungen → Allgemein → Videocalls** ein (nur https). Wer den Link
+  hat, kann teilnehmen – teile ihn also nur mit den Gewünschten. Lobby und Ende-zu-Ende-Verschlüsselung
+  schaltest du im Call über die Sicherheitsoptionen von Jitsi ein.
 
 ### Termin finden, Abstimmungen und Buchungslinks
 
@@ -236,6 +247,18 @@ liegt im Schlüsselbund.
   Adresse, Geburtstag, Notiz), Bearbeiten, Löschen.
 - **E-Mail schreiben** öffnet direkt eine neue Nachricht an den Kontakt.
 - **Import** einer .vcf-Datei (z. B. Export aus Outlook, Apple Kontakte, Google) und **Export** aller Kontakte.
+- **Verlauf (Kontaktverlauf):** Unter den Kontaktdaten zeigt „Verlauf“ alles zu dieser Person auf einer
+  Zeitleiste: E-Mails (aus dem lokalen Suchindex, über alle Konten und Ordner), gemeinsame Termine, Aufgaben
+  und deine Notizen. Mit den Schaltflächen **Alles / E-Mails / Termine / Aufgaben / Notizen** filterst du; ein
+  Klick auf eine E-Mail öffnet sie. **Notiz speichern** hält fest, was besprochen wurde; Notizen lassen sich
+  bearbeiten und löschen. **Aufgabe anlegen** erstellt eine Aufgabe zu dieser Person (sie erscheint auch unter
+  Aufgaben). Aufgaben, die aus einer E-Mail der Person entstanden sind, zeigt der Verlauf ebenfalls.
+- **Auch beim Lesen:** Die Kontaktkarte neben einer E-Mail (Klick auf den Absender) zeigt offene Aufgaben und
+  die letzten Notizen und hat dieselben Felder für eine neue Notiz oder Aufgabe – auch für Personen, die nicht
+  im Adressbuch stehen.
+- **Nur auf diesem Gerät:** Notizen werden verschlüsselt gespeichert (AES-256-GCM, Schlüssel im
+  Schlüsselbund) und sind Teil der Sicherung. Es wird nichts im Internet nachgeschlagen und keine KI
+  verwendet. Löschst du den letzten Kontakt mit einer Adresse, werden auch die Notizen dazu gelöscht.
 
 ## 11 Verschlüsselung
 
@@ -375,6 +398,20 @@ und beim Schreiben wird nur nach deinem Klick gesendet, gespeichert oder verscho
 Cloud-Modell übertragen wird, steht im Einwilligungsdialog und in PRIVACY.md (auch Stilproben, Suchtreffer
 und was Routinen lesen). Das Einsortieren in Bündel im Hintergrund läuft nur mit dem lokalen Modell.
 
+**Erweitert (Einstellungen → KI & Agenten → Erweitert, eingeklappt):** gilt für das gewählte Modell, leere
+Felder bedeuten „Automatisch“, **Zurücksetzen** stellt die Standardwerte wieder her.
+- **Kontextlänge (Tokens):** wie viel Text das Modell auf einmal liest (Regeln, Frage und gefundene Mails
+  zusammen). Standard: 8.192 für kleine, 16.384 für Standard-, 32.768 für große Modelle; die Obergrenze
+  richtet sich nach dem Arbeitsspeicher dieses Computers. Ab etwa 2 GB zusätzlichem Speicherbedarf zeigt
+  Levuvo Mail einen Hinweis. Eine geänderte Länge gilt nach einem automatischen Neustart des eigenen
+  Ollama (nicht während eines Downloads). Nur für lokale Modelle.
+- **Max. Antwortlänge (Tokens):** Obergrenze für eine Antwort (Max Tokens). Automatisch passt sie zur
+  Funktion, z. B. 1.500 für Fragen ans Postfach.
+- **Temperatur:** niedrig antwortet sachlich und gleichbleibend, höher abwechslungsreicher. Automatisch
+  0,2 für Fragen ans Postfach. Nur für lokale Modelle.
+- **Thinking:** Aus, Niedrig, Mittel, Hoch – nur für Modelle, die vor der Antwort nachdenken (z. B. Qwen
+  3.5). Automatisch ist es bei Fragen ans Postfach aus, damit sie schnell bleiben.
+
 **In einer Nachricht:** Zusammenfassen (wer will was bis wann, Fristen, Beträge, offene Fragen),
 Übersetzen, Termine/Aufgaben/Kontakte finden und mit „Übernehmen“ speichern, Echtheit prüfen
 (Druck, Zahlungsaufforderung, geänderte IBAN, falscher Absender).
@@ -409,15 +446,23 @@ Mikrofon.
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 
 **Assistent-Fenster (✦ links oder Strg/⌘ + J):**
-- **Frage:** „Was hat Müller zum Angebot gesagt?“ – kurze Antwort mit den Quell-Mails zum Anklicken, jeweils
-  mit Absender, Datum und einer zitierten Stelle (nur Stellen, die wörtlich in der Mail stehen). Die Suche
-  verbindet Bedeutung und genaue Wörter, findet also auch Namen, Rechnungsnummern und seltene Begriffe, und
-  liest PDF- und Textanhänge der besten Treffer. Rückfragen wie „Und der Preis?“ beziehen sich auf die
-  vorige Antwort; das Papierkorb-Symbol beginnt ein neues Gespräch.
+- **Frage:** „Was hat Müller zum Angebot gesagt?“ – kurze Antwort mit den Quell-Mails als anklickbare
+  Kärtchen, jeweils mit Absender, Datum und einer zitierten Stelle (nur Stellen, die wörtlich in der Mail
+  stehen). **Ob im Postfach gesucht wird, entscheidet das Modell selbst:** Auf „Hallo“, „Danke“ oder „Wer
+  bist du?“ antwortet der Assistent direkt und nennt dabei sein Modell und ob es lokal oder in der Cloud
+  läuft; für eine Frage zu deinen Mails ruft er die Postfachsuche auf. Die Suche verbindet Bedeutung und
+  genaue Wörter, findet also auch Namen, Rechnungsnummern und seltene Begriffe, und liest PDF- und
+  Textanhänge der besten Treffer. Nur Mails, die zur Frage passen, gehen an das Modell; passt keine,
+  lautet die Antwort ehrlich „Dazu habe ich in deinen Mails nichts gefunden“. Antworten erscheinen
+  formatiert (fett, Listen) in der Sprache der Oberfläche. Wird eine Antwort länger als die maximale
+  Antwortlänge, steht dort „Antwort gekürzt“ mit dem Knopf **Weiter antworten**, der mit mehr Platz neu antwortet.
+  Rückfragen wie „Und der Preis?“ beziehen sich auf die vorige Antwort; das Papierkorb-Symbol beginnt ein
+  neues Gespräch.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche“ – der Assistent sucht freie Zeiten und legt
   einen Entwurf an. Gesendet wird nichts.
 - **Routinen:** Tagesbriefing, Offene Antworten, Newsletter aufräumen, Meeting vorbereiten, Termin
-  vereinbaren, Antwortentwürfe vorbereiten.
+  vereinbaren, Antwortentwürfe vorbereiten. Die Leiste bleibt oben stehen, auch wenn der Verlauf scrollt;
+  passen nicht alle Knöpfe, lässt sie sich seitlich schieben.
 - **Freigaben:** was Agenten vorbereitet haben (Mail senden, Termin mit Teilnehmern, Kontakt, Aufgabe,
   Papierkorb) – „Freigeben“ oder „Ablehnen“.
 - **Breite ändern:** den Griff am linken Rand des Fensters nach links (breiter) oder rechts (schmaler)
@@ -482,8 +527,18 @@ Postfach per IMAP IDLE beobachtet. Antworten, Bearbeiten und Löschen gehen übe
 Nachricht; gelöscht wird für alle. Ungelesene Nachrichten zählt nur dein Gerät, es gibt keine
 Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-erstellt“ markiert. Bei der Freigabe wählst du
 „Nur diese“ oder „Für diesen Raum bis auf Widerruf“; zurücknehmen kannst du das in den Einstellungen des Raums.
+Mit **„Videocall starten“** im Chat schickt Levuvo Mail allen Mitgliedern einen neuen Jitsi-Link
+(Kapitel 9, „Videocalls“); Links in Chatnachrichten lassen sich anklicken.
 Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
-Erlaubnis. Details: `docs/SPACES.md`.
+Erlaubnis. Der Reiter **Einstellungen** eines Raums ist aufgebaut wie die App-Einstellungen: Karten für
+**Allgemein** (Name, Beschreibung), **Levuvo Mail Assistant in diesem Raum** (Schalter für Lesen und
+Vorschlagen, Cloud-Modelle und externe Agenten, Schreiben im Chat ohne Rückfrage, Hinweise für den
+Assistenten) und **Abgleich** („Fehlendes anfragen“). Alles speichert automatisch, sobald du ein Feld
+verlässt oder einen Schalter umlegst. Ganz unten steht die rot umrandete **Gefahrenzone** mit „Raum
+übergeben“, „Raum auflösen“, „Raum verlassen“ bzw. „Kopie löschen“; jede dieser Aktionen fragt vorher nach.
+Dein **Sicherheitscode** (Fingerabdruck deines Raum-Schlüssels) steht unter Raum › **Mitglieder** mit
+Kopieren-Knopf; vergleicht ihn bei sensiblen Räumen z. B. am Telefon mit dem, den die anderen bei dir sehen.
+Details: `docs/SPACES.md`.
 
 ## 20 Sicherung & Umzug
 

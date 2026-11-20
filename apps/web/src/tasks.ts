@@ -25,6 +25,8 @@ export type Task = {
   done: boolean;
   doneAt: string | null;
   mail: TaskMailRef | null;
+  /** Person the task is about (made in their contact history). */
+  contact?: { email: string; name: string } | null;
   /** Connected list the task is synced with (null: only on this device). */
   list?: string | null;
   /**

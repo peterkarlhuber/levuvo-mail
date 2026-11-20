@@ -31,10 +31,10 @@ export const CHAT_EN: Record<string, string> = {
   'Für diesen Raum bis auf Widerruf freigeben: {title}': 'Approve for this space until revoked: {title}',
   'Der Assistent darf in diesem Raum ab jetzt ohne Rückfrage im Chat schreiben. Zurücknehmen in den Einstellungen des Raums.':
     'From now on the assistant may write in the chat of this space without asking. Revoke it in the space settings.',
-  'Assistent im Chat': 'Assistant in the chat',
   'Erlaubt bis auf Widerruf.': 'Allowed until revoked.',
   'Zurückgenommen.': 'Revoked.',
-  'Der Assistent darf in diesem Raum ohne Rückfrage im Chat schreiben (bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten). Seine Nachrichten sind für alle als „KI-erstellt“ markiert.':
-    'The assistant may write in the chat of this space without asking (until revoked, on this device only, at most 10 messages in 10 minutes). Its messages are marked “AI-generated” for everyone.',
-  'Erlaubt seit {date}': 'Allowed since {date}'
+  'Erlaubt seit {date}': 'Allowed since {date}',
+  'Im Chat ohne Rückfrage schreiben': 'Write in the chat without asking',
+  'Bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten. Seine Nachrichten sind für alle als „KI-erstellt“ markiert.':
+    'Until revoked, only on this device, at most 10 messages in 10 minutes. Its messages are marked “AI-generated” for everyone.'
 };

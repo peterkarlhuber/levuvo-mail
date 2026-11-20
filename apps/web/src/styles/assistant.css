@@ -145,10 +145,19 @@
   gap: var(--space-3);
   font-size: var(--text-md);
 }
+/* Routines: one row above the conversation that stays in place; scrolls sideways when it is full. */
 .assistant-skills {
+  flex: none;
   display: flex;
-  flex-wrap: wrap;
   gap: var(--space-1-5);
+  overflow-x: auto;
+  padding: var(--space-2) var(--space-3-5);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: thin;
+}
+.assistant-skills .chip {
+  flex: none;
+  white-space: nowrap;
 }
 .assistant-skills .chip {
   display: inline-flex;
@@ -184,18 +193,57 @@
 .assistant-answer p {
   margin: 0 0 var(--space-1-5);
 }
-.assistant-report {
-  white-space: pre-wrap;
-}
-.assistant-sources {
+.assistant-answer .markdown ul,
+.assistant-answer .markdown ol {
   margin: 0 0 var(--space-1-5);
   padding-left: var(--space-5);
 }
-.assistant-sources li + li {
-  margin-top: var(--space-1-5);
+.assistant-answer .markdown li + li {
+  margin-top: var(--space-1);
+}
+.assistant-answer .markdown code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.92em;
+}
+/* Sources: chips that open the mail. */
+.assistant-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  margin: var(--space-1) 0 var(--space-1-5);
+  padding: 0;
+  list-style: none;
+}
+.source-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-1-5);
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.source-chip:hover {
+  border-color: var(--accent);
+}
+.source-chip:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.source-chip-subject {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
 }
 .assistant-source-meta {
-  display: block;
   font-size: var(--text-sm);
   color: var(--muted);
 }

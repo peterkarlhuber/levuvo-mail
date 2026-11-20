@@ -18,11 +18,13 @@ import {
 } from 'lucide-react';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
+import ContactHistory from './ContactHistory';
 import { initials } from './format';
 import { useT } from './i18n';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import type { AddressBook, Contact, ContactEntry } from './types';
 
+import { PageTitle } from './ui';
 const EMPTY: Contact = {
   uid: '',
   name: '',
@@ -109,10 +111,12 @@ function EntryList({
 
 export default function ContactsModule({
   onCompose,
-  onOpenSettings
+  onOpenSettings,
+  onOpenMail
 }: {
   onCompose: (to: string) => void;
   onOpenSettings: () => void;
+  onOpenMail?: (mail: { accountId: string; folder: string; uid: number }) => void;
 }) {
   const { t, locale } = useT();
   const { confirm, toast } = useUi();
@@ -212,10 +216,26 @@ export default function ContactsModule({
     }
   }
   async function remove(c: Contact) {
-    if (!(await confirm({ title: t('Kontakt löschen?'), message: c.name, confirmLabel: t('Löschen'), danger: true })))
+    // Notes of the contact history belong to the address: they go with the last contact that has it.
+    const others = (data?.contacts || []).filter(o => key(o) !== key(c));
+    const orphaned = c.emails
+      .map(e => e.value.trim().toLowerCase())
+      .filter(e => e && !others.some(o => o.emails.some(x => x.value.trim().toLowerCase() === e)));
+    if (
+      !(await confirm({
+        title: t('Kontakt löschen?'),
+        message: orphaned.length
+          ? `${c.name} · ${t('Notizen zu diesem Kontakt auf diesem Gerät werden ebenfalls gelöscht.')}`
+          : c.name,
+        confirmLabel: t('Löschen'),
+        danger: true
+      }))
+    )
       return;
     try {
       await postJson('/api/contacts/delete', { accountId: c.accountId, url: c.url, etag: c.etag }, 'contacts-v1');
+      for (const email of orphaned)
+        await postJson('/api/contact-history/forget', { email }, 'contacts-v1').catch(() => {});
       setSelected(null);
       await load();
     } catch (e) {
@@ -224,7 +244,7 @@ export default function ContactsModule({
   }
   async function importFile(file?: File) {
     if (!file || !books.length) return;
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 5_000_000) {
       toast({ text: t('Datei zu groß (max. 5 MB).'), kind: 'error' });
       return;
     }
@@ -283,10 +303,7 @@ export default function ContactsModule({
     <main className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
       <section className="contacts-list" aria-label={t('Kontaktliste')}>
         <div className="contacts-head">
-          <h1>
-            {t('Kontakte')}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{t('Kontakte')}</PageTitle>
           <button className="icon-button" title={t('Neuer Kontakt')} aria-label={t('Neuer Kontakt')} onClick={startNew}>
             <Plus size={18} />
           </button>
@@ -545,6 +562,9 @@ export default function ContactsModule({
                 </div>
               )}
             </dl>
+            {current.emails.some(e => e.value.trim()) && (
+              <ContactHistory emails={current.emails.map(e => e.value)} name={current.name} onOpenMail={onOpenMail} />
+            )}
           </div>
         ) : (
           <div className="reader-empty">

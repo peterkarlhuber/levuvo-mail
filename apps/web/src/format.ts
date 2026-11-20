@@ -57,12 +57,36 @@ export function initials(value: string) {
   );
 }
 
-export function prettySize(bytes: number) {
-  if (!Number.isFinite(bytes)) return '–';
-  return bytes >= 1024 * 1024
-    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-    : `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
+/** Decimal units, as on macOS, in the model registry and on most product pages: 1 MB = 1,000,000 bytes. */
+export const KB = 1000;
+export const MB = 1000 * KB;
+export const GB = 1000 * MB;
+
+/**
+ * Every file, attachment, download and disk size in the app goes through here, so the same number
+ * reads the same everywhere: "820 kB", "2,4 MB", "6,6 GB" (decimal comma in German). One decimal
+ * below 10, whole numbers above; anything above zero shows at least "1 kB".
+ */
+export function formatBytes(bytes: number, locale = LOCALE) {
+  if (!Number.isFinite(bytes) || bytes < 0) return '–';
+  const units: [number, string][] = [
+    [1000 * GB, 'TB'],
+    [GB, 'GB'],
+    [MB, 'MB']
+  ];
+  for (const [size, unit] of units) {
+    // 999,950 kB would round to "1000 kB": switch up a unit a little early.
+    if (bytes >= size * 0.9995) {
+      const n = bytes / size;
+      return `${new Intl.NumberFormat(locale, { maximumFractionDigits: n < 9.95 ? 1 : 0 }).format(n)} ${unit}`;
+    }
+  }
+  if (bytes === 0) return '0 kB';
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.max(1, Math.round(bytes / KB)))} kB`;
 }
+
+/** Short name kept for existing callers. */
+export const prettySize = (bytes: number) => formatBytes(bytes);
 
 export function addressLabel(items: Address[]) {
   return items.map(a => (a.name ? `${a.name} <${a.email}>` : a.email)).join(', ');

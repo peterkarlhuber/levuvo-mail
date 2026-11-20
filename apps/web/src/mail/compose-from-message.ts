@@ -108,7 +108,7 @@ export function forwardOf(
     attachments: o.files || [],
     notice:
       o.files === null
-        ? t('Die Anhänge sind zusammen größer als 8 MiB bzw. mehr als acht und wurden nicht übernommen.')
+        ? t('Die Anhänge sind zusammen größer als 8 MB bzw. mehr als acht und wurden nicht übernommen.')
         : undefined
   };
 }
@@ -135,14 +135,14 @@ export function draftEdit(detail: Detail, o: { identities: Identity[]; uid: numb
   };
 }
 
-/** Downloads the attachments to take into the composer; null when there are more than eight or over 8 MiB. */
+/** Downloads the attachments to take into the composer; null when there are more than eight or over 8 MB. */
 export async function fetchAttachments(
   t: Translate,
   d: Detail,
   o: { folder: string; accountId: string; onlyFiles: boolean }
 ) {
   const list = d.attachments.filter(a => !o.onlyFiles || !a.embedded);
-  if (list.length > 8 || list.reduce((n, a) => n + a.size, 0) > 8 * 1024 * 1024) return null;
+  if (list.length > 8 || list.reduce((n, a) => n + a.size, 0) > 8_000_000) return null;
   const files: File[] = [];
   for (const att of list) {
     const response = await fetch(

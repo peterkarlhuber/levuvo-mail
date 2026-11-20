@@ -24,6 +24,7 @@ import { fileToBase64, fileToDataUrl, getJson, postJson, ApiError } from './api'
 import { fillTemplate, nameParts, SHORTCUT_KEYS, shortcutAt, type Template, type TemplateVars } from './templates';
 import TemplateMenu from './TemplateMenu';
 import { DictateButton } from './DictateButton';
+import { AddVideoCallButton } from './VideoCall';
 import { ComposerAssist, ownPart, presendIssues } from './ComposerAssist';
 import { complianceIssues } from './compliance-checks';
 import { useUi } from './ConfirmDialog';
@@ -34,6 +35,7 @@ import WhenMenu from './WhenMenu';
 import { FOLLOW_UP_DAYS } from './when';
 import { usePrefs } from './prefs';
 import type { Identity } from './types';
+import { MB, prettySize } from './format';
 
 export type ComposeInitial = {
   mode: 'new' | 'reply' | 'replyAll' | 'forward';
@@ -108,13 +110,11 @@ type Props = {
   onSubmit: (payload: OutgoingPayload, restore: ComposeInitial, sendAt: string | null) => void;
 };
 
-const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 8 * MB;
 const MAX_ATTACHMENTS = 8;
-const MAX_IMAGE_BYTES = 1024 * 1024;
+const MAX_IMAGE_BYTES = 1 * MB;
 const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const parseAddresses = (value: string) => (value.trim() ? value.split(/[;,\s]+/).filter(Boolean) : []);
-const prettySize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MiB` : `${Math.ceil(bytes / 1024)} KiB`;
 export default function Composer({
   accountId,
   initial,
@@ -448,7 +448,7 @@ export default function Composer({
     if (empty) return t('Bitte einen Nachrichtentext eingeben.');
     if (subject.length > 250) return t('Der Betreff ist zu lang.');
     if (files.length > MAX_ATTACHMENTS || totalBytes > MAX_TOTAL_BYTES)
-      return t('Maximal acht Anhänge und insgesamt 8 MiB.');
+      return t('Maximal acht Anhänge und insgesamt 8 MB.');
     if (missing && (missing.own || missing.recipients.length))
       return t('Für die Verschlüsselung fehlen Schlüssel – Details oben.');
     if (security.method === 'password') {
@@ -457,7 +457,7 @@ export default function Composer({
         return t(
           'Dieses Passwort ist zu leicht zu erraten. Bitte das vorgeschlagene Passwort verwenden oder ein anderes wählen.'
         );
-      if (totalBytes > 5 * 1024 * 1024) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.');
+      if (totalBytes > 5 * MB) return t('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MB enthalten.');
     }
     return '';
   }
@@ -587,6 +587,26 @@ export default function Composer({
     editor?.chain().focus().insertContent({ type: 'text', text: spoken }).run();
   }
   expandShortcut.current = tpl => void insertTemplate(tpl);
+  /** Inserts an invitation to a video call at the cursor (before the signature in an empty mail). */
+  function insertVideoLink(url: string) {
+    const intro = t('Videocall beitreten:');
+    if (format === 'text') {
+      const el = textArea.current;
+      const at = el ? el.selectionStart : 0;
+      const line = `${intro} ${url}\n`;
+      setText(old => old.slice(0, at) + line + old.slice(at));
+      const caret = at + line.length;
+      requestAnimationFrame(() => textArea.current?.setSelectionRange(caret, caret));
+      return;
+    }
+    if (!editor) return;
+    const safe = url.replace(/"/g, '%22').replace(/</g, '%3C');
+    editor
+      .chain()
+      .focus()
+      .insertContent(`<p>${intro.replace(/</g, '&lt;')} <a href="${safe}">${safe}</a></p>`)
+      .run();
+  }
   async function saveAsTemplate() {
     const name = await prompt({
       title: t('Als Vorlage speichern'),
@@ -615,7 +635,7 @@ export default function Composer({
     if (!incoming) return;
     const next = [...files, ...Array.from(incoming)];
     if (next.length > MAX_ATTACHMENTS || next.reduce((s, f) => s + f.size, 0) > MAX_TOTAL_BYTES) {
-      setError(t('Maximal acht Anhänge mit insgesamt 8 MiB.'));
+      setError(t('Maximal acht Anhänge mit insgesamt 8 MB.'));
       return;
     }
     setFiles(next);
@@ -785,6 +805,11 @@ export default function Composer({
 
             <div className="compose-options">
               <TemplateMenu onInsert={tpl => void insertTemplate(tpl)} onSaveCurrent={() => void saveAsTemplate()} />
+              <AddVideoCallButton
+                className="btn small ghost"
+                label={t('Videocall')}
+                onLink={link => insertVideoLink(link.url)}
+              />
               <ComposerAssist
                 accountId={accountId}
                 source={initial.mode === 'reply' || initial.mode === 'replyAll' ? initial.source : undefined}
@@ -929,7 +954,7 @@ export default function Composer({
               <div className="compose-files-head">
                 <Paperclip size={15} /> {t('Anhänge')}{' '}
                 <span>
-                  {files.length}/{MAX_ATTACHMENTS} · {prettySize(totalBytes)} / 8 MiB
+                  {files.length}/{MAX_ATTACHMENTS} · {prettySize(totalBytes)} / {prettySize(MAX_TOTAL_BYTES)}
                 </span>
               </div>
               {files.map((file, i) => (

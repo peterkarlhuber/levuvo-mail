@@ -144,7 +144,7 @@ export function RichTextField({
   value,
   onChange,
   label,
-  maxImageBytes = 200 * 1024
+  maxImageBytes = 200_000
 }: {
   value: string;
   onChange: (html: string) => void;
@@ -168,8 +168,8 @@ export function RichTextField({
     }
     if (file.size > maxImageBytes) {
       toast({
-        text: t('Logo bitte unter {size} KB (wird in jede E-Mail eingebettet).', {
-          size: Math.round(maxImageBytes / 1024)
+        text: t('Logo bitte unter {size} kB (wird in jede E-Mail eingebettet).', {
+          size: Math.round(maxImageBytes / 1000)
         }),
         kind: 'error'
       });

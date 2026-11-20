@@ -155,7 +155,10 @@ test('ask: matching manual sections go to the model and come back as manual sour
       running: true,
       async call(method, params) {
         calls.push({ method, params });
-        return method === 'task' ? { answer: 'ok', found: true, sources: ['m1', 's1'] } : { ok: true };
+        if (method !== 'task') return { ok: true };
+        // Step 1: the model asks for a search; step 2 answers from the mails and manual sections.
+        if (!params.input.sources) return { search: 'Sicherung erstellen', tool: 'search_mailbox' };
+        return { answer: 'ok', found: true, sources: ['m1', 's1'] };
       },
       async stop() {},
       diagnostics: () => ({})
@@ -174,7 +177,7 @@ test('ask: matching manual sections go to the model and come back as manual sour
     ownAddresses: () => [],
     aiForgetHooks: [],
     semantic: {
-      search: async () => [{ accountId: 'a', folder: 'INBOX', uid: 7, subject: 'S', text: 'T' }],
+      search: async () => [{ accountId: 'a', folder: 'INBOX', uid: 7, subject: 'S', text: 'T', score: 0.8 }],
       sync: async () => null,
       forget: async () => {}
     }
@@ -191,8 +194,8 @@ test('ask: matching manual sections go to the model and come back as manual sour
     },
     reply
   );
-  const task = calls.find(c => c.method === 'task');
-  assert.ok(task, JSON.stringify(out));
+  const task = calls.findLast(c => c.method === 'task');
+  assert.ok(task?.params.input.manual, JSON.stringify(out));
   const sent = JSON.stringify(task.params);
   assert.match(sent, /"m1"/);
   assert.match(sent, /Sicherung/);

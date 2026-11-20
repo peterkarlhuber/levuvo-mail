@@ -42,6 +42,10 @@ Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt
 
 Über **Vorlagen** fügst du gespeicherte Texte ein oder speicherst die aktuelle Nachricht als Vorlage. Platzhalter wie `{Vorname}` oder `{Datum}` werden beim Einfügen automatisch ersetzt. Vorlagen verwaltest du unter **Einstellungen → Vorlagen**.
 
+### Zu einem Videocall einladen
+
+Klicke über dem Text auf **Videocall**. Levuvo Mail fügt an der Cursorposition „Videocall beitreten:“ mit einem neuen Jitsi-Link ein. Mehr dazu im Kapitel Kalender unter „Videocalls“.
+
 ### Hinweise vor dem Senden
 
 Bevor eine Mail hinausgeht, prüft Levuvo Mail sie auf deinem Computer, ohne KI. Sehen viele externe Empfänger aus mehreren Organisationen gegenseitig ihre Adressen, schlägt es **Bcc** vor. Gehen Kartennummern, Sozialversicherungsnummern, Passwörter oder Gesundheitsdaten unverschlüsselt nach außen, weist es darauf hin. Mit eingeschaltetem Assistenten erkennt die Prüfung auch diskriminierende Formulierungen und Drohungen. Du entscheidest, ob du trotzdem sendest; nichts davon wird gespeichert oder gemeldet. Die Hinweise sind keine Rechtsberatung.

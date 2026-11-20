@@ -56,6 +56,7 @@ import {
 } from './mail/compose-from-message';
 import { useMailSearch } from './mail/useMailSearch';
 import { searchPath } from './mail/search-state';
+import { PageTitle } from './ui';
 export { ATTACHMENTS, FOLLOWUPS, UNIFIED };
 type Props = {
   accountId: string;
@@ -804,7 +805,7 @@ export default function MailInstance({
       const files = await fetchAttachments(t, detail, { folder, accountId, onlyFiles: false });
       if (files === null)
         throw new Error(
-          t('Der Entwurf enthält mehr als acht Anhänge oder über 8 MiB und kann hier nicht bearbeitet werden.')
+          t('Der Entwurf enthält mehr als acht Anhänge oder über 8 MB und kann hier nicht bearbeitet werden.')
         );
       open(draftEdit(detail, { identities, uid: selectedUid, files }));
     } catch (err) {
@@ -979,10 +980,7 @@ export default function MailInstance({
               >
                 <Menu size={20} />
               </button>
-              <h1>
-                {listTitle}
-                <span className="period">.</span>
-              </h1>
+              <PageTitle>{listTitle}</PageTitle>
               <button
                 className="compose-fab"
                 onClick={beginNewMessage}

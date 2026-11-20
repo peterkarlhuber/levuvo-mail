@@ -6,7 +6,8 @@ import { contactPayload, eventPayload, messageForAi, securityDetails, securityFa
 // Re-exported for existing callers; the mappers live in ai-payloads.mjs.
 export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 import { createSemanticIndex } from './ai-semantic.mjs';
-import { readSources, retrieve, verifiedQuote } from './ask-mailbox.mjs';
+import { readSources, relevant, retrieve, verifiedQuote } from './ask-mailbox.mjs';
+import { mailBudget } from './ai-model-options.mjs';
 import { contactSamples, createStyleProfiles } from './style-profile.mjs';
 
 const ACTION = 'ai-v1';
@@ -128,6 +129,112 @@ export function registerAiRoutes(ctx) {
   }
   const own = () => ctx.ownAddresses().join(', ');
   const profile = () => ({ ...DEFAULT_AI_SETTINGS.profile, ...(ai.publicSettings().profile || {}) });
+
+  /** Earlier turns of a follow-up question; they help find and understand, they are not trusted. */
+  const askHistory = input =>
+    (Array.isArray(input.history) ? input.history : []).slice(-2).map(h => ({
+      question: clientText(h?.question, 500),
+      answer: clientText(h?.answer, 1500)
+    }));
+
+  /**
+   * Step 2 of a question, after the model called search_mailbox: search with its words, keep only
+   * relevant mails and let the model answer from them. With no relevant mail the model is not asked
+   * again: "nothing found" is the honest answer, not the nearest unrelated mail.
+   */
+  async function askWithMail(body, first, query, tool = 'search_mailbox') {
+    const lang = first.lang;
+    const accountId = body.account ? String(body.account) : null;
+    // "How do I …": the best matching sections of the user manual (no personal data). The manual
+    // tool searches only there; the mailbox search adds matching sections too.
+    const manualHits = ctx.manual
+      ? await ctx.manual.search(`${query} ${first.question}`, { lang, limit: 3 }).catch(() => [])
+      : [];
+    const manualMap = manualHits.map(h => ({
+      manual: true,
+      chapterId: h.chapterId,
+      section: h.number,
+      title: h.title
+    }));
+    const manual = manualHits.map((h, i) => ({
+      id: `m${i + 1}`,
+      title: [h.number, h.title].filter(Boolean).join(' '),
+      chapter: h.chapter,
+      text: h.text.slice(0, 2500)
+    }));
+    // Accounts marked "No cloud AI" are left out before the search when a cloud model answers,
+    // so none of their text is ever part of the input.
+    const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
+    const hits =
+      tool === 'search_manual'
+        ? []
+        : await retrieve({
+            semantic,
+            localIndex: ctx.localIndex,
+            ids,
+            question: query,
+            context: [first.question, ...first.history.map(h => h.question)].join(' '),
+            limit: 8
+          });
+    const useful = hits.filter(h => relevant(h));
+    // A fixed text of the app, not written by the model (`fixed`).
+    if (!useful.length && !manual.length)
+      return {
+        result: { answer: notFound(lang), found: false, sources: [], fixed: true },
+        sourceMap: [],
+        manualMap: []
+      };
+    if (!useful.length) {
+      const result = await ai.run('ask', { ...first, sources: [], manual }, { accountId });
+      return { result, sourceMap: [], manualMap };
+    }
+    const read = await readSources(useful, {
+      mapLimit,
+      load: async h => messageForAi(await loadDetail(h.accountId, h)),
+      attachments: async h => (await internalApi(ctx).attachmentText(h.accountId, h.folder, h.uid)).files
+    });
+    const sourceMap = read.map(h => ({
+      accountId: h.accountId,
+      folder: h.folder,
+      uid: h.uid,
+      subject: h.subject,
+      fromName: h.fromName || '',
+      fromEmail: h.fromEmail || '',
+      date: h.date || '',
+      text: h.text,
+      attachments: h.attachments
+    }));
+    // The mails are trimmed to what fits the context of the model next to rules, question and answer.
+    let budget = mailBudget(ai.options());
+    const sources = read.map((h, i) => {
+      const share = Math.max(800, Math.floor(budget / Math.max(1, read.length - i)));
+      const text = String(h.text || '').slice(0, Math.min(i < 5 ? 6000 : 2000, share));
+      let left = Math.max(0, share - text.length);
+      const attachments = [];
+      for (const a of h.attachments || []) {
+        if (left < 400) break;
+        const part = a.text.slice(0, Math.min(4000, left));
+        attachments.push({ name: a.filename, text: part });
+        left -= part.length;
+      }
+      budget -= share - left;
+      return {
+        id: `s${i + 1}`,
+        from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
+        to: h.to || '',
+        date: h.date,
+        subject: h.subject,
+        text,
+        attachments
+      };
+    });
+    const result = await ai.run(
+      'ask',
+      { ...first, sources, manual },
+      { accountId, sources: sourceMap.map(s => s.accountId) }
+    );
+    return { result, sourceMap, manualMap };
+  }
 
   // Writing style per contact (opt-in): learned locally from sent mail, encrypted on disk.
   let memoryStyle = { accounts: {} };
@@ -267,67 +374,17 @@ export function registerAiRoutes(ctx) {
         return out;
       }
       case 'ask': {
+        // Step 1 of a question: the model decides itself whether it needs the mailbox (tool
+        // search_mailbox). No mail is part of this input. Step 2 is `askWithMail` below.
         const question = clientText(input.question, 500).trim();
         if (!question) throw Object.assign(new Error('Bitte eine Frage eingeben.'), { statusCode: 400 });
-        // Accounts marked "No cloud AI" are left out before the search when a cloud model answers,
-        // so none of their text is ever part of the input.
-        const ids = (accountId ? [accountId] : ctx.accounts().map(a => a.id)).filter(id => !ai.cloudBlocked(id));
-        // A follow-up question: the earlier turns help find and understand, they are not trusted.
-        const history = (Array.isArray(input.history) ? input.history : []).slice(-2).map(h => ({
-          question: clientText(h?.question, 500),
-          answer: clientText(h?.answer, 1500)
-        }));
-        const hits = await retrieve({
-          semantic,
-          localIndex: ctx.localIndex,
-          ids,
-          question,
-          context: history.map(h => h.question).join(' '),
-          limit: 8
-        });
-        const read = await readSources(hits, {
-          mapLimit,
-          load: async h => messageForAi(await loadDetail(h.accountId, h)),
-          attachments: async h => (await internalApi(ctx).attachmentText(h.accountId, h.folder, h.uid)).files
-        });
-        // "How do I …" questions: the best matching sections of the user manual (no personal data).
-        const manualHits = ctx.manual ? await ctx.manual.search(question, { lang, limit: 3 }).catch(() => []) : [];
-        body.manualMap = manualHits.map(h => ({
-          manual: true,
-          chapterId: h.chapterId,
-          section: h.number,
-          title: h.title
-        }));
-        body.sourceMap = read.map(h => ({
-          accountId: h.accountId,
-          folder: h.folder,
-          uid: h.uid,
-          subject: h.subject,
-          fromName: h.fromName || '',
-          fromEmail: h.fromEmail || '',
-          date: h.date || '',
-          text: h.text,
-          attachments: h.attachments
-        }));
+        const s = ai.get();
         return {
           lang,
           question,
-          history,
-          manual: manualHits.map((h, i) => ({
-            id: `m${i + 1}`,
-            title: [h.number, h.title].filter(Boolean).join(' '),
-            chapter: h.chapter,
-            text: h.text.slice(0, 2500)
-          })),
-          sources: read.map((h, i) => ({
-            id: `s${i + 1}`,
-            from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
-            to: h.to || '',
-            date: h.date,
-            subject: h.subject,
-            text: String(h.text || '').slice(0, i < 5 ? 6000 : 2000),
-            attachments: (h.attachments || []).map(a => ({ name: a.filename, text: a.text.slice(0, 4000) }))
-          }))
+          history: askHistory(input),
+          assistant: { model: s.model, provider: s.provider },
+          ...(Number.isInteger(input.minTokens) ? { minTokens: Math.min(16384, Math.max(0, input.minTokens)) } : {})
         };
       }
       case 'filter_rule':
@@ -443,7 +500,7 @@ export function registerAiRoutes(ctx) {
   const localModels = ai.localModels;
   const noRuntime = reply =>
     reply.code(409).send({
-      error: 'Levuvos eigenes Ollama ist in dieser Installation nicht enthalten.',
+      error: 'Das eigene Ollama von Levuvo Mail ist in dieser Installation nicht enthalten.',
       code: 'ai_runtime_missing'
     });
   api.get('/api/ai/local-models', async (_request, reply) => {
@@ -456,6 +513,38 @@ export function registerAiRoutes(ctx) {
     } catch (err) {
       return aiError(reply, err);
     }
+  });
+  // Status of the semantic index for Settings and the search: counts and state only, no content.
+  const embedInstalled = async () => {
+    if (!localModels) return true;
+    const list = await localModels.list().catch(() => null);
+    return Boolean(list?.models?.find(m => m.id === ai.get().embedModel)?.installed);
+  };
+  api.get('/api/ai/index-status', async () =>
+    semantic.overview(
+      ctx.accounts().map(a => a.id),
+      { modelInstalled: ai.get().enabled ? await embedInstalled() : true }
+    )
+  );
+  api.post('/api/ai/index/:action', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, ACTION)) return;
+    const ids = ctx.accounts().map(a => a.id);
+    switch (request.params.action) {
+      case 'pause':
+        await semantic.pause();
+        break;
+      case 'resume':
+        await semantic.resume();
+        void syncAll();
+        break;
+      case 'rebuild':
+        await semantic.rebuild(ids);
+        void syncAll();
+        break;
+      default:
+        return reply.code(404).send({ error: 'Unbekannte Aktion.', code: 'not_found' });
+    }
+    return semantic.overview(ids, { modelInstalled: await embedInstalled() });
   });
   for (const action of ['download', 'cancel', 'delete']) {
     api.post(`/api/ai/local-models/${action}`, { bodyLimit: 1024 }, async (request, reply) => {
@@ -475,7 +564,8 @@ export function registerAiRoutes(ctx) {
     if (!requireAction(request, reply, ACTION)) return;
     if (!localModels) return noRuntime(reply);
     try {
-      return await localModels.discardPartial();
+      const model = request.body?.model ? String(request.body.model) : undefined;
+      return await localModels.discardPartial(model);
     } catch (err) {
       return aiError(reply, err);
     }
@@ -495,19 +585,26 @@ export function registerAiRoutes(ctx) {
     try {
       const accountId = body.account ? String(body.account) : null;
       ai.ensureAllowed(null, accountId);
-      // set by prepare() only, never taken from the client
-      delete body.sourceMap;
-      delete body.manualMap;
       const input = await prepare(kind, body);
-      // Every account whose mail text is in the input is checked again, right before the model call.
-      const sources = Array.isArray(body.sourceMap) ? body.sourceMap.map(s => s.accountId) : [];
-      const result = await ai.run(kind, input, { accountId, sources });
-      if (kind === 'ask' && Array.isArray(body.sourceMap)) {
-        result.sources = askSources(result, body.sourceMap, body.manualMap);
+      let result = await ai.run(kind, input, { accountId });
+      if (kind === 'ask') {
+        let sourceMap = [];
+        let manualMap = [];
+        if (typeof result.search === 'string')
+          ({ result, sourceMap, manualMap } = await askWithMail(
+            body,
+            input,
+            clientText(result.search, 300).trim() || input.question,
+            result.tool === 'search_manual' ? 'search_manual' : 'search_mailbox'
+          ));
+        // Without an answer in the mails or the manual there is no source to show.
+        result.sources = result.found === false ? [] : askSources(result, sourceMap, manualMap);
         delete result.quotes;
       }
       if ((kind === 'reply' || kind === 'compose') && input.styleContact) result.styleContact = input.styleContact;
-      return { kind, result, provider: ai.get().provider, model: ai.get().model, generated: true };
+      const generated = !result.fixed;
+      delete result.fixed;
+      return { kind, result, provider: ai.get().provider, model: ai.get().model, generated };
     } catch (err) {
       return aiError(reply, err);
     }
@@ -615,4 +712,11 @@ export function registerAiRoutes(ctx) {
     for (const hook of ctx.aiForgetHooks || []) await hook();
     return { forgotten: true };
   });
+}
+
+/** The answer when no mail is relevant to a question, in the UI language. */
+export function notFound(lang) {
+  return lang === 'en'
+    ? 'I found nothing about this in your mail. Try other words, a name or a subject.'
+    : 'Dazu habe ich in deinen Mails nichts gefunden. Versuch es mit anderen Worten, einem Namen oder einem Betreff.';
 }

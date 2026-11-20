@@ -18,6 +18,10 @@ import type { ComposeInitial, OutgoingPayload } from './Composer';
 import MailInstance from './MailInstance';
 import CommandPalette from './CommandPalette';
 import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
+import { Briefing, lastBriefingDay, markBriefingShown, type BriefingTarget } from './Briefing';
+import { sendMailCommand } from './command-bus';
+import { localDay, shouldAutoOpen } from './day-utils';
+import { MeetingPrep } from './MeetingPrep';
 import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
@@ -29,6 +33,7 @@ import { useSpacesChatBadge } from './spaces-badge';
 import { lazyModule, ModuleBoundary } from './ModuleBoundary';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
+import { PageTitle } from './ui';
 // Lazy modules reload the page once when their chunk is gone (app updated while it ran).
 const CalendarModule = lazyModule(() => import('./Calendar'));
 const ContactsModule = lazyModule(() => import('./Contacts'));
@@ -120,6 +125,7 @@ function Shell() {
   });
   const [module, setModule] = useState<Module>('mail');
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState<false | 'auto' | 'manual'>(false);
   const [pendingApprovals, setPendingApprovals] = usePendingApprovals();
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [snapshots, setSnapshots] = useState<Record<string, InboxSnapshot>>({});
@@ -164,6 +170,40 @@ function Shell() {
   useEffect(() => {
     void reloadAccounts();
   }, [reloadAccounts]);
+
+  // "Mein Tag": once a day by itself (when switched on), any time from the palette or the assistant.
+  useEffect(() => {
+    const today = localDay().key;
+    if (
+      shouldAutoOpen({
+        enabled: prefs.briefingOnStart,
+        lastShown: lastBriefingDay(),
+        today,
+        ready: loaded && accounts.length > 0
+      })
+    ) {
+      markBriefingShown(today);
+      setBriefingOpen('auto');
+    }
+  }, [loaded, accounts.length, prefs.briefingOnStart]);
+  useEffect(() => {
+    const onOpen = () => {
+      markBriefingShown(localDay().key);
+      setBriefingOpen('manual');
+    };
+    window.addEventListener('levuvo:briefing', onOpen);
+    return () => window.removeEventListener('levuvo:briefing', onOpen);
+  }, []);
+  const closeBriefing = useCallback(() => setBriefingOpen(false), []);
+  const openFromBriefing = useCallback((target: BriefingTarget) => {
+    if (target.type === 'mail') {
+      setActive({ id: target.accountId, openUid: target.uid, openFolder: target.folder });
+      setModule('mail');
+    } else if (target.type === 'followups') {
+      setModule('mail');
+      window.setTimeout(() => sendMailCommand({ type: 'followups' }), 0);
+    } else setModule(target.type);
+  }, []);
 
   const requestNotifications = useCallback(async () => {
     if (!('Notification' in window)) {
@@ -524,10 +564,7 @@ function Shell() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-panel">
-          <h1>
-            {t('Verbindung unterbrochen')}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{t('Verbindung unterbrochen')}</PageTitle>
           <p role="alert">{accountsError}</p>
           <button className="btn primary" onClick={() => void reloadAccounts()}>
             {t('Erneut versuchen')} <RefreshCcw size={16} />
@@ -541,7 +578,7 @@ function Shell() {
       <div className="onboarding-shell">
         <div className="onboarding-panel">
           <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="onboarding-logo brand-image" />
-          <h1>
+          <PageTitle>
             {credentialsMissing ? (
               t('Zugang prüfen')
             ) : (
@@ -551,8 +588,7 @@ function Shell() {
                 Levuvo Mail
               </>
             )}
-            <span className="period">.</span>
-          </h1>
+          </PageTitle>
           <p>
             {credentialsMissing
               ? t(
@@ -724,6 +760,10 @@ function Shell() {
                   composeTo(to);
                 }}
                 onOpenSettings={() => openSettings('dav')}
+                onOpenMail={mail => {
+                  setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                  setModule('mail');
+                }}
               />
             </Suspense>
           </ModuleBoundary>
@@ -778,6 +818,15 @@ function Shell() {
           openSettings('ai');
         }}
         onPending={setPendingApprovals}
+      />
+      {briefingOpen && (
+        <Briefing key={briefingOpen} auto={briefingOpen === 'auto'} onClose={closeBriefing} onOpen={openFromBriefing} />
+      )}
+      <MeetingPrep
+        onOpenMail={m => {
+          setActive({ id: m.accountId, openUid: m.uid, openFolder: m.folder });
+          setModule('mail');
+        }}
       />
       <ModuleShortcuts onModule={setModule} onAssistant={() => setAssistantOpen(o => !o)} />
       <CommandPalette

@@ -79,7 +79,7 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
     rmSync(dir, { recursive: true, force: true });
   });
 
-  async function open({ setup, ...options } = {}) {
+  async function open({ setup, briefing = false, ...options } = {}) {
     // bypassCSP only lets the test inject axe; the app itself runs under its normal policy.
     const context = await browser.newContext({
       locale: 'de-AT',
@@ -124,6 +124,17 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       if (req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
       return route.fulfill({ status: 204, body: '' });
     });
+    // "Mein Tag" opens by itself on the first start of a day; only its own test wants it.
+    await context.addInitScript(show => {
+      try {
+        const key = 'levuvo-mail-prefs-v2';
+        const prefs = JSON.parse(globalThis.localStorage.getItem(key) || '{}');
+        globalThis.localStorage.setItem(key, JSON.stringify({ ...prefs, briefingOnStart: show }));
+        if (!show) globalThis.localStorage.removeItem('levuvo-mail-briefing-day');
+      } catch {
+        /* documents without storage (about:blank) */
+      }
+    }, briefing);
     if (setup) await setup(context);
     const page = await context.newPage();
     const errors = [];
@@ -203,11 +214,27 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.space-row', { hasText: 'Projekt Relaunch' }).click();
       await page.locator('.space-tabs').waitFor();
       await axe(page, 'space overview');
-      for (const tab of ['Chat', 'Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder']) {
+      for (const tab of ['Chat', 'Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder', 'Einstellungen']) {
         await page.getByRole('tab', { name: tab }).click();
         await page.waitForTimeout(150);
         await axe(page, `space › ${tab}`);
       }
+      // Space settings look like Settings: cards, the danger zone last, fields save on blur.
+      assert.ok(
+        await page
+          .locator('.space-settings .settings-section')
+          .last()
+          .evaluate(s => s.classList.contains('settings-section--danger')),
+        'danger zone is the last card'
+      );
+      const saved = page.waitForRequest(
+        r =>
+          r.method() === 'POST' && r.url().endsWith('/api/spaces/sp1/op') && r.postDataJSON()?.type === 'space.update'
+      );
+      const nameField = page.locator('.space-settings').getByLabel('Name', { exact: true });
+      await nameField.fill('Projekt Relaunch 2');
+      await nameField.blur();
+      assert.equal((await saved).postDataJSON().data.name, 'Projekt Relaunch 2');
       // Tabs: arrow keys move the selection and the focus (UX-LEV-013).
       await page.getByRole('tab', { name: 'Dateien' }).focus();
       await page.keyboard.press('ArrowRight');
@@ -368,10 +395,82 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.settings-nav button', { hasText: 'KI & Agenten' }).first().click();
       await page.locator('.local-model-status progress').first().waitFor();
       await axe(page, `own Ollama settings (${colorScheme})`);
+      // Interrupted downloads: one line each, with resume and discard.
+      const paused = page.locator('.local-model-paused li', { hasText: 'Gemma 4 12B' });
+      await paused.getByRole('button', { name: 'Fortsetzen' }).waitFor();
+      await paused.getByRole('button', { name: 'Teile von Gemma 4 12B verwerfen' }).waitFor();
+      // Choosing a model that is not on this computer downloads nothing yet: a button with the size.
+      const downloads = [];
+      page.on('request', r => r.url().includes('/local-models/download') && downloads.push(r.url()));
+      await page.getByRole('combobox', { name: 'Sprachmodell' }).selectOption('ministral-3:8b');
+      const button = page.getByRole('button', { name: /^Herunterladen \(6 GB\)$/ });
+      await button.waitFor();
+      await page.getByRole('button', { name: 'Bei Qwen3.5 9B bleiben' }).waitFor();
+      assert.deepEqual(downloads, [], 'no download before the button is pressed');
+      if (colorScheme === 'dark') {
+        await axe(page, 'own Ollama settings, model chosen but not downloaded');
+        await page.setViewportSize({ width: 320, height: 800 });
+        const width = await page.evaluate(() => document.documentElement.scrollWidth);
+        assert.ok(width <= 320, `model settings scroll horizontally at 320px (${width}px)`);
+        const shots = process.env.LEVUVO_SHOT_DIR;
+        if (shots) await page.locator('.local-model-paused').screenshot({ path: `${shots}/local-models-phone.png` });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        if (shots) await page.locator('.local-model-paused').screenshot({ path: `${shots}/local-models-desktop.png` });
+      }
       assert.deepEqual(errors, []);
       await context.close();
     }
   });
+
+  for (const colorScheme of ['dark', 'light'])
+    await t.test(`Mein Tag (morning briefing), ${colorScheme}`, async () => {
+      const { page, context, errors } = await open({
+        viewport: { width: 1440, height: 900 },
+        colorScheme,
+        briefing: true
+      });
+      await page.locator('.briefing .briefing-item').first().waitFor({ timeout: 10_000 });
+      await page.locator('.briefing .commitment').first().waitFor();
+      await axe(page, `briefing ${colorScheme}`);
+      // Opening an entry closes the overview and goes there.
+      await page.locator('.briefing-item', { hasText: 'Angebot Website-Relaunch' }).click();
+      await page.locator('.briefing').waitFor({ state: 'detached' });
+      await page.locator('.reader-content h2').waitFor();
+      assert.deepEqual(errors, []);
+      await context.close();
+    });
+
+  for (const colorScheme of ['dark', 'light'])
+    await t.test(`meeting preparation card, ${colorScheme}`, async () => {
+      const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      const { page, context, errors } = await open({
+        viewport: { width: 1440, height: 900 },
+        colorScheme,
+        setup: async context => {
+          await context.route(
+            url => url.pathname === '/api/meeting-prep/upcoming',
+            route => route.fulfill(json(fixtures.meetingPrep.upcoming))
+          );
+          await context.route(
+            url => url.pathname === '/api/meeting-prep',
+            route => route.fulfill(json(fixtures.meetingPrep.prep))
+          );
+        }
+      });
+      await page.locator('.meeting-prep').waitFor({ timeout: 10_000 });
+      await axe(page, `meeting prep collapsed ${colorScheme}`);
+      await page.locator('.meeting-prep-peek').click();
+      await page.locator('.meeting-person').first().waitFor();
+      await axe(page, `meeting prep ${colorScheme}`);
+      await page.locator('.meeting-prep .briefing-item', { hasText: 'Angebot Website-Relaunch' }).first().click();
+      await page.locator('.reader-content h2').waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('.meeting-prep').focus();
+      await page.locator('.meeting-prep').press('Escape');
+      await page.locator('.meeting-prep').waitFor({ state: 'detached' });
+      assert.deepEqual(errors, []);
+      await context.close();
+    });
 
   await t.test('sender screening: row and screener view', async () => {
     const { page, context, errors } = await open({

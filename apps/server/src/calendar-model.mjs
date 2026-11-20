@@ -130,8 +130,9 @@ function details(comp) {
 // ------------------------------------------------------------------ attachments (RFC 5545 ATTACH)
 // Files are stored inline (ENCODING=BASE64;VALUE=BINARY), so they travel with the event to the
 // device calendar, CalDAV servers and .ics exports. Links (ATTACH as URI) from other apps are kept.
-export const ATTACH_MAX_FILE = 5 * 1024 * 1024;
-export const ATTACH_MAX_TOTAL = 10 * 1024 * 1024;
+// Decimal like every size shown in the app: "5 MB" and "10 MB" mean exactly that.
+export const ATTACH_MAX_FILE = 5_000_000;
+export const ATTACH_MAX_TOTAL = 10_000_000;
 export const ATTACH_MAX_COUNT = 20;
 const FILENAME_PARAMS = ['x-filename', 'filename', 'x-apple-filename', 'x-oracle-filename', 'x-ms-filename'];
 const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Check,
   CheckSquare,
+  Copy,
   Download,
   FileText,
   LoaderCircle,
@@ -23,8 +24,9 @@ import {
   X
 } from 'lucide-react';
 import { download } from './api';
-import { Button, Field, IconButton, Segmented } from './ui';
+import { Button, Field, IconButton, Segmented, PageTitle } from './ui';
 import { useUi } from './ConfirmDialog';
+import { Row, Section, Toggle } from './ui/SettingsLayout';
 import { dateLabel, dueDateLabel, fullDateLabel, initials, prettySize } from './format';
 import { useT } from './i18n';
 import type { AccountItem } from './types';
@@ -129,7 +131,7 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
     <main className="spaces-module">
       <aside className="spaces-list" aria-label={t('Räume')}>
         <div className="contacts-head">
-          <h1>{t('Räume')}</h1>
+          <PageTitle>{t('Räume')}</PageTitle>
           <div className="spaces-head-tools">
             <IconButton
               onClick={() => void syncNow()}
@@ -204,14 +206,6 @@ export default function SpacesModule({ accounts }: { accounts: AccountItem[] }) 
             </button>
           ))}
         </div>
-        {list && (
-          <p
-            className="spaces-foot muted"
-            title={t('Diesen Code können andere mit dem vergleichen, den sie bei dir sehen.')}
-          >
-            <ShieldCheck size={13} /> {t('Dein Sicherheitscode')}: {list.identity.safetyCode}
-          </p>
-        )}
       </aside>
       <section className="space-main">
         {creating ? (
@@ -1358,7 +1352,10 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
                   {m.me ? ` (${t('du')})` : ''}
                 </strong>
                 <small className="muted">
-                  {m.email} · {roleLabel(m)} · <ShieldCheck size={11} /> {m.safetyCode}
+                  {m.email} · {roleLabel(m)} ·{' '}
+                  <span className="space-code">
+                    <ShieldCheck size={11} /> {m.safetyCode}
+                  </span>
                 </small>
               </div>
               {detail.owner && active && !m.me && m.role !== 'owner' && (
@@ -1449,12 +1446,44 @@ function Members({ detail, run }: { detail: SpaceDetail; run: Run }) {
           </ul>
         </>
       )}
-      <p className="muted small">
-        <ShieldCheck size={12} />{' '}
-        {t('Sicherheitscodes könnt ihr z. B. am Telefon vergleichen. Stimmen sie überein, ist niemand dazwischen.')}{' '}
-        {t('Dein Code')}: {detail.mySafetyCode}
-      </p>
+      <SafetyCode code={detail.mySafetyCode} />
     </div>
+  );
+}
+
+/** The own safety code, grouped and copyable, where members compare codes (Members tab). */
+function SafetyCode({ code }: { code: string }) {
+  const { t } = useT();
+  const ui = useUi();
+  const copy = () =>
+    void navigator.clipboard
+      ?.writeText(code)
+      .then(() => ui.toast({ text: t('Kopiert.'), kind: 'info' }))
+      .catch(() => undefined);
+  return (
+    <Section
+      level={3}
+      title={t('Sicherheitscodes')}
+      description={t(
+        'Sicherheitscodes könnt ihr z. B. am Telefon vergleichen. Stimmen sie überein, ist niemand dazwischen.'
+      )}
+    >
+      <Row
+        label={t('Dein Sicherheitscode')}
+        hint={t('Diesen Code können andere mit dem vergleichen, den sie bei dir sehen.')}
+      >
+        <div className="settings-actions">
+          <code className="safety-code" aria-label={code}>
+            {code.split(' ').map((group, i) => (
+              <span key={i}>{group}</span>
+            ))}
+          </code>
+          <Button size="sm" onClick={copy}>
+            <Copy size={14} /> {t('Kopieren')}
+          </Button>
+        </div>
+      </Row>
+    </Section>
   );
 }
 
@@ -1468,106 +1497,148 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
   const active = detail.status === 'active';
   const others = detail.members.filter(m => !m.removed && !m.me);
   const canWrite = active && (detail.role === 'owner' || detail.role === 'editor');
+  const owner = detail.owner && active;
+  const chatGrant = canWrite && detail.ai.enabled;
+  const canDeleteCopy = !active && detail.status !== 'joining';
+  // Fields save on their own when they lose focus, like everywhere else in Settings.
+  const saveText = () => {
+    const next = { name: name.trim(), description: description.trim() };
+    if (!next.name) return setName(detail.name);
+    if (next.name !== detail.name || next.description !== detail.description)
+      void op('space.update', next, t('Gespeichert'));
+  };
+  const saveInstructions = () => {
+    if (instructions.trim() !== detail.ai.instructions)
+      void op('ai.settings', { instructions: instructions.trim() }, t('Gespeichert'));
+  };
+  const setCloud = async (on: boolean) => {
+    // Sharing content with cloud models is a decision for everyone in the space: ask first.
+    if (
+      on &&
+      !(await ui.confirm({
+        title: t('Cloud-KI für diesen Raum erlauben?'),
+        message: t(
+          'Dann dürfen alle Inhalte dieses Raums, auch die der anderen Mitglieder, an das Cloud-Modell gehen, das in den KI-Einstellungen gewählt ist (Anthropic oder OpenAI), und an verbundene externe Agenten. Das gilt für alle Mitglieder, und alle sehen die Änderung in der Aktivität.'
+        ),
+        confirmLabel: t('Erlauben')
+      }))
+    )
+      return;
+    void op(
+      'ai.settings',
+      { cloudAllowed: on },
+      on ? t('Cloud-KI für den Raum erlaubt.') : t('Cloud-KI für den Raum ausgeschlossen.')
+    );
+  };
   return (
     <div className="space-settings">
-      {canWrite && detail.ai.enabled && (
-        <>
-          <h4>{t('Assistent im Chat')}</h4>
-          <label className="space-check">
-            <input
-              type="checkbox"
-              checked={Boolean(detail.aiChatGrant)}
-              onChange={e =>
-                void run(
-                  () => spaces.post(`/${detail.id}/chat/grant`, { on: e.target.checked }),
-                  e.target.checked ? t('Erlaubt bis auf Widerruf.') : t('Zurückgenommen.')
-                )
-              }
-            />{' '}
-            {t(
-              'Der Assistent darf in diesem Raum ohne Rückfrage im Chat schreiben (bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten). Seine Nachrichten sind für alle als „KI-erstellt“ markiert.'
-            )}
-          </label>
-          {detail.aiChatGrant && (
-            <p className="muted small">{t('Erlaubt seit {date}', { date: fullDateLabel(detail.aiChatGrant.since) })}</p>
-          )}
-        </>
-      )}
-      {detail.owner && active && (
-        <>
-          <form
-            className="space-form"
-            onSubmit={e => {
-              e.preventDefault();
-              void op('space.update', { name, description }, t('Gespeichert'));
-            }}
-          >
-            <Field label={t('Name')}>
-              <input value={name} maxLength={120} onChange={e => setName(e.target.value)} />
-            </Field>
-            <Field label={t('Beschreibung')}>
-              <textarea value={description} maxLength={2000} rows={3} onChange={e => setDescription(e.target.value)} />
-            </Field>
-            <div className="space-form-actions">
-              <Button type="submit" variant="primary" size="sm" disabled={!name.trim()}>
-                {t('Speichern')}
-              </Button>
-            </div>
-          </form>
-          <h4>{t('Levuvo Mail Assistant in diesem Raum')}</h4>
-          <label className="space-check">
-            <input
-              type="checkbox"
-              checked={detail.ai.enabled}
-              onChange={e => void op('ai.settings', { enabled: e.target.checked })}
-            />{' '}
-            {t('Der Assistent darf diesen Raum lesen und Änderungen vorschlagen (jede Änderung erst nach Freigabe)')}
-          </label>
-          <label className="space-check">
-            <input
-              type="checkbox"
-              checked={detail.ai.cloudAllowed}
-              onChange={async e => {
-                const on = e.target.checked;
-                // Sharing content with cloud models is a decision for everyone in the space: ask first.
-                if (
-                  on &&
-                  !(await ui.confirm({
-                    title: t('Cloud-KI für diesen Raum erlauben?'),
-                    message: t(
-                      'Dann dürfen alle Inhalte dieses Raums, auch die der anderen Mitglieder, an das Cloud-Modell gehen, das in den KI-Einstellungen gewählt ist (Anthropic oder OpenAI), und an verbundene externe Agenten. Das gilt für alle Mitglieder, und alle sehen die Änderung in der Aktivität.'
-                    ),
-                    confirmLabel: t('Erlauben')
-                  }))
-                )
-                  return;
-                void op(
-                  'ai.settings',
-                  { cloudAllowed: on },
-                  on ? t('Cloud-KI für den Raum erlaubt.') : t('Cloud-KI für den Raum ausgeschlossen.')
-                );
-              }}
-            />{' '}
-            {t('Inhalte dürfen auch an Cloud-Modelle und externe Agenten gehen (sonst nur lokales Modell)')}
-          </label>
-          <Field label={t('Hinweise für den Assistenten')}>
+      {owner && (
+        <Section level={3} title={t('Allgemein')} description={t('Änderungen werden automatisch gespeichert.')}>
+          <Row label={t('Name')} wide>
+            <input value={name} maxLength={120} required onChange={e => setName(e.target.value)} onBlur={saveText} />
+          </Row>
+          <Row label={t('Beschreibung')} wide>
             <textarea
-              value={instructions}
+              value={description}
+              maxLength={2000}
               rows={3}
-              maxLength={4000}
-              onChange={e => setInstructions(e.target.value)}
-              placeholder={t('z. B. Ansprechpartner, Tonfall gegenüber dem Kunden')}
+              onChange={e => setDescription(e.target.value)}
+              onBlur={saveText}
             />
-          </Field>
-          <div className="space-form-actions">
-            <Button size="sm" onClick={() => void op('ai.settings', { instructions }, t('Gespeichert'))}>
-              {t('Hinweise speichern')}
-            </Button>
-          </div>
-          {others.length > 0 && (
+          </Row>
+        </Section>
+      )}
+      {(owner || chatGrant) && (
+        <Section level={3} title={t('Levuvo Mail Assistant in diesem Raum')}>
+          {owner && (
             <>
-              <h4>{t('Raum übergeben')}</h4>
-              <div className="space-inline-form">
+              <Row
+                label={t('Raum lesen und Änderungen vorschlagen')}
+                hint={t('Jede Änderung des Assistenten gilt erst nach deiner Freigabe.')}
+              >
+                <Toggle
+                  label={t('Raum lesen und Änderungen vorschlagen')}
+                  checked={detail.ai.enabled}
+                  onChange={on => void op('ai.settings', { enabled: on })}
+                />
+              </Row>
+              <Row
+                label={t('Cloud-Modelle und externe Agenten erlauben')}
+                hint={t('Sonst arbeitet der Assistent für diesen Raum nur mit dem lokalen Modell.')}
+              >
+                <Toggle
+                  label={t('Cloud-Modelle und externe Agenten erlauben')}
+                  checked={detail.ai.cloudAllowed}
+                  onChange={on => void setCloud(on)}
+                />
+              </Row>
+            </>
+          )}
+          {chatGrant && (
+            <Row
+              label={t('Im Chat ohne Rückfrage schreiben')}
+              hint={
+                t(
+                  'Bis auf Widerruf, nur auf diesem Gerät, höchstens 10 Nachrichten in 10 Minuten. Seine Nachrichten sind für alle als „KI-erstellt“ markiert.'
+                ) +
+                (detail.aiChatGrant
+                  ? ' ' + t('Erlaubt seit {date}', { date: fullDateLabel(detail.aiChatGrant.since) })
+                  : '')
+              }
+            >
+              <Toggle
+                label={t('Im Chat ohne Rückfrage schreiben')}
+                checked={Boolean(detail.aiChatGrant)}
+                onChange={on =>
+                  void run(
+                    () => spaces.post(`/${detail.id}/chat/grant`, { on }),
+                    on ? t('Erlaubt bis auf Widerruf.') : t('Zurückgenommen.')
+                  )
+                }
+              />
+            </Row>
+          )}
+          {owner && (
+            <Row label={t('Hinweise für den Assistenten')} wide>
+              <textarea
+                value={instructions}
+                rows={3}
+                maxLength={4000}
+                onChange={e => setInstructions(e.target.value)}
+                onBlur={saveInstructions}
+                placeholder={t('z. B. Ansprechpartner, Tonfall gegenüber dem Kunden')}
+              />
+            </Row>
+          )}
+        </Section>
+      )}
+      <Section
+        level={3}
+        title={t('Abgleich')}
+        description={t('Über {email}. Änderungen kommen in der Regel innerhalb einer Minute bei allen an.', {
+          email: detail.email
+        })}
+      >
+        <Row
+          label={t('Fehlende Inhalte')}
+          hint={t('Fehlt auf diesem Gerät etwas, schicken die anderen Mitglieder es erneut.')}
+        >
+          <Button
+            size="sm"
+            onClick={() => void run(() => spaces.post(`/${detail.id}/resync`), t('Fehlende Inhalte werden angefragt.'))}
+          >
+            <RefreshCcw size={14} /> {t('Fehlendes anfragen')}
+          </Button>
+        </Row>
+      </Section>
+      {(active || canDeleteCopy) && (
+        <Section level={3} danger title={t('Gefahrenzone')}>
+          {owner && others.length > 0 && (
+            <Row
+              label={t('Raum übergeben')}
+              hint={t('Du wirst danach Bearbeiter und kannst nicht mehr einladen oder entfernen.')}
+            >
+              <div className="settings-actions">
                 <select
                   aria-label={t('Neuer Besitzer')}
                   value={transferTo}
@@ -1597,88 +1668,88 @@ function SpaceSettings({ detail, run, op, onGone }: { detail: SpaceDetail; run: 
                   {t('Übergeben')}
                 </Button>
               </div>
-            </>
+            </Row>
           )}
-          <h4>{t('Raum auflösen')}</h4>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={async () => {
-              if (
-                await ui.confirm({
-                  title: t('Raum auflösen?'),
-                  message: t(
-                    'Für alle Mitglieder wird der Raum schreibgeschützt. Jeder kann seine Kopie danach löschen.'
-                  ),
-                  confirmLabel: t('Auflösen'),
-                  danger: true
-                })
-              )
-                void run(() => spaces.post(`/${detail.id}/dissolve`, { confirm: true }));
-            }}
-          >
-            {t('Auflösen')}
-          </Button>
-        </>
+          {owner && (
+            <Row
+              label={t('Raum auflösen')}
+              hint={t('Für alle Mitglieder wird der Raum schreibgeschützt. Jeder kann seine Kopie danach löschen.')}
+            >
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={async () => {
+                  if (
+                    await ui.confirm({
+                      title: t('Raum auflösen?'),
+                      message: t(
+                        'Für alle Mitglieder wird der Raum schreibgeschützt. Jeder kann seine Kopie danach löschen.'
+                      ),
+                      confirmLabel: t('Auflösen'),
+                      danger: true
+                    })
+                  )
+                    void run(() => spaces.post(`/${detail.id}/dissolve`, { confirm: true }));
+                }}
+              >
+                {t('Auflösen')}
+              </Button>
+            </Row>
+          )}
+          {!detail.owner && active && (
+            <Row
+              label={t('Raum verlassen')}
+              hint={t(
+                'Du bekommst danach keine neuen Inhalte mehr. Für einen Wiedereintritt braucht es eine neue Einladung.'
+              )}
+            >
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={async () => {
+                  if (
+                    await ui.confirm({
+                      title: t('Raum verlassen?'),
+                      message: t(
+                        'Du bekommst danach keine neuen Inhalte mehr. Für einen Wiedereintritt braucht es eine neue Einladung.'
+                      ),
+                      confirmLabel: t('Verlassen'),
+                      danger: true
+                    })
+                  )
+                    void run(() => spaces.post(`/${detail.id}/leave`));
+                }}
+              >
+                {t('Verlassen')}
+              </Button>
+            </Row>
+          )}
+          {canDeleteCopy && (
+            <Row
+              label={t('Kopie auf diesem Gerät')}
+              hint={t('Alle Inhalte dieses Raums werden von diesem Gerät gelöscht.')}
+            >
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={async () => {
+                  if (
+                    await ui.confirm({
+                      title: t('Kopie löschen?'),
+                      message: t('Alle Inhalte dieses Raums werden von diesem Gerät gelöscht.'),
+                      confirmLabel: t('Löschen'),
+                      danger: true
+                    })
+                  )
+                    if (await run(() => spaces.post(`/${detail.id}/delete-local`, { confirm: true }))) onGone();
+                }}
+              >
+                <Trash2 size={14} /> {t('Kopie löschen')}
+              </Button>
+            </Row>
+          )}
+        </Section>
       )}
-      {!detail.owner && active && (
-        <>
-          <h4>{t('Raum verlassen')}</h4>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={async () => {
-              if (
-                await ui.confirm({
-                  title: t('Raum verlassen?'),
-                  message: t(
-                    'Du bekommst danach keine neuen Inhalte mehr. Für einen Wiedereintritt braucht es eine neue Einladung.'
-                  ),
-                  confirmLabel: t('Verlassen'),
-                  danger: true
-                })
-              )
-                void run(() => spaces.post(`/${detail.id}/leave`));
-            }}
-          >
-            {t('Verlassen')}
-          </Button>
-        </>
-      )}
-      {!active && detail.status !== 'joining' && (
-        <>
-          <h4>{t('Kopie auf diesem Gerät')}</h4>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={async () => {
-              if (
-                await ui.confirm({
-                  title: t('Kopie löschen?'),
-                  message: t('Alle Inhalte dieses Raums werden von diesem Gerät gelöscht.'),
-                  confirmLabel: t('Löschen'),
-                  danger: true
-                })
-              )
-                if (await run(() => spaces.post(`/${detail.id}/delete-local`, { confirm: true }))) onGone();
-            }}
-          >
-            <Trash2 size={14} /> {t('Kopie löschen')}
-          </Button>
-        </>
-      )}
-      <h4>{t('Abgleich')}</h4>
-      <p className="muted small">
-        {t('Über {email}. Änderungen kommen in der Regel innerhalb einer Minute bei allen an.', {
-          email: detail.email
-        })}
-      </p>
-      <Button
-        size="sm"
-        onClick={() => void run(() => spaces.post(`/${detail.id}/resync`), t('Fehlende Inhalte werden angefragt.'))}
-      >
-        <RefreshCcw size={14} /> {t('Fehlendes anfragen')}
-      </Button>
     </div>
   );
 }

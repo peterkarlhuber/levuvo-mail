@@ -797,7 +797,7 @@ export default function AccountSettings({
               <legend>{t('Signatur')}</legend>
               <p className="managed-hint">
                 {t(
-                  'Formatierter Text, Links und ein kleines Logo (bis 200 KB) sind möglich. Wird beim Verfassen automatisch eingefügt.'
+                  'Formatierter Text, Links und ein kleines Logo (bis 200 kB) sind möglich. Wird beim Verfassen automatisch eingefügt.'
                 )}
               </p>
               <RichTextField

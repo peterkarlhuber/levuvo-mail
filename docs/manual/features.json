@@ -99,6 +99,26 @@
       "de": "04-raeume.md#Im Raum arbeiten",
       "en": "04-spaces.md#Work in a space"
     },
+    "settings-section:Allgemein": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Levuvo Mail Assistant in diesem Raum": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Abgleich": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Gefahrenzone": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Sicherheitscodes": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
     "settings-section:Sicherheit und Support": {
       "de": "06-einstellungen.md#Deine Daten exportieren oder löschen",
       "en": "06-settings.md#Export or delete your data"
@@ -140,8 +160,8 @@
       "en": "06-settings.md#The settings at a glance"
     },
     "settings-section:Gespeicherte Daten auf diesem Gerät": {
-      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
-      "en": "06-settings.md#The settings at a glance"
+      "de": "06-einstellungen.md#Wo Levuvo Mail Daten speichert",
+      "en": "06-settings.md#Where Levuvo Mail stores data"
     },
     "settings-section:Handbuch": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
@@ -389,6 +409,22 @@
     "settings-section:Diktieren": {
       "de": "05-ki-assistent.md#Diktieren",
       "en": "05-ai-assistant.md#Dictation"
+    },
+    "settings-section:Videocalls": {
+      "de": "03-kalender-kontakte-aufgaben.md#Videocalls",
+      "en": "03-calendar-contacts-tasks.md#Video calls"
+    },
+    "command:briefing": {
+      "de": "03-kalender-kontakte-aufgaben.md#Mein Tag",
+      "en": "03-calendar-contacts-tasks.md#My day"
+    },
+    "command:meeting-prep": {
+      "de": "03-kalender-kontakte-aufgaben.md#Termin-Vorbereitung",
+      "en": "03-calendar-contacts-tasks.md#Meeting preparation"
+    },
+    "settings-section:Suche nach Bedeutung": {
+      "de": "05-ki-assistent.md#Den Suchindex für die Suche nach Bedeutung im Blick",
+      "en": "05-ai-assistant.md#Keeping an eye on the index for search by meaning"
     }
   }
 }
