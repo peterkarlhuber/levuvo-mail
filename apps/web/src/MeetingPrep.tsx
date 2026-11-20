@@ -24,6 +24,7 @@ import { ApiError, getJson } from './api';
 import { prepKey, refsForDigest } from './day-utils';
 import { useT } from './i18n';
 import { usePrefs } from './prefs';
+import { useUi } from './ConfirmDialog';
 import { formatTaskDate } from './tasks';
 import { Button, IconButton } from './ui';
 
@@ -84,6 +85,13 @@ export const openMeetingPrep = (meeting?: Pick<Meeting, 'uid' | 'start'>) =>
 
 /** Watches for a meeting about to start and returns the one to show (once per meeting). */
 export function useMeetingWatch(enabled: boolean, minutes: number) {
+  const { t } = useT();
+  const { toast } = useUi();
+  // Kept in a ref so the polling callback stays stable.
+  const say = useRef((text: string) => toast({ text, kind: 'info' }));
+  say.current = (text: string) => toast({ text, kind: 'info' });
+  const texts = useRef(t);
+  texts.current = t;
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [expanded, setExpanded] = useState(false);
   const busy = useRef(false);
@@ -106,9 +114,13 @@ export function useMeetingWatch(enabled: boolean, minutes: number) {
         markPrepShown(prepKey(next));
         setMeeting(next);
         setExpanded(force);
-      } else if (force) setMeeting(null);
+      } else if (force) {
+        setMeeting(null);
+        say.current(texts.current('In den nächsten 24 Stunden steht kein Termin mit anderen an.'));
+      }
     } catch {
       /* calendar not reachable: try again next minute */
+      if (force) say.current(texts.current('Der Kalender ist gerade nicht erreichbar.'));
     } finally {
       busy.current = false;
     }
@@ -122,7 +134,7 @@ export function useMeetingWatch(enabled: boolean, minutes: number) {
   useEffect(() => {
     const onOpen = (e: Event) => {
       const wanted = (e as CustomEvent<Pick<Meeting, 'uid' | 'start'> | null>).detail;
-      void check(60, true, wanted);
+      void check(24 * 60, true, wanted);
     };
     window.addEventListener('levuvo:meeting-prep', onOpen);
     return () => window.removeEventListener('levuvo:meeting-prep', onOpen);

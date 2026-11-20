@@ -177,7 +177,9 @@ export function FiltersSettings({ accounts }: { accounts: AccountItem[] }) {
       {!viaProvider && state && !state.available && (
         <Section
           title={t('Nicht verfügbar')}
-          description={state.reason || t('Dein Mailserver bietet keine Serverfilter (ManageSieve) an.')}
+          description={
+            state.reason ? t(state.reason) : t('Dein Mailserver bietet keine Serverfilter (ManageSieve) an.')
+          }
         >
           <p className="settings-description">
             {t(

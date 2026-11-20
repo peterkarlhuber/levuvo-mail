@@ -385,3 +385,44 @@
   font-size: var(--text-xs);
   color: var(--muted);
 }
+
+/* Focus in the header rows (From, To, Subject): the row's underline instead of a ring around the bare text. */
+.compose-row input:focus-visible,
+.compose-row select:focus-visible,
+.recipient-field input:focus-visible {
+  outline: none;
+}
+.compose-row:focus-within,
+.recipient-row:focus-within,
+.recipient-field:focus-within {
+  border-bottom-color: var(--focus, var(--accent));
+  box-shadow: 0 1px 0 var(--focus, var(--accent));
+}
+.recipient-row:focus-within .recipient-field {
+  box-shadow: none;
+}
+
+/* "Find a time": the people field looks like the other fields of the dialog. */
+.find-time-form .recipient-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1-5);
+  border-bottom: 0;
+  box-shadow: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-2);
+}
+.find-time-form .recipient-field input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-2-5);
+}
+.find-time-form .recipient-field input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}

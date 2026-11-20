@@ -277,7 +277,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                     {e.busy && (
                       <div className="ai-hint">
                         <LoaderCircle className="spin" size={14} />{' '}
-                        {e.kind === 'ask' ? t('Sucht im Postfach…') : t('Arbeitet…')}
+                        {e.kind === 'ask' ? t('Sucht im Postfach …') : t('Arbeitet …')}
                       </div>
                     )}
                     {e.error && (
@@ -406,7 +406,7 @@ export function AssistantPanel({ open, onClose, onOpenMessage, onOpenSettings, o
                   rows={2}
                   maxLength={2000}
                   value={text}
-                  placeholder={mode === 'ask' ? t('Frag dein Postfach…') : t('Was soll der Assistent erledigen?')}
+                  placeholder={mode === 'ask' ? t('Frag dein Postfach …') : t('Was soll der Assistent erledigen?')}
                   onChange={ev => setText(ev.target.value)}
                   onKeyDown={ev => {
                     if (ev.key === 'Enter' && !ev.shiftKey) {

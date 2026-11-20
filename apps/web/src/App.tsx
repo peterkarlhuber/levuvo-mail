@@ -577,7 +577,12 @@ function Shell() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-panel">
-          <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="onboarding-logo brand-image" />
+          <div className="sidebar-brand onboarding-logo">
+            <img src="/levuvo-wordmark.png" alt="Levuvo Mail" className="brand-image" />
+            <span className="brand-product" aria-hidden="true">
+              mail<span className="brand-dot">.</span>
+            </span>
+          </div>
           <PageTitle>
             {credentialsMissing ? (
               t('Zugang prüfen')
@@ -695,7 +700,6 @@ function Shell() {
               {pendingApprovals > 99 ? '99+' : pendingApprovals}
             </span>
           )}
-          <span className="rail-label rail-mobile-only">{t('Assistent')}</span>
         </button>
         <button
           className="rail-item rail-desktop-only"
@@ -720,7 +724,6 @@ function Shell() {
           aria-label={t('Einstellungen')}
         >
           <Settings2 size={20} strokeWidth={1.8} />
-          <span className="rail-label rail-mobile-only">{t('Einstellungen')}</span>
         </button>
       </nav>
       <div className="module-host">

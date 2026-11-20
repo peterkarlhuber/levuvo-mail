@@ -363,3 +363,13 @@ h4 {
   color: var(--warn);
   border-color: var(--warn);
 }
+
+/* A checkbox next to a long label never shrinks (flex rows). */
+input[type='checkbox'],
+input[type='radio'] {
+  flex-shrink: 0;
+}
+/* A select with long options never grows wider than its container. */
+select {
+  max-width: 100%;
+}

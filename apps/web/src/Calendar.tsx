@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  Link2,
   ListTodo,
   LoaderCircle,
   MapPin,
@@ -18,6 +19,7 @@ import {
   Trash2,
   Users,
   UsersRound,
+  Vote,
   X
 } from 'lucide-react';
 import { download, fileToBase64, getJson, postJson } from './api';
@@ -25,7 +27,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
-import { Segmented, useFocusTrap, PageTitle } from './ui';
+import { Button, Segmented, useFocusTrap, PageTitle } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
@@ -606,9 +608,13 @@ function EventEditor({
       ? t('Zum Beginn')
       : m < 60
         ? t('{n} Minuten vorher', { n: m })
-        : m < 1440
-          ? t('{n} Stunden vorher', { n: m / 60 })
-          : t('{n} Tage vorher', { n: m / 1440 });
+        : m === 60
+          ? t('1 Stunde vorher')
+          : m < 1440
+            ? t('{n} Stunden vorher', { n: m / 60 })
+            : m === 1440
+              ? t('1 Tag vorher')
+              : t('{n} Tage vorher', { n: m / 1440 });
   const dayNames = WEEKDAYS.map((_, i) =>
     new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 1 + i))
   );
@@ -1208,7 +1214,8 @@ export default function CalendarModule({
       title={t('Aufgabe')}
       onClick={() => setTaskEdit(x)}
     >
-      <ListTodo size={11} /> {x.title}
+      <ListTodo size={11} aria-hidden="true" />
+      <span className="task-chip-title">{x.title}</span>
     </button>
   );
 
@@ -1515,12 +1522,14 @@ export default function CalendarModule({
             )}
           </p>
         )}
-        <button className="text-button subtle" onClick={onOpenSettings}>
-          {calendars.every(c => c.source === 'local') ? t('Kalender verbinden') : t('Kalender verwalten')}
-        </button>
-        <button className="text-button subtle" onClick={() => setPollsOpen(true)}>
-          {t('Abstimmungen')}
-        </button>
+        <div className="task-list-actions calendar-side-actions">
+          <Button size="sm" variant="ghost" icon={<Link2 size={14} />} onClick={onOpenSettings}>
+            {calendars.every(c => c.source === 'local') ? t('Kalender verbinden') : t('Kalender verwalten')}
+          </Button>
+          <Button size="sm" variant="ghost" icon={<Vote size={14} />} onClick={() => setPollsOpen(true)}>
+            {t('Abstimmungen')}
+          </Button>
+        </div>
       </aside>
       <main className="calendar-main">
         <header className="calendar-toolbar">

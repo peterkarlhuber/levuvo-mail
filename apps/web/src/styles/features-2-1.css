@@ -494,7 +494,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2-5) var(--space-2-5);
+  /* Same height with or without a shortcut chip on the right. */
+  min-height: 2.5rem;
+  padding: var(--space-1) var(--space-2-5);
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;

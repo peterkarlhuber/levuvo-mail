@@ -439,9 +439,11 @@ export function Briefing({
                       <span className="briefing-main">
                         <strong>{s.name}</strong>
                         <span className="briefing-meta">
-                          {s.openTasks > 0
-                            ? t('Neue Aktivität · {n} offene Aufgaben', { n: s.openTasks })
-                            : t('Neue Aktivität')}
+                          {s.openTasks === 1
+                            ? t('Neue Aktivität · 1 offene Aufgabe')
+                            : s.openTasks > 0
+                              ? t('Neue Aktivität · {n} offene Aufgaben', { n: s.openTasks })
+                              : t('Neue Aktivität')}
                         </span>
                       </span>
                     </button>

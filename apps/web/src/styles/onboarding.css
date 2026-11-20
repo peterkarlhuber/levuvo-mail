@@ -25,7 +25,7 @@
   line-height: var(--leading-relaxed);
 }
 .onboarding-logo {
-  width: 110px;
+  padding-inline: 0;
 }
 .onboarding-loading {
   color: var(--muted);

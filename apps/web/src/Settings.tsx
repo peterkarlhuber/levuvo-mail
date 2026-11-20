@@ -665,7 +665,12 @@ function About({ runtime }: { runtime: Runtime }) {
     <>
       <Section title="Levuvo Mail">
         <div className="about-card">
-          <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="brand-image" />
+          <div className="sidebar-brand">
+            <img src="/levuvo-wordmark.png" alt="Levuvo Mail" className="brand-image" />
+            <span className="brand-product" aria-hidden="true">
+              mail<span className="brand-dot">.</span>
+            </span>
+          </div>
           <div>
             <strong>Levuvo Mail {runtime.version}</strong>
             <small>

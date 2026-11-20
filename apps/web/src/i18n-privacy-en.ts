@@ -22,7 +22,7 @@ export const PRIVACY_EN: Record<string, string> = {
   'Morgen-Briefing': 'Morning briefing',
   'Versprechen-Tracker': 'Commitment tracker',
   'Termin-Vorbereitung': 'Meeting preparation',
-  Diktieren: 'Dictation',
+  Diktat: 'Dictation',
   'Newsletter-Überblick': 'Newsletter overview',
   'Datenschutz-Cockpit': 'Privacy cockpit',
   'Das Cockpit konnte nicht geladen werden.': 'The cockpit could not be loaded.',

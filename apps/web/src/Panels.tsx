@@ -33,7 +33,12 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
     [['/'], t('Suche')],
     [[t('Strg/⌘'), 'K'], t('Befehle')],
     [[t('Strg/⌘'), 'Enter'], t('Senden (im Editor)')],
-    [['Alt', '1 · 2 · 3'], t('E-Mail · Kalender · Kontakte')],
+    [[t('Strg/⌘'), 'J'], t('Assistent')],
+    [['Alt', '1'], t('E-Mail')],
+    [['Alt', '2'], t('Kalender')],
+    [['Alt', '3'], t('Kontakte')],
+    [['Alt', '4'], t('Räume')],
+    [['Alt', '5'], t('Aufgaben')],
     [['Alt', ','], t('Einstellungen')],
     [['Esc'], t('Schließen / Auswahl aufheben')],
     [['?'], t('Diese Übersicht')]
@@ -57,10 +62,7 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         <button className="modal-close icon-button" onClick={onClose} aria-label={t('Schließen')}>
           <X size={18} />
         </button>
-        <h2>
-          {t('Tastenkürzel')}
-          <span className="period">.</span>
-        </h2>
+        <h2>{t('Tastenkürzel')}</h2>
         <dl className="shortcut-list">
           {rows.map(([keys, label]) => (
             <div key={label} className="shortcut-row">

@@ -226,10 +226,11 @@
   align-items: center;
   gap: var(--space-4);
 }
-.about-card img {
-  width: 96px;
+.about-card .sidebar-brand {
+  flex: none;
+  padding: 0;
 }
-.about-card div {
+.about-card > div:not(.sidebar-brand) {
   display: flex;
   flex-direction: column;
 }
@@ -554,4 +555,8 @@
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   margin: 0;
+}
+/* A warning above the first card keeps the same gap as between cards. */
+.settings-content .compose-warning {
+  margin-bottom: var(--space-4);
 }

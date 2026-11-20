@@ -397,6 +397,11 @@ export function McpSettings() {
             />
           </Row>
         ))}
+        {state.agents.length === 0 && (
+          <p className="settings-description">
+            <Bot size={14} aria-hidden="true" /> {t('Noch kein externer Agent eingerichtet.')}
+          </p>
+        )}
         <Row label={t('Neuer Agent')} hint={t('Der Zugangsschlüssel wird nur einmal angezeigt.')}>
           <input
             aria-label={t('Name des Agenten')}
@@ -453,11 +458,6 @@ export function McpSettings() {
       <Section title={t('Freigaben')} description={t('Was Agenten vorbereitet haben und auf deine Zustimmung wartet.')}>
         <ApprovalList onChange={load} />
       </Section>
-      {state.agents.length === 0 && (
-        <p className="settings-description">
-          <Bot size={14} /> {t('Noch kein externer Agent eingerichtet.')}
-        </p>
-      )}
     </>
   );
 }

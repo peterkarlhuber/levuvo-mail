@@ -41,8 +41,9 @@
     flex: 1 1 0;
     width: auto;
     min-width: var(--touch-target);
-    padding: var(--space-1-5) 0;
-    justify-content: center;
+    padding: var(--space-2) 0 var(--space-1-5);
+    /* Icons on one line, also for the buttons without a label (assistant, settings). */
+    justify-content: flex-start;
     border-radius: 0;
   }
   .rail-item.active {
