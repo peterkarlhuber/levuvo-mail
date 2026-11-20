@@ -38,6 +38,9 @@
 ### Window frame (macOS)
 - **Calmer top left corner:** the traffic lights now sit 16 px from the edge, centred in a 40 px strip, with no rail border next to them. The logo keeps a clear gap below, and the "Levuvo mail." wordmark sits on the same row as the logo. (Manual: none)
 
+### Levuvo Mail Assistant
+- **Adjustable width:** drag the handle on the left edge of the assistant panel to make it wider or narrower (340–960 px, part of the app always stays visible). Keyboard: the handle is an ARIA separator; Left/Right arrow (Shift for bigger steps), Home and End. A double click resets it to 420 px. The width is saved in the view preferences and therefore in the backup. Hidden on phones, where the panel fills the screen. (Manual: The assistant window)
+
 ### Ask your mailbox
 - **Names and numbers are found:** a question searches by meaning and by exact words at the same time (merged by rank), so "What did Müller say about the offer?" finds Müller's mails even when the meaning search misses them, and questions work while the search index is still being built. (Manual: The assistant window)
 - **Whole mails and attachments:** the best five hits are read in full, with the text of their PDF and text attachments (CSV, Markdown, HTML; at most 8 MB, 30 pages and 8,000 characters per file, read on demand, never stored). PDFs are read with scripting off. (Manual: The assistant window)

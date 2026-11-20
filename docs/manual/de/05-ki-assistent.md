@@ -67,6 +67,7 @@ Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche.“ Der Assistent sucht freie Zeiten und bereitet einen Entwurf vor. Gesendet wird nichts.
 - **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen.
 - **Freigaben:** alles, was der Assistent oder ein Agent vorbereitet hat und auf dein **Freigeben** oder **Ablehnen** wartet.
+- **Breite ändern:** Zieh den Griff am linken Rand des Fensters nach links, wird es breiter, nach rechts schmaler. Ein Teil der App bleibt immer sichtbar. Mit der Tastatur gehst du mit `Tab` auf den Griff und nutzt dann `←` und `→`, mit `Umschalt` in größeren Schritten. `Pos1` wählt die schmalste, `Ende` die breiteste Breite. Ein Doppelklick setzt die Breite zurück. Levuvo Mail merkt sich deine Breite. Auf dem Handy füllt der Assistent den ganzen Bildschirm.
 
 ## Externe Agenten anbinden
 
