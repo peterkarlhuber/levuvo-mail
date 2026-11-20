@@ -564,7 +564,8 @@ export function registerAiRoutes(ctx) {
     if (!requireAction(request, reply, ACTION)) return;
     if (!localModels) return noRuntime(reply);
     try {
-      return await localModels.discardPartial();
+      const model = request.body?.model ? String(request.body.model) : undefined;
+      return await localModels.discardPartial(model);
     } catch (err) {
       return aiError(reply, err);
     }

@@ -21,12 +21,13 @@ Levuvo Mail bringt für lokale Modelle ein eigenes, abgeschottetes Programm mit 
 2. Schalte **KI-Funktionen** ein.
 3. Lass bei **Modell-Anbieter** die Einstellung **Lokal (Ollama)** stehen.
 4. Wähle bei **Sprachmodell** ein Modell aus der Liste. Levuvo Mail schlägt die Größe vor, die zu deinem Computer passt.
-5. Der Download startet mit Fortschrittsbalken. Je nach Internet dauert er einige Minuten. **Abbrechen** hält ihn an, später machst du mit **Fortsetzen** weiter.
-6. Sobald „… ist heruntergeladen und geprüft“ erscheint, kannst du loslegen. **Bereit** neben **Lokale KI** heißt nur, dass das Programm für lokale Modelle läuft.
+5. Unter der Liste zeigt Levuvo Mail die Größe des Modells und den freien Speicher auf deinem Laufwerk. Klicke auf **Herunterladen (…)**. Vorher wird nichts geladen, und ein Modell, das schon auf deinem Computer liegt, wird einfach eingeschaltet.
+6. Der Download läuft mit Fortschrittsbalken. Je nach Internet dauert er einige Minuten. **Abbrechen** hält ihn an, später machst du mit **Fortsetzen** weiter. Unter **Unterbrochene Downloads** hat jedes angehaltene Modell eine eigene Zeile mit **Fortsetzen** und **Verwerfen**.
+7. Sobald „… ist heruntergeladen und geprüft“ erscheint, ist das neue Modell aktiv und du kannst loslegen. Bis dahin arbeitet das bisherige Modell weiter. **Bereit** neben **Lokale KI** heißt nur, dass das Programm für lokale Modelle läuft.
 
 Für die **Suche nach Bedeutung** lädt Levuvo Mail zusätzlich ein kleines Suchmodell. Voreingestellt ist BGE-M3, es lieferte in unseren Tests die besten Ergebnisse, gerade bei deutschen Mails. Damit findet die Suche auch „Lieferung“, wenn in der Mail „Zustellung“ steht.
 
-Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen, einer Art digitalem Fingerabdruck der Datei. So ist sichergestellt, dass genau das richtige Modell auf deinem Computer liegt. Unter **Heruntergeladene Modelle** gibst du mit **Löschen** den Speicherplatz wieder frei.
+Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen, einer Art digitalem Fingerabdruck der Datei. So ist sichergestellt, dass genau das richtige Modell auf deinem Computer liegt. Auf einem Mac mit Apple-Chip gibt es manche Modelle in einer dafür optimierten Fassung (MLX), die etwas größer sein kann; die Liste zeigt die Größe für deinen Computer. Unter **Heruntergeladene Modelle** gibst du mit **Löschen** den Speicherplatz wieder frei.
 
 ### Welches Modell passt?
 

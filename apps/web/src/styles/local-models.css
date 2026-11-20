@@ -54,6 +54,33 @@
 .local-model-list small {
   color: var(--muted);
 }
+.local-model-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+/* Interrupted downloads: one line per model, with resume and discard. */
+.local-model-paused {
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-2);
+}
+.local-model-paused > strong {
+  display: block;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.local-model-paused-hint {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.local-model-paused ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
 /* Index for search by meaning: status in Settings and a quiet line below the search field. */
 .local-model-status.warn {

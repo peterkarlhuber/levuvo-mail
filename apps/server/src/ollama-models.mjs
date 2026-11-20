@@ -1,18 +1,20 @@
 // Models of Levuvo Mail's own Ollama: what is installed, downloads with progress, cancel, resume and
-// delete. Only models of the fixed catalog (ai-model-catalog.mjs) are downloaded, and a download only
-// counts as finished when the model's manifest digest equals the pinned one; anything else is
-// deleted again (fail closed).
+// delete. Only models of the fixed catalog (ai-model-catalog.mjs) are downloaded, always the variant
+// pinned for this platform (GGUF, or MLX on Apple silicon; requested from Ollama explicitly), and a
+// download only counts as finished when the model's manifest digest equals that variant's pin;
+// anything else is deleted again (fail closed).
 //
 // Resume: Ollama keeps the parts of a cancelled download (the runtime runs with OLLAMA_NOPRUNE),
 // so choosing the model again continues where it stopped. "Discard" removes those parts.
-import { readdir, rm, statfs as fsStatfs } from 'node:fs/promises';
+import { readdir, rm, stat, statfs as fsStatfs } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier } from './ai-model-catalog.mjs';
+import { MODEL_CATALOG, catalogEntry, fitFor, ollamaName, recommendedTier, variantFor } from './ai-model-catalog.mjs';
 
 // Room left on the disk after a download: the system and the mailbox need space too.
 export const DISK_RESERVE = 2 * 1024 ** 3;
 const PULL_STALL_MS = 120_000;
+const PARTIAL = /^sha256-[0-9a-f]{64}-partial/;
 
 const stripDigest = d => String(d || '').replace(/^sha256:/, '');
 
@@ -70,8 +72,11 @@ export function createModelManager({
   totalmem = os.totalmem,
   log = null,
   logger = () => {},
-  catalog = MODEL_CATALOG
+  catalog = MODEL_CATALOG,
+  platform = process.platform,
+  arch = process.arch
 }) {
+  const variant = entry => variantFor(entry, platform, arch);
   const jobs = new Map(); // id -> job
   const readyListeners = new Set();
   const entryOf = id => {
@@ -94,7 +99,7 @@ export function createModelManager({
     for (const m of models) {
       const entry = catalog.find(e => ollamaName(e.id) === m.name);
       if (!entry) continue;
-      out.set(entry.id, { verified: stripDigest(m.digest) === stripDigest(entry.digest), size: m.size });
+      out.set(entry.id, { verified: stripDigest(m.digest) === stripDigest(variant(entry).digest), size: m.size });
     }
     return out;
   }
@@ -144,7 +149,8 @@ export function createModelManager({
         tier: e.tier,
         license: e.license,
         licenseUrl: e.licenseUrl,
-        size: e.size,
+        size: variant(e).size,
+        variant: variant(e).runner,
         default: Boolean(e.default),
         fit: fitFor(e, ram),
         installed: have.get(e.id)?.verified === true,
@@ -165,7 +171,8 @@ export function createModelManager({
   }
 
   async function runPull(entry, job) {
-    const tracker = progressTracker(entry.size);
+    const { runner, size } = variant(entry);
+    const tracker = progressTracker(size);
     let stall = null;
     const armStall = () => {
       clearTimeout(stall);
@@ -176,7 +183,7 @@ export function createModelManager({
       armStall();
       const res = await api('/api/pull', {
         method: 'POST',
-        body: JSON.stringify({ model: ollamaName(entry.id), stream: true }),
+        body: JSON.stringify({ model: ollamaName(entry.id), runner, stream: true }),
         signal: job.controller.signal
       });
       if (!res.ok || !res.body) throw new ModelError('download_failed', `Ollama ${res.status}`);
@@ -203,8 +210,12 @@ export function createModelManager({
       logger(`ollama: ${entry.id} downloaded and verified`);
     } catch (err) {
       const reason = job.controller.signal.reason;
-      if (job.canceled) job.status = 'canceled';
-      else {
+      if (job.canceled) {
+        // Parts first, then the status: a discard right after the pause must see them.
+        job.pausedAt = Date.now();
+        job.parts = [...new Set([...(job.parts || []), ...(await partsSince(job.startedAt).catch(() => []))])];
+        job.status = 'canceled';
+      } else {
         job.status = 'error';
         job.error = (reason instanceof ModelError ? reason : err).kind || 'download_failed';
         void log?.add({ type: 'model_download', model: entry.id, ok: false, error: job.error });
@@ -222,21 +233,24 @@ export function createModelManager({
       throw new ModelError('unreachable', 'Das Ollama von Levuvo Mail startet nicht.', { statusCode: 503 });
     });
     if (have.get(entry.id)?.verified) {
-      const done = { status: 'done', completed: entry.size, total: entry.size, startedAt: Date.now() };
+      const { size } = variant(entry);
+      const done = { status: 'done', completed: size, total: size, startedAt: Date.now() };
       jobs.set(entry.id, done);
       return publicJob(done);
     }
+    const { size } = variant(entry);
     const free = await freeBytes();
-    if (free !== null && free < entry.size + DISK_RESERVE)
+    if (free !== null && free < size + DISK_RESERVE)
       throw new ModelError('disk_full', 'Nicht genug Speicherplatz für dieses Modell.', {
-        needed: entry.size + DISK_RESERVE,
+        needed: size + DISK_RESERVE,
         free
       });
     const job = {
       status: 'downloading',
       completed: running?.completed || 0,
-      total: entry.size,
+      total: size,
       startedAt: Date.now(),
+      parts: running?.parts || [],
       controller: new AbortController(),
       canceled: false
     };
@@ -255,18 +269,57 @@ export function createModelManager({
     return publicJob(job);
   }
 
-  /** Removes the parts of cancelled downloads (only while nothing downloads). */
-  async function discardPartial() {
-    if ([...jobs.values()].some(j => ['downloading', 'verifying'].includes(j.status)))
-      throw new ModelError('busy', 'Während eines Downloads nicht möglich.');
+  // Parts of a paused download, so that one model's parts can be discarded while another model
+  // downloads. Taken when the download stops: the partial blobs written since it started.
+  async function partsSince(since) {
     const dir = path.join(runtime.paths.models, 'blobs');
-    let removed = 0;
+    const out = [];
     for (const name of await readdir(dir).catch(() => []))
-      if (/^sha256-[0-9a-f]{64}-partial/.test(name)) {
-        await rm(path.join(dir, name), { force: true });
-        removed += 1;
+      if (PARTIAL.test(name)) {
+        const file = path.join(dir, name);
+        const st = await stat(file).catch(() => null);
+        if (st && st.mtimeMs >= since - 1000) out.push(file);
       }
-    for (const [id, j] of jobs) if (j.status === 'canceled') jobs.delete(id);
+    return out;
+  }
+
+  /**
+   * Removes the parts of cancelled downloads: of one model (id), also while another model
+   * downloads, or of all paused ones while nothing downloads. A part changed after its model was
+   * paused is shared with the running download and stays (on Windows an open file cannot be
+   * removed anyway).
+   */
+  async function discardPartial(id) {
+    const running = [...jobs.values()].some(j => ['downloading', 'verifying'].includes(j.status));
+    let targets;
+    if (id) {
+      const entry = entryOf(id);
+      const job = jobs.get(entry.id);
+      if (!job || job.status !== 'canceled') return { removed: 0 };
+      targets = [entry.id];
+    } else {
+      if (running) throw new ModelError('busy', 'Während eines Downloads nicht möglich.');
+      targets = [...jobs].filter(([, j]) => j.status === 'canceled').map(([k]) => k);
+    }
+    const dir = path.join(runtime.paths.models, 'blobs');
+    const files = id
+      ? jobs.get(targets[0]).parts || []
+      : (await readdir(dir).catch(() => [])).filter(n => PARTIAL.test(n)).map(n => path.join(dir, n));
+    let removed = 0;
+    const pausedAt = id ? jobs.get(targets[0]).pausedAt || 0 : 0;
+    for (const file of files) {
+      if (id) {
+        const st = await stat(file).catch(() => null);
+        if (!st || st.mtimeMs > pausedAt + 1000) continue;
+      }
+      try {
+        await rm(file);
+        removed += 1;
+      } catch {
+        // gone already, or still open by Ollama
+      }
+    }
+    for (const k of targets) jobs.delete(k);
     return { removed };
   }
 

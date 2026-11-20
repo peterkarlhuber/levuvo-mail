@@ -395,6 +395,28 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.settings-nav button', { hasText: 'KI & Agenten' }).first().click();
       await page.locator('.local-model-status progress').first().waitFor();
       await axe(page, `own Ollama settings (${colorScheme})`);
+      // Interrupted downloads: one line each, with resume and discard.
+      const paused = page.locator('.local-model-paused li', { hasText: 'Gemma 4 12B' });
+      await paused.getByRole('button', { name: 'Fortsetzen' }).waitFor();
+      await paused.getByRole('button', { name: 'Teile von Gemma 4 12B verwerfen' }).waitFor();
+      // Choosing a model that is not on this computer downloads nothing yet: a button with the size.
+      const downloads = [];
+      page.on('request', r => r.url().includes('/local-models/download') && downloads.push(r.url()));
+      await page.getByRole('combobox', { name: 'Sprachmodell' }).selectOption('ministral-3:8b');
+      const button = page.getByRole('button', { name: /^Herunterladen \(6 GB\)$/ });
+      await button.waitFor();
+      await page.getByRole('button', { name: 'Bei Qwen3.5 9B bleiben' }).waitFor();
+      assert.deepEqual(downloads, [], 'no download before the button is pressed');
+      if (colorScheme === 'dark') {
+        await axe(page, 'own Ollama settings, model chosen but not downloaded');
+        await page.setViewportSize({ width: 320, height: 800 });
+        const width = await page.evaluate(() => document.documentElement.scrollWidth);
+        assert.ok(width <= 320, `model settings scroll horizontally at 320px (${width}px)`);
+        const shots = process.env.LEVUVO_SHOT_DIR;
+        if (shots) await page.locator('.local-model-paused').screenshot({ path: `${shots}/local-models-phone.png` });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        if (shots) await page.locator('.local-model-paused').screenshot({ path: `${shots}/local-models-desktop.png` });
+      }
       assert.deepEqual(errors, []);
       await context.close();
     }

@@ -9,7 +9,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { createOllamaRuntime } from '../../apps/server/src/ollama-runtime.mjs';
 import { createModelManager } from '../../apps/server/src/ollama-models.mjs';
-import { catalogEntry } from '../../apps/server/src/ai-model-catalog.mjs';
+import { catalogEntry, ollamaName, variantFor } from '../../apps/server/src/ai-model-catalog.mjs';
 
 const bin = process.env.LEVUVO_OLLAMA_BIN;
 const lock = JSON.parse(readFileSync(new URL('../../scripts/ollama/ollama-lock.json', import.meta.url), 'utf8'));
@@ -97,3 +97,35 @@ test(
     }
   }
 );
+
+// Catalog models downloaded for real with the variant of this platform (GGUF, or MLX on Apple
+// silicon), each checked against its pin and size, then deleted again. Used by the weekly job on a
+// Mac with Apple silicon:  LEVUVO_LIVE_MODELS=qwen3.5:4b,gemma4:e2b
+const extra = (process.env.LEVUVO_LIVE_MODELS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+for (const id of extra)
+  test(`own Ollama: real download of ${id} (${variantFor(catalogEntry(id)).runner}) matches its pin`, async () => {
+    assert.ok(bin && existsSync(bin), 'LEVUVO_OLLAMA_BIN must point at the fetched binary');
+    const dataDir = mkdtempSync(path.join(os.tmpdir(), 'lv-ollama-live-'));
+    const runtime = createOllamaRuntime({ dataDir, env: { PATH: process.env.PATH, LEVUVO_OLLAMA_BIN: bin } });
+    try {
+      const url = await runtime.ensure();
+      const models = createModelManager({ runtime });
+      const variant = variantFor(catalogEntry(id));
+      await models.download(id);
+      await until(async () => ['error', 'done'].includes(models.jobs.get(id)?.status), 3_600_000);
+      assert.equal(models.jobs.get(id).status, 'done', `download ended with ${models.jobs.get(id).error}`);
+      assert.equal(await models.isReady(id), true);
+      const tags = await (await fetch(`${url}/api/tags`)).json();
+      const tag = tags.models.find(m => m.name === ollamaName(id));
+      assert.equal(`sha256:${tag.digest}`, variant.digest);
+      assert.equal(models.jobs.get(id).total, variant.size, 'the progress total is the pinned size');
+      console.log(`${id}: ${variant.runner} ${tag.digest} ${tag.size} bytes (${tag.details?.format})`);
+      await models.remove(id);
+    } finally {
+      await runtime.stop();
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });

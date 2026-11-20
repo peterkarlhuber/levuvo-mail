@@ -21,12 +21,13 @@ For local models, Levuvo Mail brings its own, separate program (Ollama). It runs
 2. Switch on **AI features**.
 3. Leave **Model provider** set to **Local (Ollama)**.
 4. Under **Language model**, choose a model from the list. Levuvo Mail suggests the size that fits your computer.
-5. The download starts with a progress bar. Depending on your internet it takes a few minutes. **Cancel** pauses it; later you continue with **Resume**.
-6. As soon as "… is downloaded and verified" appears, you can start. **Ready** next to **Local AI** only means that the program for local models is running.
+5. Below the list Levuvo Mail shows the size of the model and the free space on your disk. Click **Download (…)**. Nothing is downloaded before that, and a model that is already on your computer is simply switched on.
+6. The download runs with a progress bar. Depending on your internet it takes a few minutes. **Cancel** pauses it; later you continue with **Resume**. Under **Interrupted downloads** each paused model has its own line with **Resume** and **Discard**.
+7. As soon as "… is downloaded and verified" appears, the new model is active and you can start. Until then the previous model keeps working. **Ready** next to **Local AI** only means that the program for local models is running.
 
 For **search by meaning**, Levuvo Mail also downloads a small search model. BGE-M3 is preset; it gave the best results in our tests, especially on German email. With it, the search also finds "delivery" when the email says "shipment".
 
-After the download each model is compared with a fixed checksum, a kind of digital fingerprint of the file. That makes sure exactly the right model is on your computer. Under **Downloaded models**, **Delete** frees the disk space again.
+After the download each model is compared with a fixed checksum, a kind of digital fingerprint of the file. That makes sure exactly the right model is on your computer. On a Mac with an Apple chip some models come in a version optimised for it (MLX), which can be a little larger; the list shows the size for your computer. Under **Downloaded models**, **Delete** frees the disk space again.
 
 ### Which model fits?
 

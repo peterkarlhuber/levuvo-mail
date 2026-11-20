@@ -349,7 +349,19 @@ export const AI_EN: Record<string, string> = {
   'Heruntergeladene Modelle': 'Downloaded models',
   'Noch {free} frei auf diesem Laufwerk.': '{free} free on this drive.',
   '{name} löschen': 'Delete {name}',
-  'Unterbrochene Downloads: {names}': 'Interrupted downloads: {names}',
+  'Unterbrochene Downloads': 'Interrupted downloads',
+  'Bereits geladene Teile bleiben erhalten. Fortsetzen lädt nur den Rest.':
+    'Parts already downloaded are kept. Resume downloads only the rest.',
+  '{name}: pausiert bei {pct} % ({done} von {total})': '{name}: paused at {pct}% ({done} of {total})',
+  'Teile von {name} verwerfen': 'Discard the parts of {name}',
+  'Teile, die der laufende Download gerade schreibt, bleiben erhalten.':
+    'Parts the running download is writing right now are kept.',
+  'Bei {name} bleiben': 'Stay with {name}',
+  'Nicht genug Speicherplatz: {free} frei, gebraucht werden {need}.':
+    'Not enough disk space: {free} free, {need} needed.',
+  'Noch {free} frei.': '{free} free.',
+  '{name} ist noch nicht auf diesem Computer. Download {size}.': '{name} is not on this computer yet. Download {size}.',
+  'Herunterladen ({size})': 'Download ({size})',
   'Für diesen Computer zu groß.': 'Too large for this computer.',
   'Läuft hier, aber knapp: andere Programme werden langsamer.': 'Runs here, but tight: other programs get slower.',
   'Passt zu diesem Computer.': 'Fits this computer.',
@@ -361,7 +373,6 @@ export const AI_EN: Record<string, string> = {
   '{name} ist heruntergeladen und geprüft.': '{name} is downloaded and verified.',
   'Download pausiert bei {pct} %. Bereits geladene Teile bleiben erhalten.':
     'Download paused at {pct} %. Parts already downloaded are kept.',
-  '{name} ist noch nicht auf diesem Computer ({size}).': '{name} is not on this computer yet ({size}).',
   Fortsetzen: 'Resume',
   'Dieses Modell steht nicht in der Liste.': 'This model is not in the list.',
   'Das eigene Ollama von Levuvo Mail ist in dieser Installation nicht enthalten.':

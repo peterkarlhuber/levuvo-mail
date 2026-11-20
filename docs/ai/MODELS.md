@@ -51,20 +51,40 @@ that Ollama reports (`/api/tags`) with the pin. A different upload under the sam
 and reported as "checksum does not match". `scripts/ollama/check-catalog.mjs` compares the pins and sizes
 with the registry in every CI run and weekly.
 
-| Size | Model | Vendor (origin) | License | Download |
-|---|---|---|---|---|
-| Small (8 GB RAM) | **qwen3.5:4b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 3.3 GB |
-| | gemma4:e2b | Google (US) | Apache-2.0 | 4.6 GB |
-| | ministral-3:3b | Mistral AI (FR, EU) | Apache-2.0 | 3.0 GB |
-| Standard (16 GB) | **qwen3.5:9b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 6.6 GB |
-| | gemma4:12b | Google (US) | Apache-2.0 | 8.0 GB |
-| | ministral-3:8b | Mistral AI (FR, EU) | Apache-2.0 | 6.0 GB |
-| Large (32 GB) | **qwen3.8:27b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 17.7 GB |
-| | mistral-small3.2:24b | Mistral AI (FR, EU) | Apache-2.0 | 15.2 GB |
-| | ministral-3:14b | Mistral AI (FR, EU) | Apache-2.0 | 9.1 GB |
-| Search | **bge-m3** (default) | BAAI (CN) | MIT | 1.2 GB |
-| | qwen3-embedding:0.6b | Alibaba Qwen (CN) | Apache-2.0 | 0.6 GB |
-| | qwen3-embedding:4b | Alibaba Qwen (CN) | Apache-2.0 | 2.5 GB |
+### Variants: GGUF and MLX
+
+Since Ollama 0.40 a tag on the registry can be a **manifest list** with one variant per runner:
+`llamacpp` (GGUF, every platform) and `mlx` (safetensors, only Macs with Apple silicon). Ollama on such a
+Mac prefers MLX, everywhere else GGUF; the variants differ in files, digest and size. Until this fix Levuvo
+pinned only the GGUF variant, so on a Mac with Apple silicon Ollama downloaded the MLX variant (Qwen3.5
+9B: 7.6 GB instead of 6.6 GB) and Levuvo deleted it again as "checksum does not match".
+
+Now every entry pins the GGUF variant (`digest`, `size`) and, where the registry offers one, the MLX
+variant (`mlx`). Levuvo requests the variant explicitly (`runner` in `/api/pull`), so the download never
+depends on Ollama's own preference, and checks the result against that variant's pin. The size shown in
+the list is the size of the variant this computer downloads. `mlx: false` marks an MLX variant that was
+reviewed and not taken: Gemma 4 E2B's MLX variant is 7.5 GB, too big for the small tier, so Macs get
+GGUF there too. The catalog check reports an MLX variant the registry adds but the catalog does not pin.
+
+| Size | Model | Vendor (origin) | License | Download | Apple silicon (MLX) |
+|---|---|---|---|---|---|
+| Small (8 GB RAM) | **qwen3.5:4b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 3.3 GB | 4.0 GB |
+| | gemma4:e2b | Google (US) | Apache-2.0 | 4.6 GB | GGUF (MLX 7.5 GB not used) |
+| | ministral-3:3b | Mistral AI (FR, EU) | Apache-2.0 | 3.0 GB | GGUF |
+| Standard (16 GB) | **qwen3.5:9b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 6.6 GB | 7.6 GB |
+| | gemma4:12b | Google (US) | Apache-2.0 | 8.0 GB | 7.7 GB |
+| | ministral-3:8b | Mistral AI (FR, EU) | Apache-2.0 | 6.0 GB | GGUF |
+| Large (32 GB) | **qwen3.8:27b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 17.7 GB | 18.2 GB |
+| | mistral-small3.2:24b | Mistral AI (FR, EU) | Apache-2.0 | 15.2 GB | GGUF |
+| | ministral-3:14b | Mistral AI (FR, EU) | Apache-2.0 | 9.1 GB | GGUF |
+| Search | **bge-m3** (default) | BAAI (CN) | MIT | 1.2 GB | GGUF |
+| | qwen3-embedding:0.6b | Alibaba Qwen (CN) | Apache-2.0 | 0.6 GB | GGUF |
+| | qwen3-embedding:4b | Alibaba Qwen (CN) | Apache-2.0 | 2.5 GB | GGUF |
+
+Choosing a model that is not on the computer downloads nothing yet: the settings show its size, the free
+space and a "Download (size)" button, and the model becomes active once it is downloaded and verified.
+Choosing a model that is already there only switches to it. Interrupted downloads have a line each with
+"Resume" and "Discard"; discarding one model's parts also works while another model downloads.
 
 On the first start the size is suggested from the computer's memory (from 30 GiB large, from 15 GiB
 standard, else small); a model one size above is marked "tight", two sizes above asks before the download.
@@ -104,6 +124,10 @@ Switching the search model asks first and then rebuilds the index in the backgro
 - **Ollama:** set `version`, `size` and `sha256` of every asset in `ollama-lock.json` from the release,
   run `npm run ollama:runtime -- --arch …` on each target and `node --test test/ollama-live/*.test.mjs`
   with `LEVUVO_OLLAMA_BIN`; check the release notes for changed environment variables.
-- **A model:** add or change the entry in `ai-model-catalog.mjs` with the digest and size printed by
-  `npm run check:models` (it reports the registry values on a mismatch), review the license layer, and
-  run the evaluation again for a search model.
+- **A model:** add or change the entry in `ai-model-catalog.mjs` with the digest and size of each variant
+  printed by `npm run check:models -- --print` (it also prints them on a mismatch), review the license
+  layer, and run the evaluation again for a search model. Pin an MLX variant only if it fits the tier
+  (about the size of the GGUF one), otherwise set `mlx: false`.
+- **Real downloads:** `LEVUVO_LIVE_MODELS=qwen3.5:4b,gemma4:e2b node --test test/ollama-live/*.test.mjs`
+  downloads the listed models with the variant of the platform and checks digest and size; the weekly
+  supply-chain job runs it on a Mac with Apple silicon.
