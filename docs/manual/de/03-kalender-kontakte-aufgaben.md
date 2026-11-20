@@ -99,6 +99,8 @@ Der Verlauf bleibt auf diesem Computer. Notizen werden verschlüsselt gespeicher
 
 Beim ersten Öffnen am Tag zeigt Levuvo Mail **Mein Tag**: einen Überblick über alles, was heute ansteht.
 
+![Mein Tag: Termine, Aufgaben, wartende Mails und Versprechen auf einen Blick](my-day.png)
+
 - **Termine heute** mit Ort und Zahl der Teilnehmenden.
 - **Aufgaben für heute**, auch überfällige. Mit dem Kreis hakst du sie gleich ab.
 - **Wartet auf deine Antwort:** Mails von Menschen aus den letzten drei Tagen, auf die du noch nicht geantwortet hast. Newsletter und automatische Mails fehlen hier.

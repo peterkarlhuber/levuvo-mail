@@ -99,6 +99,8 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 
 The first time you open Levuvo Mail on a day, it shows **My day**: an overview of everything that is on today.
 
+![My day: events, tasks, waiting emails and promises at a glance](my-day.png)
+
 - **Today’s events** with place and number of attendees.
 - **Tasks for today**, overdue ones too. Tick them off right there with the circle.
 - **Waiting for your answer:** emails from people from the last three days that you have not answered yet. Newsletters and automatic emails are left out.

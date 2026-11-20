@@ -89,6 +89,7 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 
 - **Question:** "When is the delivery from Müller arriving?" The assistant decides itself whether to search your emails or the manual. To "Hello" or "Who are you?" it answers directly and names the model it is using. Cards below the answer show the emails or manual sections it comes from. Each source shows sender, date and a literal quote; one click opens it. Follow-ups such as "And the price?" refer to the previous answer, **Clear history** starts afresh. If nothing fits, it says so instead of guessing.
 - **Long answers:** If an answer is longer than the maximum response length, it shows **Answer cut off**. **Continue** gets you the full answer.
+- **Slow computer:** Without a graphics card, local models answer more slowly. If a model needs longer than allowed, you see **The model took too long.** A smaller model answers faster. While you wait for an answer, AI work in the background (such as sorting in **My day**) pauses.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters. The routine bar stays visible at the top of the window.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
