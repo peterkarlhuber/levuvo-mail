@@ -418,8 +418,38 @@ def test_ask_without_tool_support_always_searches() -> None:
         fake.capabilities = ["completion"]
         engine = configured(url)
         out = tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
-        assert out == {"search": "hi", "tool": "search_mailbox"}
+        assert out == {"search": "hi", "tool": "search_mailbox", "fallback": True}
         assert not [p for p, _ in fake.requests if p == "/v1/chat/completions"]
+
+
+def test_ask_answer_takes_source_ids_out_of_longer_text() -> None:
+    """Small local models write 'From: Lufthansa (id: s1) ...' instead of the id: the id still counts."""
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append(
+            {
+                "role": "assistant",
+                "content": json.dumps(
+                    {
+                        "found": True,
+                        "sources": ["From: Lufthansa (id: s1) Hinflug 07:05", "s9", "m1"],
+                        "answer": "Dein Flug geht am 8. Dezember um 07:05.",
+                        "quotes": [],
+                    }
+                ),
+            }
+        )
+        mail = {
+            "id": "s1",
+            "from": "Lufthansa <x@example.com>",
+            "date": "2026-11-10",
+            "subject": "Flug",
+            "text": "07:05",
+        }
+        out = tasks.ask_mailbox(
+            engine, {"lang": "de", "question": "Wann geht mein Flug?", "assistant": ASSISTANT, "sources": [mail]}
+        )
+        assert out["sources"] == ["s1"], "unknown ids (s9, m1 without manual) are dropped"
 
 
 def test_user_model_options_reach_the_request() -> None:

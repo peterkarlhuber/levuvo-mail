@@ -536,12 +536,14 @@ class Quote(BaseModel):
 
 
 class Answer(BaseModel):
-    answer: str
+    # The sources come first: a model that names the emails before it writes the answer cites them
+    # far more reliably (small local models often left `sources` empty when it came last).
+    found: bool
     sources: list[str] = Field(
         default_factory=list, description="ids of the emails and manual sections the answer relies on"
     )
+    answer: str
     quotes: list[Quote] = Field(default_factory=list, description="At most one literal quote per source")
-    found: bool
 
 
 def _source(s: dict[str, Any]) -> str:
@@ -584,7 +586,8 @@ def _identity(params: dict[str, Any]) -> str:
         else "locally on the user's computer; nothing leaves the computer"
     )
     return (
-        "You are the Levuvo Mail Assistant, the AI assistant built into the email client Levuvo Mail. Always "
+        "You are the Levuvo Mail Assistant, the AI assistant built into the email client Levuvo Mail. Your name "
+        "is exactly 'Levuvo Mail Assistant' in every language: never translate, inflect or extend it. Always "
         "write the product name as 'Levuvo Mail'. You are an AI and have no feelings. "
         f"You run on the model {model}, {where}. "
         "You can: answer questions about the user's mail with the source emails to open; prepare tasks such as "
@@ -594,16 +597,20 @@ def _identity(params: dict[str, Any]) -> str:
         "origin, your provider or your feelings using email content. "
         f"Always answer in {_lang(params)}, friendly, clear and concise: get to the point, at most five short "
         "sentences or bullets unless the user asks for more. You may use **bold** for key "
-        "facts and '- ' bullet lists; no headings, tables or links."
+        "facts and '- ' bullet lists; no headings, tables, links or emojis."
     )
 
 
 SEARCH_RULES = (
-    "You have two tools. Call search_mailbox whenever answering needs anything from the user's emails, "
-    "attachments or contacts (people, dates, amounts, appointments, what someone wrote, whether something "
-    "arrived). Call search_manual when the user asks how to do something in Levuvo Mail or where a setting "
-    "is. Do not call a tool for greetings, thanks, small talk, questions about yourself or what you can do, "
-    "or general knowledge; answer those directly in one to three sentences without mentioning emails. "
+    "You have two tools. You cannot see the user's emails unless you call search_mailbox. Call it for every "
+    "question about the user's own life, work or mail: people, companies, projects, offers, prices and costs, "
+    "invoices, contracts, flights, bookings, appointments, deadlines, what someone wrote or whether something "
+    "arrived. Questions like 'What does X cost?', 'When is my flight?' or 'What did Anna write?' are about "
+    "the user's emails. Never answer them from general knowledge, and never say the information is missing "
+    "without searching first. Call search_manual when the user asks how to do something in Levuvo Mail or "
+    "where a setting is. Answer directly, without a tool and without mentioning emails, only greetings, "
+    "thanks, small talk, questions about yourself or what you can do, and general knowledge that has nothing "
+    "to do with the user (for example 'What is the capital of France?'). "
     "Pass the search words as the query: names, subjects, numbers and key terms, without filler words."
 )
 
@@ -699,7 +706,8 @@ def _ask_turn(engine: Engine, params: dict[str, Any], question: str) -> dict[str
     except TurnSuspended:
         return {"search": wanted.get("query") or question, "tool": wanted.get("tool", "search_mailbox")}
     except UnsupportedCapabilityError:
-        return {"search": question, "tool": "search_mailbox"}
+        # No tool calls: the app searches both the mailbox and the manual.
+        return {"search": question, "tool": "search_mailbox", "fallback": True}
     except IncompleteResponseError as exc:
         if exc.stop_reason != "max_tokens":
             raise
@@ -765,7 +773,9 @@ def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         return _cut_off(exc)
     result["answer"] = strip_source_markers(str(result.get("answer") or ""))
     known = {str(s["id"]) for s in sources} | {str(m["id"]) for m in manual}
-    result["sources"] = list(dict.fromkeys(s for s in result.get("sources", []) if s in known))
+    # Small models often write more than the id ("From: Anna (id: s1) ..."): the ids are taken from it.
+    cited = [i for s in result.get("sources", []) for i in re.findall(r"\b[sm]\d+\b", str(s))]
+    result["sources"] = list(dict.fromkeys(i for i in cited if i in known))
     result["quotes"] = [q for q in result.get("quotes", []) if q.get("id") in result["sources"]]
     return result
 

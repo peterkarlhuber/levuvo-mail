@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Assistant with real models
+- **The assistant searches your mail on its own more reliably:** tested with real local models, small models answered "What does the relaunch cost?" or "How high is the fee in the contract?" from general knowledge instead of searching. The rules for every model now say clearly that questions about your people, offers, prices, contracts, flights and appointments need the mailbox search; greetings and general knowledge are still answered directly. The model still decides itself. (Manual: The assistant window)
+- **Sources are shown with every answer from mail:** small models often named the source as "From: Lufthansa (id: s1) …" instead of "s1", so no source appeared. The id is now taken from such text, and if the model names none, the mails whose details (amounts, dates, codes, names) are in the answer are shown. (Manual: The assistant window)
+- **Faster answers from mail:** a mailbox question no longer also gets three manual sections; the manual is only added when the model asks for it ("How do I …"). On a computer without a graphics card this made answers several times faster. (Manual: none)
+- **Name and tone:** the assistant calls itself exactly "Levuvo Mail Assistant" in every language and writes without emojis. (Manual: none)
+- **Wider question box:** the box in the assistant window uses the full width; "Question | Task" and the buttons are below it. (Manual: The assistant window)
+- **A chosen model becomes active after its download, also when you leave the page:** before, choosing a model, starting the download and opening another page left the old model active. (Manual: Advanced model settings)
+- **Check cases for every AI function:** `python -m levuvo_ai.evals` now also checks summaries, translation, replies, rewriting, filters and automations in words, prioritisation, bundles, event and promise detection, the newsletter overview, phishing assessment and the assistant, with realistic fictional mail; used to compare local models. (Manual: none)
+
 ### Dictation
 - **Speak instead of type:** a microphone button in the composer records up to five minutes and inserts the recognised text at the cursor. Speech recognition is Whisper (base, small or large-v3-turbo, chosen under Settings → AI & agents → Dictation) running on this computer with the graphics card (WebGPU) or the processor; audio and text never leave the device and recordings are not stored. (Manual: Dictation)
 - **Checked download:** the model is downloaded once from Hugging Face at a pinned revision, every file is checked against size and SHA-256 shipped with the app, and a mismatch deletes it. Models are not part of backups and can be deleted in the settings. (Manual: Dictation)

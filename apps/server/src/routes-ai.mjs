@@ -8,6 +8,7 @@ export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs'
 import { createSemanticIndex } from './ai-semantic.mjs';
 import { readSources, relevant, retrieve, verifiedQuote } from './ask-mailbox.mjs';
 import { mailBudget } from './ai-model-options.mjs';
+import { catalogEntry } from './ai-model-catalog.mjs';
 import { contactSamples, createStyleProfiles } from './style-profile.mjs';
 
 const ACTION = 'ai-v1';
@@ -43,7 +44,8 @@ function clientText(value, limit = MAX_CLIENT_TEXT) {
 export function askSources(result, sourceMap, manualMap = []) {
   const quotes = new Map((result.quotes || []).map(q => [String(q?.id), String(q?.quote || '')]));
   const out = [];
-  for (const id of result.sources || []) {
+  const cited = (result.sources || []).length ? result.sources : answerSources(result.answer, sourceMap);
+  for (const id of cited) {
     const n = Number(String(id).slice(1)) - 1;
     if (String(id).startsWith('m')) {
       const m = manualMap[n];
@@ -67,6 +69,36 @@ export function askSources(result, sourceMap, manualMap = []) {
     });
   }
   return out;
+}
+
+/**
+ * Small local models sometimes answer from the mails but name no source. Then the mails whose
+ * distinctive details (numbers, dates, codes, rare words) occur in the answer are shown, so the user
+ * can still check the answer. A detail that occurs in most of the mails tells nothing and is skipped.
+ */
+export function answerSources(answer, sourceMap) {
+  const norm = v => String(v || '').toLowerCase();
+  const terms = [...new Set(norm(answer).match(/\d[\d.,:/-]*\d|\d{2,}|[\p{L}][\p{L}\d-]{4,}/gu) || [])];
+  const texts = sourceMap.map(s =>
+    norm([s.subject, s.fromName, s.text, ...(s.attachments || []).map(a => a.text)].join(' '))
+  );
+  // A detail counts more the fewer mails contain it; one in most of the mails tells nothing.
+  const weight = new Map();
+  for (const term of terms) {
+    const n = texts.filter(t => t.includes(term)).length;
+    if (n > 0 && n <= Math.max(1, Math.floor(texts.length / 2))) weight.set(term, 1 / n);
+  }
+  const scored = texts.map((t, i) => {
+    const found = [...weight.keys()].filter(term => t.includes(term));
+    return { id: `s${i + 1}`, hits: found.length, score: found.reduce((sum, term) => sum + weight.get(term), 0) };
+  });
+  const best = Math.max(0, ...scored.map(x => x.score));
+  if (best < 1) return [];
+  return scored
+    .filter(x => x.hits >= 2 && x.score >= best * 0.6)
+    .sort((x, y) => y.score - x.score)
+    .slice(0, 2)
+    .map(x => x.id);
 }
 
 const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
@@ -142,14 +174,16 @@ export function registerAiRoutes(ctx) {
    * relevant mails and let the model answer from them. With no relevant mail the model is not asked
    * again: "nothing found" is the honest answer, not the nearest unrelated mail.
    */
-  async function askWithMail(body, first, query, tool = 'search_mailbox') {
+  async function askWithMail(body, first, query, tool = 'search_mailbox', withManual = false) {
     const lang = first.lang;
     const accountId = body.account ? String(body.account) : null;
-    // "How do I …": the best matching sections of the user manual (no personal data). The manual
-    // tool searches only there; the mailbox search adds matching sections too.
-    const manualHits = ctx.manual
-      ? await ctx.manual.search(`${query} ${first.question}`, { lang, limit: 3 }).catch(() => [])
-      : [];
+    // "How do I …": the best matching sections of the user manual (no personal data), only when the
+    // model asked for the manual. Sections next to the mails made the input longer (slow on local
+    // models) and pulled the answer away from the mails. A model without tool calls gets both.
+    const manualHits =
+      ctx.manual && (tool === 'search_manual' || withManual)
+        ? await ctx.manual.search(`${query} ${first.question}`, { lang, limit: 3 }).catch(() => [])
+        : [];
     const manualMap = manualHits.map(h => ({
       manual: true,
       chapterId: h.chapterId,
@@ -423,6 +457,9 @@ export function registerAiRoutes(ctx) {
     }
   }
 
+  // A model chosen in the settings and downloaded with "Herunterladen" becomes active once it is
+  // verified, even if the settings page was closed meanwhile (until then the old model keeps working).
+  const activateOnReady = new Map();
   api.get('/api/ai/settings', async () => ai.publicSettings());
   api.post('/api/ai/settings', { bodyLimit: 8 * 1024 }, async (request, reply) => {
     if (!requireAction(request, reply, ACTION)) return;
@@ -430,6 +467,9 @@ export function registerAiRoutes(ctx) {
       const before = ai.get().embedModel;
       const learnedBefore = profile().learnStyle;
       const saved = await ai.save(request.body || {});
+      // A model chosen by hand meanwhile wins over one still waiting for its download.
+      for (const [id, kind] of activateOnReady)
+        if (request.body?.[kind === 'embed' ? 'embedModel' : 'model'] !== undefined) activateOnReady.delete(id);
       // Another search model: its vectors are built in the background (the old ones are dropped).
       if (saved.embedModel !== before) void syncAll();
       // Style learning switched on: learn now; switched off: the profile is deleted.
@@ -458,7 +498,14 @@ export function registerAiRoutes(ctx) {
   ctx.jobs?.register('semantic-index', syncAll, { every: 10 * 60_000, firstDelay: 60_000 });
   // A newly downloaded search model starts its index right away instead of at the next run.
   ai.localModels?.onReady(id => {
-    if (id === ai.get().embedModel) void syncAll();
+    const kind = activateOnReady.get(id);
+    activateOnReady.delete(id);
+    const switched = kind ? ai.save(kind === 'embed' ? { embedModel: id } : { model: id }) : Promise.resolve();
+    void Promise.resolve(switched)
+      .catch(() => {})
+      .then(() => {
+        if (id === ai.get().embedModel) void syncAll();
+      });
   });
   // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
   api.get('/api/ai/search', async (request, reply) => {
@@ -552,7 +599,12 @@ export function registerAiRoutes(ctx) {
       if (!localModels) return noRuntime(reply);
       const model = String(request.body?.model || '');
       try {
-        if (action === 'download') return { job: await localModels.download(model) };
+        if (action === 'download') {
+          const job = await localModels.download(model);
+          const entry = catalogEntry(model);
+          if (request.body?.activate === true && entry) activateOnReady.set(entry.id, entry.kind);
+          return { job };
+        }
         if (action === 'cancel') return { job: localModels.cancel(model) };
         return await localModels.remove(model);
       } catch (err) {
@@ -588,6 +640,15 @@ export function registerAiRoutes(ctx) {
       const input = await prepare(kind, body);
       let result = await ai.run(kind, input, { accountId });
       if (kind === 'ask') {
+        console.log(
+          '[ask1]',
+          JSON.stringify({
+            q: input.question,
+            search: result.search,
+            tool: result.tool,
+            answer: result.answer?.slice(0, 60)
+          })
+        );
         let sourceMap = [];
         let manualMap = [];
         if (typeof result.search === 'string')
@@ -595,9 +656,19 @@ export function registerAiRoutes(ctx) {
             body,
             input,
             clientText(result.search, 300).trim() || input.question,
-            result.tool === 'search_manual' ? 'search_manual' : 'search_mailbox'
+            result.tool === 'search_manual' ? 'search_manual' : 'search_mailbox',
+            result.fallback === true
           ));
         // Without an answer in the mails or the manual there is no source to show.
+        console.log(
+          '[ask2]',
+          JSON.stringify({
+            found: result.found,
+            hits: sourceMap.map(x => x.subject),
+            cited: result.sources,
+            manual: manualMap.map(m => m.title)
+          })
+        );
         result.sources = result.found === false ? [] : askSources(result, sourceMap, manualMap);
         delete result.quotes;
       }

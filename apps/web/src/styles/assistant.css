@@ -270,10 +270,14 @@
   padding: var(--space-2-5) var(--space-3-5);
   border-top: 1px solid var(--border);
 }
+/* The question box gets the full width of the panel; "Frage | Aufgabe" and the buttons go below it. */
 .assistant-input .field {
-  flex: 1;
-  min-width: 160px;
+  flex: 1 1 100%;
+  order: -1;
   margin: 0;
+}
+.assistant-input > .segmented {
+  margin-right: auto;
 }
 .assistant-input textarea {
   width: 100%;
