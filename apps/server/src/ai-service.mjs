@@ -117,9 +117,9 @@ export function validateAiSettings(input, current, { managed = false, totalBytes
       if (!entry || entry.kind !== (key === 'embedModel' ? 'embed' : 'chat'))
         throw invalid('Dieses Modell steht nicht in der Liste.', 'ai_not_in_catalog');
       next[key] = entry.id;
-      continue;
-    }
-    next[key] = value;
+    } else next[key] = value;
+    // A search model saved on purpose is kept when the default changes (see adoptSearchDefault).
+    if (key === 'embedModel') next.embedDefault = DEFAULT_EMBED_MODEL;
   }
   if (input.baseUrl !== undefined) {
     let url;

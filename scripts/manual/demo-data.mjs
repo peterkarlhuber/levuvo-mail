@@ -187,7 +187,7 @@ function aiStatus(enabled) {
       enabled: true,
       localRuntime: 'bundled',
       model: 'qwen3.5:9b',
-      embedModel: 'bge-m3'
+      embedModel: 'qwen3-embedding:0.6b'
     });
     status.runtime = { ...(status.runtime || {}), available: true, ollama: { running: true } };
   }
@@ -202,13 +202,13 @@ function localModels() {
     recommendedTier: 'standard',
     freeBytes: 120e9,
     runtime: { version: '0.40.16', running: true },
-    selected: { model: 'qwen3.5:9b', embedModel: 'bge-m3', provider: 'ollama' },
+    selected: { model: 'qwen3.5:9b', embedModel: 'qwen3-embedding:0.6b', provider: 'ollama' },
     index: [{ accountId: 'managed-8998d6a1e1f6', messages: 1200, vectors: 1200, running: false }],
     models: MODEL_CATALOG.map(m => ({
       ...m,
       default: Boolean(m.default),
       fit: fitFor(m, ram),
-      installed: m.id === 'bge-m3',
+      installed: m.id === 'qwen3-embedding:0.6b',
       mismatch: false,
       job: m.id === 'qwen3.5:9b' ? { status: 'downloading', completed: 3.4e9, total: m.size, error: null } : null
     }))

@@ -77,8 +77,8 @@ GGUF there too. The catalog check reports an MLX variant the registry adds but t
 | Large (32 GB) | **qwen3.8:27b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 17.7 GB | 18.2 GB |
 | | mistral-small3.2:24b | Mistral AI (FR, EU) | Apache-2.0 | 15.2 GB | GGUF |
 | | ministral-3:14b | Mistral AI (FR, EU) | Apache-2.0 | 9.1 GB | GGUF |
-| Search | **bge-m3** (default) | BAAI (CN) | MIT | 1.2 GB | GGUF |
-| | qwen3-embedding:0.6b | Alibaba Qwen (CN) | Apache-2.0 | 0.6 GB | GGUF |
+| Search | **qwen3-embedding:0.6b** (default) | Alibaba Qwen (CN) | Apache-2.0 | 0.6 GB | GGUF |
+| | bge-m3 | BAAI (CN) | MIT | 1.2 GB | GGUF |
 | | qwen3-embedding:4b | Alibaba Qwen (CN) | Apache-2.0 | 2.5 GB | GGUF |
 
 Choosing a model that is not on the computer downloads nothing yet: the settings show its size, the free
@@ -99,7 +99,7 @@ Decisions while checking the first proposal against the registry (19 November 20
 - Licenses were read from the license layer of each manifest; the Qwen3-Embedding manifests carry none,
   their license (Apache-2.0) is taken from the model card.
 
-### Search model: why bge-m3
+### Search model: why Qwen3-Embedding 0.6B
 
 `scripts/ollama/eval-embeddings.mjs` ranks 40 German test mails (`embed-eval-de.json`, invented content:
 invoices, appointments, deliveries, support, HR) for 30 paraphrased German queries (CI run, 19 November
@@ -114,20 +114,33 @@ invoices, appointments, deliveries, support, HR) for 30 paraphrased German queri
 | **bge-m3, without instruction** | **0.967** | **1.000** | **0.983** | **269** |
 
 bge-m3 finds the right mail first in 29 of 30 queries against 26 of 30 for Qwen3-Embedding 0.6B, at the
-same speed, so it is the default. Qwen3-Embedding 4B is better still but five times slower and is offered
-for large computers. The search instruction is set per model (`queryPrefix`); bge-m3 uses none.
+same speed, and was the default up to 2.6. From 2.7.0 the default is **Qwen3-Embedding 0.6B** (product
+decision, 20 November 2026): half the download (0.6 instead of 1.2 GB), the right mail is among the first
+three in 29 of 30 queries, and it is the same family as the language models. bge-m3 stays in the list for
+anyone who wants the last bit of accuracy on German mail. Qwen3-Embedding 4B is better still but five
+times slower and is offered for large computers. The search instruction is set per model (`queryPrefix`);
+bge-m3 uses none.
+
+**Moving existing installations:** settings that still carry the old default `bge-m3` move to the new
+default once, about 20 seconds after start (`adoptSearchDefault` in `routes-ai.mjs`). With search on and
+Levuvo's own Ollama, the new model is downloaded first and becomes active only once it is verified; the
+old index answers until then, and the semantic index then rebuilds itself for the new model (vectors are
+stored per model). If the download fails (offline, disk full), it is tried again at the next start. A
+search model chosen by hand later (`embedDefault` in the settings) is never changed. The bge-m3 file stays
+on disk until the user deletes it.
 
 Switching the search model asks first and then rebuilds the index in the background with progress.
 
-**mDenseOn (LightOn, FR, EU), checked 19 November 2026 and not offered yet.** Apache-2.0, 307M parameters,
+**mDenseOn (LightOn, FR, EU), checked 19 and 20 November 2026 and not offered yet.** Apache-2.0, 307M parameters,
 768 dimensions, 8,192 tokens context. With sentence-transformers on a CI processor and its prompts
 ("query: " / "document: ") it ranked the right mail first in **30 of 30** queries (Recall@1 1.000, MRR
 1.000, about 120 ms per mail; without prompts 0.967), against 29 of 30 for bge-m3 in the same run. It
 cannot be offered through Levuvo's Ollama yet: there is no GGUF on registry.ollama.ai or Hugging Face, and
 a GGUF converted with llama.cpp (`convert_hf_to_gguf.py`, 614 MB, F16) does not load in the pinned Ollama
 0.40.16 ("metaspace prepend_scheme 'always' is not supported for BPE vocab"). Once Ollama loads it and a
-GGUF is published under a reviewable name, it goes into the list with the EU flag; bge-m3 stays the
-default.
+GGUF is published under a reviewable name, it goes into the list with the EU flag. Check on 20 November
+2026: 0.40.16 is still the newest Ollama release (no newer release or release candidate on GitHub), and
+registry.ollama.ai still has no mDenseOn model, so nothing changed.
 
 ## 3. Updating
 

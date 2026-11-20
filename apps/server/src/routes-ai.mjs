@@ -19,7 +19,7 @@ import {
   verifiedQuote
 } from './ask-mailbox.mjs';
 import { mailBudget } from './ai-model-options.mjs';
-import { catalogEntry } from './ai-model-catalog.mjs';
+import { DEFAULT_EMBED_MODEL, LEGACY_EMBED_MODEL, catalogEntry } from './ai-model-catalog.mjs';
 import { contactSamples, createStyleProfiles } from './style-profile.mjs';
 
 const ACTION = 'ai-v1';
@@ -113,6 +113,27 @@ export function answerSources(answer, sourceMap) {
 }
 
 const invalidApply = message => Object.assign(new Error(message), { statusCode: 400 });
+
+/**
+ * Qwen3-Embedding 0.6B replaced bge-m3 as the default search model in 2.7.0. Settings that still carry
+ * the old default move once: with search on and the bundled Ollama, the new model is downloaded first
+ * and becomes active once verified (the old index answers until then), then the index is rebuilt.
+ * A search model saved later on purpose (`embedDefault` set) is never changed.
+ * @returns {Promise<'none'|'switched'|'downloading'>}
+ */
+export async function adoptSearchDefault({ ai, localModels, activateOnReady, syncAll }) {
+  const s = ai.get();
+  if (s.embedModel !== LEGACY_EMBED_MODEL || s.embedDefault === DEFAULT_EMBED_MODEL) return 'none';
+  const searching = Boolean(s.enabled && s.features?.search !== false);
+  if (searching && localModels && !(await localModels.isReady(DEFAULT_EMBED_MODEL))) {
+    activateOnReady.set(DEFAULT_EMBED_MODEL, 'embed');
+    await localModels.download(DEFAULT_EMBED_MODEL);
+    return 'downloading';
+  }
+  await ai.save({ embedModel: DEFAULT_EMBED_MODEL });
+  if (searching) void syncAll();
+  return 'switched';
+}
 
 export function registerAiRoutes(ctx) {
   const { api, ai, requireAction } = ctx;
@@ -531,6 +552,13 @@ export function registerAiRoutes(ctx) {
         if (id === ai.get().embedModel) void syncAll();
       });
   });
+  // Moves settings with the old default search model to the new one, shortly after start.
+  const adopt = () =>
+    adoptSearchDefault({ ai, localModels: ai.localModels, activateOnReady, syncAll }).catch(err => {
+      activateOnReady.delete(DEFAULT_EMBED_MODEL);
+      ctx.logger?.(`search model default not adopted (${err?.code || err?.kind || 'failed'})`);
+    });
+  if (ctx.adoptSearchDefaultAfter !== null) setTimeout(adopt, ctx.adoptSearchDefaultAfter ?? 20_000).unref?.();
   // Search by meaning: only metadata goes back to the UI, the reader loads the message itself.
   api.get('/api/ai/search', async (request, reply) => {
     const { q: query, account, folder } = request.query || {};
