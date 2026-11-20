@@ -254,7 +254,8 @@ def reply(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         f"Draft a reply in {_lang(params)} to the last email of the thread. {_style(params)} "
         "Do not include a signature block (name, title, contact details). "
         "Do not promise anything the user did not ask for; leave placeholders like "
-        "[date] where facts are missing. "
+        "[date] where facts are missing. Never state that an email, link or attachment was checked, is safe or "
+        "is legitimate; the draft only says what the user wants to say. "
         + (f"The user's instruction for this reply (trusted): {instruction}" if instruction else ""),
         _thread(params),
         Draft,
@@ -273,6 +274,10 @@ REWRITE_MODES = {
 }
 
 
+def _keep_language(params: dict[str, Any]) -> str:
+    return f"Write in the language of the draft (usually {_lang(params)}); do not translate. "
+
+
 def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     mode = str(params.get("mode") or "")
     if mode not in REWRITE_MODES:
@@ -280,7 +285,7 @@ def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Rewrite the user's draft. {REWRITE_MODES[mode]} Keep names, numbers, dates and links. "
-        f"{'' if mode in ('english', 'german') else 'Keep the language of the draft; do not translate. '}"
+        f"{'' if mode in ('english', 'german') else _keep_language(params)}"
         f"{_profile(params) if mode not in ('formal', 'casual', 'proofread') else ''} "
         "Return only the rewritten body as `body`.",
         frame_untrusted(_text(params.get("text")), "user's draft"),
@@ -294,14 +299,26 @@ def compose(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     prompt = f"Bullet points from the user (trusted):\n{_text(params.get('bullets'), 3000)}"
     if isinstance(context, list) and context:
         prompt += "\n\nThe email being answered:\n" + _thread(params)
-    return _ask(
+    result = _ask(
         engine,
         f"Turn the user's bullet points into a complete email in {_lang(params)}. {_style(params)} "
-        "Cover every bullet, add nothing factual. No signature block. Suggest a subject if none is given.",
+        "Cover every bullet, add nothing factual. No signature block. Put a suggested subject in `subject`, "
+        "not in the body.",
         prompt,
         Draft,
         max_tokens=2000,
     )
+    return _subject_out_of_body(result)
+
+
+def _subject_out_of_body(draft: dict[str, Any]) -> dict[str, Any]:
+    """Some models write 'Betreff: …' as the first body line instead of filling `subject`."""
+    body = str(draft.get("body") or "")
+    first, _, rest = body.lstrip().partition("\n")
+    label = re.match(r"(?i)\s*(betreff|subject)\s*:\s*(.+)", first)
+    if label and not str(draft.get("subject") or "").strip():
+        return {**draft, "subject": label.group(2).strip()[:200], "body": rest.lstrip("\n")}
+    return draft
 
 
 class AttachmentCheck(BaseModel):
@@ -804,6 +821,8 @@ def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     # Small models often write more than the id ("From: Anna (id: s1) ..."): the ids are taken from it.
     cited = [i for s in result.get("sources", []) for i in re.findall(r"\b[sm]\d+\b", str(s))]
     result["sources"] = list(dict.fromkeys(i for i in cited if i in known))
+    if not result["sources"] and result.get("found") and len(known) == 1:
+        result["sources"] = list(known)  # only one email or section was given, so the answer came from it
     result["quotes"] = [q for q in result.get("quotes", []) if q.get("id") in result["sources"]]
     return result
 
@@ -923,18 +942,31 @@ class AutomationCondition(BaseModel):
 
 
 class AutomationAction(BaseModel):
-    type: Literal["move", "markRead", "flag", "task"]
+    # delete, forward and reply are never carried out: they are accepted only so that the app can tell
+    # the user so (small models silently swapped "delete" for another action instead).
+    type: Literal["move", "markRead", "flag", "task", "delete", "forward", "reply"]
     folder: str = Field(default="", description="Exact folder path from the list, only for move")
     title: str = Field(default="", description="Task title, may use {subject} and {from}; only for task")
     dueDays: int | None = Field(default=None, description="Task due in this many days, only for task")
 
 
 class AutomationRule(BaseModel):
+    # `unclear` comes first: small models filled it only when it was the first thing they had to decide.
+    unclear: str = Field(
+        default="",
+        description="What of the description cannot be done (e.g. deleting, forwarding), empty if everything fits",
+    )
     name: str
     match: Literal["all", "any"] = "all"
     conditions: list[AutomationCondition] = Field(min_length=1, max_length=10)
     actions: list[AutomationAction] = Field(min_length=1, max_length=5)
-    unclear: str = Field(default="", description="What could not be expressed, empty if everything fits")
+
+
+NOT_AUTOMATED = {
+    "delete": ("delete", "löschen"),
+    "forward": ("forward", "weiterleiten"),
+    "reply": ("reply", "antworten"),
+}
 
 
 def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
@@ -948,7 +980,8 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         "Operators: contains, not_contains, is (exact), ends_with (e.g. a domain like @example.com). "
         "Actions: move to a folder, mark as read (markRead), flag, create a task (task, with a title in "
         f"{_lang(params)} that may use {{subject}} and {{from}}, and dueDays if a deadline is mentioned). Each action "
-        "at most once. Never delete, forward, reply or send: if asked, explain it in `unclear`. For move, use "
+        "at most once. If the user asks to delete, forward or reply, use that action type; it is never carried "
+        "out and the user is told so. For move, use "
         "exactly one folder path from this list: "
         + ", ".join(folders or ["INBOX"])
         + ". If something cannot be expressed with these options, explain it in `unclear`.",
@@ -959,8 +992,12 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     known = set(folders)
     actions = []
     seen: set[str] = set()
+    refused = []
     for a in result.get("actions", []):
         kind = a.get("type")
+        if kind in NOT_AUTOMATED:
+            refused.append(NOT_AUTOMATED[kind][0 if params.get("lang") == "en" else 1])
+            continue
         if kind in seen or (kind == "move" and a.get("folder") not in known):
             continue
         seen.add(kind)
@@ -974,6 +1011,13 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
             }
         )
     result["actions"] = actions or [{"type": "flag", "folder": "", "title": "", "dueDays": None}]
+    if refused:
+        note = (
+            f"Automations cannot do this: {', '.join(dict.fromkeys(refused))}."
+            if params.get("lang") == "en"
+            else f"Das kann eine Automatisierung nicht: {', '.join(dict.fromkeys(refused))}."
+        )
+        result["unclear"] = f"{note} {_text(result.get('unclear'), 500)}".strip()
     conditions = []
     for c in result.get("conditions", []):
         if c.get("field") == "attachment":

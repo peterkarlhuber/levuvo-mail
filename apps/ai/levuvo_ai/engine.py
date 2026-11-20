@@ -167,14 +167,15 @@ class Engine:
         max_tokens: int = 1500,
         max_tool_rounds: int = 8,
         temperature: float | None = None,
-        think: bool = True,
+        think: bool = False,
         min_tokens: int | None = None,
     ) -> Any:
         """An agent for the active model.
 
-        ``temperature`` and ``think=False`` apply to local models only: cloud reasoning models reject a
-        temperature, and their thinking is set by the provider. ``think=False`` turns thinking off for a
-        local model that thinks, so a short answer is not delayed (and its tokens not used up) by it.
+        ``temperature`` and ``think`` apply to local models only: cloud reasoning models reject a
+        temperature, and their thinking is set by the provider. A local model that thinks does not think
+        unless the user chose a thinking level: on a computer without a graphics card the thinking used up
+        the token limit or the time limit of almost every function (found with Qwen 3.5).
         """
         from orkexa import Agent
         from orkexa.providers.options import CompatibleOptions

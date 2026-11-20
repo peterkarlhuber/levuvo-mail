@@ -509,3 +509,14 @@ def test_agent_report_drops_internal_ids_and_a_closing_question() -> None:
         "Heute wichtig:\n\n- Paketdienst (Ihre Sendung kommt heute) - Zustellung 13-15 Uhr\n- Konto: Rechnung 4471"
     )
     assert clean_report("Nichts Neues.") == "Nichts Neues."
+
+
+def test_a_thinking_model_does_not_think_unless_the_user_chose_a_level() -> None:
+    """Qwen 3.5 used up the token or time limit of almost every function by thinking (CPU, no GPU)."""
+    with fake_ollama() as (fake, url):
+        fake.capabilities = ["completion", "tools", "thinking"]
+        engine = configured(url)
+        fake.chat.append({"role": "assistant", "content": json.dumps({"attachment_expected": True, "reason": ""})})
+        tasks.attachment_check(engine, {"subject": "Vertrag", "text": "Im Anhang der Vertrag."})
+        chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
+        assert chat["reasoning_effort"] == "none"

@@ -101,7 +101,7 @@ Under **Settings → AI & agents → Advanced** you set for the selected model:
 - **Context length (tokens):** how much text the model can read at once: rules, question and found emails together. More context needs more memory; Levuvo Mail then shows a hint.
 - **Max response length (tokens):** how long an answer may get.
 - **Temperature:** low answers factually, higher more varied.
-- **Thinking:** whether the model thinks before answering, if it can.
+- **Thinking:** whether the model thinks before answering, if it can. "Automatic" means off: without a graphics card, thinking would delay answers a lot or cut them off. Low, Medium and High turn it on.
 
 Empty fields mean "Automatic". **Reset** restores the defaults.
 

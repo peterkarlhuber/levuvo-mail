@@ -101,7 +101,7 @@ Unter **Einstellungen → KI & Agenten → Erweitert** stellst du für das gewä
 - **Kontextlänge (Tokens):** wie viel Text das Modell auf einmal lesen kann, also Regeln, Frage und gefundene Mails zusammen. Mehr Kontext braucht mehr Arbeitsspeicher; Levuvo Mail zeigt dann einen Hinweis.
 - **Max. Antwortlänge (Tokens):** wie lang eine Antwort höchstens werden darf.
 - **Temperatur:** niedrig antwortet sachlich, höher abwechslungsreicher.
-- **Thinking:** ob das Modell vor der Antwort nachdenkt, falls es das kann.
+- **Thinking:** ob das Modell vor der Antwort nachdenkt, falls es das kann. „Automatisch“ bedeutet aus: Ohne Grafikkarte würde das Nachdenken Antworten stark verzögern oder abbrechen lassen. Niedrig, Mittel und Hoch schalten es ein.
 
 Leere Felder bedeuten „Automatisch“. **Zurücksetzen** stellt die Standardwerte wieder her.
 
