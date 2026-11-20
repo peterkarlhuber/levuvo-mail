@@ -127,3 +127,14 @@ def test_a_summary_never_carries_a_link() -> None:
     out = tasks.digest(engine, {"messages": [{"from": "a@b.c", "text": "x"}]})
     assert out["summary"][1] == "Zahlung an: [Link]"
     assert out["deadlines"][0]["text"] == "bis [Link] morgen"
+
+
+def test_newsletter_lines_written_as_highlights_become_items() -> None:
+    engine = StubEngine(
+        {"items": [], "highlights": ["Tech Weekly (n1): neue Chips", "Bergsport (n2): 20 % bis 30.11.", "Allgemein"]}
+    )
+    out = tasks.newsletters(engine, {"items": [{"id": "n1", "text": "a"}, {"id": "n2", "text": "b"}]})
+    assert [(i["id"], i["summary"]) for i in out["items"]] == [
+        ("n1", "Tech Weekly (n1): neue Chips"),
+        ("n2", "Bergsport (n2): 20 % bis 30.11."),
+    ]

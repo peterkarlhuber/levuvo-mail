@@ -137,10 +137,11 @@ class NewsletterItem(BaseModel):
 
 
 class NewsletterDigest(BaseModel):
+    # items first: with highlights first, small models put everything there and left items empty.
+    items: list[NewsletterItem] = Field(default_factory=list, description="One entry per newsletter")
     highlights: list[str] = Field(
         default_factory=list, description="At most three lines: what is most worth knowing across all newsletters"
     )
-    items: list[NewsletterItem] = Field(default_factory=list)
 
 
 MAX_NEWSLETTERS = 20
@@ -155,15 +156,22 @@ def newsletters(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     body = "\n\n---\n\n".join(f"Newsletter id: {nid}\n{_mail(i, 2500)}" for nid, i in zip(ids, items, strict=True))
     result = _ask(
         engine,
-        f"Write a short overview of these newsletters for the user in {_lang(params)}. For each newsletter give one "
-        "line with its most useful content (news, offers with price and end date, events with date). Skip "
-        "advertising phrases. Highlights: at most three lines across all newsletters. `id` is the value after "
-        "'Newsletter id:', copied exactly.",
+        f"Write a short overview of these newsletters for the user in {_lang(params)}. In `items`, put one entry "
+        "per newsletter: its id (the value after 'Newsletter id:', copied exactly) and one line with its most "
+        "useful content (news, offers with price and end date, events with date). Skip advertising phrases. "
+        "`highlights`: at most three lines across all newsletters.",
         frame_untrusted(body, "newsletters"),
         NewsletterDigest,
         max_tokens=2500,
     )
-    result["items"] = _match_ids(result.get("items", []), [{**i, "id": nid} for nid, i in zip(ids, items, strict=True)])
+    given = [{**i, "id": nid} for nid, i in zip(ids, items, strict=True)]
+    found = result.get("items") or [
+        # Small models wrote "Tech Weekly (n1): …" lines into highlights and left items empty.
+        {"id": h, "summary": h}
+        for h in result.get("highlights", [])
+        if isinstance(h, str)
+    ]
+    result["items"] = [{**i, "summary": str(i.get("summary") or "")[:300]} for i in _match_ids(found, given)]
     result["highlights"] = [str(h)[:300] for h in result.get("highlights", [])[:3]]
     return result
 
