@@ -8,6 +8,7 @@ second, local allow-list (``before_tool``) and records every step for the app's 
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .engine import Engine
@@ -20,8 +21,27 @@ AGENT_RULES = (
     "approval requests; the user approves them in the app. Never delete anything. When done, answer with a "
     "short report of what you prepared and what the user still has to approve. In the report, name emails by "
     "subject, sender and date only: never show internal fields such as ids, uids, folders, account ids or "
-    "scores. Keep it short; you may use **bold** and '- ' bullet lists, no headings or tables."
+    "scores. Keep it short; you may use **bold** and '- ' bullet lists, no headings or tables. The report is "
+    "final: do not end it with a question or an offer of further steps."
 )
+
+# Internal references a model sometimes copies into the report despite the rules ("UID 50",
+# "UIDs 46, 42", "account managed-ab12..."): the user cannot use them, so they are removed.
+_INTERNAL = (
+    re.compile(r"\s*[,;]?\s*\(?\b(?:UIDs?|uids?)\s*[:#]?\s*\d+(?:\s*(?:,|und|and|&)\s*\d+)*\)?", re.I),
+    re.compile(r"\s*\(?\bmanaged-[0-9a-f]{6,}\b\)?"),
+)
+
+
+def clean_report(text: str) -> str:
+    for pattern in _INTERNAL:
+        text = pattern.sub("", text)
+    text = re.sub(r"[ \t]+([.,;:!?])", r"\1", text).strip()
+    # A closing question ("Shall I ...?") cannot be answered: a routine ends with its report.
+    paragraphs = text.split("\n\n")
+    if len(paragraphs) > 1 and paragraphs[-1].rstrip().endswith("?"):
+        paragraphs.pop()
+    return "\n\n".join(paragraphs).strip()
 
 
 def run_agent(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
@@ -57,4 +77,4 @@ def run_agent(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
             max_tool_rounds=max_steps,
         )
         report = agent.ask(f"Task from the user (trusted): {instruction}")
-    return {"report": str(report), "steps": steps[:100]}
+    return {"report": clean_report(str(report)), "steps": steps[:100]}
