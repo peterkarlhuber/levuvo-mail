@@ -254,7 +254,8 @@ def reply(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         f"Draft a reply in {_lang(params)} to the last email of the thread. {_style(params)} "
         "Do not include a signature block (name, title, contact details). "
         "Do not promise anything the user did not ask for; leave placeholders like "
-        "[date] where facts are missing. "
+        "[date] where facts are missing. Never state that an email, link or attachment was checked, is safe or "
+        "is legitimate; the draft only says what the user wants to say. "
         + (f"The user's instruction for this reply (trusted): {instruction}" if instruction else ""),
         _thread(params),
         Draft,
