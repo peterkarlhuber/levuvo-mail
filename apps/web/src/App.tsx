@@ -18,6 +18,10 @@ import type { ComposeInitial, OutgoingPayload } from './Composer';
 import MailInstance from './MailInstance';
 import CommandPalette from './CommandPalette';
 import { AssistantPanel, usePendingApprovals } from './AssistantPanel';
+import { Briefing, lastBriefingDay, markBriefingShown, type BriefingTarget } from './Briefing';
+import { sendMailCommand } from './command-bus';
+import { localDay, shouldAutoOpen } from './day-utils';
+import { MeetingPrep } from './MeetingPrep';
 import { useBundleAssist } from './BundleAssist';
 import { ApiError, getJson, postJson } from './api';
 import { setFormatLocale } from './format';
@@ -120,6 +124,7 @@ function Shell() {
   });
   const [module, setModule] = useState<Module>('mail');
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState<false | 'auto' | 'manual'>(false);
   const [pendingApprovals, setPendingApprovals] = usePendingApprovals();
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [snapshots, setSnapshots] = useState<Record<string, InboxSnapshot>>({});
@@ -164,6 +169,40 @@ function Shell() {
   useEffect(() => {
     void reloadAccounts();
   }, [reloadAccounts]);
+
+  // "Mein Tag": once a day by itself (when switched on), any time from the palette or the assistant.
+  useEffect(() => {
+    const today = localDay().key;
+    if (
+      shouldAutoOpen({
+        enabled: prefs.briefingOnStart,
+        lastShown: lastBriefingDay(),
+        today,
+        ready: loaded && accounts.length > 0
+      })
+    ) {
+      markBriefingShown(today);
+      setBriefingOpen('auto');
+    }
+  }, [loaded, accounts.length, prefs.briefingOnStart]);
+  useEffect(() => {
+    const onOpen = () => {
+      markBriefingShown(localDay().key);
+      setBriefingOpen('manual');
+    };
+    window.addEventListener('levuvo:briefing', onOpen);
+    return () => window.removeEventListener('levuvo:briefing', onOpen);
+  }, []);
+  const closeBriefing = useCallback(() => setBriefingOpen(false), []);
+  const openFromBriefing = useCallback((target: BriefingTarget) => {
+    if (target.type === 'mail') {
+      setActive({ id: target.accountId, openUid: target.uid, openFolder: target.folder });
+      setModule('mail');
+    } else if (target.type === 'followups') {
+      setModule('mail');
+      window.setTimeout(() => sendMailCommand({ type: 'followups' }), 0);
+    } else setModule(target.type);
+  }, []);
 
   const requestNotifications = useCallback(async () => {
     if (!('Notification' in window)) {
@@ -778,6 +817,15 @@ function Shell() {
           openSettings('ai');
         }}
         onPending={setPendingApprovals}
+      />
+      {briefingOpen && (
+        <Briefing key={briefingOpen} auto={briefingOpen === 'auto'} onClose={closeBriefing} onOpen={openFromBriefing} />
+      )}
+      <MeetingPrep
+        onOpenMail={m => {
+          setActive({ id: m.accountId, openUid: m.uid, openFolder: m.folder });
+          setModule('mail');
+        }}
       />
       <ModuleShortcuts onModule={setModule} onAssistant={() => setAssistantOpen(o => !o)} />
       <CommandPalette

@@ -200,11 +200,39 @@ function General() {
         </Row>
       </Section>
       <Section title={t('Lesen')}>
+        <Row
+          label={t('„Mein Tag“ beim ersten Öffnen am Tag zeigen')}
+          hint={t(
+            'Termine, fällige Aufgaben, Mails, die auf deine Antwort warten, und Neues aus den Räumen auf einen Blick.'
+          )}
+        >
+          <Toggle
+            label={t('„Mein Tag“ beim ersten Öffnen am Tag zeigen')}
+            checked={prefs.briefingOnStart}
+            onChange={v => setPrefs({ briefingOnStart: v })}
+          />
+        </Row>
         <Row label={t('Beim Öffnen als gelesen markieren')}>
           <Toggle
             label={t('Beim Öffnen als gelesen markieren')}
             checked={prefs.markReadOnOpen}
             onChange={v => setPrefs({ markReadOnOpen: v })}
+          />
+        </Row>
+        <Row
+          label={t('Termin-Vorbereitung')}
+          hint={t('Kurz vor einem Termin mit anderen: Teilnehmende, letzte Mails, Dateien und offene Punkte.')}
+        >
+          <Segmented
+            label={t('Termin-Vorbereitung')}
+            value={prefs.meetingPrep}
+            onChange={v => setPrefs({ meetingPrep: v })}
+            options={[
+              { value: 0, label: t('Aus') },
+              { value: 5, label: t('5 Min.') },
+              { value: 10, label: t('10 Min.') },
+              { value: 15, label: t('15 Min.') }
+            ]}
           />
         </Row>
         <Row
