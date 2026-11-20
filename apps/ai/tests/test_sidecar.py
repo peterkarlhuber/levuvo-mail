@@ -314,6 +314,23 @@ def test_filter_rule_only_moves_to_known_folders() -> None:
     assert "Rechnungen" in engine.calls[0]["system"]
 
 
+def test_ask_strips_source_ids_and_carries_the_identity() -> None:
+    engine = StubEngine(
+        {"answer": "Der Termin wurde abgesagt (sources: s1, s2). Siehe [s1].", "sources": ["s1"], "found": True}
+    )
+    out = tasks.ask_mailbox(engine, {"question": "wer bist du?", "sources": [{"id": "s1", "text": "Nextcloud"}]})
+    assert out["answer"] == "Der Termin wurde abgesagt. Siehe."
+    system = engine.calls[0]["system"]
+    assert "Levuvo Mail Assistant" in system
+    assert "never about you" in system
+
+
+def test_strip_source_markers_keeps_normal_text() -> None:
+    assert tasks.strip_source_markers("Steht so drin. Quellen: s1 und s4.") == "Steht so drin."
+    assert tasks.strip_source_markers("Am **19. November** (s3).") == "Am **19. November**."
+    assert tasks.strip_source_markers("Version s3 der Datei") == "Version s3 der Datei"
+
+
 def test_automation_rule_keeps_known_folders_and_drops_unsafe_parts() -> None:
     engine = StubEngine(
         {

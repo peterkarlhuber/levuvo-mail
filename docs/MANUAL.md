@@ -364,6 +364,19 @@ moved without your click. What a cloud model receives is listed in the consent d
 (including style samples, search hits and what routines read). Sorting into bundles in the background uses
 the local model only.
 
+**Advanced (Settings → AI & agents → Advanced, collapsed):** applies to the selected model; empty fields mean
+"Automatic", **Reset** restores the defaults.
+- **Context length (tokens):** how much text the model reads at once (rules, question and the mails found,
+  together). Default: 8,192 for small, 16,384 for standard and 32,768 for large models; the maximum follows
+  the memory of this computer. From about 2 GB of extra memory, Levuvo Mail shows a note. A changed length
+  takes effect after an automatic restart of the own Ollama (not during a download). Local models only.
+- **Max response length (tokens):** upper limit for one answer (max tokens). Automatic suits each function,
+  e.g. 1,500 for questions to the mailbox.
+- **Temperature:** low answers factually and consistently, higher more varied. Automatic: 0.2 for questions
+  to the mailbox. Local models only.
+- **Thinking:** off, low, medium, high – only for models that think before answering (e.g. Qwen 3.5).
+  Automatic turns it off for questions to the mailbox, so they stay fast.
+
 **In a message:** summarize (who wants what by when, deadlines, amounts, open questions), translate, find
 events, tasks and contacts and save them with "Add", check authenticity (pressure, payment requests,
 changed bank details, impersonation).
@@ -389,15 +402,22 @@ learned; single contacts or everything can be deleted, and switching it off dele
 folder", click "Suggest rule", review, save.
 
 **Assistant panel (✦ on the left or Ctrl/⌘ + J):**
-- **Question:** "What did Müller say about the offer?" – a short answer with the source emails to click,
-  each with sender, date and a quoted passage (only passages that literally appear in the email). The
-  search combines meaning and exact words, so names, invoice numbers and rare terms are found too, and it
-  reads PDF and text attachments of the best hits. Follow-ups like "and the price?" refer to the previous
-  answer; the bin icon starts a new conversation.
+- **Question:** "What did Müller say about the offer?" – a short answer with the source emails as cards to
+  click, each with sender, date and a quoted passage (only passages that literally appear in the email).
+  **The model decides itself whether to search the mailbox:** to "Hello", "Thanks" or "Who are you?" the
+  assistant answers directly and names its model and whether it runs locally or in the cloud; for a
+  question about your mail it calls the mailbox search. The search combines meaning and exact words, so
+  names, invoice numbers and rare terms are found too, and it reads PDF and text attachments of the best
+  hits. Only mails that match the question reach the model; if none does, the answer honestly says "I
+  found nothing about this in your mail". Answers are formatted (bold, lists) in the language of the
+  interface. If an answer gets longer than the maximum response length, it shows "Answer cut off" with a
+  **Continue** button that answers again with more room. Follow-ups like "and the price?" refer to the
+  previous answer; the bin icon starts a new conversation.
 - **Task:** "Arrange a meeting with Anna next week" – the assistant finds free times and creates a draft.
   Nothing is sent.
 - **Routines:** daily briefing, waiting for your reply, clean up newsletters, prepare a meeting, arrange a
-  meeting, prepare reply drafts.
+  meeting, prepare reply drafts. The bar stays at the top while the conversation scrolls and scrolls
+  sideways when not all buttons fit.
 - **Approvals:** what agents prepared (send an email, event with attendees, contact, task, trash) – "Approve" or
   "Reject".
 - **Change the width:** drag the handle on the left edge of the panel to the left (wider) or right

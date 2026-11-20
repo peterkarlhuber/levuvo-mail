@@ -293,5 +293,7 @@ export function createModelManager({
     return () => readyListeners.delete(fn);
   };
 
-  return { list, download, cancel, remove, discardPartial, isReady, onReady, jobs };
+  /** True while a model downloads or is checked; the runtime is not restarted then. */
+  const busy = () => [...jobs.values()].some(j => j.status === 'downloading' || j.status === 'verifying');
+  return { list, download, cancel, remove, discardPartial, isReady, onReady, jobs, busy };
 }

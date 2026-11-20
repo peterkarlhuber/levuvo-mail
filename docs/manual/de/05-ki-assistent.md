@@ -78,11 +78,23 @@ Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 
 ![Das Assistent-Fenster](assistant.png)
 
-- **Frage:** „Wann kommt die Lieferung von Müller?“ Der Assistent liest die passenden Mails samt Anhängen und nennt jede Quelle mit Absender, Datum und wörtlichem Zitat; ein Klick öffnet sie. Nachfragen wie „Und der Preis?“ beziehen sich auf die vorige Antwort, **Verlauf leeren** beginnt neu.
+- **Frage:** „Wann kommt die Lieferung von Müller?“ Der Assistent entscheidet selbst, ob er dafür in deinen Mails oder im Handbuch suchen muss. Auf „Hallo“ oder „Wer bist du?“ antwortet er direkt und nennt das Modell, das er gerade nutzt. Die Antwort nennt als Karten darunter die Mails oder Handbuch-Abschnitte, aus denen sie stammt. Jede Quelle zeigt Absender, Datum und ein wörtliches Zitat; ein Klick öffnet sie. Nachfragen wie „Und der Preis?“ beziehen sich auf die vorige Antwort, **Verlauf leeren** beginnt neu. Findet er nichts Passendes, sagt er das, statt zu raten.
+- **Lange Antworten:** Wird eine Antwort länger als die eingestellte maximale Antwortlänge, steht darunter **Antwort gekürzt**. Mit **Weiter antworten** bekommst du die vollständige Antwort.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche.“ Der Assistent sucht freie Zeiten und bereitet einen Entwurf vor. Gesendet wird nichts.
-- **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen.
+- **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen. Die Leiste mit den Routinen bleibt oben im Fenster sichtbar.
 - **Freigaben:** alles, was der Assistent oder ein Agent vorbereitet hat und auf dein **Freigeben** oder **Ablehnen** wartet.
 - **Breite ändern:** Zieh den Griff am linken Rand des Fensters nach links, wird es breiter, nach rechts schmaler. Ein Teil der App bleibt immer sichtbar. Mit der Tastatur gehst du mit `Tab` auf den Griff und nutzt dann `←` und `→`, mit `Umschalt` in größeren Schritten. `Pos1` wählt die schmalste, `Ende` die breiteste Breite. Ein Doppelklick setzt die Breite zurück. Levuvo Mail merkt sich deine Breite. Auf dem Handy füllt der Assistent den ganzen Bildschirm.
+
+### Erweiterte Modell-Einstellungen
+
+Unter **Einstellungen → KI & Agenten → Erweitert** stellst du für das gewählte Modell ein:
+
+- **Kontextlänge (Tokens):** wie viel Text das Modell auf einmal lesen kann, also Regeln, Frage und gefundene Mails zusammen. Mehr Kontext braucht mehr Arbeitsspeicher; Levuvo Mail zeigt dann einen Hinweis.
+- **Max. Antwortlänge (Tokens):** wie lang eine Antwort höchstens werden darf.
+- **Temperatur:** niedrig antwortet sachlich, höher abwechslungsreicher.
+- **Thinking:** ob das Modell vor der Antwort nachdenkt, falls es das kann.
+
+Leere Felder bedeuten „Automatisch“. **Zurücksetzen** stellt die Standardwerte wieder her.
 
 ## Versprechen-Tracker
 

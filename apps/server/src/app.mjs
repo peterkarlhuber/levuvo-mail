@@ -703,6 +703,7 @@ export async function createMailServer({
   const localRuntime = ollamaRuntime || createOllamaRuntime({ dataDir: dir, env, logger });
   const aiLog = createAiLog(path.join(dir, 'ai-log.jsonl'));
   const models = localRuntime.available ? createModelManager({ runtime: localRuntime, log: aiLog, logger }) : null;
+  localRuntime.configure?.({ canRestart: () => !models?.busy?.() });
   ai = createAiService({
     settingsFile: aiSettings,
     vault: store,

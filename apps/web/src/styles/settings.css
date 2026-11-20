@@ -469,6 +469,25 @@
   flex-basis: 100%;
 }
 
+/* Settings → KI & Agenten → Erweitert: collapsed until opened. */
+.settings-advanced {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+.settings-advanced > summary {
+  cursor: pointer;
+  font-weight: var(--weight-semibold);
+  padding: var(--space-1) 0;
+}
+.settings-advanced > summary:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.settings-advanced input[type='number'] {
+  width: 10rem;
+}
+
 /* Settings → Privacy: where the data lives on this computer. */
 .storage-item {
   display: flex;

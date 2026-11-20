@@ -21,6 +21,7 @@ import { Button } from './ui';
 import { Row, Section, Segmented, Toggle } from './Settings';
 import { McpSettings } from './SettingsMcp';
 import { LocalModelSettings } from './SettingsLocalModels';
+import { AiAdvancedSettings } from './SettingsAiAdvanced';
 import { SemanticIndexStatus } from './SemanticIndexStatus';
 import { StyleProfileSettings } from './SettingsStyle';
 import type { AccountItem } from './types';
@@ -332,6 +333,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
             </div>
           </>
         )}
+        <AiAdvancedSettings settings={settings} save={save} />
       </Section>
 
       <Section title={t('Funktionen')} description={t('Jede Funktion lässt sich einzeln abschalten.')}>
