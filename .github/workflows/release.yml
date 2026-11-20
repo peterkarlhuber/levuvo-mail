@@ -112,6 +112,42 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  manual:
+    name: User manual (PDF, DE and EN)
+    needs: [prepare, gate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Inter font and Typst
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q fonts-inter poppler-utils
+          python -m pip install --require-hashes -r scripts/manual/requirements.txt
+      - run: npm ci --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Every feature and changelog entry has its manual section
+        run: npm run manual:features
+      - run: npm run manual:pdf
+      - name: Check the PDFs (tagged, title, page count)
+        run: node scripts/manual/check-pdf.mjs dist/manual
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: manual
+          path: dist/manual/*.pdf
+          if-no-files-found: error
+          retention-days: 30
+
   build:
     name: Build
     needs: [prepare, gate, quality]
@@ -126,7 +162,7 @@ jobs:
 
   publish:
     name: Create draft release
-    needs: [prepare, gate, quality, build]
+    needs: [prepare, gate, quality, manual, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # Only this job may write.
