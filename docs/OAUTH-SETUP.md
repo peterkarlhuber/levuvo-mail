@@ -31,10 +31,13 @@ contained in every installed app. Security comes from PKCE and the local redirec
 4. **API permissions** (delegated): `offline_access`, `openid`, `email`, under
    “Office 365 Exchange Online” `IMAP.AccessAsUser.All` and `SMTP.Send`, and **from 2.1** under
    “Microsoft Graph” `Calendars.ReadWrite` and `Contacts.ReadWrite` (calendar & contacts), and for
-   synced task lists (Microsoft To Do) `Tasks.ReadWrite`.
+   synced task lists (Microsoft To Do) `Tasks.ReadWrite`, and **from 2.6** for the out-of-office reply
+   `MailboxSettings.ReadWrite`.
    Levuvo Mail fetches separate access tokens for mail (Outlook resource), calendar/contacts (Graph)
    and tasks (Graph) with the same refresh token, so an account without the tasks consent keeps
-   calendar and contacts; the tasks consent is asked for once when a To Do list is connected.
+   calendar and contacts; the tasks consent is asked for once when a To Do list is connected. The
+   out-of-office reply uses its own token (`MailboxSettings.ReadWrite`) in the same way: accounts
+   without it are asked once (“Approve”) in Settings → Filters & vacation.
 5. Enter the **Application (client) ID** in `package.json`. No client secret is needed.
 
 Notes for customers with Microsoft 365:
@@ -46,9 +49,12 @@ Notes for customers with Microsoft 365:
 1. <https://console.cloud.google.com> → create a project → **APIs & Services** → **OAuth consent screen** (user type “External”), app name, support address, privacy policy (link to the privacy notice).
 2. Scopes: `openid`, `email`, `https://mail.google.com/` and **from 2.1**
    `https://www.googleapis.com/auth/calendar` and `https://www.googleapis.com/auth/contacts`, and for
-   synced task lists `https://www.googleapis.com/auth/tasks`.
-   Under **APIs & Services → Library**, enable the **Google Calendar API**, the **People API** and the
-   **Google Tasks API**.
+   synced task lists `https://www.googleapis.com/auth/tasks`, and **from 2.6** for the out-of-office
+   reply `https://www.googleapis.com/auth/gmail.settings.basic` (`https://mail.google.com/` does not
+   cover the Gmail settings API).
+   Under **APIs & Services → Library**, enable the **Google Calendar API**, the **People API**, the
+   **Google Tasks API** and, from 2.6, the **Gmail API** (IMAP/SMTP do not need it, the
+   out-of-office reply does).
 3. **Credentials** → **OAuth client ID** → application type **Desktop app**. Enter the client ID and client secret.
 
 Important – please plan for this before publication:
@@ -80,3 +86,17 @@ Important – please plan for this before publication:
 - Tested automatically with test servers for Graph (integration test) and Google (unit test with
   simulated responses). A test against real Microsoft/Google accounts is part of acceptance after
   entering the client IDs (`RELEASE-CHECKLIST.md`).
+
+## Out-of-office reply (from 2.6)
+
+- Microsoft 365 / Outlook.com and Gmail have no ManageSieve, so Levuvo Mail stores the reply with the
+  provider: Microsoft Graph `PATCH /me/mailboxSettings` (`automaticRepliesSetting`) and Gmail
+  `PUT users/me/settings/vacation`. It answers while Levuvo Mail is closed.
+- New accounts grant the permission at sign-in. Older accounts see **“Approve”** in
+  Settings → Filters & vacation; it opens the provider's sign-in page for exactly this mailbox.
+- If the Gmail API is not enabled in the Google project, the app says so; mail is unaffected.
+- **Images:** both providers keep the reply as HTML (bold, links, lists) but cannot hold embedded
+  images, so an uploaded logo (also from the signature) is left out and the app says so. Images from
+  an https address stay. On IMAP servers with ManageSieve the logo travels inline in the reply.
+- Microsoft sets the subject itself (“Automatic reply: …”) and needs both dates or none; Gmail has a
+  subject and answers each sender at most once every four days.

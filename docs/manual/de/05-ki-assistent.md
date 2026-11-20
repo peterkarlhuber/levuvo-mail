@@ -70,9 +70,7 @@ Im Editor öffnet der Knopf **Assistent** diese Hilfen:
 - **Stichpunkte zu fertiger Mail** macht aus Notizen einen vollständigen Text.
 - **Umformulieren:** **Kürzer**, **Höflicher**, **Förmlicher**, **Lockerer**, **Rechtschreibung korrigieren**, **Auf Englisch** oder **Auf Deutsch**. Mit **Rückgängig** kommst du zum Original zurück.
 
-Vor dem Senden prüft der Assistent auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten. Du entscheidest, ob trotzdem gesendet wird.
-
-Unter **Schreibstil** legst du fest, wie der Assistent für dich schreibt: Tonfall, du oder Sie, Grußformel und eigene Hinweise.
+Unter **Schreibstil** legst du Tonfall, du oder Sie, Grußformel und eigene Hinweise fest. Mit **Stil pro Kontakt lernen** übernimmt der Assistent deine Anrede je Empfänger, verschlüsselt auf diesem Gerät. Vor dem Senden prüft er auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten; du entscheidest.
 
 ### Das Assistent-Fenster
 
@@ -80,14 +78,14 @@ Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 
 ![Das Assistent-Fenster](assistant.png)
 
-- **Frage:** „Wann kommt die Lieferung von Müller?“ Die Antwort nennt die Mails, aus denen sie stammt. Ein Klick öffnet sie.
+- **Frage:** „Wann kommt die Lieferung von Müller?“ Der Assistent liest die passenden Mails samt Anhängen und nennt jede Quelle mit Absender, Datum und wörtlichem Zitat; ein Klick öffnet sie. Nachfragen wie „Und der Preis?“ beziehen sich auf die vorige Antwort, **Verlauf leeren** beginnt neu.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche.“ Der Assistent sucht freie Zeiten und bereitet einen Entwurf vor. Gesendet wird nichts.
 - **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen.
 - **Freigaben:** alles, was der Assistent oder ein Agent vorbereitet hat und auf dein **Freigeben** oder **Ablehnen** wartet.
 
 ## Externe Agenten anbinden
 
-Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbinden. Dafür stellt Levuvo Mail eine Schnittstelle bereit, den sogenannten MCP-Server. Er ist nur von diesem Computer aus erreichbar. Unter **Einstellungen → KI & Agenten → Agenten-Schnittstelle (MCP)** schaltest du ihn ein und legst mit **Neuer Agent** einen Zugang mit festen Rechten an: nur lesen, Entwürfe anlegen, ordnen oder alles. Senden, Termine mit Teilnehmenden und Löschen warten auf deine Freigabe. Nur wenn du bei der Stufe „Alles inkl. Senden“ **ohne Freigabe senden** ankreuzt, sendet der Agent direkt. Passwörter, Schlüssel und Konten sind für Agenten nie erreichbar.
+Fortgeschrittene können KI-Programme wie Claude Desktop über eine Schnittstelle, den MCP-Server, mit Levuvo Mail verbinden. Sie ist nur von diesem Computer aus erreichbar. Unter **Einstellungen → KI & Agenten → Agenten-Schnittstelle (MCP)** schaltest du ihn ein und legst mit **Neuer Agent** einen Zugang mit festen Rechten an: nur lesen, Entwürfe anlegen, ordnen oder alles. Senden, Termine mit Teilnehmenden und Löschen warten auf deine Freigabe. Nur wenn du bei der Stufe „Alles inkl. Senden“ **ohne Freigabe senden** ankreuzt, sendet der Agent direkt. Passwörter, Schlüssel und Konten sind für Agenten nie erreichbar.
 
 ## Datenschutz und KI-Regeln
 
@@ -95,6 +93,6 @@ Fortgeschrittene können KI-Programme wie Claude Desktop mit Levuvo Mail verbind
 - **Cloud nur mit Einwilligung.** Bevor du ein Cloud-Modell nutzt, zeigt Levuvo Mail genau, welche Inhalte übertragen werden. Du kannst die Einwilligung jederzeit mit **Einwilligung widerrufen** zurücknehmen.
 - **Konten sperren.** Unter **Keine Cloud-KI für diese Konten** schließt du einzelne Postfächer, etwa dein dienstliches, ganz von Cloud-KI aus.
 - **Daten anderer Menschen.** Mails enthalten auch Namen und Daten deiner Kontakte. Nutze Cloud-KI für dienstliche Mails nur, wenn deine Organisation das erlaubt.
-- **Kennzeichnung und Kontrolle.** KI-Ergebnisse sind immer gekennzeichnet. KI kann sich irren: Prüfe Zusammenfassungen und Vorschläge, besonders Beträge, Fristen und Namen. Die letzte Entscheidung triffst du, so verlangt es auch die europäische KI-Verordnung (EU AI Act).
-- **KI-Protokoll.** Unter **KI-Protokoll** siehst du, was KI und Agenten getan haben, ohne Mailinhalte, 30 Tage lang und nur auf diesem Gerät.
-- **Alles löschen.** **Alle KI-Daten löschen** entfernt Einstellungen, Einwilligungen, Schlüssel, Protokoll und Agenten. Deine Mails bleiben unverändert.
+- **Kennzeichnung und Kontrolle.** KI-Ergebnisse sind immer gekennzeichnet. KI kann sich irren: Prüfe besonders Beträge, Fristen und Namen. Die letzte Entscheidung triffst du, so verlangt es die EU-KI-Verordnung.
+- **Kennzeichnung beim Senden.** Von der KI geschriebene Mails tragen einen unsichtbaren Vermerk (abschaltbar: **KI-geschriebene Mails kennzeichnen**). Menschen, etwa Bewerber, bewertet der Assistent nicht.
+- **Protokoll und Löschen.** Das **KI-Protokoll** zeigt 30 Tage lang, was KI und Agenten taten, ohne Mailinhalte. **Alle KI-Daten löschen** entfernt Einstellungen, Einwilligungen, Protokoll und Agenten.
