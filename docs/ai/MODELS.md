@@ -119,6 +119,16 @@ for large computers. The search instruction is set per model (`queryPrefix`); bg
 
 Switching the search model asks first and then rebuilds the index in the background with progress.
 
+**mDenseOn (LightOn, FR, EU), checked 19 November 2026 and not offered yet.** Apache-2.0, 307M parameters,
+768 dimensions, 8,192 tokens context. With sentence-transformers on a CI processor and its prompts
+("query: " / "document: ") it ranked the right mail first in **30 of 30** queries (Recall@1 1.000, MRR
+1.000, about 120 ms per mail; without prompts 0.967), against 29 of 30 for bge-m3 in the same run. It
+cannot be offered through Levuvo's Ollama yet: there is no GGUF on registry.ollama.ai or Hugging Face, and
+a GGUF converted with llama.cpp (`convert_hf_to_gguf.py`, 614 MB, F16) does not load in the pinned Ollama
+0.40.16 ("metaspace prepend_scheme 'always' is not supported for BPE vocab"). Once Ollama loads it and a
+GGUF is published under a reviewable name, it goes into the list with the EU flag; bge-m3 stays the
+default.
+
 ## 3. Updating
 
 - **Ollama:** set `version`, `size` and `sha256` of every asset in `ollama-lock.json` from the release,
@@ -131,3 +141,34 @@ Switching the search model asks first and then rebuilds the index in the backgro
 - **Real downloads:** `LEVUVO_LIVE_MODELS=qwen3.5:4b,gemma4:e2b node --test test/ollama-live/*.test.mjs`
   downloads the listed models with the variant of the platform and checks digest and size; the weekly
   supply-chain job runs it on a Mac with Apple silicon.
+
+## 4. Dictation (Whisper)
+
+Dictation uses OpenAI's Whisper (Apache-2.0) as ONNX exports of Hugging Face's `onnx-community`, run with
+transformers.js in a worker of the app window (WebGPU, else WebAssembly). Nothing ships with the installer:
+`apps/server/src/speech-catalog.mjs` pins the repository revision and the size and SHA-256 of every file;
+`speech-models.mjs` downloads exactly these files from `huggingface.co/{repo}/resolve/{revision}/…`,
+checks each one and deletes the model on any mismatch. The app window loads them only from Levuvo's own
+server (`/api/ai/speech/files/…`); remote models, the browser cache and the WebAssembly cache are off.
+
+| Model | Files (encoder / decoder) | Download | Use |
+|---|---|---|---|
+| Whisper base | fp32 / q4 | 0.21 GB | fast, rough |
+| Whisper small | fp32 / q4 | 0.59 GB | balanced |
+| Whisper large-v3-turbo | fp16 / q4 | 1.61 GB | most accurate, needs a graphics card for good speed |
+
+Check on 19 November 2026 (transformers.js 4.3.2 in Node on a CI processor, a synthetic German voice
+reading "Hallo Anna, ich schicke dir das Angebot bis Freitag. Die Lieferung kommt in Kalenderwoche drei.
+Viele Grüße, Peter."):
+
+- base (0.9 s): "Hallo Haar, ich schick er die Pass an dem Boot, ist veraytag. …" — unusable for German;
+- small (2.1 s): "Hallo Anna, ich schicke die Fass an der Boot bis Freitag. Die Lieferung kommt in kalender Woche dabei. …";
+- large-v3-turbo (9.0 s): "Hallo Anna, ich schicke dir das Angebot bis Freitag. Die Lieferung kommt in kalender Woche 3. Viele Grüße, Peter."
+
+A synthetic voice is harder than a real one, but the ranking holds: base stays in the list for weak
+computers, small is the everyday choice, large-v3-turbo the accurate one.
+
+**Updating:** take the new revision from `https://huggingface.co/api/models/{repo}`, the sizes and
+`lfs.oid` (SHA-256) from `/api/models/{repo}/tree/{revision}?recursive=1`, hash the small JSON files
+yourself, and check with a German recording that the files transformers.js requests are exactly those in
+the list (the app's file route answers 404 for anything else).

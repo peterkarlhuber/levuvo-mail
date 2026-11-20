@@ -433,6 +433,15 @@ Antwortvorschlag an Anna übernimmt dann ihre Anrede und eure Du/Sie-Form (vor d
 und nimmt deine Mails an sie als Stilprobe; der Entwurf zeigt „Im Stil deiner Mails an …“. Die Tabelle zeigt,
 was gelernt wurde; einzelne Kontakte oder alles lassen sich löschen, Ausschalten löscht ebenfalls alles.
 
+**Diktieren** (Einstellungen → KI & Agenten → Diktieren): ein Sprachmodell wählen (Whisper base rund
+0,2 GB, small rund 0,6 GB, large-v3-turbo rund 1,6 GB, das für gutes Tempo eine Grafikkarte braucht). Es
+wird einmal von Hugging Face geladen; jede Datei wird gegen eine SHA-256-Prüfsumme geprüft, die Levuvo Mail
+mitbringt, und eine abweichende Datei wird gelöscht. Danach nimmt der Mikrofon-Knopf im Verfassen-Fenster bis
+zu fünf Minuten auf; die Sprache wird auf diesem Computer erkannt (Grafikkarte, sonst Prozessor) und der
+Text an der Schreibmarke eingefügt. Weder Ton noch Text verlassen das Gerät, Aufnahmen werden nicht
+gespeichert, und das KI-Protokoll vermerkt nur Modell und Länge. Beim ersten Mal fragt das System nach dem
+Mikrofon.
+
 **Filter in Worten:** unter Einstellungen → Filter z. B. „Rechnungen von Lieferanten in den Ordner
 Buchhaltung“ eingeben, „Regel vorschlagen“, prüfen, speichern.
 

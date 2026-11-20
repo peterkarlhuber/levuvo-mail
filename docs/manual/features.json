@@ -406,6 +406,10 @@
       "de": "07-tastenkuerzel.md#Tastenkürzel",
       "en": "07-shortcuts.md#Keyboard shortcuts"
     },
+    "settings-section:Diktieren": {
+      "de": "05-ki-assistent.md#Diktieren",
+      "en": "05-ai-assistant.md#Dictation"
+    },
     "settings-section:Videocalls": {
       "de": "03-kalender-kontakte-aufgaben.md#Videocalls",
       "en": "03-calendar-contacts-tasks.md#Video calls"

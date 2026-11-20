@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Dictation
+- **Speak instead of type:** a microphone button in the composer records up to five minutes and inserts the recognised text at the cursor. Speech recognition is Whisper (base, small or large-v3-turbo, chosen under Settings → AI & agents → Dictation) running on this computer with the graphics card (WebGPU) or the processor; audio and text never leave the device and recordings are not stored. (Manual: Dictation)
+- **Checked download:** the model is downloaded once from Hugging Face at a pinned revision, every file is checked against size and SHA-256 shipped with the app, and a mismatch deletes it. Models are not part of backups and can be deleted in the settings. (Manual: Dictation)
+- **Microphone permission:** the app asks for audio only (no camera); macOS shows the microphone prompt with a reason. (Manual: Dictation)
+
 ### Layout
 - **Space settings look like the app settings:** cards for General, Assistant and Sync, switches instead of checkboxes, fields save on their own, and a red-framed danger zone (hand over, dissolve, leave, delete copy) as the last card. (Manual: Work in a space)
 - **Safety code under Members:** your own safety code moved from the spaces sidebar to the Members tab, grouped, explained and with a copy button. (Manual: Work in a space)

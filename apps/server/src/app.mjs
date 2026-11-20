@@ -52,6 +52,7 @@ import { registerDataRightsRoutes } from './routes-data-rights.mjs';
 import { applyPendingWipe, pendingWipe } from './data-rights.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
 import { registerAiRoutes } from './routes-ai.mjs';
+import { registerSpeechRoutes } from './routes-speech.mjs';
 import { createBackgroundJobs } from './background-jobs.mjs';
 import { setupMcp } from './routes-mcp.mjs';
 import { createSidecar } from './ai-sidecar.mjs';
@@ -818,6 +819,7 @@ export async function createMailServer({
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerSpeechRoutes(ctx);
   registerContactHistoryRoutes(ctx);
   registerBriefingRoutes(ctx);
   registerCommitmentRoutes(ctx);

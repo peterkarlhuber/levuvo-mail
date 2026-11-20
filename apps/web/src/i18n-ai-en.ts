@@ -514,6 +514,36 @@ export const AI_EN: Record<string, string> = {
   'Weitere {count} Kontakte, über die Suche zu finden.': '{count} more contacts, find them with the search.',
   'Im Stil deiner Mails an {email}': 'In the style of your emails to {email}',
   'Stil lernen ist ausgeschaltet.': 'Style learning is switched off.',
+  'Kein Zugriff auf das Mikrofon. Bitte in den Systemeinstellungen erlauben.':
+    'No access to the microphone. Please allow it in the system settings.',
+  'Diktiert mit {model}, auf diesem Gerät. Bitte vor dem Senden prüfen.':
+    'Dictated with {model}, on this device. Please check before sending.',
+  'Es wurde keine Sprache erkannt.': 'No speech was recognised.',
+  'Diktieren fehlgeschlagen. Bitte erneut versuchen.': 'Dictation failed. Please try again.',
+  Aufnahme: 'Recording',
+  'Diktieren (lokal mit {model})': 'Dictate (locally with {model})',
+  'Modell lädt… {pct} %': 'Loading model… {pct} %',
+  'Wird umgewandelt…': 'Converting…',
+  Diktieren: 'Dictate',
+  'Im Editor auf „Diktieren“ klicken, sprechen, „Fertig“: der Text erscheint an der Schreibmarke.':
+    'Click “Dictate” in the editor, speak, then “Done”: the text appears at the cursor.',
+  'Sprache wird auf diesem Gerät zu Text, mit Whisper': 'Speech becomes text on this device, with Whisper',
+  Spracherkennung: 'Speech recognition',
+  'Whisper wandelt deine Sprache auf diesem Gerät in Text um. Die Aufnahme wird weder gespeichert noch gesendet. Das Modell wird einmal heruntergeladen und mit seiner festen Prüfsumme verglichen.':
+    'Whisper turns your speech into text on this device. The recording is neither stored nor sent. The model is downloaded once and compared with its fixed checksum.',
+  'Kein Modell (Diktieren aus)': 'No model (dictation off)',
+  'braucht Grafikkarte': 'needs a graphics card',
+  '{name} wird geladen … {pct} %': 'Downloading {name} … {pct} %',
+  Fortschritt: 'Progress',
+  '{name} ist bereit. Lizenz {license}.': '{name} is ready. License {license}.',
+  'Diktieren ist danach aus, bis du wieder ein Modell wählst.': 'Dictation is then off until you choose a model again.',
+  '{name} ist noch nicht heruntergeladen.': '{name} is not downloaded yet.',
+  not_loaded: 'not_loaded',
+  'Nicht gefunden.': 'Not found.',
+  stalled: 'stalled',
+  Schnell: 'Fast',
+  Ausgewogen: 'Balanced',
+  'Am genauesten': 'Most accurate',
   // Width of the assistant panel
   'Breite des Assistenten ändern': 'Change width of the assistant',
   '{n} Pixel breit': '{n} pixels wide'

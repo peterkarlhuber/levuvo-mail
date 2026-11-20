@@ -17,6 +17,7 @@ export type AiFeature =
   | 'assess'
   | 'search'
   | 'agents'
+  | 'dictation'
   | 'commitments';
 
 export type AiProfile = {

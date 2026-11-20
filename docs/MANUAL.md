@@ -398,6 +398,14 @@ suggestion to Anna then uses her greeting and your du/Sie form (before the gener
 emails to her as style samples; the draft shows "In the style of your emails to …". The table shows what was
 learned; single contacts or everything can be deleted, and switching it off deletes everything too.
 
+**Dictation** (Settings → AI & agents → Dictation): choose a speech model (Whisper base about 0.2 GB,
+small about 0.6 GB, large-v3-turbo about 1.6 GB, which needs a graphics card for good speed). It is
+downloaded once from Hugging Face; every file is checked against a SHA-256 checksum that ships with Levuvo
+Mail, and a file that does not match is deleted. Then the microphone button in the composer records up to
+five minutes; the speech is recognised on this computer (graphics card, else processor), and the text is
+inserted at the cursor. No audio and no text leaves the device, recordings are not stored, and the AI log
+notes only the model and the length. The first time, the system asks for microphone access.
+
 **Filters in words:** under Settings → Filters type e.g. "invoices from suppliers to the Accounting
 folder", click "Suggest rule", review, save.
 

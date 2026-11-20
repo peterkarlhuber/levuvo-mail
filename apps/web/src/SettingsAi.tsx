@@ -24,6 +24,7 @@ import { LocalModelSettings } from './SettingsLocalModels';
 import { AiAdvancedSettings } from './SettingsAiAdvanced';
 import { SemanticIndexStatus } from './SemanticIndexStatus';
 import { StyleProfileSettings } from './SettingsStyle';
+import { SpeechSettings } from './SettingsSpeech';
 import type { AccountItem } from './types';
 
 type LogEntry = {
@@ -61,6 +62,7 @@ const FEATURES: { id: AiFeature; label: string; hint: string; optIn?: boolean }[
   { id: 'assess', label: 'Phishing- & Betrugseinschätzung', hint: 'Begründung zusätzlich zu den festen Prüfregeln' },
   { id: 'search', label: 'Semantische Suche & Fragen', hint: 'Suche nach Bedeutung, Antworten mit Quellnachricht' },
   { id: 'agents', label: 'Agenten & Routinen', hint: 'Bereitet Entwürfe vor, die du freigibst' },
+  { id: 'dictation', label: 'Diktieren', hint: 'Sprache wird auf diesem Gerät zu Text, mit Whisper' },
   {
     id: 'commitments',
     label: 'Versprechen-Tracker',
@@ -404,6 +406,15 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
           />
         </Row>
         <StyleProfileSettings onToggle={on => save({ profile: { learnStyle: on } })} />
+      </Section>
+
+      <Section
+        title={t('Diktieren')}
+        description={t(
+          'Im Editor auf „Diktieren“ klicken, sprechen, „Fertig“: der Text erscheint an der Schreibmarke.'
+        )}
+      >
+        <SpeechSettings />
       </Section>
 
       <Section

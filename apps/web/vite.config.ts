@@ -13,6 +13,8 @@ export default defineConfig({
       '/api': { target: 'http://127.0.0.1:3001', changeOrigin: true }
     }
   },
+  // Dictation runs Whisper in a module worker (apps/web/src/speech-worker.ts) with its own bundle.
+  worker: { format: 'es' },
   build: {
     outDir: fileURLToPath(new URL('./dist', import.meta.url)),
     emptyOutDir: true,

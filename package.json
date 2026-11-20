@@ -81,6 +81,7 @@
   "devDependencies": {
     "@electron/fuses": "1.8.0",
     "@eslint/js": "10.0.1",
+    "@huggingface/transformers": "4.3.2",
     "@tiptap/extension-collaboration": "3.33.1",
     "@tiptap/extension-image": "3.33.1",
     "@tiptap/extension-list": "3.33.1",
@@ -162,6 +163,9 @@
       "hardenedRuntime": true,
       "notarize": false,
       "minimumSystemVersion": "12.0",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Levuvo Mail uses the microphone only while you dictate. Speech is turned into text on this Mac; the audio is not stored or sent."
+      },
       "artifactName": "Levuvo-Mail-${version}-${arch}.${ext}"
     },
     "win": {

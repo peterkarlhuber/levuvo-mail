@@ -73,6 +73,14 @@ In the editor, the **Assistant** button opens these helpers:
 
 Under **Writing style** you set tone, formal or informal address, sign-off and your own instructions. With **Learn style per contact** the assistant adopts how you greet each recipient, encrypted on this device. Before sending, it checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data; you decide.
 
+**Learn style per contact** (under Writing style, off at first): Levuvo Mail reads your sent emails in the local search index and remembers, for each contact, the greeting, the closing and whether you use du or Sie. No AI model runs for this; it is stored encrypted on this device only. A reply suggestion to that person then uses their greeting and your form of address and shows "In the style of your emails to …". The table shows what was learned; you can delete single contacts or everything.
+
+### Dictation
+
+Under **Settings → AI & agents → Dictation** you choose a speech model: **Whisper base** (fast, rough), **Whisper small** (balanced) or **Whisper large-v3-turbo** (most accurate, needs a graphics card for good speed). It is downloaded once and checked against fixed checksums.
+
+The editor then shows the **Dictate** button with the microphone. Click it, speak, and click **Done**; the text is inserted at the cursor. A recording lasts at most five minutes. Speech is recognised on your computer, audio and text never leave the device, and the recording is not stored. The first time, the system asks for the microphone.
+
 ### The assistant window
 
 Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.

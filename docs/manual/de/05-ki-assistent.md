@@ -73,6 +73,14 @@ Im Editor öffnet der Knopf **Assistent** diese Hilfen:
 
 Unter **Schreibstil** legst du Tonfall, du oder Sie, Grußformel und eigene Hinweise fest. Mit **Stil pro Kontakt lernen** übernimmt der Assistent deine Anrede je Empfänger, verschlüsselt auf diesem Gerät. Vor dem Senden prüft er auf vergessene Anhänge, scharfen Ton, falsche Empfänger und sensible Daten; du entscheidest.
 
+**Stil pro Kontakt lernen** (unter Schreibstil, anfangs aus): Levuvo Mail liest deine gesendeten Mails im lokalen Suchindex und merkt sich je Kontakt Anrede, Gruß und du oder Sie. Dafür läuft kein KI-Modell; gespeichert wird verschlüsselt nur auf diesem Gerät. Ein Antwortvorschlag an diese Person übernimmt dann ihre Anrede und eure Du/Sie-Form und zeigt „Im Stil deiner Mails an …“. In der Tabelle siehst du, was gelernt wurde, und kannst einzelne Kontakte oder alles löschen.
+
+### Diktieren
+
+Unter **Einstellungen → KI & Agenten → Diktieren** wählst du ein Sprachmodell: **Whisper base** (schnell, ungenau), **Whisper small** (ausgewogen) oder **Whisper large-v3-turbo** (am genauesten, braucht für gutes Tempo eine Grafikkarte). Es wird einmal heruntergeladen und gegen feste Prüfsummen geprüft.
+
+Danach erscheint im Editor der Knopf **Diktieren** mit dem Mikrofon. Klicke ihn, sprich, und klicke **Fertig**; der Text landet an der Schreibmarke. Eine Aufnahme dauert höchstens fünf Minuten. Die Sprache wird auf deinem Computer erkannt, Ton und Text verlassen das Gerät nicht, und die Aufnahme wird nicht gespeichert. Beim ersten Mal fragt das System nach dem Mikrofon.
+
 ### Das Assistent-Fenster
 
 Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.

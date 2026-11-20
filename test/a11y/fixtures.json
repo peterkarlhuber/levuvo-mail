@@ -1826,5 +1826,60 @@
       "error": null,
       "accounts": []
     }
+  },
+  "GET /api/ai/speech/models": {
+    "status": 200,
+    "contentType": "application/json",
+    "body": {
+      "models": [
+        {
+          "id": "whisper-base",
+          "name": "Whisper base",
+          "quality": "fast",
+          "languages": "multilingual (99 languages, including German and English)",
+          "license": "Apache-2.0",
+          "device": "any",
+          "dtype": {
+            "encoder_model": "fp32",
+            "decoder_model_merged": "q4"
+          },
+          "size": 208840059,
+          "installed": false,
+          "job": null
+        },
+        {
+          "id": "whisper-small",
+          "name": "Whisper small",
+          "quality": "balanced",
+          "languages": "multilingual (99 languages, including German and English)",
+          "license": "Apache-2.0",
+          "device": "any",
+          "dtype": {
+            "encoder_model": "fp32",
+            "decoder_model_merged": "q4"
+          },
+          "size": 588744805,
+          "installed": true,
+          "job": null
+        },
+        {
+          "id": "whisper-large-v3-turbo",
+          "name": "Whisper large-v3-turbo",
+          "quality": "best",
+          "languages": "multilingual (99 languages, including German and English)",
+          "license": "Apache-2.0",
+          "device": "webgpu",
+          "dtype": {
+            "encoder_model": "fp16",
+            "decoder_model_merged": "q4"
+          },
+          "size": 1611258854,
+          "installed": false,
+          "job": null
+        }
+      ],
+      "selected": "whisper-small",
+      "enabled": true
+    }
   }
 }
