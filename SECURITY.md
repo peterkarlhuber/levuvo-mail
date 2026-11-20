@@ -60,7 +60,7 @@ Reviewed 2026-11-19 (`apps/server/src/protected-message.mjs`). The message, its 
 
 ## Known open items
 
-State 2.6.0 (internal use only):
+State 2.6.1 (internal use only):
 
 - **Unsigned internal test builds:** deliberately without code signing and without auto-update; Gatekeeper/SmartScreen warn. Signed releases need the certificates from `RELEASING.md`.
 - **Build tool dependencies** of `electron-builder` with known advisories, relevant only at build time; see the audit summary of the respective CI run.

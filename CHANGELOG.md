@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.6.1 – 20 November 2026
+
+> **User manual included:** the German and English user manual are attached to this release as PDFs (`Levuvo-Mail-Handbuch-2.6.1.pdf`, `Levuvo-Mail-Manual-2.6.1.pdf`) and are also in the app under Settings → Help. This version also contains everything from 2.6.0 (see below).
 
 ### Reliability and privacy (audit of 20 November 2026)
 - **A scheduled mail without a copy in "Sent" stays in "Drafts":** if a scheduled mail went out but its copy could not be saved in "Sent", the draft was moved to the trash anyway and nothing told you. It now stays in "Drafts" with the note "Sent, but the copy in Sent could not be saved", so you can see what went out; delete it when you no longer need it. It is never sent again. (Manual: Write and reply)
