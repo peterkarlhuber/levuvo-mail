@@ -32,7 +32,7 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Overview | What happened recently |
 | Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line; **Start video call** sends everyone a Jitsi link |
 | Notes | Texts that several people edit at the same time |
-| Mails | Emails on the topic with internal comments |
+| Emails | Emails on the topic with internal comments |
 | Tasks | Tasks with owners and due dates |
 | Events | Shared events |
 | Files | Files with earlier versions |
@@ -44,6 +44,8 @@ Chat messages usually arrive within a few seconds. Levuvo Mail counts unread one
 To put an email into a space, open it, click **Add to space** in the **…** menu and choose the space.
 
 The AI assistant only sees a space if its owner allows it in the space's **Settings** tab. Cloud AI needs a separate, additional permission there.
+
+With your approval the assistant can also write in the space chat. Choose **Only this one** for one message or **For this space until revoked**; then it writes without asking, at most 10 messages in 10 minutes and only on this device, until you revoke it. Its messages are marked **AI-generated** for every member.
 
 The **Settings** tab (the gear at the far right of the tab bar) is laid out like the app settings: cards for **General**, **Levuvo Mail Assistant in this space** and **Sync**. Everything saves automatically as soon as you leave a field or flip a switch. At the bottom sits the red-framed **Danger zone** with **Hand over space**, **Dissolve space**, **Leave space** or **Delete copy**. Each of these asks first.
 

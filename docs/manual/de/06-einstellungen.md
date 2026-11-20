@@ -49,9 +49,9 @@ Unter **So läuft die Regel** steht die Regel in Worten. Mit **Probelauf** siehs
 
 Unter **Einstellungen → Datenschutz** zeigt das **Datenschutz-Cockpit** die letzten 30 Tage: blockierte Tracker, KI-Aufrufe und was das Gerät verlassen hat. Darunter, bei **Deine Daten**:
 
-- **Meine Daten exportieren** speichert eine lesbare Kopie (JSON) der Daten, die nur auf diesem Gerät liegen., ohne Passwörter und private Schlüssel.
+- **Meine Daten exportieren** speichert eine lesbare Kopie (JSON) der Daten, die nur auf diesem Gerät liegen, ohne Passwörter und private Schlüssel. Die Datei ist nicht verschlüsselt, bewahre sie sicher auf.
 - **Alle Daten auf diesem Gerät löschen** entfernt beim nächsten Start alles, was Levuvo Mail hier gespeichert hat, auch die Einträge im Schlüsselbund. Bis dahin kannst du abbrechen; Mails auf den Servern bleiben.
-- **Updates automatisch installieren** ist eingeschaltet. Schaltest du es aus, fragt Levuvo Mail vor jedem Update. Installiere Sicherheitsupdates dann bitte zügig.
+- **Updates automatisch installieren** ist eingeschaltet. Schaltest du es aus, fragt Levuvo Mail vor jedem Update. Installiere Sicherheitsupdates dann bitte zügig. Das funktioniert nur in signierten Versionen; eine unsignierte Testversion aktualisierst du, indem du die neue Datei über die alte installierst (siehe Kapitel 1).
 
 Unter **Einstellungen → Über** steht bei **Sicherheit und Support**, bis wann diese Version kostenlose Sicherheitsupdates bekommt und wie du eine Sicherheitslücke meldest. **Open-Source-Lizenzen** zeigt die Lizenztexte aller mitgelieferten Bausteine.
 

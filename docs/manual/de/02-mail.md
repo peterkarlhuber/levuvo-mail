@@ -21,7 +21,7 @@ Klicke auf **Neue Nachricht** oder drücke `N`. Zum Antworten nimmst du **Antwor
 1. **Von:** Wähle die Absenderadresse, falls du mehrere hast. Die passende Signatur kommt automatisch dazu.
 2. **An:** Tippe einen Namen oder eine Adresse. Levuvo Mail schlägt Kontakte vor. Über **CC/BCC** fügst du weitere Empfänger hinzu. BCC-Empfänger sehen die anderen nicht.
 3. **Betreff** und Text eingeben. Die Leiste über dem Text formatiert ihn (fett, Listen, Links, Bilder).
-4. **Anhänge:** Klicke auf **Dateien auswählen** oder ziehe Dateien ins Fenster. Erlaubt sind bis zu acht Dateien mit zusammen 8 MiB (etwa 8 MB).
+4. **Anhänge:** Klicke auf **Dateien auswählen** oder ziehe Dateien ins Fenster. Erlaubt sind bis zu acht Dateien mit zusammen 8 MB.
 5. Klicke auf **Senden** oder drücke `Strg` + `Enter`.
 
 Entwürfe werden beim Schreiben automatisch gespeichert. **Als Entwurf schließen** legt die Nachricht unter **Entwürfe** ab.
@@ -48,7 +48,7 @@ Klicke über dem Text auf **Videocall**. Levuvo Mail fügt an der Cursorposition
 
 ### Hinweise vor dem Senden
 
-Bevor eine Mail hinausgeht, prüft Levuvo Mail sie auf deinem Computer, ohne KI. Sehen viele externe Empfänger aus mehreren Organisationen gegenseitig ihre Adressen, schlägt es **Bcc** vor. Gehen Kartennummern, Sozialversicherungsnummern, Passwörter oder Gesundheitsdaten unverschlüsselt nach außen, weist es darauf hin. Mit eingeschaltetem Assistenten erkennt die Prüfung auch diskriminierende Formulierungen und Drohungen. Du entscheidest, ob du trotzdem sendest; nichts davon wird gespeichert oder gemeldet. Die Hinweise sind keine Rechtsberatung.
+Bevor eine Mail hinausgeht, prüft Levuvo Mail sie auf deinem Computer, ohne KI. Sehen viele externe Empfänger aus mehreren Organisationen gegenseitig ihre Adressen, schlägt es **Bcc** vor. Gehen Kartennummern, österreichische Sozialversicherungsnummern, Passwörter oder Gesundheitsdaten unverschlüsselt nach außen, weist es darauf hin. Mit eingeschaltetem Assistenten erkennt die Prüfung auch diskriminierende Formulierungen und Drohungen. Du entscheidest, ob du trotzdem sendest; nichts davon wird gespeichert oder gemeldet. Die Hinweise sind keine Rechtsberatung.
 
 ## Ordnung halten
 
@@ -110,7 +110,7 @@ Das klappt, wenn dein Anbieter Serverfilter anbietet (Fachbegriff: Sieve oder Ma
 Diese Art funktioniert für jeden Empfänger, ohne dass er etwas einrichten muss. Geeignet für Verträge, Zugangsdaten oder persönliche Dokumente.
 
 1. Wähle beim Schreiben im Feld **Ohne Verschlüsselung** die Option **Mit Passwort schützen**.
-2. Levuvo Mail schlägt ein starkes Passwort vor. Du kannst es übernehmen oder ändern (mindestens 10 Zeichen). Text und Anhänge dürfen zusammen höchstens 5 MiB groß sein.
+2. Levuvo Mail schlägt ein starkes Passwort vor. Du kannst es übernehmen oder ändern (mindestens 10 Zeichen). Text und Anhänge dürfen zusammen höchstens 5 MB groß sein.
 3. Klicke auf **Senden**.
 4. Teile dem Empfänger das Passwort auf einem anderen Weg mit, etwa per SMS oder Telefon. Nie in derselben Mail.
 

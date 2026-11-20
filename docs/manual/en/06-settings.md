@@ -49,9 +49,9 @@ Under **Settings → Automations**, **New automation** creates rules for new ema
 
 Under **Settings → Privacy** the **Privacy cockpit** shows the last 30 days: blocked trackers, AI calls and what left your computer. Below it, under **Your data**:
 
-- **Export my data** saves a readable copy (JSON) of the data that exists only on this device., without passwords and private keys.
+- **Export my data** saves a readable copy (JSON) of the data that exists only on this device, without passwords and private keys. The file is not encrypted, so keep it safe.
 - **Delete all data on this device** removes everything Levuvo Mail stored here at the next start, including its entries in the Keychain or Credential Manager. Until then you can cancel; emails on the servers stay.
-- **Install updates automatically** is on. If you switch it off, Levuvo Mail asks before each update. Then please install security updates promptly.
+- **Install updates automatically** is on. If you switch it off, Levuvo Mail asks before each update. Then please install security updates promptly. This only works in signed versions; an unsigned test version is updated by installing the new file over the old one (see chapter 1).
 
 Under **Settings → About**, **Security and support** shows until when this version gets free security updates and how to report a vulnerability. **Open-source licences** shows the licence texts of all included components.
 

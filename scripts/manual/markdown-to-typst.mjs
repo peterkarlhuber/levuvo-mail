@@ -5,8 +5,8 @@
 //   > **Tipp:** / > **Wichtig:** callouts, **bold**, *italic*, `keys` and [links](https://…),
 //   :::columns / :::next / :::end for two columns, and {{name}} blocks filled in by the caller.
 
-const SPECIAL = /[\\#$*_`<>@[\]~=/+\-"'^]/g;
-/** Escapes text so Typst shows it literally (also keeps // and "--" from turning into markup). */
+const SPECIAL = /[\\#$*_`<>@[\]~=/+\-"'^;]/g;
+/** Escapes text so Typst shows it literally (also keeps // and "--" from turning into markup, and a ";" after #strong[…] from ending the call). */
 export const esc = s => s.replace(SPECIAL, c => `\\${c}`);
 
 const KEY_NAMES = new Set(['Strg', 'Ctrl', 'Enter', 'Entf', 'Delete', 'Del', 'Esc', 'Alt', 'Shift', '⌘', 'Tab']);
