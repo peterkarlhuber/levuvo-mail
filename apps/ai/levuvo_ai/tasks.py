@@ -274,6 +274,10 @@ REWRITE_MODES = {
 }
 
 
+def _keep_language(params: dict[str, Any]) -> str:
+    return f"Write in the language of the draft (usually {_lang(params)}); do not translate. "
+
+
 def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     mode = str(params.get("mode") or "")
     if mode not in REWRITE_MODES:
@@ -281,7 +285,7 @@ def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Rewrite the user's draft. {REWRITE_MODES[mode]} Keep names, numbers, dates and links. "
-        f"{'' if mode in ('english', 'german') else 'Keep the language of the draft; do not translate. '}"
+        f"{'' if mode in ('english', 'german') else _keep_language(params)}"
         f"{_profile(params) if mode not in ('formal', 'casual', 'proofread') else ''} "
         "Return only the rewritten body as `body`.",
         frame_untrusted(_text(params.get("text")), "user's draft"),
@@ -938,7 +942,9 @@ class AutomationCondition(BaseModel):
 
 
 class AutomationAction(BaseModel):
-    type: Literal["move", "markRead", "flag", "task"]
+    # delete, forward and reply are never carried out: they are accepted only so that the app can tell
+    # the user so (small models silently swapped "delete" for another action instead).
+    type: Literal["move", "markRead", "flag", "task", "delete", "forward", "reply"]
     folder: str = Field(default="", description="Exact folder path from the list, only for move")
     title: str = Field(default="", description="Task title, may use {subject} and {from}; only for task")
     dueDays: int | None = Field(default=None, description="Task due in this many days, only for task")
@@ -956,6 +962,13 @@ class AutomationRule(BaseModel):
     actions: list[AutomationAction] = Field(min_length=1, max_length=5)
 
 
+NOT_AUTOMATED = {
+    "delete": ("delete", "löschen"),
+    "forward": ("forward", "weiterleiten"),
+    "reply": ("reply", "antworten"),
+}
+
+
 def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     """Turns a description in words into an automation rule that the user checks before it runs."""
     folders = [_text(f, 200) for f in (params.get("folders") or [])[:200] if isinstance(f, str)]
@@ -967,7 +980,8 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         "Operators: contains, not_contains, is (exact), ends_with (e.g. a domain like @example.com). "
         "Actions: move to a folder, mark as read (markRead), flag, create a task (task, with a title in "
         f"{_lang(params)} that may use {{subject}} and {{from}}, and dueDays if a deadline is mentioned). Each action "
-        "at most once. Never delete, forward, reply or send: if asked, explain it in `unclear`. For move, use "
+        "at most once. If the user asks to delete, forward or reply, use that action type; it is never carried "
+        "out and the user is told so. For move, use "
         "exactly one folder path from this list: "
         + ", ".join(folders or ["INBOX"])
         + ". If something cannot be expressed with these options, explain it in `unclear`.",
@@ -978,8 +992,12 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     known = set(folders)
     actions = []
     seen: set[str] = set()
+    refused = []
     for a in result.get("actions", []):
         kind = a.get("type")
+        if kind in NOT_AUTOMATED:
+            refused.append(NOT_AUTOMATED[kind][0 if params.get("lang") == "en" else 1])
+            continue
         if kind in seen or (kind == "move" and a.get("folder") not in known):
             continue
         seen.add(kind)
@@ -993,6 +1011,13 @@ def automation_rule(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
             }
         )
     result["actions"] = actions or [{"type": "flag", "folder": "", "title": "", "dueDays": None}]
+    if refused:
+        note = (
+            f"Automations cannot do this: {', '.join(dict.fromkeys(refused))}."
+            if params.get("lang") == "en"
+            else f"Das kann eine Automatisierung nicht: {', '.join(dict.fromkeys(refused))}."
+        )
+        result["unclear"] = f"{note} {_text(result.get('unclear'), 500)}".strip()
     conditions = []
     for c in result.get("conditions", []):
         if c.get("field") == "attachment":

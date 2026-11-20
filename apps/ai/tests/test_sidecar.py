@@ -358,8 +358,24 @@ def test_automation_rule_keeps_known_folders_and_drops_unsafe_parts() -> None:
     assert [a["type"] for a in out["actions"]] == ["move", "task"]
     assert out["actions"][0]["folder"] == "Rechnungen"
     assert out["actions"][1]["dueDays"] == 14
-    assert "Never delete" in engine.calls[0]["system"]
+    assert "it is never carried out" in engine.calls[0]["system"]
     assert "Rechnungen" in engine.calls[0]["system"]
+
+
+def test_automation_rule_never_deletes_and_says_so() -> None:
+    engine = StubEngine(
+        {
+            "unclear": "",
+            "name": "Paketdienst",
+            "conditions": [{"field": "from", "op": "contains", "value": "Paketdienst"}],
+            "actions": [{"type": "delete"}, {"type": "forward"}],
+        }
+    )
+    out = tasks.automation_rule(engine, {"text": "Lösche alles vom Paketdienst", "folders": ["INBOX"]})
+    assert [a["type"] for a in out["actions"]] == ["flag"]
+    assert out["unclear"] == "Das kann eine Automatisierung nicht: löschen, weiterleiten."
+    out = tasks.automation_rule(engine, {"text": "Delete", "folders": ["INBOX"], "lang": "en"})
+    assert out["unclear"].startswith("Automations cannot do this: delete")
 
 
 def test_automation_rule_without_usable_condition_fails() -> None:
