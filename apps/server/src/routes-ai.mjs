@@ -6,7 +6,18 @@ import { contactPayload, eventPayload, messageForAi, securityDetails, securityFa
 // Re-exported for existing callers; the mappers live in ai-payloads.mjs.
 export { messageForAi, securityDetails, securityFacts } from './ai-payloads.mjs';
 import { createSemanticIndex } from './ai-semantic.mjs';
-import { readSources, relevant, retrieve, verifiedQuote } from './ask-mailbox.mjs';
+import {
+  dayRange,
+  inDays,
+  localDate,
+  localNow,
+  mailsOfDays,
+  readSources,
+  relevant,
+  retrieve,
+  userTimeZone,
+  verifiedQuote
+} from './ask-mailbox.mjs';
 import { mailBudget } from './ai-model-options.mjs';
 import { catalogEntry } from './ai-model-catalog.mjs';
 import { contactSamples, createStyleProfiles } from './style-profile.mjs';
@@ -174,8 +185,9 @@ export function registerAiRoutes(ctx) {
    * relevant mails and let the model answer from them. With no relevant mail the model is not asked
    * again: "nothing found" is the honest answer, not the nearest unrelated mail.
    */
-  async function askWithMail(body, first, query, tool = 'search_mailbox', withManual = false) {
+  async function askWithMail(body, first, query, tool = 'search_mailbox', withManual = false, range = null) {
     const lang = first.lang;
+    const timeZone = userTimeZone(first.timeZone);
     const accountId = body.account ? String(body.account) : null;
     // "How do I …": the best matching sections of the user manual (no personal data), only when the
     // model asked for the manual. Sections next to the mails made the input longer (slow on local
@@ -208,9 +220,18 @@ export function registerAiRoutes(ctx) {
             ids,
             question: query,
             context: [first.question, ...first.history.map(h => h.question)].join(' '),
-            limit: 8
+            limit: range ? 30 : 8
           });
-    const useful = hits.filter(h => relevant(h));
+    let useful = hits.filter(h => relevant(h));
+    if (range && tool !== 'search_manual') {
+      // "today", "yesterday": only mails of those days, the matching ones first, then the rest of
+      // those days (newest first), so "any new mail today?" sees the day's mail.
+      useful = useful.filter(h => inDays(h.date, range, timeZone));
+      const seen = new Set(useful.map(h => `${h.accountId}\u0000${h.folder}\u0000${h.uid}`));
+      for (const h of await mailsOfDays({ localIndex: ctx.localIndex, ids, range, timeZone, limit: 8 }))
+        if (!seen.has(`${h.accountId}\u0000${h.folder}\u0000${h.uid}`)) useful.push(h);
+      useful = useful.slice(0, 8);
+    }
     // A fixed text of the app, not written by the model (`fixed`).
     if (!useful.length && !manual.length)
       return {
@@ -256,7 +277,7 @@ export function registerAiRoutes(ctx) {
         id: `s${i + 1}`,
         from: `${h.fromName || ''} <${h.fromEmail || ''}>`,
         to: h.to || '',
-        date: h.date,
+        date: localDate(h.date, timeZone),
         subject: h.subject,
         text,
         attachments
@@ -418,6 +439,9 @@ export function registerAiRoutes(ctx) {
           question,
           history: askHistory(input),
           assistant: { model: s.model, provider: s.provider },
+          // The model has no clock: today's date and time in the user's time zone.
+          now: localNow(userTimeZone(input.timeZone)),
+          timeZone: userTimeZone(input.timeZone),
           ...(Number.isInteger(input.minTokens) ? { minTokens: Math.min(16384, Math.max(0, input.minTokens)) } : {})
         };
       }
@@ -652,7 +676,8 @@ export function registerAiRoutes(ctx) {
             input,
             clientText(result.search, 300).trim() || input.question,
             result.tool === 'search_manual' ? 'search_manual' : 'search_mailbox',
-            result.fallback === true
+            result.fallback === true,
+            dayRange(result.since, result.until)
           ));
         // Without an answer in the mails or the manual there is no source to show.
         result.sources = result.found === false ? [] : askSources(result, sourceMap, manualMap);

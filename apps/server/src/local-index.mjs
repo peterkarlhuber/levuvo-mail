@@ -861,6 +861,23 @@ export function createLocalIndex({
     },
     searchPage,
 
+    /** Messages dated from `from` (inclusive) to `to` (exclusive, ISO strings), newest first. */
+    async between(ids, from, to, { limit = 100 } = {}) {
+      const size = Math.max(1, Math.min(SEARCH_MAX_LIMIT, Number.isInteger(limit) ? limit : 100));
+      let rows = [];
+      for (const id of ids) {
+        const entry = await open(id);
+        if (!entry) continue;
+        rows = rows.concat(
+          stmt(entry, `SELECT ${PAGE_COLUMNS} FROM messages WHERE d >= ? AND d < ? ORDER BY d DESC, uid DESC LIMIT ?`)
+            .all(String(from), String(to), size)
+            .map(r => ({ id, r }))
+        );
+      }
+      rows.sort((a, b) => String(b.r.d).localeCompare(String(a.r.d)) || b.r.uid - a.r.uid);
+      return rows.slice(0, size).map(({ id, r }) => hitFor(id, r));
+    },
+
     /**
      * Indexed messages, optionally only those indexed after `since` (ms since epoch), for
      * consumers that derive data from the index (e.g. embeddings). Keys come from `entryKey`.

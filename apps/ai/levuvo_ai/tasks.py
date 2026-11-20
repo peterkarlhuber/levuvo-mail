@@ -9,7 +9,7 @@ the user reviews in the app.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from orkexa.mcp import frame_untrusted
@@ -678,17 +678,60 @@ SEARCH_RULES = (
     "the user's emails. Never answer them from general knowledge, and never say the information is missing "
     "without searching first. Call search_manual when the user asks how to do something in Levuvo Mail or "
     "where a setting is. Answer directly, without a tool and without mentioning emails, only greetings, "
-    "thanks, small talk, questions about yourself or what you can do, and general knowledge that has nothing "
+    "thanks, small talk, questions about yourself or what you can do, today's date or the time, and general "
+    "knowledge that has nothing "
     "to do with the user (for example 'What is the capital of France?'). "
-    "Pass the search words as the query: names, subjects, numbers and key terms, without filler words."
+    "Pass the search words as the query: names, subjects, numbers and key terms, without filler words. "
+    "If the question names a time ('today', 'yesterday', 'this week'), also pass since and until as dates "
+    "counted from today's date below."
 )
 
+_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
-def search_mailbox(query: str) -> str:
+
+def _today(params: dict[str, Any]) -> tuple[date, str]:
+    """The user's local date and time from the app (``now`` as local "YYYY-MM-DDTHH:MM"), or the
+    computer's clock."""
+    raw = _text(params.get("now"), 40)
+    try:
+        now = datetime.fromisoformat(raw[:16]) if raw else datetime.now()
+    except ValueError:
+        now = datetime.now()
+    return now.date(), now.strftime("%H:%M")
+
+
+def _now_line(params: dict[str, Any]) -> str:
+    """Today's date for the model: it has no clock, so "today" and "yesterday" are spelled out."""
+    today, clock = _today(params)
+    zone = _text(params.get("timeZone"), 60) or "local time"
+    yesterday = today - timedelta(days=1)
+    monday = today - timedelta(days=today.weekday())
+    return (
+        f"Today is {WEEKDAYS[today.weekday()]}, {today.isoformat()}, the time is {clock} ({zone}). "
+        f"Yesterday was {yesterday.isoformat()}; this week began on Monday {monday.isoformat()}."
+    )
+
+
+def _day(value: Any) -> str:
+    """A date the model passed to search_mailbox, as YYYY-MM-DD, or empty when it is not one."""
+    text = _text(value, 20).strip()
+    if not _DAY.match(text):
+        return ""
+    try:
+        return date.fromisoformat(text).isoformat()
+    except ValueError:
+        return ""
+
+
+def search_mailbox(query: str, since: str = "", until: str = "") -> str:
     """Search the user's mailbox (emails and their attachments) and read the best matching emails.
 
     Args:
         query: Search words: names, subjects, numbers and key terms from the question.
+        since: Only when the question names a time ("today", "yesterday", "this week", "in October"):
+            first day as YYYY-MM-DD. Otherwise leave empty.
+        until: Last day as YYYY-MM-DD, e.g. the same day as since for "today". Otherwise leave empty.
 
     Returns:
         The matching emails with sender, date, subject and text.
@@ -757,12 +800,15 @@ def _ask_turn(engine: Engine, params: dict[str, Any], question: str) -> dict[str
         if name not in ("search_mailbox", "search_manual"):
             return "Unknown tool."
         wanted["tool"] = name
-        wanted["query"] = _text((getattr(call, "input", None) or {}).get("query"), 300).strip()
+        args = getattr(call, "input", None) or {}
+        wanted["query"] = _text(args.get("query"), 300).strip()
+        wanted["since"] = _day(args.get("since"))
+        wanted["until"] = _day(args.get("until"))
         raise ToolCallSuspended("search", ref=name)
 
     try:
         agent = engine.agent(
-            system=f"{BASE_RULES}\n\n{_identity(params)}\n\n{SEARCH_RULES}",
+            system=f"{BASE_RULES}\n\n{_identity(params)}\n\n{SEARCH_RULES}\n\n{_now_line(params)}",
             tools=[Tool(search_mailbox), Tool(search_manual)],
             before_tool=before_tool,
             max_tokens=600,
@@ -773,7 +819,11 @@ def _ask_turn(engine: Engine, params: dict[str, Any], question: str) -> dict[str
         )
         text = agent.ask(f"{_history(params)}Message from the user (trusted): {question}")
     except TurnSuspended:
-        return {"search": wanted.get("query") or question, "tool": wanted.get("tool", "search_mailbox")}
+        out: dict[str, Any] = {"search": wanted.get("query") or question, "tool": wanted.get("tool", "search_mailbox")}
+        since, until = wanted.get("since") or wanted.get("until"), wanted.get("until") or wanted.get("since")
+        if out["tool"] == "search_mailbox" and since and until:
+            out["since"], out["until"] = min(since, until), max(since, until)
+        return out
     except UnsupportedCapabilityError:
         # No tool calls: the app searches both the mailbox and the manual.
         return {"search": question, "tool": "search_mailbox", "fallback": True}
@@ -797,7 +847,8 @@ def ask_mailbox(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     body = "\n\n===\n\n".join(_source(s) for s in sources)
     earlier = _history(params)
     system = (
-        f"{_identity(params)}\n\nThe app searched the mailbox for the user's message. Answer it using only "
+        f"{_identity(params)}\n\n{_now_line(params)}\n\nThe app searched the mailbox for the user's message. "
+        "Answer it using only "
         "the emails and attachments provided. "
         "Be direct: start with the answer, then the key details (who, what, when, amounts) in at most five "
         "sentences. Name the sender and date when it matters. Report what the emails say ('According to the "

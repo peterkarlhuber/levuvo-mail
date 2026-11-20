@@ -272,6 +272,24 @@ def _no_markers(result: dict[str, Any]) -> str | None:
     return "source ids in the answer text" if re.search(r"\bs\d+\b|sources?:|quellen?:", answer, re.I) else None
 
 
+NOW = {"now": "2026-11-20T19:10", "timeZone": "Europe/Vienna"}
+
+
+def _days(result: dict[str, Any], since: str, until: str) -> str | None:
+    if not result.get("search"):
+        return "answered without searching the mailbox"
+    got = (result.get("since"), result.get("until"))
+    return None if got == (since, until) else f"searched days {got}, expected {(since, until)}"
+
+
+def _contains_any(*words: str) -> Callable[[dict[str, Any]], str | None]:
+    def check(result: dict[str, Any]) -> str | None:
+        answer = str(result.get("answer") or "").lower()
+        return None if any(w in answer for w in words) else f"none of {words} in {answer[:120]!r}"
+
+    return check
+
+
 def _decide(case_id: str, question: str, lang: str, check: Callable[[dict[str, Any]], str | None], note: str) -> Case:
     return Case(case_id, "assistant", "ask", {"lang": lang, "question": question, "assistant": ASSISTANT}, check, note)
 
@@ -286,6 +304,30 @@ CASES += [
     _decide("decide-cloud", "welchen cloud speicher verwenden wir?", "de", _searches, "Frage zum Postfach: Suche"),
     _decide("decide-hi-question", "Hi, wann ist das Meeting mit Anna?", "de", _searches, "Gruß + Frage: Suche"),
     _decide("decide-invoice-en", "Did the invoice from Acme arrive?", "en", _searches, "Englische Postfachfrage"),
+    Case(
+        "decide-today",
+        "assistant",
+        "ask",
+        {**NOW, "lang": "de", "question": "habe ich neue mails heute bekommen?", "assistant": ASSISTANT},
+        lambda r: _days(r, "2026-11-20", "2026-11-20"),
+        "„heute“: Suche mit dem Datum von heute",
+    ),
+    Case(
+        "decide-yesterday",
+        "assistant",
+        "ask",
+        {**NOW, "lang": "de", "question": "Was hat Anna gestern geschrieben?", "assistant": ASSISTANT},
+        lambda r: _days(r, "2026-11-19", "2026-11-19"),
+        "„gestern“: Suche mit dem Datum von gestern",
+    ),
+    Case(
+        "date-today",
+        "assistant",
+        "ask",
+        {**NOW, "lang": "de", "question": "welches datum ist heute?", "assistant": ASSISTANT},
+        _all(_answers_directly, _contains_any("20. november", "20.11", "2026-11-20", "20 november")),
+        "„welches Datum ist heute?“: Datum ohne Suche",
+    ),
     Case(
         "answer-identity",
         "assistant",

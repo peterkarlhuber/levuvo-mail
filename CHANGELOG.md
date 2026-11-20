@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Assistant
+- **The assistant knows today's date:** asked "What is the date today?", it answered "today is the current day" or a date from 2023, and "Did I get new mail today?" showed mails from three days ago. Every question now carries today's date, the time and your time zone. When a question names a time ("today", "yesterday", "this week"), the model passes those days to the mailbox search, and only mails of those days in your time zone reach the answer. Mail dates are given to the model in your local time instead of UTC. The model still decides itself whether to search. (Manual: The assistant window)
+
 ## 2.6.0 – 20 November 2026
 
 > **User manual included:** the German and English user manual are attached to this release as PDFs (`Levuvo-Mail-Handbuch-2.6.0.pdf`, `Levuvo-Mail-Manual-2.6.0.pdf`) and are also in the app under Settings → Help.
