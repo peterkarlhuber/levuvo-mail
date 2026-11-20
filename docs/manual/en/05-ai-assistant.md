@@ -68,6 +68,18 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
+- **Change the width:** drag the handle on the left edge of the window to the left to make it wider, to the right to make it narrower. Part of the app always stays visible. With the keyboard, press `Tab` to reach the handle, then use `←` and `→`, with `Shift` for bigger steps. `Home` picks the narrowest, `End` the widest width. A double click resets the width. Levuvo Mail remembers your width. On a phone the assistant fills the whole screen.
+
+## Promise tracker
+
+The promise tracker finds promises in your emails, so nothing gets lost. It is off by default. Switch it on under **Settings → AI & agents → Features** with **Promise tracker**. It only runs with a local model, never with a cloud model.
+
+- **Your promises:** If you write "I'll send you the offer by Friday", Levuvo Mail suggests a task with a due date and a link to the email (**As a task**).
+- **Promises of others:** If someone writes "I'll get back to you next week", Levuvo Mail suggests a reminder (**Remind me if nothing arrives**). It fires the morning after the promised day and clears itself as soon as an answer arrives.
+
+The suggestions show in **My day** and above the task list under **Promises from your emails**. They are labelled as AI results. Nothing is created until you click. The cross discards a suggestion.
+
+Only new emails from the moment you switch it on are read (at most two days back), each only once, and only the part the sender wrote. The suggestions are stored encrypted on this computer for 60 days, are part of backups and are deleted with **Delete all AI data**.
 
 ## Connect external agents
 

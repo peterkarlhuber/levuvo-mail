@@ -379,6 +379,11 @@ folder", click "Suggest rule", review, save.
   meeting, prepare reply drafts.
 - **Approvals:** what agents prepared (send an email, event with attendees, contact, task, trash) – "Approve" or
   "Reject".
+- **Change the width:** drag the handle on the left edge of the panel to the left (wider) or right
+  (narrower), 340 to 960 pixels; part of the app always stays visible. With the keyboard: Tab to the
+  handle, then Left/Right arrow (with Shift in bigger steps), Home for the narrowest, End for the widest
+  width. A double click resets it to 420 pixels. The width is saved, also in the backup. On a phone the
+  assistant fills the screen.
 
 **Agents (MCP server):** under Settings → AI & agents switch on the MCP server, create an agent (level
 read, drafts, organize or everything incl. sending) and enter the token shown once, or the ready-made

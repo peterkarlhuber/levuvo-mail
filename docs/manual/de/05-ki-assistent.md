@@ -68,6 +68,18 @@ Klicke links auf das Funkel-Symbol ✦ oder drücke `Strg` + `J`.
 - **Aufgabe:** „Kläre mit Anna einen Termin nächste Woche.“ Der Assistent sucht freie Zeiten und bereitet einen Entwurf vor. Gesendet wird nichts.
 - **Routinen:** fertige Abläufe wie Tagesbriefing, offene Antworten oder Newsletter aufräumen.
 - **Freigaben:** alles, was der Assistent oder ein Agent vorbereitet hat und auf dein **Freigeben** oder **Ablehnen** wartet.
+- **Breite ändern:** Zieh den Griff am linken Rand des Fensters nach links, wird es breiter, nach rechts schmaler. Ein Teil der App bleibt immer sichtbar. Mit der Tastatur gehst du mit `Tab` auf den Griff und nutzt dann `←` und `→`, mit `Umschalt` in größeren Schritten. `Pos1` wählt die schmalste, `Ende` die breiteste Breite. Ein Doppelklick setzt die Breite zurück. Levuvo Mail merkt sich deine Breite. Auf dem Handy füllt der Assistent den ganzen Bildschirm.
+
+## Versprechen-Tracker
+
+Der Versprechen-Tracker findet Zusagen in deinen Mails, damit nichts untergeht. Er ist standardmäßig aus. Du schaltest ihn unter **Einstellungen → KI & Agenten → Funktionen** mit **Versprechen-Tracker** ein. Er läuft nur mit einem lokalen Modell, nie mit einem Cloud-Modell.
+
+- **Deine Zusagen:** Schreibst du „Ich schicke Ihnen das Angebot bis Freitag“, schlägt Levuvo Mail eine Aufgabe mit Fälligkeit und Link zur Mail vor (**Als Aufgabe**).
+- **Zusagen anderer:** Schreibt dir jemand „Ich melde mich nächste Woche“, schlägt Levuvo Mail eine Erinnerung vor (**Erinnern, falls nichts kommt**). Sie meldet sich am Morgen nach dem versprochenen Tag und verschwindet von selbst, sobald eine Antwort kommt.
+
+Die Vorschläge erscheinen in **Mein Tag** und über der Aufgabenliste unter **Versprechen aus deinen Mails**. Sie sind als KI-Ergebnis gekennzeichnet. Erst dein Klick legt etwas an. Mit dem Kreuz verwirfst du einen Vorschlag.
+
+Gelesen werden nur neue Mails ab dem Einschalten (höchstens zwei Tage zurück), jede nur einmal, und nur der Teil, den die Absenderin oder der Absender selbst geschrieben hat. Die Vorschläge liegen 60 Tage verschlüsselt auf diesem Computer, gehören zur Datensicherung und werden mit **Alle KI-Daten löschen** gelöscht.
 
 ## Externe Agenten anbinden
 
