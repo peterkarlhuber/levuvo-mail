@@ -42,6 +42,10 @@ At the bottom left of the editor choose, for example, **Follow up after 3 days**
 
 **Templates** inserts saved texts or saves the current message as a template. Placeholders such as `{FirstName}` or `{Date}` are filled in automatically. You manage templates under **Settings → Templates**.
 
+### Invite to a video call
+
+Click **Video call** above the text. Levuvo Mail inserts “Join the video call:” with a new Jitsi link at the cursor. More in the calendar chapter under “Video calls”.
+
 ### Hints before sending
 
 Before an email goes out, Levuvo Mail checks it on your computer, without AI. If many external recipients from several organizations would see each other's addresses, it suggests **Bcc**. If card numbers, social security numbers, passwords or health data would leave unencrypted, it points that out. With the assistant switched on, the check also spots discriminatory wording and threats. You decide whether to send anyway; nothing of this is stored or reported. The hints are not legal advice.

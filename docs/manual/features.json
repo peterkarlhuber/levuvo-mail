@@ -386,6 +386,10 @@
       "de": "07-tastenkuerzel.md#Tastenkürzel",
       "en": "07-shortcuts.md#Keyboard shortcuts"
     },
+    "settings-section:Videocalls": {
+      "de": "03-kalender-kontakte-aufgaben.md#Videocalls",
+      "en": "03-calendar-contacts-tasks.md#Video calls"
+    },
     "command:briefing": {
       "de": "03-kalender-kontakte-aufgaben.md#Mein Tag",
       "en": "03-calendar-contacts-tasks.md#My day"

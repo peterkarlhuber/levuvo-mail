@@ -39,6 +39,7 @@ import { BookingSettings } from './SettingsBooking';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
+import { VideoSettings } from './SettingsVideo';
 import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
 import { PrivacyDataSettings } from './SettingsPrivacyData';
@@ -308,6 +309,7 @@ function General() {
           />
         </Row>
       </Section>
+      <VideoSettings />
     </>
   );
 }
@@ -572,6 +574,11 @@ function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
           <li>
             {t(
               'App-Datenordner: Kontoeinstellungen ohne Passwörter, öffentliche Schlüssel/Zertifikate, CalDAV/CardDAV-Konten, verschlüsselter Suchindex.'
+            )}
+          </li>
+          <li>
+            {t(
+              'Verschlüsselt (AES-256-GCM, Schlüssel im Schlüsselbund): Aufgaben, Kontakte und Kalender auf diesem Gerät sowie die Notizen im Kontaktverlauf.'
             )}
           </li>
           <li>

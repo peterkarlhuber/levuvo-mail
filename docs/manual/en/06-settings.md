@@ -8,7 +8,7 @@ Open the settings with the slider icon at the bottom left or with `Alt` + `,`.
 
 | Section | What you set there |
 |---|---|
-| General | **Display** (language, theme, density), **Reading** (bundles, review new senders), **Writing** (undo send), **Calendar** |
+| General | **Display** (language, theme, density), **Reading** (bundles, review new senders), **Writing** (undo send), **Calendar**, **Video calls** (Jitsi server) |
 | Accounts | Accounts, signatures, sender addresses, **Connection status** |
 | Templates | **Snippets and templates** |
 | Filters & vacation | **Filter rules** on the mail server and **Vacation reply** |

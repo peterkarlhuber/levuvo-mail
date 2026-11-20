@@ -31,6 +31,8 @@ import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
 import { FindTimeDialog } from './FindTime';
 import { SchedulingPollsDialog } from './SchedulingPolls';
+import { AddVideoCallButton, JoinVideoCall, useVideoServers } from './VideoCall';
+import { findVideoLink, withVideoLink } from './video-call';
 import { useTasks } from './task-reminders';
 import { dueDay, type Task } from './tasks';
 import type { AccountItem, ApiStatus, CalendarEvent, CalendarInfo, EventAttachment } from './types';
@@ -431,6 +433,9 @@ function EventEditor({
   );
   const readOnly = Boolean(cal?.readOnly) || invitedByOther;
   const set = (patch: Partial<Draft>) => setD(old => ({ ...old, ...patch }));
+  // A call link already in the appointment (known Jitsi hosts or the configured server).
+  const videoServers = useVideoServers();
+  const videoInText = Boolean(findVideoLink(`${d.location}\n${d.description}`, videoServers));
   // Loading the Microsoft attachment list is not an edit; everything else the user typed is.
   const dirty =
     JSON.stringify({ ...d, attachments: d.attachmentsChanged ? d.attachments : null }) !==
@@ -716,6 +721,13 @@ function EventEditor({
             {t('Ort')}
             <input value={d.location} maxLength={500} onChange={ev => set({ location: ev.target.value })} />
           </label>
+          <div className="event-video">
+            {videoInText ? (
+              <JoinVideoCall text={`${d.location}\n${d.description}`} />
+            ) : (
+              <AddVideoCallButton onLink={link => setD(old => withVideoLink(old, link.url, t('Videocall')))} />
+            )}
+          </div>
           <div className="event-grid">
             <label>
               {t('Wiederholung')}

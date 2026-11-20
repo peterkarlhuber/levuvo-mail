@@ -105,6 +105,8 @@ without opening it.
 - **Templates:** **Templates** button above the text – insert a template or “Save current message as
   template”. Placeholders such as {Vorname}, {Name}, {Datum} and {Absender} are filled in when inserted.
   Manage them under Settings → Templates.
+- **Video call:** the **Video call** button above the text inserts “Join the video call:” with a new Jitsi
+  link at the cursor (see chapter 9, “Video calls”).
 - **Encryption:** see chapter 11.
 
 ## 6 Staying organized
@@ -182,6 +184,15 @@ is stored in the keychain.
   Replies to your own invitations are applied with “Apply to calendar” (participation status),
   cancellations with “Remove from calendar”.
 - On the left: show/hide calendars; colors and new calendars under “Manage calendars”.
+- **Video calls (Jitsi Meet):** choose **“Add video call”** in an event. Levuvo Mail creates a link with a
+  random room name that nobody can guess and enters it as the location (if the location is already set, e.g.
+  to a meeting room, the link becomes the first line of the description). All attendees get the link with
+  the invitation. When an event contains a Jitsi link, **“Join video call”** and **“Copy link”** appear. The
+  call runs in the browser; the app asks first, as for every link. The default server is
+  **meet.ffmuc.net** (Freifunk München, Germany, no account needed). Enter your own Jitsi server under
+  **Settings → General → Video calls** (https only). Everyone who has the link can join, so share it only
+  with the intended people. Turn on the lobby and end-to-end encryption in the call via Jitsi's security
+  options.
 
 ### Finding a time, polls and booking links
 
@@ -212,6 +223,16 @@ is stored in the keychain.
   birthday, note), edit, delete.
 - **Write email** opens a new message to the contact.
 - **Import** a .vcf file (e.g. exported from Outlook, Apple Contacts, Google) and **export** all contacts.
+- **History (contact history):** below the contact details, “History” shows everything about the person on
+  one timeline: emails (from the local search index, across all accounts and folders), shared events, tasks
+  and your notes. Filter with **Everything / Emails / Events / Tasks / Notes**; click an email to open it.
+  **Save note** records what was discussed; notes can be edited and deleted. **Add task** creates a task
+  about this person (it also appears under Tasks). Tasks made from one of the person's emails show up too.
+- **While reading:** the contact card next to an email (click the sender) shows open tasks and the latest
+  notes and has the same fields for a new note or task, also for people who are not in an address book.
+- **Only on this device:** notes are stored encrypted (AES-256-GCM, key in the keychain) and are part of
+  the backup. Nothing is looked up online and no AI is used. Deleting the last contact with an address also
+  deletes the notes about it.
 
 ## 11 Encryption
 
@@ -435,7 +456,9 @@ and files can be uploaded with the keyboard. In the **Chat** tab owners and edit
 seconds because Levuvo watches the mailbox with IMAP IDLE. Reply, edit and delete with the buttons next
 to a message; deleting removes it for everyone. Only your device counts unread messages, and there are no
 read receipts. Messages written with the assistant are marked "AI-generated". When approving one you choose "Only this
-one" or "For this space until revoked"; revoke it in the space settings. The assistant and agents see
+one" or "For this space until revoked"; revoke it in the space settings.
+**“Start video call”** in the chat sends all members a new Jitsi link (chapter 9, “Video calls”); links in
+chat messages can be clicked. The assistant and agents see
 a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving

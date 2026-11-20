@@ -1,0 +1,154 @@
+/* Contact history (mini CRM) and video call buttons. Tokens only (docs/design-system.md). */
+.event-video,
+.video-call-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.video-call-actions a.btn {
+  text-decoration: none;
+}
+.video-server-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.video-server-form input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.space-chat-bubble a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.contact-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-5);
+}
+.contact-history h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+.contact-history.compact {
+  border-top: 0;
+  padding-top: 0;
+  gap: var(--space-2);
+}
+.contact-history-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.contact-history-form textarea,
+.contact-history-form input,
+.contact-history-note-edit textarea {
+  width: 100%;
+}
+.contact-history-form.inline {
+  flex-direction: row;
+  align-items: center;
+}
+.contact-history-form.inline input {
+  flex: 1;
+  min-width: 0;
+}
+.contact-history-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+.contact-history-filter .chip.active,
+.contact-history-filter .chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.contact-history-list,
+.contact-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.contact-history-item {
+  display: grid;
+  grid-template-columns: auto 6.5rem 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.contact-history-kind {
+  color: var(--muted);
+  display: inline-flex;
+  padding-top: var(--space-0-5);
+}
+.contact-history-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.contact-history-body p,
+.contact-history-note p {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.contact-history-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: flex-start;
+}
+.contact-history-note > small {
+  flex-basis: 100%;
+}
+.contact-history-note-edit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.contact-history-buttons {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+.contact-history-task {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.contact-history-task .done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .contact-history-item {
+    grid-template-columns: auto 1fr;
+  }
+  .contact-history-item .contact-history-body {
+    grid-column: 1 / -1;
+  }
+  .contact-history-form.inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

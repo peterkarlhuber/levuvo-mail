@@ -8,7 +8,7 @@
 
 | Bereich | Was du dort einstellst |
 |---|---|
-| Allgemein | **Darstellung** (Sprache, Design, Dichte), **Lesen** (Bündeln, neue Absender prüfen), **Schreiben** (Senden rückgängig), **Kalender** |
+| Allgemein | **Darstellung** (Sprache, Design, Dichte), **Lesen** (Bündeln, neue Absender prüfen), **Schreiben** (Senden rückgängig), **Kalender**, **Videocalls** (Jitsi-Server) |
 | Konten | Konten, Signaturen, Absenderadressen, **Verbindungsstatus** |
 | Vorlagen | **Textbausteine und Vorlagen** |
 | Filter & Abwesenheit | **Filterregeln** auf dem Mailserver und **Abwesenheitsnotiz** |
