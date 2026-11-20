@@ -62,6 +62,7 @@ export function registerAccountRoutes(ctx) {
     await ctx.followups.forgetAccount(request.body.id);
     await ctx.screening?.clear(request.body.id);
     await ctx.tasks.forgetAccount(request.body.id);
+    await ctx.autoReply?.forget(request.body.id);
     refreshAccounts();
     return result;
   });
@@ -103,7 +104,7 @@ export function registerAccountRoutes(ctx) {
         ctx.cloud?.reset(existing.id);
         oauth.setStatus(String(state), { status: 'done', accountId: existing.id });
         refreshAccounts();
-        return callbackPage(true, `${result.email}: Kalender und Kontakte sind freigegeben.`);
+        return callbackPage(true, `${result.email}: Der Zugriff ist freigegeben.`);
       }
       const account = await accountManager.createOAuth({
         provider: result.provider,

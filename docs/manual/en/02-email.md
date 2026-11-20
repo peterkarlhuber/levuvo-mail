@@ -42,6 +42,10 @@ At the bottom left of the editor choose, for example, **Follow up after 3 days**
 
 **Templates** inserts saved texts or saves the current message as a template. Placeholders such as `{FirstName}` or `{Date}` are filled in automatically. You manage templates under **Settings → Templates**.
 
+### Hints before sending
+
+Before an email goes out, Levuvo Mail checks it on your computer, without AI. If many external recipients from several organizations would see each other's addresses, it suggests **Bcc**. If card numbers, social security numbers, passwords or health data would leave unencrypted, it points that out. With the assistant switched on, the check also spots discriminatory wording and threats. You decide whether to send anyway; nothing of this is stored or reported. The hints are not legal advice.
+
 ## Keep things tidy
 
 | What you want to do | How |
@@ -88,10 +92,12 @@ The **attachment overview** (in the folder bar under **Attachments**) shows all 
 
 Under **Settings → Filters & vacation** you set up rules, for example "emails from invoice@supplier.com into the Accounting folder". The rules run directly on your mail server, so they also work when Levuvo Mail is closed.
 
-- **Vacation reply:** switch it on, enter the period, subject and text, save.
+- **Vacation reply:** switch it on, enter the period, subject and text, save. You format the text like the signature (bold, links, images). **Append the account's signature (with logo)** adds your signature. If you change the signature later, save the vacation reply again.
 - **Rules:** Click **Add rule**, choose a condition (From, To/CC, Subject …) and an action (move, mark as read …), and click **Save on the server**.
 
-This works if your provider offers server filters (the technical term is Sieve or ManageSieve). With Microsoft 365 and Gmail, set up rules in the provider's webmail instead.
+This works if your provider offers server filters (the technical term is Sieve or ManageSieve). The logo then travels inside the reply. If your mail server can only send plain text, Levuvo Mail saves the reply as text and tells you.
+
+**Microsoft 365 and Gmail:** here Levuvo Mail stores the vacation reply directly with Microsoft or Google. You also choose who gets a reply (everyone, only contacts, only your organization). The first time, click **Approve** and confirm on the provider's sign-in page. Neither provider keeps embedded images, so the logo is left out there. For these accounts, set up rules in the provider's webmail.
 
 ## Encrypt confidential messages
 

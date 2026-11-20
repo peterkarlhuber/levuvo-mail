@@ -1,0 +1,410 @@
+{
+  "$comment": "Every user-visible feature and the manual section that explains it (German, English). Checked by apps/web/test/manual-features.test.mjs; generate missing entries with: node scripts/manual/features.mjs --missing",
+  "features": {
+    "settings-tab:general": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance",
+      "image": "settings-general.png"
+    },
+    "settings-tab:accounts": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance",
+      "image": "settings-accounts.png"
+    },
+    "settings-tab:templates": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:filters": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:automations": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
+    "settings-tab:dav": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:booking": {
+      "de": "03-kalender-kontakte-aufgaben.md#Buchungslinks",
+      "en": "03-calendar-contacts-tasks.md#Booking links"
+    },
+    "settings-tab:security": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:search": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:ai": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:notifications": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:privacy": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:backup": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:help": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-tab:about": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "space-tab:overview": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:chat": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:notes": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:mails": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:tasks": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:events": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:files": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:members": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "space-tab:settings": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Allgemein": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Levuvo Mail Assistant in diesem Raum": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Abgleich": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Gefahrenzone": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Sicherheitscodes": {
+      "de": "04-raeume.md#Im Raum arbeiten",
+      "en": "04-spaces.md#Work in a space"
+    },
+    "settings-section:Sicherheit und Support": {
+      "de": "06-einstellungen.md#Deine Daten exportieren oder löschen",
+      "en": "06-settings.md#Export or delete your data"
+    },
+    "settings-section:Open-Source-Lizenzen": {
+      "de": "06-einstellungen.md#Deine Daten exportieren oder löschen",
+      "en": "06-settings.md#Export or delete your data"
+    },
+    "settings-section:Darstellung": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Lesen": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Schreiben": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Kalender": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Verbindungsstatus": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Mitteilungen": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Suche & Offline": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Datenschutz": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Gespeicherte Daten auf diesem Gerät": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Handbuch": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Kurzhilfe": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Levuvo Mail": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance",
+      "mentions": false,
+      "why": "The About section headed with the product name shows the version, listed as \"Version\" in the overview."
+    },
+    "settings-section:Impressum": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:KI-Assistent": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Funktionen": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Schreibstil": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Keine Cloud-KI für diese Konten": {
+      "de": "05-ki-assistent.md#Datenschutz und KI-Regeln",
+      "en": "05-ai-assistant.md#Privacy and AI rules"
+    },
+    "settings-section:KI-Protokoll": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Automatisierungen": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
+    "settings-section:Protokoll": {
+      "de": "06-einstellungen.md#Automatisierungen",
+      "en": "06-settings.md#Automations"
+    },
+    "settings-section:Wiederherstellung bereit": {
+      "de": "01-erste-schritte.md#Eine Sicherung anlegen",
+      "en": "01-getting-started.md#Make a backup",
+      "mentions": false,
+      "why": "Shown only while a restore waits for the restart; the section explains the restore."
+    },
+    "settings-section:Sicherung erstellen": {
+      "de": "01-erste-schritte.md#Eine Sicherung anlegen",
+      "en": "01-getting-started.md#Make a backup",
+      "image": "settings-backup.png"
+    },
+    "settings-section:Wiederherstellen oder auf neuen Rechner umziehen": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Buchungslinks": {
+      "de": "03-kalender-kontakte-aufgaben.md#Buchungslinks",
+      "en": "03-calendar-contacts-tasks.md#Booking links"
+    },
+    "settings-section:Server-Konten": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Nicht verfügbar": {
+      "de": "06-einstellungen.md#Wenn etwas nicht klappt",
+      "en": "06-settings.md#When something doesn't work"
+    },
+    "settings-section:Abwesenheitsnotiz": {
+      "de": "02-mail.md#Filter und Abwesenheitsnotiz",
+      "en": "02-email.md#Filters and vacation reply"
+    },
+    "settings-section:Filterregeln": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Agenten-Schnittstelle (MCP)": {
+      "de": "05-ki-assistent.md#Externe Agenten anbinden",
+      "en": "05-ai-assistant.md#Connect external agents"
+    },
+    "settings-section:Freigaben": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "settings-section:Deine Daten": {
+      "de": "06-einstellungen.md#Deine Daten exportieren oder löschen",
+      "en": "06-settings.md#Export or delete your data"
+    },
+    "settings-section:Kennzeichnung": {
+      "de": "05-ki-assistent.md#Datenschutz und KI-Regeln",
+      "en": "05-ai-assistant.md#Privacy and AI rules"
+    },
+    "settings-section:OpenPGP": {
+      "de": "02-mail.md#OpenPGP und S/MIME",
+      "en": "02-email.md#OpenPGP and S/MIME"
+    },
+    "settings-section:S/MIME": {
+      "de": "02-mail.md#OpenPGP und S/MIME",
+      "en": "02-email.md#OpenPGP and S/MIME"
+    },
+    "settings-section:Textbausteine und Vorlagen": {
+      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
+      "en": "06-settings.md#The settings at a glance"
+    },
+    "command:compose": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search",
+      "image": "palette.png"
+    },
+    "command:search": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:followups": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:attachments": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:shortcuts": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:m:mail": {
+      "de": "01-erste-schritte.md#Die Oberfläche im Überblick",
+      "en": "01-getting-started.md#The app at a glance",
+      "image": "mail.png"
+    },
+    "command:m:cal": {
+      "de": "03-kalender-kontakte-aufgaben.md#Kalender",
+      "en": "03-calendar-contacts-tasks.md#Calendar",
+      "image": "calendar.png"
+    },
+    "command:m:con": {
+      "de": "03-kalender-kontakte-aufgaben.md#Kontakte",
+      "en": "03-calendar-contacts-tasks.md#Contacts",
+      "image": "contacts.png"
+    },
+    "command:m:spaces": {
+      "de": "04-raeume.md#Räume für Zusammenarbeit",
+      "en": "04-spaces.md#Spaces for collaboration",
+      "image": "spaces.png"
+    },
+    "command:m:tasks": {
+      "de": "03-kalender-kontakte-aufgaben.md#Aufgaben",
+      "en": "03-calendar-contacts-tasks.md#Tasks",
+      "image": "tasks.png"
+    },
+    "command:theme:dark": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:theme:light": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "command:theme:system": {
+      "de": "01-erste-schritte.md#Alles mit einer Suche erreichen",
+      "en": "01-getting-started.md#Reach everything with one search"
+    },
+    "shortcut:J+K": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:N": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:R": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:A": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:F": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:U": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:S": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:E": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:B": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:!": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Entf": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:P": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:/": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Strg/⌘+K": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Strg/⌘+Enter": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Alt+1 · 2 · 3": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Alt+,": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:Esc": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "shortcut:?": {
+      "de": "07-tastenkuerzel.md#Tastenkürzel",
+      "en": "07-shortcuts.md#Keyboard shortcuts"
+    }
+  }
+}

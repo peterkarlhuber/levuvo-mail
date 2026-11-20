@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ASSISTANT_WIDTH, validAssistantWidth } from './assistant-width';
 
 // View preferences only. Never mail content, addresses or credentials.
 export type Prefs = {
@@ -12,6 +13,8 @@ export type Prefs = {
   /** Inbox: mail from new senders waits in a screener until accepted or blocked. */
   screening: boolean;
   listWidth: number;
+  /** Width of the Levuvo Mail Assistant panel in pixels. */
+  assistantWidth: number;
   sendDelay: number;
   calendarView: 'month' | 'week' | 'day' | 'agenda';
   composeMode: 'html' | 'text';
@@ -28,6 +31,7 @@ export const DEFAULT_PREFS: Prefs = {
   bundles: true,
   screening: false,
   listWidth: 400,
+  assistantWidth: ASSISTANT_WIDTH.initial,
   sendDelay: 10,
   calendarView: 'week',
   composeMode: 'html'
@@ -48,6 +52,7 @@ function read(): Prefs {
         typeof v.listWidth === 'number' && v.listWidth >= 300 && v.listWidth <= 680
           ? v.listWidth
           : DEFAULT_PREFS.listWidth,
+      assistantWidth: validAssistantWidth(v.assistantWidth) ? v.assistantWidth : DEFAULT_PREFS.assistantWidth,
       sendDelay: [0, 5, 10, 20, 30].includes(v.sendDelay as number) ? (v.sendDelay as number) : DEFAULT_PREFS.sendDelay,
       calendarView: ['month', 'week', 'day', 'agenda'].includes(v.calendarView as string)
         ? (v.calendarView as Prefs['calendarView'])

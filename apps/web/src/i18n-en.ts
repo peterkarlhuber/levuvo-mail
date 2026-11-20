@@ -854,6 +854,39 @@ export const EN: Record<string, string> = {
   'Gespeichert. Dein Mailserver kann Abwesenheitsnotizen nur als reinen Text senden – Formatierung und Bilder entfallen dort.':
     'Saved. Your mail server can only send vacation replies as plain text – formatting and images are left out there.',
   'Text der Abwesenheitsnotiz': 'Vacation reply text',
+  'Gespeichert. {provider} übernimmt keine eingebetteten Bilder – die Abwesenheitsnotiz wurde ohne Logo gespeichert.':
+    'Saved. {provider} does not keep embedded images – the vacation reply was saved without the logo.',
+  'Die Abwesenheitsnotiz ist bei {provider} gespeichert.': 'The vacation reply is saved at {provider}.',
+  'Lade Abwesenheitsnotiz …': 'Loading vacation reply …',
+  'Für dieses Konto ist keine Abwesenheitsnotiz verfügbar.': 'No vacation reply is available for this account.',
+  'Damit Levuvo Mail die Abwesenheitsnotiz beim Anbieter speichern darf, ist eine einmalige Freigabe nötig. Es öffnet sich die Anmeldeseite des Anbieters für dieses Konto.':
+    "Levuvo Mail needs a one-time consent to store the vacation reply with your provider. The provider's sign-in page opens for this account.",
+  'Wird bei {provider} gespeichert und von dort automatisch beantwortet – auch wenn Levuvo Mail geschlossen ist.':
+    'Stored at {provider} and answered automatically from there – even when Levuvo Mail is closed.',
+  'Antworten an': 'Reply to',
+  'Alle Absender': 'All senders',
+  'Nur meine Kontakte': 'Only my contacts',
+  'Nur meine Organisation': 'Only my organization',
+  'Ohne Datum gilt die Notiz, bis du sie ausschaltest. Microsoft setzt den Betreff selbst („Automatische Antwort: …“) und antwortet jedem Absender einmal.':
+    'Without dates the reply stays on until you turn it off. Microsoft sets the subject itself (“Automatic reply: …”) and answers each sender once.',
+  'Gmail antwortet jedem Absender höchstens einmal in vier Tagen.':
+    'Gmail answers each sender at most once every four days.',
+  'Signatur des Kontos anhängen': "Append the account's signature",
+  '{provider} speichert die Notiz formatiert (fett, Links), aber ohne eingebettete Bilder: Ein hochgeladenes Logo (auch aus der Signatur) wird weggelassen. Die Signatur wird beim Speichern übernommen – nach einer Änderung an der Signatur bitte hier erneut speichern.':
+    '{provider} keeps the reply formatted (bold, links) but without embedded images: an uploaded logo (also from the signature) is left out. The signature is taken over when saving – after changing the signature, please save here again.',
+  'Bei {provider} speichern': 'Save at {provider}',
+  'Für die Abwesenheitsnotiz dieses Kontos ist eine einmalige Freigabe beim Anbieter nötig.':
+    'The vacation reply of this account needs a one-time consent at the provider.',
+  'Ungültiger Wert: Betreff.': 'Invalid value: subject.',
+  'Für Microsoft 365 bitte Start- und Enddatum angeben oder beide leer lassen.':
+    'For Microsoft 365, please enter both start and end date or leave both empty.',
+  'Unerwartete Adresse.': 'Unexpected address.',
+  'Der Anbieter ist nicht erreichbar. Bitte später erneut versuchen.':
+    'The provider cannot be reached. Please try again later.',
+  'Die Gmail-API ist im Google-Projekt dieser App nicht aktiviert (siehe docs/OAUTH-SETUP.md).':
+    "The Gmail API is not enabled in this app's Google project (see docs/OAUTH-SETUP.md).",
+  'Der Anbieter hat die Abwesenheitsnotiz abgelehnt.': 'The provider rejected the vacation reply.',
+  'Nicht verfügbar.': 'Not available.',
   'Signatur des Kontos anhängen (mit Logo)': "Append the account's signature (with logo)",
   'Formatierung und Bilder werden mit einer Textversion gespeichert. Die Signatur wird beim Speichern übernommen – nach einer Änderung an der Signatur bitte hier erneut speichern.':
     'Formatting and images are stored together with a plain-text version. The signature is taken over when saving – after changing the signature, please save here again.',
