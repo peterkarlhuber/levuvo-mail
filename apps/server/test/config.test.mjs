@@ -5,12 +5,21 @@ import { cleanBeforeUid, mailConfig, folderName, cleanLimit, toMessageInfo } fro
 test('Account without credentials counts as not configured', () => {
   const c = mailConfig({});
   assert.equal(c.configured, false);
-  assert.equal(c.host, 'mail.your-server.de');
+  assert.equal(c.host, '');
   assert.equal(c.port, 993);
 });
 
 test('Configuration with a mailbox is enabled', () => {
-  assert.equal(mailConfig({ IMAP_USER: ' test@example.com ', IMAP_PASSWORD: 'secret' }).configured, true);
+  assert.equal(
+    mailConfig({ IMAP_HOST: 'imap.example.com', IMAP_USER: ' test@example.com ', IMAP_PASSWORD: 'secret' }).configured,
+    true
+  );
+});
+
+test('F-FUN-004: credentials without a host never fall back to a built-in server', () => {
+  const c = mailConfig({ IMAP_USER: 'test@example.com', IMAP_PASSWORD: 'secret' });
+  assert.equal(c.host, '');
+  assert.equal(c.configured, false);
 });
 
 test('Limit is clamped to 1 to 100, default 40', () => {

@@ -606,7 +606,7 @@ export async function createMailServer({
       return reply.code(err.statusCode || 502).send({ error: err.message, code: err.code });
     }
     if (domain && !err.imapPhase) {
-      diagnostics.record(domain, `${domain}_failed`);
+      diagnostics.record(domain, `${domain}_failed`, err);
       return reply
         .code(500)
         .send({ error: 'Der Vorgang ist fehlgeschlagen. Bitte erneut versuchen.', code: `${domain}_failed` });

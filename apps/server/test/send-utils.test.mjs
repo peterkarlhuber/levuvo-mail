@@ -14,12 +14,18 @@ const basic = {
   attachments: []
 };
 
-test('SMTP default is an encrypted Hetzner connection on 587 and sending stays off', () => {
-  const c = smtpConfig({ IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'secret' });
-  assert.equal(c.host, 'mail.your-server.de');
+test('SMTP default is an encrypted connection on 587 and sending stays off', () => {
+  const c = smtpConfig({ SMTP_HOST: 'smtp.example.com', IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'secret' });
+  assert.equal(c.host, 'smtp.example.com');
   assert.equal(c.port, 587);
   assert.equal(c.configured, true);
   assert.equal(c.enabled, false);
+});
+
+test('F-FUN-004: SMTP credentials without a host are not configured', () => {
+  const c = smtpConfig({ IMAP_USER: 'info@levuvo.com', IMAP_PASSWORD: 'secret' });
+  assert.equal(c.host, '');
+  assert.equal(c.configured, false);
 });
 
 test('Enabling requires explicit ENABLE_SEND=true', () => {

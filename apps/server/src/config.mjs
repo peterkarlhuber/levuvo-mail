@@ -4,12 +4,14 @@ export const MAX_PAGE_SIZE = 100;
 export function mailConfig(env = process.env) {
   const user = (env.IMAP_USER || '').trim();
   const password = env.IMAP_PASSWORD || '';
+  // No built-in default host: credentials only ever go to a server the user named (F-FUN-004).
+  const host = String(env.IMAP_HOST || '').trim();
   return {
-    host: (env.IMAP_HOST || 'mail.your-server.de').trim(),
+    host,
     port: Number(env.IMAP_PORT || 993),
     user,
     password,
-    configured: Boolean(user && password)
+    configured: Boolean(host && user && password)
   };
 }
 

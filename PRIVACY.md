@@ -18,7 +18,7 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Data | Where | Purpose |
 |---|---|---|
 | Emails, folders, attachments | on your provider's mail server; in memory while reading | display, search, sending |
-| Events and contacts | on your CalDAV/CardDAV server; in memory while displayed | calendar, address book, invitations |
+| Events and contacts | on your CalDAV/CardDAV server, or for Microsoft 365 / Outlook.com and Google accounts signed in with OAuth in that provider's calendar and contacts (Microsoft Graph, Google Calendar and People API); in memory while displayed | calendar, address book, invitations |
 | Passwords, OAuth sign-in tokens, private PGP/S/MIME keys, index key | exclusively in the operating system keychain (macOS Keychain / Windows Credential Manager) | sign-in, decryption, signing |
 | Account settings (address, servers, folders, sender addresses, signatures), CalDAV/CardDAV accounts, public keys and certificates, app settings | files in the app data folder, readable only by your user account | connections, encryption |
 | Local search index: subject, sender, recipients, date and the first 3,000 characters of text (no attachments; end-to-end encrypted messages only in their unreadable, encrypted form); with the AI assistant on, also numeric embeddings (vectors) of these texts | app data folder, SQLite database **encrypted as a whole with SQLCipher (AES-256, HMAC-SHA512)**, key in the system keychain; can be switched off and deleted | search across all folders, offline reading |
@@ -30,6 +30,8 @@ servers. There is **no telemetry, no usage statistics and no advertising**.
 | Snoozed mails and follow-up reminders (subject, sender address, time) and sender screening decisions (allowed and blocked addresses per account) | app data folder, **encrypted with AES-256-GCM** (key in the system keychain) | snooze, follow-ups, screening of new senders |
 | AI settings, consents (provider, date, version of the consent text), own routines, connected agents (name, permission level, **hash** of the token only) | app data folder, readable only by your user account | AI features, MCP server |
 | AI log (time, function or tool, provider, model, result – no message content) | app data folder, 30 days | transparency about what the AI and agents did |
+| Promise tracker (opt-in): suggested tasks and reminders with a short quote from the mail, its subject, the account and the promised date | app data folder, **encrypted with AES-256-GCM** (key in the system keychain), kept 60 days; part of backups; deleted with "Delete all AI data" or when the account is removed | not losing promises from mail |
+| Writing style per contact (opt-in): greeting, closing, form of address (du/Sie) and number of mails per recipient address | app data folder, **encrypted with AES-256-GCM** (key in the system keychain); not part of backups (learned again from the sent mail in the search index); deleted per contact, per account, by switching it off, with "Delete all AI data" or when the account is removed | replies in your usual style |
 | Privacy cockpit counters (per day: number of blocked trackers, external images loaded, newsletter unsubscribes – no addresses, hosts, subjects or message IDs) | app data folder, 30 days, deletable under Settings → Privacy; not part of backups | showing what was blocked and what left the device |
 | Pending agent approvals with the prepared content (recipients, text, event, contact, task) | app data folder, **encrypted with AES-256-GCM**; invalid after 7 days, the content is removed once decided | your approval before an agent acts |
 | Scheduling: polls and offers from “Find a time” (title, participants’ addresses, proposed times, who answered which time), booking links (settings, token), the message IDs of replies already handled and the times of automatic answers | app data folder, **encrypted with AES-256-GCM** (key in the system keychain); a poll is deleted 30 days after its last proposed time, automatic-answer times after 24 hours | finding a time, booking by e-mail |
@@ -40,7 +42,7 @@ Decrypted content is not stored – not even for the offline view.
 
 ## Backups
 
-A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, notes of the contact history, templates, snooze and follow-up entries, sender screening decisions, tasks, scheduling polls and booking links, automations, your own PGP/S/MIME keys, shared spaces (still encrypted, together with the space key and the member identity from the keychain, so the restored device stays a member) and the assistant's settings, own routines, connected agents (token hashes only, no tokens) and activity log. It does **not** contain pending agent approvals, account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
+A backup is created only when you ask for it (Settings → Backup) and is saved as a file wherever you choose. It contains the data that exists only on this device: app settings, account settings (without passwords), CalDAV/CardDAV accounts (without passwords), the local calendar with attachments, local contacts, notes of the contact history, templates, snooze and follow-up entries, sender screening decisions, tasks, scheduling polls and booking links, automations, your own PGP/S/MIME keys, shared spaces (still encrypted, together with the space key and the member identity from the keychain, so the restored device stays a member) and the assistant's settings, own routines, connected agents (token hashes only, no tokens), activity log and the suggestions of the promise tracker. It does **not** contain pending agent approvals, account passwords, OAuth tokens, AI API keys, the search index or the installation ID.
 
 The file is encrypted with a password of your choice (scrypt key derivation, AES-256-GCM); without it the backup cannot be read, not even by Levuvo. Only the creation date and app version are readable without the password. Restoring checks the file first and replaces the data on this device at the next start; the previous data is kept in `before-restore/` in the app data folder (the last three restores, each for at most 30 days; older copies are deleted automatically at the next start) and can be deleted there earlier. Since a backup contains personal data of others (contacts, appointments), store it as carefully as the computer itself and delete outdated copies.
 ## AI features (optional, off by default)
@@ -87,7 +89,10 @@ The AI features (Settings → AI & agents) are switched off until you switch the
   whether it worked. The app asks the system for microphone access only (no camera).
 - **What is stored:** the AI settings (app data folder, no key) and an **AI log** of what the AI and
   agents did (time, function or tool, provider, model, result) **without message content**, kept for 30
-  days on this device. It is not used to monitor anyone's performance.
+  days on this device. It is not used to monitor anyone's performance. With the promise tracker on, its
+  suggestions (a short quote from the mail, subject, account, date) are stored encrypted for 60 days;
+  with "Learn style per contact" on, your greeting, closing and form of address per recipient are stored
+  encrypted. Both stay on this device (see the table above).
 - **Transparency:** AI results are labelled as AI-generated. A mail whose text the assistant or an agent
   wrote carries the header `X-Levuvo-AI-Assisted` (who wrote it and the model) when sent, so recipients
   and their systems can recognise AI-generated text (AI Act Art. 50(2)); it can be switched off under
@@ -107,9 +112,11 @@ The AI features (Settings → AI & agents) are switched off until you switch the
     approval);
   - *organize:* additionally, **without approval**, move, archive, mark and snooze mails, create events
     without attendees, save contacts and create or complete tasks (every call is in the AI log);
-  - *everything:* additionally send mails after your approval.
+  - *everything:* additionally send mails after your approval; only if you also tick **send without
+    approval** for that agent (with a confirmation) does it send directly, and every mail it sends is
+    in the AI log.
 
-  Sending, events with attendees and moving to the trash always wait for your approval; the approval
+  Apart from that one option, sending, events with attendees and moving to the trash wait for your approval; the approval
   shows the full content (all recipients, sending account, text). Pending approvals become invalid after
   7 days and are removed from the file at the next change or start; after a decision only a summary
   remains. Accounts marked "No cloud AI" are hidden from external agents, because their model usually
@@ -135,6 +142,7 @@ anywhere.
 - **AI:** the local model talks only to Levuvo's own Ollama on this computer (127.0.0.1). Downloading a model you chose contacts registry.ollama.ai (IP address and model name only); downloading a speech model for dictation contacts huggingface.co (IP address and the files of that model only). With a cloud model and your consent, the contents listed under "AI features" go to Anthropic (api.anthropic.com) or OpenAI (api.openai.com) over HTTPS.
 - **Microsoft 365 calendar:** accepting an invitation in a Microsoft 365 calendar creates the event without attendees, so Microsoft does not send invitations on your behalf; your answer goes to the organizer as a reply mail.
 - **CalDAV/CardDAV servers** that you add yourself – HTTPS only.
+- **Calendar and contacts of Microsoft 365 / Outlook.com and Google accounts** (signed in with OAuth): events, calendars and contacts are read from and written to Microsoft Graph or the Google Calendar and People API of that same account over HTTPS, with that account's sign-in token. The provider's privacy policy applies.
 - **Task lists you connect yourself** (Tasks → Lists → "Connect a list": a CalDAV list, Microsoft To Do via Microsoft Graph, or Google Tasks): only the tasks in that list are sent to the server of that list (title, note, due date, reminder, priority, repetition, status); the link to the mail, the origin and the reminder state stay on this device. Nothing is sent before you connect a list. Google Tasks receives only title, note, due day and status (it cannot store the rest). CalDAV passwords are only sent to addresses of the account's own domain over HTTPS; Microsoft and Google receive the sign-in token of that account, which needs a one-time consent for tasks. The provider's privacy policy also applies. Disconnecting a list stops syncing and keeps the tasks on this device; nothing is deleted on the server.
 - **Video calls (Jitsi Meet):** Levuvo Mail only *creates* a link with a random room name (125 bits, so it cannot be guessed); creating it opens no connection. The default server is meet.ffmuc.net, run by Freifunk München e.V. in Germany; under Settings → General → Video calls you can enter your own Jitsi server instead (HTTPS only). The call itself runs in your browser after you open the link (with confirmation, like every link): the server then receives your IP address, the room name and the audio/video of the call, and the operator's privacy policy applies. The link goes wherever you put it (an invitation, a mail, a space chat); everyone who has it can join, so share it only with the intended people. Jitsi offers end-to-end encryption and a lobby in the call's security options.
 - **Out-of-office reply of Microsoft 365 / Google accounts** (Settings → Filters & vacation): when you save it, its text (with the signature if you choose so), dates and audience are sent to Microsoft Graph (mailbox settings) or the Gmail API of that same account; the provider then answers senders from there. Nothing is sent before you save. Embedded images are not sent. It needs a one-time consent for mailbox settings. A copy of the editor content stays on this device, **encrypted with AES-256-GCM** (key in the system keychain), so the editor shows it again; it is not part of backups.
@@ -152,7 +160,7 @@ anywhere.
 
 ## Deletion
 
-- Removing an email account deletes the local setup, the keychain entries and the search index of that account. Emails on the server remain unchanged.
+- Removing an email account deletes the local setup, the keychain entries, the search index, snooze and follow-up entries, promise-tracker suggestions and the writing-style profile of that account. Emails on the server remain unchanged.
 - Calendar/contact accounts, keys and certificates can be removed individually in the settings.
 - Contact history: each note can be deleted on its own; deleting the last contact with an address also deletes the notes about that address on this device.
 - Shared spaces: leaving a space or dissolving it (owner) stops syncing; afterwards the local copy can be deleted under Spaces. Copies on other members' devices are under their control.
@@ -160,7 +168,7 @@ anywhere.
 - Backup files you saved yourself are not touched by Levuvo; delete them yourself when no longer needed. Safety copies from a restore are in `before-restore/` in the app data folder.
 - The privacy cockpit's counters can be deleted under Settings → Privacy → "Delete counters"; they expire after 30 days anyway.
 - All AI data can be deleted under Settings → AI & agents → "Delete all AI data".
-- **Delete all data on this device** (Settings → Privacy) removes everything Levuvo Mail stored on this computer – settings, accounts, local calendar, contacts, tasks, templates, spaces, search index, AI data and models – and its keychain entries, at the next start; the window's own storage is cleared too. Data on your providers' servers is not touched.
+- **Delete all data on this device** (Settings → Privacy) removes everything Levuvo Mail stored on this computer – settings, accounts, local calendar, contacts, tasks, templates, spaces, search index, AI data and models, including temporary files of interrupted saves and set-aside copies of damaged files – and its keychain entries, at the next start; the window's own storage is cleared too. Data on your providers' servers is not touched.
 - After uninstalling, the app data folder can be deleted: macOS `~/Library/Application Support/Levuvo Mail`, Windows `%APPDATA%\Levuvo Mail`.
 
 ## Your rights

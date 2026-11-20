@@ -22,7 +22,10 @@ export const WIPE_MARKER = 'wipe-pending.json';
  * nothing else in it (Chromium's caches and storage) is removed by name.
  */
 export const LEVUVO_DIRS = ['index/', 'spaces/', 'ollama/', 'before-restore/', 'restore-pending/'];
-const TMP = /\.(tmp|bak)(-[\w-]+)?$/;
+// Leftover siblings of known files: interrupted atomic writes (`<file>.<12 hex>.tmp`, see
+// local-store.mjs), older `.tmp`/`.bak` names and damaged files set aside as `<file>.corrupt-<time>`
+// (app.mjs, local-calendar.mjs). They can hold a full plain copy of the data (F-GOV-002).
+const LEFTOVER = [/\.[a-f0-9]{12}\.tmp$/, /\.(tmp|bak)(-[\w-]+)?$/, /\.corrupt-[\w-]+$/];
 
 /** Names (and folder names with a trailing slash) in the data folder that belong to Levuvo. */
 export function levuvoEntries(names) {
@@ -32,9 +35,11 @@ export function levuvoEntries(names) {
     const key = dir ? `${name}/` : name;
     if (known.has(key)) return true;
     if (!dir && patterns.some(ext => name.endsWith(ext))) return true;
-    // Atomic writes leave temporary siblings of known files when interrupted.
-    const base = name.replace(TMP, '');
-    return !dir && base !== name && known.has(base);
+    if (dir) return false;
+    return LEFTOVER.some(re => {
+      const base = name.replace(re, '');
+      return base !== name && (known.has(base) || patterns.some(ext => base.endsWith(ext)));
+    });
   });
 }
 

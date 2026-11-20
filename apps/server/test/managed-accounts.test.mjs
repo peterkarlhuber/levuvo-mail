@@ -8,6 +8,7 @@ import { createAccountManager, normalizeAccount, settingsPath } from '../src/man
 const env = {
   IMAP_USER: 'peter@levuvo.at',
   IMAP_PASSWORD: 'legacy-secret',
+  IMAP_HOST: 'mail.your-server.de',
   SMTP_HOST: 'mail.your-server.de',
   SMTP_USER: 'peter@levuvo.at',
   SMTP_PASSWORD: 'legacy-secret',

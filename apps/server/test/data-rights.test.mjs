@@ -33,7 +33,12 @@ test('only Levuvo files are selected, never Chromium storage in the same folder'
     { name: 'accounts.json', dir: false },
     { name: 'tasks-local.json', dir: false },
     { name: 'tasks-local.json.tmp-123', dir: false },
+    // F-GOV-002: names atomicWrite and createJsonFile/local-calendar really produce.
+    { name: 'accounts.json.0a1b2c3d4e5f.tmp', dir: false },
+    { name: 'templates.json.corrupt-2026-11-20T10-00-00-000Z', dir: false },
+    { name: 'calendar-local.json.corrupt-1763600000000', dir: false },
     { name: 'primary.lvdb', dir: false },
+    { name: 'Preferences.0a1b2c3d4e5f.tmp', dir: false },
     { name: 'spaces', dir: true },
     { name: 'ollama', dir: true },
     { name: 'index', dir: true },
@@ -44,7 +49,18 @@ test('only Levuvo files are selected, never Chromium storage in the same folder'
   ];
   assert.deepEqual(
     levuvoEntries(names).map(e => e.name),
-    ['accounts.json', 'tasks-local.json', 'tasks-local.json.tmp-123', 'primary.lvdb', 'spaces', 'ollama', 'index']
+    [
+      'accounts.json',
+      'tasks-local.json',
+      'tasks-local.json.tmp-123',
+      'accounts.json.0a1b2c3d4e5f.tmp',
+      'templates.json.corrupt-2026-11-20T10-00-00-000Z',
+      'calendar-local.json.corrupt-1763600000000',
+      'primary.lvdb',
+      'spaces',
+      'ollama',
+      'index'
+    ]
   );
 });
 

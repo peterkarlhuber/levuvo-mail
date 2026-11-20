@@ -18,6 +18,9 @@ export const FAILED_FLAG = '$LevuvoFailed';
 export const SENT_FLAG = '$LevuvoSent';
 export const CLAIM_OWNER_FLAG = '$LevuvoClaimOwner';
 export const CLAIM_OTHER_FLAG = '$LevuvoClaimOther';
+/** Sent, but the copy in "Sent" could not be stored: the draft stays as the only record. */
+export const NO_SENT_COPY_FLAG = '$LevuvoNoSentCopy';
+// NO_SENT_COPY_FLAG is optional: without it a copy-less draft is cleaned up like any sent one.
 const STATE_FLAGS = [SENDING_FLAG, FAILED_FLAG, SENT_FLAG, CLAIM_OWNER_FLAG, CLAIM_OTHER_FLAG];
 const MAX_AHEAD_MS = 366 * 24 * 3600 * 1000;
 const problem = (message, code, statusCode = 400) => Object.assign(new Error(message), { code, statusCode });
@@ -155,7 +158,7 @@ function headerValue(header, name) {
  */
 export function scheduleState(flags) {
   if (!(flags instanceof Set)) return 'scheduled';
-  if (flags.has(SENT_FLAG)) return 'sent';
+  if (flags.has(SENT_FLAG)) return flags.has(NO_SENT_COPY_FLAG) ? 'sent_no_copy' : 'sent';
   if (flags.has(FAILED_FLAG)) return 'failed';
   if (flags.has(SENDING_FLAG)) return 'uncertain';
   if (flags.has(CLAIM_OWNER_FLAG) || flags.has(CLAIM_OTHER_FLAG)) return 'claimed';
@@ -509,9 +512,25 @@ export async function sendDue(
       clearInterval(keepAlive);
     }
     await client.messageFlagsAdd(String(item.uid), [SENT_FLAG], { uid: true }).catch(() => {});
-    await saveSent(raw).catch(() => {});
+    // `saveSent` reports a failed copy as { saved: false } (appendToSent) or by throwing.
+    const copy = await Promise.resolve()
+      .then(() => saveSent(raw))
+      .catch(() => ({ saved: false, reason: 'append_failed' }));
+    if (copy && copy.saved === false) {
+      // Delivered, but "Sent" has no copy: the scheduled draft is the only record of what went
+      // out, so it stays in "Drafts" (marked) instead of moving to the trash (F-FUN-002).
+      await client.messageFlagsAdd(String(item.uid), [NO_SENT_COPY_FLAG], { uid: true }).catch(() => {});
+      results.push({
+        uid: item.uid,
+        sent: true,
+        savedToSent: false,
+        sentCopyError: copy.reason || 'append_failed',
+        subject: item.subject
+      });
+      return;
+    }
     await cleanUp(client, item.uid, trash);
-    results.push({ uid: item.uid, sent: true, subject: item.subject });
+    results.push({ uid: item.uid, sent: true, savedToSent: true, subject: item.subject });
   }
 }
 

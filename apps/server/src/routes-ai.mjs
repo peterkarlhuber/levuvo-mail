@@ -344,6 +344,9 @@ export function registerAiRoutes(ctx) {
   }
   ctx.jobs?.register('style-profile', learnStyles, { every: 6 * 60 * 60_000, firstDelay: 2 * 60_000 });
   ctx.aiForgetHooks.push(() => styles.clear());
+  // A removed account (or a new mailbox behind its id) takes its contacts' style profiles along;
+  // afterwards they could no longer be removed per account (F-GOV-003).
+  ctx.onAccountChange?.(id => void styles.clear(id).catch(() => {}));
 
   /** The person a reply or new mail goes to: the sender of the last mail, or its recipient if that was the user. */
   function recipientOf(details, account) {
@@ -536,6 +539,7 @@ export function registerAiRoutes(ctx) {
     });
   ctx.semantic = semantic;
   ctx.aiForgetHooks.push(() => semantic.forget());
+  ctx.onAccountChange?.(id => void semantic.forget(id).catch(() => {}));
   // Keep the vectors close to the index: every 10 minutes, only while AI search is switched on.
   const syncAll = async () => {
     for (const a of ctx.accounts()) await semantic.sync(a.id).catch(() => null);

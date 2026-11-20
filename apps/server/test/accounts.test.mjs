@@ -5,6 +5,7 @@ import { buildAccounts, publicAccounts, resolveAccount, accountScopedRequestKey 
 const env = {
   IMAP_USER: 'main@levuvo.at',
   IMAP_PASSWORD: 'primary-secret',
+  IMAP_HOST: 'mail.your-server.de',
   SMTP_HOST: 'mail.your-server.de',
   ENABLE_SEND: 'false',
   MAIL_ACCOUNT_2_LABEL: 'Support',
@@ -16,7 +17,7 @@ const env = {
 };
 
 test('Main account stays backward compatible', () => {
-  const accounts = buildAccounts({ IMAP_USER: 'main@levuvo.at', IMAP_PASSWORD: 'p' });
+  const accounts = buildAccounts({ IMAP_HOST: 'mail.your-server.de', IMAP_USER: 'main@levuvo.at', IMAP_PASSWORD: 'p' });
   assert.equal(accounts.length, 1);
   assert.equal(resolveAccount(accounts, undefined).imap.user, 'main@levuvo.at');
 });
@@ -68,6 +69,8 @@ test('SMTP and IMAP write permission stay off by default', () => {
 
 test('Per-account signatures stay separate and contain real line breaks', () => {
   const acc = buildAccounts({
+    IMAP_HOST: 'mail.your-server.de',
+    SMTP_HOST: 'mail.your-server.de',
     IMAP_USER: 'peter@levuvo.at',
     IMAP_PASSWORD: 'secret',
     MAIL_PRIMARY_SIGNATURE: 'Grüße\\nPeter',
