@@ -67,6 +67,7 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
+- **Change the width:** drag the handle on the left edge of the window to the left to make it wider, to the right to make it narrower. Part of the app always stays visible. With the keyboard, press `Tab` to reach the handle, then use `←` and `→`, with `Shift` for bigger steps. `Home` picks the narrowest, `End` the widest width. A double click resets the width. Levuvo Mail remembers your width. On a phone the assistant fills the whole screen.
 
 ## Connect external agents
 
