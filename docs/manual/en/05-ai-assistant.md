@@ -35,6 +35,21 @@ After the download each model is compared with a fixed checksum, a kind of digit
 
 Small runs from 8 GB of memory (RAM), Standard from 16 GB, Large from 32 GB. Levuvo Mail shows how much your computer has under **Local AI**. Larger models answer better but more slowly. Models marked **EU** come from Mistral AI in France. With a local model the origin doesn't matter for your data, because it never leaves your computer.
 
+### Keeping an eye on the index for search by meaning
+
+For search by meaning to work, the search model computes an entry for every message in the search index. This happens in the background and only on your computer. You can see how far it has got under **Settings → AI & agents**, right below the search model, and under **Settings → Search & offline**:
+
+| Display | Meaning |
+|---|---|
+| **Not there** | There is no index yet. The reason is shown with it, for example: AI switched off, search model not downloaded yet, or local search index switched off. |
+| **Running** | The index is being built, with "x of y messages" and the estimated time left. |
+| **Paused** | You stopped building with **Pause**. **Resume** continues where it stopped. What has been computed is kept. |
+| **Incomplete** | A part is still missing, such as new mail. It is added in the next run, within 10 minutes at the latest, or right away with **Index now**. |
+| **Done** | All messages are searchable, with the number and the time. |
+| **Error** | The search model did not answer. **Try again** starts building again. |
+
+**Index again** discards all entries and computes them anew. You only need it when search by meaning finds noticeably poorly. While you search, a slim line below the search field shows when the index is not finished yet.
+
 ## What the assistant can do
 
 ### In a message
@@ -64,11 +79,23 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 
 ![The assistant window](assistant.png)
 
-- **Question:** "When is the delivery from Müller arriving?" The assistant reads the matching emails with their attachments and names each source with sender, date and a literal quote; one click opens it. Follow-ups such as "And the price?" refer to the previous answer, **Clear history** starts afresh.
+- **Question:** "When is the delivery from Müller arriving?" The assistant decides itself whether to search your emails or the manual. To "Hello" or "Who are you?" it answers directly and names the model it is using. Cards below the answer show the emails or manual sections it comes from. Each source shows sender, date and a literal quote; one click opens it. Follow-ups such as "And the price?" refer to the previous answer, **Clear history** starts afresh. If nothing fits, it says so instead of guessing.
+- **Long answers:** If an answer is longer than the maximum response length, it shows **Answer cut off**. **Continue** gets you the full answer.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
-- **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters.
+- **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters. The routine bar stays visible at the top of the window.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
 - **Change the width:** drag the handle on the left edge of the window to the left to make it wider, to the right to make it narrower. Part of the app always stays visible. With the keyboard, press `Tab` to reach the handle, then use `←` and `→`, with `Shift` for bigger steps. `Home` picks the narrowest, `End` the widest width. A double click resets the width. Levuvo Mail remembers your width. On a phone the assistant fills the whole screen.
+
+### Advanced model settings
+
+Under **Settings → AI & agents → Advanced** you set for the selected model:
+
+- **Context length (tokens):** how much text the model can read at once: rules, question and found emails together. More context needs more memory; Levuvo Mail then shows a hint.
+- **Max response length (tokens):** how long an answer may get.
+- **Temperature:** low answers factually, higher more varied.
+- **Thinking:** whether the model thinks before answering, if it can.
+
+Empty fields mean "Automatic". **Reset** restores the defaults.
 
 ## Promise tracker
 

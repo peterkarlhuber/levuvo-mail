@@ -54,7 +54,10 @@ async function cloudAi(t, { sidecar } = {}) {
     running: true,
     async call(method, params) {
       calls.push({ method, params });
-      return method === 'task' ? { answer: 'ok', found: true, sources: ['s1'] } : { ok: true };
+      if (method !== 'task') return { ok: true };
+      // A question: first the model asks for the mailbox search, then it answers from the hits.
+      if (params.kind === 'ask' && !params.input.sources) return { search: params.input.question };
+      return { answer: 'ok', found: true, sources: ['s1'] };
     },
     async stop() {},
     diagnostics: () => ({})
@@ -92,7 +95,14 @@ test('H-01/AI-01: a question across all accounts never sends text of a "No cloud
     semantic: {
       async search(ids) {
         searched.push(ids);
-        return ids.map(id => ({ accountId: id, folder: 'INBOX', uid: 1, subject: `S ${id}`, text: `TEXT-${id}` }));
+        return ids.map(id => ({
+          accountId: id,
+          folder: 'INBOX',
+          uid: 1,
+          subject: `S ${id}`,
+          text: `TEXT-${id}`,
+          score: 0.8
+        }));
       },
       sync: async () => null,
       forget: async () => {}
@@ -102,8 +112,8 @@ test('H-01/AI-01: a question across all accounts never sends text of a "No cloud
   const reply = { code: () => reply, send: x => x };
   const out = await handlers['POST /api/ai/run']({ body: { kind: 'ask', input: { question: 'Was gilt?' } } }, reply);
   assert.deepEqual(searched, [['open']], 'blocked account is not even searched');
-  const task = calls.find(c => c.method === 'task');
-  assert.ok(task);
+  const task = calls.findLast(c => c.method === 'task');
+  assert.ok(task?.params.input.sources, 'the answer step got the hits');
   assert.doesNotMatch(JSON.stringify(task.params), /TEXT-secret/);
   assert.equal(out.result.sources[0].accountId, 'open');
   // A client cannot smuggle in its own source list.
@@ -123,7 +133,8 @@ test('H-01/AI-01: a question across all accounts never sends text of a "No cloud
     ['open'],
     'only sources the server found itself are returned'
   );
-  assert.doesNotMatch(JSON.stringify(calls.find(c => c.method === 'task')?.params), /TEXT-secret|"secret"/);
+  for (const c of calls.filter(x => x.method === 'task'))
+    assert.doesNotMatch(JSON.stringify(c.params), /TEXT-secret|"secret"/);
   // Content of a blocked account in the input is refused right before the model call.
   await assert.rejects(ai.run('ask', {}, { sources: ['open', 'secret'] }), err => err.kind === 'cloud_blocked');
   // Functions on loaded mails need the account they come from.

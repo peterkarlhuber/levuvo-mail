@@ -87,7 +87,7 @@ function folder(value) {
 }
 function signatureHtml(value) {
   if (typeof value !== 'string') invalid('Ungültige Signatur.');
-  if (value.length > 300 * 1024) invalid('Die Signatur ist zu groß (max. 300 KB inkl. Bilder).');
+  if (value.length > 300_000) invalid('Die Signatur ist zu groß (max. 300 kB inkl. Bilder).');
   return value.trim() ? sanitizeOutgoingHtml(value) : '';
 }
 /** Additional sender addresses (aliases) of the same mailbox. */

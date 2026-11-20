@@ -58,7 +58,8 @@ class FakeOllama:
         if path == "/api/embed":
             return 200, {"model": body["model"], "embeddings": [[0.1, 0.2, 0.3] for _ in body["input"]]}
         if path == "/v1/chat/completions":
-            message = self.chat.pop(0) if self.chat else {"role": "assistant", "content": "done"}
+            message = dict(self.chat.pop(0)) if self.chat else {"role": "assistant", "content": "done"}
+            finish = message.pop("_finish", None)
             return 200, {
                 "id": "c1",
                 "object": "chat.completion",
@@ -68,7 +69,7 @@ class FakeOllama:
                     {
                         "index": 0,
                         "message": message,
-                        "finish_reason": "tool_calls" if message.get("tool_calls") else "stop",
+                        "finish_reason": finish or ("tool_calls" if message.get("tool_calls") else "stop"),
                     }
                 ],
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
@@ -359,3 +360,101 @@ def test_ollama_cloud_models_are_refused_like_orkexa_does() -> None:
     handlers = build_handlers(engine)
     with pytest.raises(RpcError):
         handlers["pull"]({"model": "deepseek-v3.1:671b-cloud"})
+
+
+ASSISTANT = {"model": "ministral-3:3b", "provider": "ollama"}
+
+
+def test_ask_greeting_is_answered_without_a_search() -> None:
+    """The model decides itself: no tool call means a direct answer, no mail is involved."""
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append({"role": "assistant", "content": "Hallo! Ich bin der Levuvo Mail Assistant. (sources: s1)"})
+        out = tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
+        assert out == {
+            "answer": "Hallo! Ich bin der Levuvo Mail Assistant.",
+            "found": True,
+            "sources": [],
+            "quotes": [],
+        }
+        chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
+        assert [t["function"]["name"] for t in chat["tools"]] == ["search_mailbox", "search_manual"]
+        system = chat["messages"][0]["content"]
+        assert "Levuvo Mail Assistant" in system and "ministral-3:3b" in system and "locally" in system
+        assert "never about you" in system and "German" in system
+        assert chat["temperature"] == 0.2
+        assert "reasoning_effort" not in chat, "only sent to a model that thinks"
+
+
+def test_ask_question_suspends_on_the_search_tool_call() -> None:
+    """A tool call is not run in the sidecar: the app searches and asks again with the hits."""
+    with fake_ollama() as (fake, url):
+        fake.capabilities = ["completion", "tools", "thinking"]
+        engine = configured(url)
+        fake.chat.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "search_mailbox", "arguments": json.dumps({"query": "Müller Angebot"})},
+                    }
+                ],
+            }
+        )
+        out = tasks.ask_mailbox(
+            engine, {"lang": "en", "question": "What did Müller say about the offer?", "assistant": ASSISTANT}
+        )
+        assert out == {"search": "Müller Angebot", "tool": "search_mailbox"}
+        chats = [body for path, body in fake.requests if path == "/v1/chat/completions"]
+        assert len(chats) == 1, "the turn stops at the tool call"
+        assert chats[0]["reasoning_effort"] == "none", "thinking off for a short decision"
+
+
+def test_ask_without_tool_support_always_searches() -> None:
+    with fake_ollama() as (fake, url):
+        fake.capabilities = ["completion"]
+        engine = configured(url)
+        out = tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
+        assert out == {"search": "hi", "tool": "search_mailbox"}
+        assert not [p for p, _ in fake.requests if p == "/v1/chat/completions"]
+
+
+def test_user_model_options_reach_the_request() -> None:
+    """Settings → KI & Agenten → Erweitert: answer length, temperature and thinking level."""
+    with fake_ollama() as (fake, url):
+        fake.capabilities = ["completion", "tools", "thinking"]
+        engine = Engine()
+        engine.configure(
+            {
+                "provider": "ollama",
+                "model": "qwen3.5:9b",
+                "baseUrl": url,
+                "options": {"maxTokens": 3000, "temperature": 0.7, "thinking": "high"},
+            }
+        )
+        fake.chat.append({"role": "assistant", "content": "Hallo!"})
+        tasks.ask_mailbox(engine, {"lang": "de", "question": "hi", "assistant": ASSISTANT})
+        chat = next(body for path, body in fake.requests if path == "/v1/chat/completions")
+        assert chat["max_tokens"] == 3000
+        assert chat["temperature"] == 0.7
+        assert chat["reasoning_effort"] == "high"
+        with pytest.raises(RpcError):
+            engine.configure({"provider": "ollama", "baseUrl": url, "options": {"thinking": "max"}})
+        with pytest.raises(RpcError):
+            engine.configure({"provider": "ollama", "baseUrl": url, "options": {"maxTokens": 10}})
+
+
+def test_cut_off_answer_is_reported_and_can_get_more_room() -> None:
+    with fake_ollama() as (fake, url):
+        engine = configured(url)
+        fake.chat.append({"role": "assistant", "content": "Eine sehr lange", "_finish": "length"})
+        out = tasks.ask_mailbox(engine, {"lang": "de", "question": "Erzähl alles", "assistant": ASSISTANT})
+        assert out["truncated"] is True
+        assert out["maxTokens"] == 600
+        fake.chat.append({"role": "assistant", "content": "Kurz."})
+        tasks.ask_mailbox(engine, {"lang": "de", "question": "Erzähl alles", "assistant": ASSISTANT, "minTokens": 1200})
+        last = [body for path, body in fake.requests if path == "/v1/chat/completions"][-1]
+        assert last["max_tokens"] == 1200

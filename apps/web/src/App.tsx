@@ -33,6 +33,7 @@ import { useSpacesChatBadge } from './spaces-badge';
 import { lazyModule, ModuleBoundary } from './ModuleBoundary';
 import type { AccountItem, InboxMonitorResult, InboxSnapshot, Runtime } from './types';
 
+import { PageTitle } from './ui';
 // Lazy modules reload the page once when their chunk is gone (app updated while it ran).
 const CalendarModule = lazyModule(() => import('./Calendar'));
 const ContactsModule = lazyModule(() => import('./Contacts'));
@@ -563,10 +564,7 @@ function Shell() {
     return (
       <div className="onboarding-shell">
         <div className="onboarding-panel">
-          <h1>
-            {t('Verbindung unterbrochen')}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{t('Verbindung unterbrochen')}</PageTitle>
           <p role="alert">{accountsError}</p>
           <button className="btn primary" onClick={() => void reloadAccounts()}>
             {t('Erneut versuchen')} <RefreshCcw size={16} />
@@ -580,7 +578,7 @@ function Shell() {
       <div className="onboarding-shell">
         <div className="onboarding-panel">
           <img src="/levuvo-header-logo.png" alt="Levuvo Mail" className="onboarding-logo brand-image" />
-          <h1>
+          <PageTitle>
             {credentialsMissing ? (
               t('Zugang prüfen')
             ) : (
@@ -590,8 +588,7 @@ function Shell() {
                 Levuvo Mail
               </>
             )}
-            <span className="period">.</span>
-          </h1>
+          </PageTitle>
           <p>
             {credentialsMissing
               ? t(
@@ -763,6 +760,10 @@ function Shell() {
                   composeTo(to);
                 }}
                 onOpenSettings={() => openSettings('dav')}
+                onOpenMail={mail => {
+                  setActive({ id: mail.accountId, openUid: mail.uid, openFolder: mail.folder });
+                  setModule('mail');
+                }}
               />
             </Suspense>
           </ModuleBoundary>

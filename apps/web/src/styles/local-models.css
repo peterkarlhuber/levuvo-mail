@@ -1,4 +1,4 @@
-/* Levuvo's own Ollama: model status, download progress and the list of downloaded models. */
+/* Levuvo Mail's own Ollama: model status, download progress and the list of downloaded models. */
 .local-model-status {
   display: flex;
   flex-wrap: wrap;
@@ -80,4 +80,36 @@
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* Index for search by meaning: status in Settings and a quiet line below the search field. */
+.local-model-status.warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+.semantic-index-status strong {
+  display: block;
+  color: var(--text);
+}
+.semantic-index-status.ok strong,
+.semantic-index-status.error strong,
+.semantic-index-status.warn strong {
+  color: inherit;
+}
+.semantic-index-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.semantic-index-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-1) var(--space-3) 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.semantic-index-hint.error {
+  color: var(--danger-text);
 }

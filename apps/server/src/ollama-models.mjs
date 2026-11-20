@@ -230,7 +230,7 @@ export function createModelManager({
     const running = jobs.get(entry.id);
     if (running && ['downloading', 'verifying'].includes(running.status)) return publicJob(running);
     const have = await installed().catch(() => {
-      throw new ModelError('unreachable', 'Levuvos Ollama startet nicht.', { statusCode: 503 });
+      throw new ModelError('unreachable', 'Das Ollama von Levuvo Mail startet nicht.', { statusCode: 503 });
     });
     if (have.get(entry.id)?.verified) {
       const { size } = variant(entry);
@@ -346,5 +346,7 @@ export function createModelManager({
     return () => readyListeners.delete(fn);
   };
 
-  return { list, download, cancel, remove, discardPartial, isReady, onReady, jobs };
+  /** True while a model downloads or is checked; the runtime is not restarted then. */
+  const busy = () => [...jobs.values()].some(j => j.status === 'downloading' || j.status === 'verifying');
+  return { list, download, cancel, remove, discardPartial, isReady, onReady, jobs, busy };
 }

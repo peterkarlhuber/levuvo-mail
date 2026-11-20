@@ -6,6 +6,8 @@ import { createScreeningStore } from './screening.mjs';
 import { createSealedJsonFile } from './sealed-json.mjs';
 import { createFollowupStore } from './followups.mjs';
 import { createTemplateStore } from './templates.mjs';
+import { createContactNotes, lockedContactNotes } from './contact-notes.mjs';
+import { registerContactHistoryRoutes } from './routes-contact-history.mjs';
 import { createTaskStore, lockedTaskStore, openTaskFile } from './tasks.mjs';
 import { AUTO_REPLY_ENDPOINTS, createAutoReplyService } from './auto-reply-cloud.mjs';
 import { createTaskSync, scheduleTaskSync } from './task-sync.mjs';
@@ -45,6 +47,7 @@ import { registerDavRoutes } from './routes-dav.mjs';
 import { registerCryptoRoutes } from './routes-crypto.mjs';
 import { registerPrivacyRoutes } from './routes-privacy.mjs';
 import { registerBackupRoutes } from './routes-backup.mjs';
+import { registerStorageRoutes } from './routes-storage.mjs';
 import { registerDataRightsRoutes } from './routes-data-rights.mjs';
 import { applyPendingWipe, pendingWipe } from './data-rights.mjs';
 import { applyPendingRestore, pendingRestore, pruneSafetyCopies } from './backup.mjs';
@@ -202,6 +205,8 @@ export async function createMailServer({
   aiSidecar = null,
   ollamaRuntime = null,
   packaged = false,
+  /** Desktop only: shows a folder in Finder or Explorer (Settings → Privacy). */
+  openFolder = null,
   logger = () => {}
 } = {}) {
   if (desktop && !/^[a-f0-9]{64}$/.test(sessionSecret)) throw new Error('Desktop-Sitzungsschlüssel fehlt.');
@@ -287,6 +292,21 @@ export async function createMailServer({
     logger(`local contacts unavailable: ${err.code || err.message}`);
     localContactsError = err;
     return null;
+  });
+  // Notes of the contact history: encrypted, fail closed like the address book on this device.
+  const contactNotes = await createContactNotes({
+    filename: path.join(dir, 'contact-notes.json'),
+    vault: store
+  }).catch(err => {
+    logger(`contact notes unavailable: ${err.code || err.message}`);
+    return lockedContactNotes(
+      err.statusCode === 423
+        ? err
+        : Object.assign(new Error('Die Notizen zu Kontakten sind gerade nicht verfügbar.'), {
+            code: 'contact_notes_locked',
+            statusCode: 423
+          })
+    );
   });
   // Like the device calendar: a locked keychain must not stop the app, tasks are then unavailable.
   // Sync with connected lists (CalDAV, Microsoft To Do, Google Tasks) is optional; without
@@ -509,7 +529,7 @@ export async function createMailServer({
     }
     if (pathname.startsWith('/api/')) {
       const accountFree =
-        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|briefing|commitments|meeting-prep|manual)(\/|$)/.test(
+        /^\/api\/(runtime|accounts|unified|oauth|dav|calendar|contacts\/(list|save|delete|export|import)|crypto|diagnostics|app-settings|index|search\/local|invitations\/calendars|followups|templates|backup|ai|mcp|spaces|tasks|scheduling|automations|privacy|briefing|commitments|meeting-prep|manual|contact-history|video)(\/|$)/.test(
           pathname
         );
       if (accountFree) return;
@@ -683,6 +703,7 @@ export async function createMailServer({
   const localRuntime = ollamaRuntime || createOllamaRuntime({ dataDir: dir, env, logger });
   const aiLog = createAiLog(path.join(dir, 'ai-log.jsonl'));
   const models = localRuntime.available ? createModelManager({ runtime: localRuntime, log: aiLog, logger }) : null;
+  localRuntime.configure?.({ canRestart: () => !models?.busy?.() });
   ai = createAiService({
     settingsFile: aiSettings,
     vault: store,
@@ -727,6 +748,7 @@ export async function createMailServer({
     commitments,
     screening,
     templates,
+    contactNotes,
     tasks,
     taskSync,
     watchers,
@@ -789,12 +811,14 @@ export async function createMailServer({
   registerDavRoutes(ctx);
   registerCryptoRoutes(ctx);
   registerBackupRoutes(ctx);
+  registerStorageRoutes(ctx, { dir, openFolder });
   registerDataRightsRoutes(ctx, { wipeState, supportUntil: PACKAGE.levuvo?.supportUntil || '' });
   registerAiRoutes(ctx);
   const mcp = await setupMcp(ctx, { createJsonFile, dir });
   ctx.mcp = mcp;
   registerSpaceRoutes(ctx, { dir: spacesDir(dir) });
   registerTaskRoutes(ctx);
+  registerContactHistoryRoutes(ctx);
   registerBriefingRoutes(ctx);
   registerCommitmentRoutes(ctx);
   registerMeetingPrepRoutes(ctx);

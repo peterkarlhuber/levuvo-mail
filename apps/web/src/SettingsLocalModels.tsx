@@ -11,6 +11,8 @@ import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Button } from './ui';
 import { Row } from './Settings';
+import { formatBytes } from './format';
+import { SemanticIndexStatus } from './SemanticIndexStatus';
 
 type Tier = 'small' | 'standard' | 'large' | 'search';
 type Fit = 'good' | 'tight' | 'too_big';
@@ -61,11 +63,8 @@ const DISK_RESERVE = 2 * 1024 ** 3;
 
 const busy = (j: Job | null) => j?.status === 'downloading' || j?.status === 'verifying';
 
-/** "6.6 GB" in the UI language. */
-export function formatSize(bytes: number, locale: string) {
-  const gb = bytes / 1e9;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: gb < 10 ? 1 : 0 }).format(gb)} GB`;
-}
+/** Model, download and disk sizes: the app-wide formatter, so all numbers on this page agree. */
+export const formatSize = (bytes: number, locale: string) => formatBytes(bytes, locale);
 
 export function percent(job: Job | null) {
   if (!job || !job.total) return 0;
@@ -235,14 +234,6 @@ export function LocalModelSettings({
         {t('Bei {name} bleiben', { name: to.name })}
       </Button>
     ) : null;
-  const index = state.index.reduce(
-    (a, i) => ({
-      messages: a.messages + (i.messages || 0),
-      vectors: a.vectors + Math.min(i.vectors || 0, i.messages || 0),
-      running: a.running || i.running
-    }),
-    { messages: 0, vectors: 0, running: false }
-  );
 
   return (
     <>
@@ -313,18 +304,7 @@ export function LocalModelSettings({
           extra={selectedEmbed !== activeEmbed ? switchBack('embed', activeEmbed) : null}
         />
       )}
-      {selectedEmbed?.installed && index.messages > 0 && index.vectors < index.messages && (
-        <div className="local-model-status" role="status">
-          <span>
-            {t('Suchindex mit {model}: {done} von {total} Nachrichten', {
-              model: selectedEmbed.name,
-              done: index.vectors.toLocaleString(locale),
-              total: index.messages.toLocaleString(locale)
-            })}
-          </span>
-          <progress max={index.messages} value={index.vectors} aria-label={t('Fortschritt des Suchindex')} />
-        </div>
-      )}
+      <SemanticIndexStatus />
       {installed.length > 0 && (
         <Row
           label={t('Heruntergeladene Modelle')}

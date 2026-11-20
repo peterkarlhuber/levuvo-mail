@@ -391,13 +391,26 @@ export function registerMailRoutes(ctx) {
   });
   api.get('/api/index/status', async () => {
     const out = [];
-    for (const a of ctx.accounts()) out.push({ accountId: a.id, label: a.label, ...(await localIndex.status(a.id)) });
-    return { enabled: ctx.settings.get().localIndex !== false, accounts: out };
+    const runner = indexer.status();
+    for (const a of ctx.accounts())
+      out.push({
+        accountId: a.id,
+        label: a.label,
+        ...(await localIndex.status(a.id)),
+        lastRun: runner.accounts[a.id] || null
+      });
+    return {
+      enabled: ctx.settings.get().localIndex !== false,
+      running: runner.running,
+      runs: runner.runs,
+      accounts: out
+    };
   });
   api.post('/api/index/sync', { bodyLimit: 1024 }, async (request, reply) => {
     if (!requireAction(request, reply, 'mail-v1')) return;
     void runIndexer(true);
-    return { started: true };
+    // The pass the UI waits for: this one, or the one already under way.
+    return { started: true, pass: indexer.status().runs };
   });
   api.post('/api/index/clear', { bodyLimit: 1024 }, async (request, reply) => {
     if (!requireAction(request, reply, 'mail-v1')) return;

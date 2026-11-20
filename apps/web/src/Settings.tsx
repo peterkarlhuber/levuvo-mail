@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ArchiveRestore,
   Bell,
@@ -28,7 +28,8 @@ import {
 import AccountSettings from './AccountSettings';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
-import { Segmented } from './ui';
+import { Segmented, PageTitle } from './ui';
+import { Row, Section, Toggle } from './ui/SettingsLayout';
 import { useT } from './i18n';
 import { usePrefs } from './prefs';
 import { ShortcutsDialog } from './Panels';
@@ -39,8 +40,12 @@ import { BookingSettings } from './SettingsBooking';
 import { DavSettings } from './SettingsDav';
 import { SecuritySettings } from './SettingsSecurity';
 import { TemplateSettings } from './SettingsTemplates';
+import { VideoSettings } from './SettingsVideo';
 import { BackupSettings } from './SettingsBackup';
 import { AiSettingsPanel } from './SettingsAi';
+import { SemanticIndexStatus } from './SemanticIndexStatus';
+import { formatBytes } from './format';
+import { StorageLocations } from './StorageLocations';
 import { PrivacyDataSettings } from './SettingsPrivacyData';
 import { AboutCompliance } from './AboutCompliance';
 import { PrivacyCockpit } from './PrivacyCockpit';
@@ -60,88 +65,8 @@ type Props = {
   onClose: () => void;
 };
 
-export function Section({
-  title,
-  children,
-  description
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="settings-section">
-      <h2>{title}</h2>
-      {description && <p className="settings-description">{description}</p>}
-      {children}
-    </section>
-  );
-}
-export function Row({
-  label,
-  hint,
-  wide,
-  children
-}: {
-  label: string;
-  hint?: string;
-  /** Free-text field: placed below the label at full row width. */
-  wide?: boolean;
-  children: ReactNode;
-}) {
-  const id = useId();
-  const control = useRef<HTMLDivElement>(null);
-  // Fields inside a row get the row's label and hint as accessible name and description,
-  // unless they carry their own (WCAG 1.3.1 / 4.1.2).
-  useLayoutEffect(() => {
-    const fields = [
-      ...(control.current?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea') ?? [])
-    ];
-    fields.forEach(el => {
-      const named =
-        el.getAttribute('aria-label') ||
-        (el.getAttribute('aria-labelledby') && !el.dataset.rowLabel) ||
-        ((el as HTMLInputElement).labels?.length && !el.dataset.rowLabel);
-      if (!named) {
-        // A single field gets the row's visible <label>; several share it via aria-labelledby.
-        if (fields.length === 1 && (!el.id || el.id === `${id}-field`)) el.id = `${id}-field`;
-        else el.setAttribute('aria-labelledby', `${id}-label`);
-        el.dataset.rowLabel = '1';
-      }
-      if (hint && !el.getAttribute('aria-describedby')) el.setAttribute('aria-describedby', `${id}-hint`);
-    });
-  });
-  return (
-    <div className={wide ? 'settings-row settings-row--wide' : 'settings-row'}>
-      <div className="settings-row-label">
-        <label id={`${id}-label`} htmlFor={`${id}-field`}>
-          {label}
-        </label>
-        {hint && <small id={`${id}-hint`}>{hint}</small>}
-      </div>
-      <div className="settings-row-control" ref={control}>
-        {children}
-      </div>
-    </div>
-  );
-}
+export { Row, Section, Toggle };
 export { Segmented };
-export function Toggle({
-  checked,
-  onChange,
-  label
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <label className="switch">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} aria-label={label} />
-      <span />
-    </label>
-  );
-}
 
 function General() {
   const { t } = useT();
@@ -308,6 +233,7 @@ function General() {
           />
         </Row>
       </Section>
+      <VideoSettings />
     </>
   );
 }
@@ -419,33 +345,72 @@ function Notifications({
   );
 }
 
+type IndexRun = { at: number; added: number; removed: number; complete: boolean; error: string | null };
 type IndexStatus = {
   enabled: boolean;
+  running?: boolean;
+  runs?: number;
   accounts: {
     accountId: string;
     label: string;
     messages: number;
     folders: number;
-    updatedAt: number | null;
+    updatedAt: string | null;
+    checkedAt?: string | null;
     bytes?: number;
+    lastRun?: IndexRun | null;
   }[];
 };
 function SearchIndex() {
   const { t, locale } = useT();
   const { confirm, toast } = useUi();
   const [status, setStatus] = useState<IndexStatus | null>(null);
+  // Set by "Update now": the pass number it waits for, so the result can be reported once it ends.
+  const [waitingFor, setWaitingFor] = useState<number | null>(null);
   const load = useCallback(
     () =>
       getJson<IndexStatus>('/api/index/status')
-        .then(setStatus)
-        .catch(() => setStatus(null)),
+        .then(next => {
+          setStatus(next);
+          return next;
+        })
+        .catch(() => {
+          setStatus(null);
+          return null;
+        }),
     []
   );
   useEffect(() => {
     void load();
-    const timer = window.setInterval(load, 5000);
+    const timer = window.setInterval(load, waitingFor !== null ? 1000 : 5000);
     return () => window.clearInterval(timer);
-  }, [load]);
+  }, [load, waitingFor]);
+  // The pass started by "Update now" ended: say what it found, also when nothing was new.
+  useEffect(() => {
+    if (waitingFor === null || !status || status.running || (status.runs ?? 0) < waitingFor) return;
+    setWaitingFor(null);
+    const runs = status.accounts.map(a => a.lastRun).filter((r): r is IndexRun => Boolean(r));
+    const failed = runs.filter(r => r.error).length;
+    const added = runs.reduce((n, r) => n + r.added, 0);
+    const removed = runs.reduce((n, r) => n + r.removed, 0);
+    if (failed)
+      toast({
+        text:
+          failed === 1
+            ? t('Index aktualisiert, aber ein Konto war nicht erreichbar.')
+            : t('Index aktualisiert, aber {count} Konten waren nicht erreichbar.', { count: failed }),
+        kind: 'error'
+      });
+    else if (added || removed)
+      toast({
+        text: t('Index aktualisiert: {added} neu, {removed} entfernt.', {
+          added: added.toLocaleString(locale),
+          removed: removed.toLocaleString(locale)
+        }),
+        kind: 'info'
+      });
+    else toast({ text: t('Index ist aktuell. Nichts Neues gefunden.'), kind: 'info' });
+  }, [status, waitingFor, toast, t, locale]);
   async function setEnabled(enabled: boolean) {
     if (
       !enabled &&
@@ -463,58 +428,87 @@ function SearchIndex() {
     if (enabled) await postJson('/api/index/sync', {}, 'mail-v1');
     void load();
   }
+  async function updateNow() {
+    try {
+      const { pass } = await postJson<{ pass?: number }>('/api/index/sync', {}, 'mail-v1');
+      setWaitingFor(pass ?? (status?.runs ?? 0) + 1);
+      void load();
+    } catch {
+      toast({ text: t('Index konnte nicht aktualisiert werden.'), kind: 'error' });
+    }
+  }
+  const stamp = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
+  const updating = waitingFor !== null || Boolean(status?.running);
   return (
-    <Section
-      title={t('Suche & Offline')}
-      description={t(
-        'Levuvo Mail legt einen verschlüsselten Suchindex (AES-256, Schlüssel im Schlüsselbund) auf diesem Gerät an: Volltextsuche über alle Ordner und Konten – auch ohne Internet. Indexiert werden Betreff, Absender und die ersten 3.000 Zeichen Text, keine Anhänge.'
-      )}
-    >
-      <Row label={t('Lokaler Suchindex')}>
-        <Toggle label={t('Lokaler Suchindex')} checked={status?.enabled !== false} onChange={v => void setEnabled(v)} />
-      </Row>
-      {status?.enabled &&
-        status.accounts.map(a => (
-          <div className="status-line" key={a.accountId}>
-            <Search size={14} />
-            <span>
-              <strong>{a.label}</strong>
-              <small>
-                {t('{count} Nachrichten in {folders} Ordnern', { count: a.messages || 0, folders: a.folders || 0 })}
-                {a.updatedAt
-                  ? ` · ${t('Stand {time}', { time: new Date(a.updatedAt).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) })}`
-                  : ` · ${t('wird aufgebaut …')}`}
-              </small>
-            </span>
+    <>
+      <Section
+        title={t('Suche & Offline')}
+        description={t(
+          'Levuvo Mail legt einen verschlüsselten Suchindex (AES-256, Schlüssel im Schlüsselbund) auf diesem Gerät an: Volltextsuche über alle Ordner und Konten – auch ohne Internet. Indexiert werden Betreff, Absender und die ersten 3.000 Zeichen Text, keine Anhänge.'
+        )}
+      >
+        <Row label={t('Lokaler Suchindex')}>
+          <Toggle
+            label={t('Lokaler Suchindex')}
+            checked={status?.enabled !== false}
+            onChange={v => void setEnabled(v)}
+          />
+        </Row>
+        {status?.enabled &&
+          status.accounts.map(a => {
+            const checked = a.checkedAt || a.updatedAt;
+            return (
+              <div className="status-line" key={a.accountId}>
+                <Search size={14} />
+                <span>
+                  <strong>{a.label}</strong>
+                  <small>
+                    {t('{count} Nachrichten in {folders} Ordnern', {
+                      count: (a.messages || 0).toLocaleString(locale),
+                      folders: a.folders || 0
+                    })}
+                    {typeof a.bytes === 'number' && a.bytes > 0 ? ` · ${formatBytes(a.bytes, locale)}` : ''}
+                    {updating
+                      ? ` · ${t('wird aktualisiert …')}`
+                      : checked
+                        ? ` · ${t('Stand {time}', { time: stamp(checked) })}`
+                        : ` · ${t('wird aufgebaut …')}`}
+                    {!updating && a.lastRun?.error ? ` · ${t('letzte Aktualisierung fehlgeschlagen')}` : ''}
+                  </small>
+                </span>
+              </div>
+            );
+          })}
+        {status?.enabled && (
+          <div className="settings-actions">
+            <button className="btn small" disabled={updating} onClick={() => void updateNow()}>
+              <RefreshCcw size={14} className={updating ? 'spin' : ''} />{' '}
+              {updating ? t('Wird aktualisiert …') : t('Jetzt aktualisieren')}
+            </button>
+            <button
+              className="btn small"
+              disabled={updating}
+              onClick={async () => {
+                if (await confirm({ title: t('Index neu aufbauen?'), confirmLabel: t('Neu aufbauen') })) {
+                  await postJson('/api/index/clear', {}, 'mail-v1');
+                  await updateNow();
+                }
+              }}
+            >
+              <Trash2 size={14} /> {t('Neu aufbauen')}
+            </button>
           </div>
-        ))}
-      {status?.enabled && (
-        <div className="settings-actions">
-          <button
-            className="btn small"
-            onClick={() => {
-              void postJson('/api/index/sync', {}, 'mail-v1').then(() =>
-                toast({ text: t('Index wird aktualisiert.'), kind: 'info' })
-              );
-            }}
-          >
-            <RefreshCcw size={14} /> {t('Jetzt aktualisieren')}
-          </button>
-          <button
-            className="btn small"
-            onClick={async () => {
-              if (await confirm({ title: t('Index neu aufbauen?'), confirmLabel: t('Neu aufbauen') })) {
-                await postJson('/api/index/clear', {}, 'mail-v1');
-                await postJson('/api/index/sync', {}, 'mail-v1');
-                void load();
-              }
-            }}
-          >
-            <Trash2 size={14} /> {t('Neu aufbauen')}
-          </button>
-        </div>
-      )}
-    </Section>
+        )}
+      </Section>
+      <Section
+        title={t('Suche nach Bedeutung')}
+        description={t(
+          'Mit eingeschalteter KI berechnet das lokale Modell für die Suche aus jeder Nachricht im Suchindex einen Eintrag, damit der Assistent Nachrichten auch ohne die genauen Wörter findet. Das passiert immer auf diesem Computer.'
+        )}
+      >
+        <SemanticIndexStatus />
+      </Section>
+    </>
   );
 }
 
@@ -535,13 +529,13 @@ function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
       <Section
         title={t('Datenschutz')}
         description={t(
-          'Levuvo Mail hat keinen eigenen Server und kein Tracking. Deine E-Mails, Kontakte und Termine gehen nur an die Server deiner Anbieter. Updates werden direkt bei Levuvo (GitHub Releases) geprüft.'
+          'Levuvo Mail hat keinen eigenen Server und kein Tracking. Deine E-Mails, Kontakte und Termine gehen nur an die Server deiner Anbieter. Updates werden direkt über die GitHub-Releases von Levuvo Mail geprüft.'
         )}
       >
         <Row
           label={t('Absturzberichte senden')}
           hint={t(
-            'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an Levuvo übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.'
+            'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an den Hersteller von Levuvo Mail übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.'
           )}
         >
           <Toggle
@@ -562,22 +556,11 @@ function Privacy({ onOpenAiLog }: { onOpenAiLog: () => void }) {
         </Row>
       </Section>
       <PrivacyDataSettings />
-      <Section title={t('Gespeicherte Daten auf diesem Gerät')}>
-        <ul className="plain-list">
-          <li>
-            {t(
-              'Schlüsselbund des Betriebssystems: Passwörter, OAuth-Token, private Schlüssel (PGP/S/MIME), Indexschlüssel.'
-            )}
-          </li>
-          <li>
-            {t(
-              'App-Datenordner: Kontoeinstellungen ohne Passwörter, öffentliche Schlüssel/Zertifikate, CalDAV/CardDAV-Konten, verschlüsselter Suchindex.'
-            )}
-          </li>
-          <li>
-            {t('Arbeitsspeicher (nicht dauerhaft): zuletzt geladene Listen und Nachrichten für die Offline-Ansicht.')}
-          </li>
-        </ul>
+      <Section
+        title={t('Gespeicherte Daten auf diesem Gerät')}
+        description={t('Wo Levuvo Mail Daten auf diesem Computer speichert. Der Speicherort lässt sich nicht ändern.')}
+      >
+        <StorageLocations />
       </Section>
     </>
   );
@@ -757,10 +740,7 @@ export default function Settings(props: Props) {
       </nav>
       <main className="settings-content">
         <header className="settings-head">
-          <h1>
-            {current.label}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{current.label}</PageTitle>
           <button
             className="icon-button"
             aria-label={t('Schließen')}

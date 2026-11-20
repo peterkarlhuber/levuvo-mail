@@ -38,7 +38,7 @@ export function ollamaPaths(dataDir) {
   return { base, home: path.join(base, 'home'), models: path.join(base, 'models') };
 }
 
-export function ollamaEnv({ env = process.env, home, models, port }) {
+export function ollamaEnv({ env = process.env, home, models, port, contextLength = null }) {
   const out = {};
   for (const key of PASS_ENV) if (env[key]) out[key] = env[key];
   for (const key of PROXY_ENV) if (env[key]) out[key] = env[key];
@@ -51,6 +51,9 @@ export function ollamaEnv({ env = process.env, home, models, port }) {
     // Partly downloaded models survive a restart, so a cancelled download continues later.
     OLLAMA_NOPRUNE: '1',
     OLLAMA_NOHISTORY: '1',
+    // Ollama's own default context is small; a longer prompt would be cut at the start, where the
+    // rules are. The length comes from the settings of the selected model (ai-model-options.mjs).
+    ...(contextLength ? { OLLAMA_CONTEXT_LENGTH: String(contextLength) } : {}),
     NO_PROXY: '127.0.0.1,localhost,::1',
     no_proxy: '127.0.0.1,localhost,::1'
   });
@@ -99,6 +102,11 @@ export function createOllamaRuntime({
   let idleTimer = null;
   let crashes = [];
   const stderrTail = [];
+  // Set by the AI service: the context length of the selected model, and whether a restart is
+  // possible right now (not during a model download).
+  let contextLength = () => null;
+  let canRestart = () => true;
+  let startedContext = null;
 
   function touch() {
     clearTimeout(idleTimer);
@@ -130,9 +138,10 @@ export function createOllamaRuntime({
     mkdirSync(paths.models, { recursive: true, mode: 0o700 });
     const port = await pickPort();
     const url = `http://127.0.0.1:${port}`;
+    const context = contextLength() || null;
     const proc = spawn(where.command, ['serve'], {
       cwd: paths.base,
-      env: ollamaEnv({ env, home: paths.home, models: paths.models, port }),
+      env: ollamaEnv({ env, home: paths.home, models: paths.models, port, contextLength: context }),
       stdio: ['ignore', 'ignore', 'pipe'],
       windowsHide: true
     });
@@ -170,6 +179,7 @@ export function createOllamaRuntime({
     }
     child = proc;
     baseUrl = url;
+    startedContext = context;
     logger(`ollama: own runtime ${version} on ${url}`);
     return url;
   }
@@ -177,6 +187,8 @@ export function createOllamaRuntime({
   /** Starts the runtime if needed and returns its address. */
   async function ensure() {
     touch();
+    // A changed context length takes effect with a restart, which loses nothing but loaded models.
+    if (child && baseUrl && !starting && (contextLength() || null) !== startedContext && canRestart()) await stop();
     if (child && baseUrl) return baseUrl;
     if (!starting)
       starting = start().finally(() => {
@@ -204,6 +216,13 @@ export function createOllamaRuntime({
     paths,
     ensure,
     stop,
+    configure(o = {}) {
+      if (typeof o.contextLength === 'function') contextLength = o.contextLength;
+      if (typeof o.canRestart === 'function') canRestart = o.canRestart;
+    },
+    get contextLength() {
+      return startedContext;
+    },
     get running() {
       return Boolean(child && baseUrl);
     },

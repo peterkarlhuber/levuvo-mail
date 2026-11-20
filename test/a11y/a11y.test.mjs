@@ -214,11 +214,27 @@ test('Accessibility (axe-core, keyboard)', { skip: missing, timeout: 300_000 }, 
       await page.locator('.space-row', { hasText: 'Projekt Relaunch' }).click();
       await page.locator('.space-tabs').waitFor();
       await axe(page, 'space overview');
-      for (const tab of ['Chat', 'Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder']) {
+      for (const tab of ['Chat', 'Notizen', 'Aufgaben', 'Termine', 'Dateien', 'Mitglieder', 'Einstellungen']) {
         await page.getByRole('tab', { name: tab }).click();
         await page.waitForTimeout(150);
         await axe(page, `space › ${tab}`);
       }
+      // Space settings look like Settings: cards, the danger zone last, fields save on blur.
+      assert.ok(
+        await page
+          .locator('.space-settings .settings-section')
+          .last()
+          .evaluate(s => s.classList.contains('settings-section--danger')),
+        'danger zone is the last card'
+      );
+      const saved = page.waitForRequest(
+        r =>
+          r.method() === 'POST' && r.url().endsWith('/api/spaces/sp1/op') && r.postDataJSON()?.type === 'space.update'
+      );
+      const nameField = page.locator('.space-settings').getByLabel('Name', { exact: true });
+      await nameField.fill('Projekt Relaunch 2');
+      await nameField.blur();
+      assert.equal((await saved).postDataJSON().data.name, 'Projekt Relaunch 2');
       // Tabs: arrow keys move the selection and the focus (UX-LEV-013).
       await page.getByRole('tab', { name: 'Dateien' }).focus();
       await page.keyboard.press('ArrowRight');
