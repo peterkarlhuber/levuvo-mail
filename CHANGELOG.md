@@ -3,9 +3,9 @@
 ## Unreleased
 
 ### Dictation
-- **Speak instead of type:** a microphone button in the composer records up to five minutes and inserts the recognised text at the cursor. Speech recognition is Whisper (base, small or large-v3-turbo, chosen under Settings → AI & agents → Dictation) running on this computer with the graphics card (WebGPU) or the processor; audio and text never leave the device and recordings are not stored.
-- **Checked download:** the model is downloaded once from Hugging Face at a pinned revision, every file is checked against size and SHA-256 shipped with the app, and a mismatch deletes it. Models are not part of backups and can be deleted in the settings.
-- **Microphone permission:** the app asks for audio only (no camera); macOS shows the microphone prompt with a reason.
+- **Speak instead of type:** a microphone button in the composer records up to five minutes and inserts the recognised text at the cursor. Speech recognition is Whisper (base, small or large-v3-turbo, chosen under Settings → AI & agents → Dictation) running on this computer with the graphics card (WebGPU) or the processor; audio and text never leave the device and recordings are not stored. (Manual: Dictation)
+- **Checked download:** the model is downloaded once from Hugging Face at a pinned revision, every file is checked against size and SHA-256 shipped with the app, and a mismatch deletes it. Models are not part of backups and can be deleted in the settings. (Manual: Dictation)
+- **Microphone permission:** the app asks for audio only (no camera); macOS shows the microphone prompt with a reason. (Manual: Dictation)
 
 ### Vacation reply
 - **Formatted vacation reply with signature and logo:** Settings → Filters & vacation uses the same editor as the signature (bold, links, images). "Append the account's signature (with logo)" adds the account signature. The reply is stored on the mail server as MIME (Sieve `vacation :mime`) with a plain-text version, the images inline, so recipients see the logo without loading anything from the internet. Mail servers that only accept plain-text replies get the text version, and Levuvo Mail says so. Too large images are refused with a clear message (at most 4 images, 400 KB together), and the server's size limit is checked before saving. (Manual: Filters and vacation reply)
