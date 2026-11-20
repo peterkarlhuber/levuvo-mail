@@ -30,7 +30,7 @@ Switch the tabs at the top with a click or with the arrow keys.
 | Tab | What for |
 |---|---|
 | Overview | What happened recently |
-| Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line |
+| Chat | Short messages to all members, end-to-end encrypted. Reply, edit or delete your own messages; `Enter` sends, `Shift` + `Enter` starts a new line; **Start video call** sends everyone a Jitsi link |
 | Notes | Texts that several people edit at the same time |
 | Mails | Emails on the topic with internal comments |
 | Tasks | Tasks with owners and due dates |

@@ -73,8 +73,8 @@ export const EN: Record<string, string> = {
   'wie IMAP': 'same as IMAP',
   'Sieve-Port': 'Sieve port',
   Signatur: 'Signature',
-  'Formatierter Text, Links und ein kleines Logo (bis 200 KB) sind möglich. Wird beim Verfassen automatisch eingefügt.':
-    'Formatted text, links and a small logo (up to 200 KB) are possible. Inserted automatically when composing.',
+  'Formatierter Text, Links und ein kleines Logo (bis 200 kB) sind möglich. Wird beim Verfassen automatisch eingefügt.':
+    'Formatted text, links and a small logo (up to 200 kB) are possible. Inserted automatically when composing.',
   'Signatur für {email}': 'Signature for {email}',
   'Weitere Absenderadressen (Aliase)': 'Additional sender addresses (aliases)',
   'Nur Adressen eintragen, die dein Mailserver für dieses Postfach zum Senden erlaubt – sonst lehnt er den Versand ab.':
@@ -214,11 +214,11 @@ export const EN: Record<string, string> = {
   'Maximal 30 Empfänger erlaubt.': 'A maximum of 30 recipients is allowed.',
   'Bitte einen Nachrichtentext eingeben.': 'Please enter a message text.',
   'Der Betreff ist zu lang.': 'The subject is too long.',
-  'Maximal acht Anhänge und insgesamt 8 MiB.': 'A maximum of eight attachments and 8 MiB in total.',
+  'Maximal acht Anhänge und insgesamt 8 MB.': 'A maximum of eight attachments and 8 MB in total.',
   'Für die Verschlüsselung fehlen Schlüssel – Details oben.': 'Keys for encryption are missing – see details above.',
   'Ohne Betreff senden?': 'Send without subject?',
   Senden: 'Send',
-  'Maximal acht Anhänge mit insgesamt 8 MiB.': 'A maximum of eight attachments with 8 MiB in total.',
+  'Maximal acht Anhänge mit insgesamt 8 MB.': 'A maximum of eight attachments with 8 MB in total.',
   'Nur PNG, JPEG, GIF oder WebP.': 'Only PNG, JPEG, GIF or WebP.',
   'Bilder im Text bis 1 MB. Größere Dateien bitte als Anhang.': 'Inline images up to 1 MB. Please attach larger files.',
   'Speichert …': 'Saving …',
@@ -331,10 +331,10 @@ export const EN: Record<string, string> = {
   'Anhang {name} ist unvollständig.': 'Attachment {name} is incomplete.',
   'Weitergeleitete Nachricht': 'Forwarded message',
   Datum: 'Date',
-  'Die Anhänge sind zusammen größer als 8 MiB bzw. mehr als acht und wurden nicht übernommen.':
-    'The attachments are larger than 8 MiB in total or more than eight and were not included.',
-  'Der Entwurf enthält mehr als acht Anhänge oder über 8 MiB und kann hier nicht bearbeitet werden.':
-    'The draft contains more than eight attachments or over 8 MiB and cannot be edited here.',
+  'Die Anhänge sind zusammen größer als 8 MB bzw. mehr als acht und wurden nicht übernommen.':
+    'The attachments are larger than 8 MB in total or more than eight and were not included.',
+  'Der Entwurf enthält mehr als acht Anhänge oder über 8 MB und kann hier nicht bearbeitet werden.':
+    'The draft contains more than eight attachments or over 8 MB and cannot be edited here.',
   'Alle Posteingänge': 'All inboxes',
   'Suche in allen Ordnern': 'Search in all folders',
   Ungelesen: 'Unread',
@@ -731,11 +731,11 @@ export const EN: Record<string, string> = {
   'Index neu aufbauen?': 'Rebuild the index?',
   'Neu aufbauen': 'Rebuild',
   Datenschutz: 'Privacy',
-  'Levuvo Mail hat keinen eigenen Server und kein Tracking. Deine E-Mails, Kontakte und Termine gehen nur an die Server deiner Anbieter. Updates werden direkt bei Levuvo (GitHub Releases) geprüft.':
-    "Levuvo Mail has no server of its own and no tracking. Your emails, contacts and events only go to your providers' servers. Updates are checked directly with Levuvo (GitHub Releases).",
+  'Levuvo Mail hat keinen eigenen Server und kein Tracking. Deine E-Mails, Kontakte und Termine gehen nur an die Server deiner Anbieter. Updates werden direkt über die GitHub-Releases von Levuvo Mail geprüft.':
+    "Levuvo Mail has no server of its own and no tracking. Your emails, contacts and events only go to your providers' servers. Updates are checked directly against the GitHub releases of Levuvo Mail.",
   'Absturzberichte senden': 'Send crash reports',
-  'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an Levuvo übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.':
-    'Optional. If the app crashes, a technical report with a memory dump is sent to Levuvo. The dump may contain parts of emails or addresses that were open. Only effective if this build contains a report address; please restart after changing.',
+  'Freiwillig. Bei einem Absturz wird ein technischer Bericht mit einem Speicherabbild an den Hersteller von Levuvo Mail übermittelt. Das Abbild kann Teile gerade geöffneter E-Mails oder Adressen enthalten. Nur wirksam, wenn dieser Build eine Berichtsadresse enthält; nach Änderung bitte neu starten.':
+    'Optional. If the app crashes, a technical report with a memory dump is sent to the maker of Levuvo Mail. The dump may contain parts of emails or addresses that were open. Only effective if this build contains a report address; please restart after changing.',
   Diagnosebericht: 'Diagnostic report',
   'Für den Support: Version, System, Fehlerzähler und Verbindungsstatus. Keine Inhalte, keine Adressen. Du entscheidest, ob du ihn weitergibst.':
     'For support: version, system, error counters and connection status. No content, no addresses. You decide whether to share it.',
@@ -892,8 +892,8 @@ export const EN: Record<string, string> = {
     'Formatting and images are stored together with a plain-text version. The signature is taken over when saving – after changing the signature, please save here again.',
   'Die Abwesenheitsnotiz ist für deinen Mailserver zu groß. Bitte ein kleineres Logo verwenden oder die Signatur weglassen.':
     'The vacation reply is too large for your mail server. Please use a smaller logo or leave out the signature.',
-  'Die Abwesenheitsnotiz enthält zu viele oder zu große Bilder (höchstens 4 Bilder, zusammen 400 KB).':
-    'The vacation reply contains too many or too large images (at most 4 images, 400 KB in total).',
+  'Die Abwesenheitsnotiz enthält zu viele oder zu große Bilder (höchstens 4 Bilder, zusammen 400 kB).':
+    'The vacation reply contains too many or too large images (at most 4 images, 400 kB in total).',
   'Danke für deine Nachricht. Ich bin bis … nicht erreichbar. In dringenden Fällen …':
     'Thank you for your message. I am not available until … In urgent cases …',
   Filterregeln: 'Filter rules',
@@ -998,8 +998,8 @@ export const EN: Record<string, string> = {
   'Bild einfügen': 'Insert image',
   'Formatierung entfernen': 'Clear formatting',
   Wiederholen: 'Redo',
-  'Logo bitte unter {size} KB (wird in jede E-Mail eingebettet).':
-    'Please keep the logo under {size} KB (it is embedded in every email).',
+  'Logo bitte unter {size} kB (wird in jede E-Mail eingebettet).':
+    'Please keep the logo under {size} kB (it is embedded in every email).',
   'SMTP-Anmeldung fehlgeschlagen. Benutzername und Passwort für den Versand prüfen.':
     'SMTP sign-in failed. Check the user name and password for sending.',
   'TLS-Zertifikat des SMTP-Servers konnte nicht geprüft werden.':
@@ -1121,7 +1121,7 @@ export const EN: Record<string, string> = {
   'Ungültiger Zielordner.': 'Invalid target folder.',
   'Quellordner nicht gefunden.': 'Source folder not found.',
   'Quelle und Ziel sind identisch.': 'Source and target are identical.',
-  'Entschlüsselte Nachricht überschreitet 12 MiB.': 'The decrypted message exceeds 12 MiB.',
+  'Entschlüsselte Nachricht überschreitet 12 MB.': 'The decrypted message exceeds 12 MB.',
   'In den Papierkorb nur mit Freigabe.': 'Moving to the trash needs approval.',
   'Die Einstellungsdatei ist nicht lesbar und wird nicht überschrieben.':
     'The settings file cannot be read and is not overwritten.',
@@ -1143,7 +1143,7 @@ export const EN: Record<string, string> = {
   'Ungültiger Servername.': 'Invalid server name.',
   'Ungültiger Ordnerpfad.': 'Invalid folder path.',
   'Ungültige Signatur.': 'Invalid signature.',
-  'Die Signatur ist zu groß (max. 300 KB inkl. Bilder).': 'The signature is too large (max. 300 KB including images).',
+  'Die Signatur ist zu groß (max. 300 kB inkl. Bilder).': 'The signature is too large (max. 300 kB including images).',
   'Maximal zehn Absenderadressen.': 'A maximum of ten sender addresses.',
   'Ungültige Absenderadresse.': 'Invalid sender address.',
   'Ungültige Kontodaten.': 'Invalid account data.',
@@ -1244,7 +1244,7 @@ export const EN: Record<string, string> = {
     'Drafts folder missing. Scheduled messages are stored there.',
   'Speichern der geplanten Nachricht fehlgeschlagen.': 'Saving the scheduled message failed.',
   'Anhänge sind zu groß.': 'Attachments are too large.',
-  'Anhänge dürfen zusammen maximal 8 MiB groß sein.': 'Attachments may be at most 8 MiB in total.',
+  'Anhänge dürfen zusammen maximal 8 MB groß sein.': 'Attachments may be at most 8 MB in total.',
   'Ungültige Versandkennung.': 'Invalid sending ID.',
   'Versand muss ausdrücklich bestätigt werden.': 'Sending must be confirmed explicitly.',
   'Mindestens ein Empfänger unter An ist erforderlich.': 'At least one recipient under To is required.',
@@ -1458,8 +1458,8 @@ export const EN: Record<string, string> = {
   'Nur lokale Kalender können hier gelöscht werden.': 'Only device calendars can be deleted here.',
   'Bitte einen lokalen Kalender wählen.': 'Please choose a device calendar.',
   'Das Passwort muss mindestens 10 Zeichen lang sein.': 'The password must be at least 10 characters long.',
-  'Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.':
-    'Protected messages may contain attachments up to 5 MiB in total.',
+  'Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MB enthalten.':
+    'Protected messages may contain attachments up to 5 MB in total.',
   'Mit Passwort schützen': 'Protect with password',
   'Passwort für den Empfänger': 'Password for the recipient',
   'Passwort verbergen': 'Hide password',
@@ -1592,8 +1592,8 @@ export const EN: Record<string, string> = {
   'Bitte Levuvo Mail jetzt beenden und neu starten.': 'Please quit and restart Levuvo Mail now.',
   'Jetzt neu starten': 'Restart now',
   'Sicherung erstellen': 'Create backup',
-  'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel, gemeinsame Räume und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo.':
-    "Backs up everything that exists only on this device: settings, accounts (without passwords), local contacts, the local calendar with attachments, templates, snoozed messages, own PGP/S/MIME keys, shared spaces and the assistant's data. The file is encrypted with your password (AES-256). Without this password it cannot be opened, not even by Levuvo.",
+  'Sichert alles, was nur auf diesem Gerät liegt: Einstellungen, Konten (ohne Passwörter), lokale Kontakte, lokalen Kalender mit Anhängen, Vorlagen, Wiedervorlagen, eigene PGP/S/MIME-Schlüssel, gemeinsame Räume und die Daten des Assistenten. Die Datei ist mit deinem Passwort verschlüsselt (AES-256). Ohne dieses Passwort lässt sie sich nicht öffnen, auch nicht von Levuvo Mail.':
+    "Backs up everything that exists only on this device: settings, accounts (without passwords), local contacts, the local calendar with attachments, templates, snoozed messages, own PGP/S/MIME keys, shared spaces and the assistant's data. The file is encrypted with your password (AES-256). Without this password it cannot be opened, not even by Levuvo Mail.",
   'Passwort für die Sicherung': 'Password for the backup',
   'Passwort wiederholen': 'Repeat password',
   'Speichere die Datei an einem zweiten Ort (USB-Stick, NAS, Cloud-Ordner) und notiere das Passwort sicher. Passwörter der Postfächer, Anmeldungen und API-Schlüssel sind nicht enthalten; der Suchindex wird neu aufgebaut.':

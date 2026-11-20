@@ -8,7 +8,7 @@
 
 | Bereich | Was du dort einstellst |
 |---|---|
-| Allgemein | **Darstellung** (Sprache, Design, Dichte), **Lesen** (Bündeln, neue Absender prüfen), **Schreiben** (Senden rückgängig), **Kalender** |
+| Allgemein | **Darstellung** (Sprache, Design, Dichte), **Lesen** (Bündeln, neue Absender prüfen), **Schreiben** (Senden rückgängig), **Kalender**, **Videocalls** (Jitsi-Server) |
 | Konten | Konten, Signaturen, Absenderadressen, **Verbindungsstatus** |
 | Vorlagen | **Textbausteine und Vorlagen** |
 | Filter & Abwesenheit | **Filterregeln** auf dem Mailserver und **Abwesenheitsnotiz** |
@@ -16,7 +16,7 @@
 | Kalender & Kontakte | **Server-Konten** anderer Anbieter, Farben, Import und Export |
 | Buchungslinks | **Buchungslinks**, über die andere einen Termin bei dir buchen |
 | Sicherheit | Schlüssel und Zertifikate (OpenPGP, S/MIME) |
-| Suche & Offline | Stand des Suchindex, neu aufbauen |
+| Suche & Offline | **Suche & Offline** (Stand der letzten Prüfung, aktualisieren, neu aufbauen), **Suche nach Bedeutung** (Index-Status, pausieren, neu indexieren) |
 | KI & Agenten | **KI-Assistent**, **Funktionen**, **Schreibstil**, **KI-Protokoll**, Agenten und **Freigaben** |
 | Mitteilungen | Benachrichtigungen erlauben und testen |
 | Datenschutz | Datenschutz-Cockpit, **Deine Daten**, Absturzberichte, Diagnosebericht, **Gespeicherte Daten auf diesem Gerät** |
@@ -56,6 +56,28 @@ Unter **Einstellungen → Datenschutz** zeigt das **Datenschutz-Cockpit** die le
 Unter **Einstellungen → Über** steht bei **Sicherheit und Support**, bis wann diese Version kostenlose Sicherheitsupdates bekommt und wie du eine Sicherheitslücke meldest. **Open-Source-Lizenzen** zeigt die Lizenztexte aller mitgelieferten Bausteine.
 
 ![Sicherheit: Schlüssel und Zertifikate](settings-security.png)
+
+## Wo Levuvo Mail Daten speichert
+
+Levuvo Mail speichert alles in einem eigenen Ordner auf deinem Computer:
+
+- **Mac:** `~/Library/Application Support/Levuvo Mail/`
+- **Windows:** `%APPDATA%\Levuvo Mail\` (also `C:\Users\<Name>\AppData\Roaming\Levuvo Mail\`)
+
+| Was | Wo im Ordner |
+|---|---|
+| Einstellungen, Konten ohne Passwörter, Vorlagen | Dateien wie `app-settings.json`, `ai.json`, `templates.json` |
+| Lokale Kontakte, Kalender und Aufgaben (verschlüsselt) | `contacts-local.json`, `calendar-local.json`, `tasks-local.json` |
+| Suchindex samt Suche nach Bedeutung (verschlüsselt) | `index/` |
+| KI-Modelle des eigenen Ollama | `ollama/models/` |
+| Gemeinsame Räume (verschlüsselt) | `spaces/` |
+| Vorheriger Stand nach einer Wiederherstellung | `before-restore/` |
+
+Passwörter, Anmeldungen und private Schlüssel liegen nicht in diesem Ordner, sondern im Schlüsselbund (Mac) oder in der Anmeldeinformationsverwaltung (Windows). Deine Mails bleiben auf dem Mailserver. Sicherungen speicherst du selbst an einem Ort deiner Wahl.
+
+Unter **Einstellungen → Datenschutz → Gespeicherte Daten auf diesem Gerät** siehst du die Pfade deines Computers mit ihrer Größe. **Im Finder zeigen** (Mac) oder **Im Explorer zeigen** (Windows) öffnet den Ordner. Der Speicherort lässt sich nicht ändern.
+
+Alle Größen in Levuvo Mail sind Dezimalangaben, wie im Finder: 1 MB sind 1.000.000 Byte. Der Windows-Explorer rechnet mit 1.024 und zeigt deshalb etwas kleinere Zahlen.
 
 ## Wenn etwas nicht klappt
 

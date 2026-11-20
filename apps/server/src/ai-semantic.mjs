@@ -98,20 +98,57 @@ export function createSemanticIndex({
   ai,
   vectors = vectorStoreFor(localIndex),
   logger = () => {},
-  stateFile = null
+  stateFile = null,
+  now = Date.now
 }) {
-  const state = new Map(); // id -> { model, generation, syncedAt, running }
-  // Progress survives a restart only together with persistent vectors.
+  // id -> { model, generation, syncedAt, finishedAt, error, running, run }
+  // run: { startedAt, embedded } of the run under way, for the remaining time.
+  const state = new Map();
+  // Progress survives a restart only together with persistent vectors; the pause always does.
   const persisted = vectors.persistent && stateFile;
+  let paused = Boolean(stateFile?.get().paused);
+  // Raised by rebuild(): a run under way stops at its next batch.
+  let generationOfRuns = 0;
   if (persisted)
     for (const [id, v] of Object.entries(stateFile.get().accounts || {}))
-      state.set(id, { model: v.model, generation: v.generation, syncedAt: v.syncedAt, running: null });
+      state.set(id, {
+        model: v.model,
+        generation: v.generation,
+        syncedAt: v.syncedAt,
+        finishedAt: v.finishedAt ?? null,
+        error: v.error ?? null,
+        running: null,
+        run: null
+      });
   const saveState = async () => {
-    if (!persisted) return;
+    if (!stateFile) return;
     const accounts = {};
-    for (const [id, v] of state) accounts[id] = { model: v.model, generation: v.generation, syncedAt: v.syncedAt };
-    await stateFile.save({ accounts }).catch(() => {});
+    if (persisted)
+      for (const [id, v] of state)
+        accounts[id] = {
+          model: v.model,
+          generation: v.generation,
+          syncedAt: v.syncedAt,
+          finishedAt: v.finishedAt ?? null,
+          error: v.error ?? null
+        };
+    await stateFile.save({ accounts, paused }).catch(() => {});
   };
+  const blank = () => ({
+    model: null,
+    generation: null,
+    syncedAt: null,
+    finishedAt: null,
+    error: null,
+    running: null,
+    run: null
+  });
+  const patch = (id, values) => state.set(id, { ...(state.get(id) || blank()), ...values });
+  // Only the error code is kept (never message text, which could quote mail content).
+  const errorOf = err => ({
+    code: String(err?.code || (err?.kind ? `ai_${err.kind}` : 'ai_failed')).slice(0, 60),
+    at: now()
+  });
 
   function model() {
     return ai.get().embedModel;
@@ -124,21 +161,28 @@ export function createSemanticIndex({
   /** Embeds what changed since the last run. Safe to call often; runs at most once per account at a time. */
   async function sync(id) {
     if (!usable()) return { skipped: true };
-    const current = state.get(id) || { model: null, generation: null, syncedAt: null, running: null };
+    if (paused) return { skipped: true, paused: true };
+    const current = state.get(id) || blank();
     if (current.running) return current.running;
+    const seq = generationOfRuns;
+    const stop = () => paused || seq !== generationOfRuns;
     const run = (async () => {
       const status = await localIndex.status(id);
       if (!status?.enabled) return { skipped: true };
       const m = model();
       return vectors.persistent && vectors.missing
-        ? fillMissing(id, m, status, current)
-        : syncChanges(id, m, status, current);
+        ? fillMissing(id, m, status, current, stop)
+        : syncChanges(id, m, status, current, stop);
     })();
-    state.set(id, { ...current, running: run });
+    patch(id, { running: run, run: { startedAt: now(), embedded: 0 } });
     try {
-      return await run;
+      const result = await run;
+      patch(id, { running: null, run: null, ...(result?.skipped ? {} : { finishedAt: now() }) });
+      await saveState();
+      return result;
     } catch (err) {
-      state.set(id, { ...current, running: null });
+      patch(id, { running: null, run: null, error: errorOf(err) });
+      await saveState();
       throw err;
     }
   }
@@ -150,6 +194,8 @@ export function createSemanticIndex({
       m,
       batch.map((e, i) => ({ key: e.key, folder: e.folder, uid: e.uid, vector: r.vectors?.[i] }))
     );
+    const s = state.get(id);
+    if (s?.run) s.run.embedded += batch.length;
     return batch.length;
   }
 
@@ -166,22 +212,18 @@ export function createSemanticIndex({
    * a failed batch never throws away finished work (PERF-LEV-001): the next run asks the index
    * again what is missing. Removed messages take their vectors with them inside the index.
    */
-  async function fillMissing(id, m, status, current) {
+  async function fillMissing(id, m, status, current, stop) {
     // Only vectors of the current model are kept; also covers a model switch whose state was lost.
     if (vectors.dropOtherVectors) await vectors.dropOtherVectors(id, m);
     else if (current.model && current.model !== m) await vectors.dropVectors(id, current.model);
-    state.set(id, {
-      model: m,
-      generation: status.generation,
-      syncedAt: current.syncedAt,
-      running: state.get(id)?.running
-    });
+    patch(id, { model: m, generation: status.generation });
     await saveState();
     let count = 0;
     let failedInRow = 0;
     let lastError = null;
     for await (const batch of vectors.missing(id, m, { batch: BATCH })) {
-      if (model() !== m || !usable()) break; // settings changed: the next run starts over cleanly
+      // Settings changed, paused or rebuilt: the next run continues cleanly.
+      if (model() !== m || !usable() || stop()) break;
       try {
         count += await embedBatch(id, m, batch);
         failedInRow = 0;
@@ -190,10 +232,11 @@ export function createSemanticIndex({
         if (++failedInRow >= MAX_FAILED_BATCHES) break;
       }
     }
-    state.set(id, { model: m, generation: status.generation, syncedAt: Date.now(), running: null });
+    const failed = failedInRow >= MAX_FAILED_BATCHES;
+    patch(id, { model: m, generation: status.generation, syncedAt: now(), error: failed ? errorOf(lastError) : null });
     await saveState();
     finished(id, m, count);
-    if (failedInRow >= MAX_FAILED_BATCHES && !count) throw lastError;
+    if (failed && !count) throw lastError;
     return { embedded: count };
   }
 
@@ -201,7 +244,7 @@ export function createSemanticIndex({
    * In-memory store (no encrypted index available): follows the index by change time and keeps
    * only the newest entries.
    */
-  async function syncChanges(id, m, status, current) {
+  async function syncChanges(id, m, status, current, stop) {
     let since = current.syncedAt;
     if (current.model !== m || current.generation !== status.generation) {
       if (current.model) await vectors.dropVectors(id, current.model);
@@ -229,9 +272,16 @@ export function createSemanticIndex({
     }
     all.sort(byDateDesc);
     let count = 0;
-    for (let i = 0; i < Math.min(all.length, MAX_MEMORY_ENTRIES); i += BATCH)
+    for (let i = 0; i < Math.min(all.length, MAX_MEMORY_ENTRIES); i += BATCH) {
+      // Interrupted: the change cursor stays where it was, the next run reads the rest again.
+      if (stop()) {
+        patch(id, { model: m, generation: status.generation });
+        finished(id, m, count);
+        return { embedded: count };
+      }
       count += await embedBatch(id, m, all.slice(i, Math.min(i + BATCH, MAX_MEMORY_ENTRIES)));
-    state.set(id, { model: m, generation: status.generation, syncedAt: started, running: null });
+    }
+    patch(id, { model: m, generation: status.generation, syncedAt: started, error: null });
     await saveState();
     finished(id, m, count);
     return { embedded: count };
@@ -268,6 +318,13 @@ export function createSemanticIndex({
     return out;
   }
 
+  /** Vectors of the current model for one account (capped at what the store can hold). */
+  async function vectorCount(id, m, status) {
+    if (!vectors.persistent) return vectors.size?.(id, m) ?? 0;
+    if (vectors.count) return (await vectors.count(id, m)) ?? 0;
+    return status.vectors ?? 0;
+  }
+
   /** Rebuild progress per account: vectors of the current model against indexed messages. */
   async function progress(ids) {
     const m = model();
@@ -280,17 +337,113 @@ export function createSemanticIndex({
         accountId: id,
         model: m,
         messages: status.messages ?? null,
-        vectors: vectors.persistent ? (status.vectors ?? null) : (vectors.size?.(id, m) ?? null),
+        vectors: await vectorCount(id, m, status),
         running: Boolean(s?.running)
       });
     }
     return out;
   }
 
+  /**
+   * One status for the UI: 'none' (with a reason), 'running', 'paused', 'pending' (incomplete,
+   * continues at the next run), 'done' or 'error'. Counts only, never content.
+   * @param {string[]} ids
+   * @param {{modelInstalled?: boolean}} [o]
+   */
+  async function overview(ids, { modelInstalled = true } = {}) {
+    const m = model();
+    const s = ai.get();
+    const out = {
+      state: 'none',
+      reason: null,
+      model: m,
+      paused,
+      messages: 0,
+      vectors: 0,
+      etaSeconds: null,
+      startedAt: null,
+      finishedAt: null,
+      error: null,
+      accounts: []
+    };
+    if (!s.enabled) return { ...out, reason: 'ai_off' };
+    if (s.features?.search === false) return { ...out, reason: 'search_off' };
+    let rate = 0;
+    for (const id of ids) {
+      const status = await localIndex.status(id).catch(() => null);
+      if (!status?.enabled) continue;
+      const entry = state.get(id) || blank();
+      const cap = vectors.persistent ? Infinity : MAX_MEMORY_ENTRIES;
+      const messages = Math.min(status.messages || 0, cap);
+      const count = Math.min(await vectorCount(id, m, status), messages);
+      out.accounts.push({
+        accountId: id,
+        messages,
+        vectors: count,
+        running: Boolean(entry.running),
+        finishedAt: entry.finishedAt ?? null,
+        error: entry.error ?? null
+      });
+      out.messages += messages;
+      out.vectors += count;
+      if (entry.finishedAt && (!out.finishedAt || entry.finishedAt > out.finishedAt)) out.finishedAt = entry.finishedAt;
+      if (entry.error && !out.error) out.error = entry.error;
+      if (entry.run) {
+        out.startedAt = Math.min(out.startedAt ?? Infinity, entry.run.startedAt);
+        const seconds = (now() - entry.run.startedAt) / 1000;
+        // A rate only after a few batches, so the first estimate is not wild.
+        if (entry.run.embedded >= BATCH && seconds >= 5) rate += entry.run.embedded / seconds;
+      }
+    }
+    if (!modelInstalled) return { ...out, reason: 'model_missing' };
+    if (!out.accounts.length) return { ...out, reason: 'index_off' };
+    if (!out.messages) return { ...out, reason: 'no_messages' };
+    const running = out.accounts.some(a => a.running);
+    const remaining = out.messages - out.vectors;
+    if (paused) out.state = 'paused';
+    else if (running) out.state = 'running';
+    else if (remaining <= 0) out.state = 'done';
+    else if (out.error) out.state = 'error';
+    else if (!out.vectors) out.reason = 'not_started';
+    else out.state = 'pending';
+    if (out.state !== 'error') out.error = null;
+    if (running && rate > 0 && remaining > 0) out.etaSeconds = Math.ceil(remaining / rate);
+    return out;
+  }
+
+  /** Stops runs at their next batch; nothing is embedded until resume() or rebuild(). */
+  async function pause() {
+    paused = true;
+    await saveState();
+  }
+  async function resume() {
+    paused = false;
+    await saveState();
+  }
+
+  /** Throws away the vectors of `ids` and lifts a pause; the caller starts the new run. */
+  async function rebuild(ids) {
+    generationOfRuns++;
+    paused = false;
+    await Promise.all(ids.map(id => state.get(id)?.running?.catch(() => null)));
+    const m = model();
+    for (const id of ids) {
+      await vectors.dropVectors(id, m);
+      if (vectors.dropOtherVectors) await vectors.dropOtherVectors(id, m);
+      patch(id, { model: m, generation: null, syncedAt: null, finishedAt: null, error: null });
+    }
+    await saveState();
+  }
+
   return {
     sync,
     search,
     progress,
+    overview,
+    pause,
+    resume,
+    rebuild,
+    isPaused: () => paused,
     forget: async id => {
       for (const [key, s] of state) if (!id || key === id) if (s.model) await vectors.dropVectors(key, s.model);
       if (id) state.delete(id);

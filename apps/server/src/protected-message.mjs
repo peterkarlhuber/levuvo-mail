@@ -12,7 +12,7 @@ const pbkdf2Async = promisify(pbkdf2);
 
 export const PROTECTED_FILENAME = 'Geschuetzte-Nachricht.html';
 export const PBKDF2_ITERATIONS = 600_000;
-export const MAX_PROTECTED_BYTES = 5 * 1024 * 1024;
+export const MAX_PROTECTED_BYTES = 5_000_000; // "5 MB", decimal like every size in the app
 // Bounds for boxes from received mail: the iteration count comes from the (untrusted) file.
 export const MIN_OPEN_ITERATIONS = 100_000;
 export const MAX_OPEN_ITERATIONS = 2_000_000;
@@ -168,7 +168,7 @@ export async function buildProtectedFile(
     return { name: a.filename, type: a.contentType || 'application/octet-stream', data: content.toString('base64') };
   });
   if (size > MAX_PROTECTED_BYTES)
-    fail('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MiB enthalten.', 'protected_too_large');
+    fail('Geschützte Nachrichten dürfen Anhänge bis zusammen 5 MB enthalten.', 'protected_too_large');
   const payload = {
     v: 1,
     from: from?.name ? `${from.name} <${from.address}>` : from?.address || '',
@@ -269,7 +269,7 @@ const VIEWER_SCRIPT = `(() => {
       document.getElementById('fileshead').textContent = T.files; document.getElementById('fileshead').hidden = false;
       for (const f of m.attachments) {
         const blob = new Blob([b64(f.data)], { type: 'application/octet-stream' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; a.textContent = '⬇ ' + f.name + ' (' + Math.max(1, Math.round(blob.size / 1024)) + ' KB)';
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; a.textContent = '⬇ ' + f.name + ' (' + Math.max(1, Math.round(blob.size / 1000)) + ' kB)';
         const li = document.createElement('li'); li.appendChild(a); list.appendChild(li);
       }
     }

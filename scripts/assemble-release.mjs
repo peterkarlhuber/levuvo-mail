@@ -94,6 +94,18 @@ for (const file of COMPLIANCE) {
   copyFileSync(matches[0], join(outDir, file));
   compliance.push(file);
 }
+// The user manual of this version (German and English), built by the release workflow's manual job.
+const MANUAL = [`Levuvo-Mail-Handbuch-${v}.pdf`, `Levuvo-Mail-Manual-${v}.pdf`];
+const manual = [];
+for (const file of MANUAL) {
+  const matches = all.filter(f => basename(f) === file);
+  if (matches.length !== 1) {
+    problems.push(matches.length ? `DUPLICATE: ${file}` : `MISSING: ${file}`);
+    continue;
+  }
+  copyFileSync(matches[0], join(outDir, file));
+  manual.push(file);
+}
 const extras = [];
 if (signed) {
   for (const f of all) {
@@ -113,7 +125,7 @@ if (problems.length && !allowPartial) {
   process.exit(1);
 }
 const builtAt = new Date().toISOString();
-const files = [...artifacts.map(a => a.file), ...compliance, ...extras].sort();
+const files = [...artifacts.map(a => a.file), ...compliance, ...manual, ...extras].sort();
 writeFileSync(join(outDir, 'SHA256SUMS.txt'), files.map(f => `${sha256(join(outDir, f))}  ${f}`).join('\n') + '\n');
 const complete = artifacts.length === EXPECTED.length && problems.length === 0;
 writeFileSync(
@@ -149,6 +161,8 @@ ${changes}
 ${rows}
 
 Checksums: \`SHA256SUMS.txt\` (\`shasum -a 256 -c SHA256SUMS.txt\` or \`Get-FileHash\`). Machine-readable: \`release-manifest.json\`.
+
+User manual (PDF/UA, accessible): \`Levuvo-Mail-Handbuch-${v}.pdf\` (Deutsch), \`Levuvo-Mail-Manual-${v}.pdf\` (English).
 
 Software bill of materials (CycloneDX 1.6): \`levuvo-mail-${v}.cdx.json\`. Licence notices: \`THIRD-PARTY-NOTICES.txt\`. Security policy and support period: \`SECURITY.md\`.
 

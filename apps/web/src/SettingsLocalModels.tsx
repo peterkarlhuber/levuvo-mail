@@ -9,6 +9,8 @@ import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
 import { Button } from './ui';
 import { Row } from './Settings';
+import { formatBytes } from './format';
+import { SemanticIndexStatus } from './SemanticIndexStatus';
 
 type Tier = 'small' | 'standard' | 'large' | 'search';
 type Fit = 'good' | 'tight' | 'too_big';
@@ -56,11 +58,8 @@ const TIER_NAMES: Record<Tier, string> = { small: 'Klein', standard: 'Standard',
 
 const busy = (j: Job | null) => j?.status === 'downloading' || j?.status === 'verifying';
 
-/** "6.6 GB" in the UI language. */
-export function formatSize(bytes: number, locale: string) {
-  const gb = bytes / 1e9;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: gb < 10 ? 1 : 0 }).format(gb)} GB`;
-}
+/** Model, download and disk sizes: the app-wide formatter, so all numbers on this page agree. */
+export const formatSize = (bytes: number, locale: string) => formatBytes(bytes, locale);
 
 export function percent(job: Job | null) {
   if (!job || !job.total) return 0;
@@ -201,15 +200,6 @@ export function LocalModelSettings({
       .join(' · ');
   const installed = state.models.filter(m => m.installed);
   const paused = state.models.filter(m => m.job?.status === 'canceled');
-  const index = state.index.reduce(
-    (a, i) => ({
-      messages: a.messages + (i.messages || 0),
-      vectors: a.vectors + Math.min(i.vectors || 0, i.messages || 0),
-      running: a.running || i.running
-    }),
-    { messages: 0, vectors: 0, running: false }
-  );
-
   return (
     <>
       <Row
@@ -267,18 +257,7 @@ export function LocalModelSettings({
         </select>
       </Row>
       {selectedEmbed && <ModelStatus model={selectedEmbed} act={act} remove={remove} />}
-      {selectedEmbed?.installed && index.messages > 0 && index.vectors < index.messages && (
-        <div className="local-model-status" role="status">
-          <span>
-            {t('Suchindex mit {model}: {done} von {total} Nachrichten', {
-              model: selectedEmbed.name,
-              done: index.vectors.toLocaleString(locale),
-              total: index.messages.toLocaleString(locale)
-            })}
-          </span>
-          <progress max={index.messages} value={index.vectors} aria-label={t('Fortschritt des Suchindex')} />
-        </div>
-      )}
+      <SemanticIndexStatus />
       {(installed.length > 0 || paused.length > 0) && (
         <Row
           label={t('Heruntergeladene Modelle')}

@@ -114,6 +114,8 @@ Papierkorb, Gelesen/Ungelesen und Zurückstellen – ohne die Nachricht zu öffn
   Nachricht als Vorlage speichern“. Platzhalter wie {Vorname}, {Name}, {Datum} und {Absender} werden beim
   Einfügen ersetzt; was sich nicht ermitteln lässt, bleibt markiert stehen. Verwalten unter
   Einstellungen → Vorlagen.
+- **Videocall:** Schaltfläche **Videocall** über dem Text fügt an der Cursorposition „Videocall beitreten:“
+  mit einem neuen Jitsi-Link ein (siehe Kapitel 9, „Videocalls“).
 - **Verschlüsselung:** siehe Kapitel 11.
 
 ## 6 Ordnung halten
@@ -203,6 +205,15 @@ liegt im Schlüsselbund.
   Antworten auf deine eigenen Einladungen übernimmst du mit „Im Kalender übernehmen“ (Teilnahmestatus),
   Absagen mit „Aus dem Kalender entfernen“.
 - Links: Kalender ein-/ausblenden; Farben und neue Kalender unter „Kalender verwalten“.
+- **Videocalls (Jitsi Meet):** Im Termin **„Videocall hinzufügen“** wählen. Levuvo Mail erzeugt einen Link mit
+  einem zufälligen Raumnamen, den niemand erraten kann, und trägt ihn als Ort ein (ist der Ort schon belegt,
+  z. B. mit einem Besprechungsraum, steht der Link als erste Zeile in der Beschreibung). Mit der Einladung
+  bekommen alle Teilnehmenden den Link. Enthält ein Termin einen Jitsi-Link, erscheinen **„Videocall
+  beitreten“** und **„Link kopieren“**. Der Call läuft im Browser; die App fragt vorher, wie bei jedem Link.
+  Standard ist der Server **meet.ffmuc.net** (Freifunk München, Deutschland, ohne Konto). Einen eigenen
+  Jitsi-Server trägst du unter **Einstellungen → Allgemein → Videocalls** ein (nur https). Wer den Link
+  hat, kann teilnehmen – teile ihn also nur mit den Gewünschten. Lobby und Ende-zu-Ende-Verschlüsselung
+  schaltest du im Call über die Sicherheitsoptionen von Jitsi ein.
 
 ### Termin finden, Abstimmungen und Buchungslinks
 
@@ -236,6 +247,18 @@ liegt im Schlüsselbund.
   Adresse, Geburtstag, Notiz), Bearbeiten, Löschen.
 - **E-Mail schreiben** öffnet direkt eine neue Nachricht an den Kontakt.
 - **Import** einer .vcf-Datei (z. B. Export aus Outlook, Apple Kontakte, Google) und **Export** aller Kontakte.
+- **Verlauf (Kontaktverlauf):** Unter den Kontaktdaten zeigt „Verlauf“ alles zu dieser Person auf einer
+  Zeitleiste: E-Mails (aus dem lokalen Suchindex, über alle Konten und Ordner), gemeinsame Termine, Aufgaben
+  und deine Notizen. Mit den Schaltflächen **Alles / E-Mails / Termine / Aufgaben / Notizen** filterst du; ein
+  Klick auf eine E-Mail öffnet sie. **Notiz speichern** hält fest, was besprochen wurde; Notizen lassen sich
+  bearbeiten und löschen. **Aufgabe anlegen** erstellt eine Aufgabe zu dieser Person (sie erscheint auch unter
+  Aufgaben). Aufgaben, die aus einer E-Mail der Person entstanden sind, zeigt der Verlauf ebenfalls.
+- **Auch beim Lesen:** Die Kontaktkarte neben einer E-Mail (Klick auf den Absender) zeigt offene Aufgaben und
+  die letzten Notizen und hat dieselben Felder für eine neue Notiz oder Aufgabe – auch für Personen, die nicht
+  im Adressbuch stehen.
+- **Nur auf diesem Gerät:** Notizen werden verschlüsselt gespeichert (AES-256-GCM, Schlüssel im
+  Schlüsselbund) und sind Teil der Sicherung. Es wird nichts im Internet nachgeschlagen und keine KI
+  verwendet. Löschst du den letzten Kontakt mit einer Adresse, werden auch die Notizen dazu gelöscht.
 
 ## 11 Verschlüsselung
 
@@ -473,6 +496,8 @@ Postfach per IMAP IDLE beobachtet. Antworten, Bearbeiten und Löschen gehen übe
 Nachricht; gelöscht wird für alle. Ungelesene Nachrichten zählt nur dein Gerät, es gibt keine
 Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-erstellt“ markiert. Bei der Freigabe wählst du
 „Nur diese“ oder „Für diesen Raum bis auf Widerruf“; zurücknehmen kannst du das in den Einstellungen des Raums.
+Mit **„Videocall starten“** im Chat schickt Levuvo Mail allen Mitgliedern einen neuen Jitsi-Link
+(Kapitel 9, „Videocalls“); Links in Chatnachrichten lassen sich anklicken.
 Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
 Erlaubnis. Der Reiter **Einstellungen** eines Raums ist aufgebaut wie die App-Einstellungen: Karten für
 **Allgemein** (Name, Beschreibung), **Levuvo Mail Assistant in diesem Raum** (Schalter für Lesen und

@@ -21,6 +21,7 @@ import { Button } from './ui';
 import { Row, Section, Segmented, Toggle } from './Settings';
 import { McpSettings } from './SettingsMcp';
 import { LocalModelSettings } from './SettingsLocalModels';
+import { SemanticIndexStatus } from './SemanticIndexStatus';
 import { StyleProfileSettings } from './SettingsStyle';
 import type { AccountItem } from './types';
 
@@ -286,6 +287,7 @@ export function AiSettingsPanel({ accounts }: { accounts: AccountItem[] }) {
                 </Button>
               )}
             </Row>
+            <SemanticIndexStatus />
           </>
         )}
         {cloud && (

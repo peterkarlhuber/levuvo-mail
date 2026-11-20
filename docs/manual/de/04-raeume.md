@@ -30,7 +30,7 @@ Die Reiter oben wechselst du per Klick oder mit den Pfeiltasten.
 | Reiter | Wofür |
 |---|---|
 | Übersicht | Was zuletzt passiert ist |
-| Chat | Kurze Nachrichten an alle Mitglieder, Ende-zu-Ende-verschlüsselt. Antworten, eigene Nachrichten bearbeiten oder löschen; `Enter` sendet, `Shift` + `Enter` beginnt eine neue Zeile |
+| Chat | Kurze Nachrichten an alle Mitglieder, Ende-zu-Ende-verschlüsselt. Antworten, eigene Nachrichten bearbeiten oder löschen; `Enter` sendet, `Shift` + `Enter` beginnt eine neue Zeile; **Videocall starten** schickt allen einen Jitsi-Link |
 | Notizen | Texte, die mehrere gleichzeitig bearbeiten |
 | Mails | E-Mails zum Thema mit internen Kommentaren |
 | Aufgaben | Aufgaben mit Zuständigen und Fälligkeit |
