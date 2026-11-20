@@ -12,7 +12,7 @@ internet address stated there.
 
 1. **Product with digital elements:** Levuvo Mail, version [x.y.z] (desktop application for macOS
    arm64, Windows x64 and Windows arm64), identified by the release manifest of commit [SHA].
-2. **Manufacturer:** [Company name, legal form], [address], [country]; contact: [email].
+2. **Manufacturer:** Levuvo (start-up project), Peter Karlhuber [legal form after founding], Laussastraße 24, 4460 Losenstein, Austria; contact: office@levuvo.at.
 3. This declaration of conformity is issued under the sole responsibility of the manufacturer.
 4. **Object of the declaration:** Levuvo Mail [x.y.z], email, calendar, contacts and tasks client with
    optional AI assistant; identification: product name, version and SHA-256 checksums in

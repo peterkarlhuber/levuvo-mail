@@ -45,6 +45,6 @@ To put an email into a space, open it, click **Add to space** in the **…** men
 
 The AI assistant only sees a space if its owner allows it in the space's **Settings** tab. Cloud AI needs a separate, additional permission there.
 
-The **Settings** tab is laid out like the app settings: cards for **General**, **Levuvo Mail Assistant in this space** and **Sync**. Everything saves automatically as soon as you leave a field or flip a switch. At the bottom sits the red-framed **Danger zone** with **Hand over space**, **Dissolve space**, **Leave space** or **Delete copy**. Each of these asks first.
+The **Settings** tab (the gear at the far right of the tab bar) is laid out like the app settings: cards for **General**, **Levuvo Mail Assistant in this space** and **Sync**. Everything saves automatically as soon as you leave a field or flip a switch. At the bottom sits the red-framed **Danger zone** with **Hand over space**, **Dissolve space**, **Leave space** or **Delete copy**. Each of these asks first.
 
 Your **safety code** is in the **Safety codes** card of the **Members** tab. It is the fingerprint of your space key, the same in all spaces and not secret. **Copy** puts it on the clipboard, for example to paste into a message.

@@ -14,10 +14,10 @@
 | Media owner and manufacturer (Medieninhaber und Hersteller) | Levuvo (Gründungsprojekt / start-up project), Peter Karlhuber |
 | Address | Laussastraße 24, 4460 Losenstein, Austria |
 | Contact | Email: office@levuvo.at |
-| Business purpose (Unternehmensgegenstand) | [e.g. development and distribution of software] |
+| Business purpose (Unternehmensgegenstand) | Development of software (Levuvo Mail) |
 | Company register number / court (Firmenbuchnummer / -gericht) | not registered (start-up project) |
 | VAT ID (UID-Nummer) | none yet |
-| Membership / trade authority | [Austrian Economic Chamber (Wirtschaftskammer) …] / [district authority or municipal office …] |
+| Membership / trade authority | none yet (start-up project, no trade licence yet) |
 | Professional law | Trade Regulation Act (Gewerbeordnung), www.ris.bka.gv.at |
 | Basic orientation (§ 25 MedienG) | Information about Levuvo Mail and Levuvo products |
 
@@ -25,8 +25,8 @@
 
 **Liability for links:** Links in emails come from the respective senders; Levuvo Mail asks for confirmation before opening them.
 
-## Replace in the app
+## After founding
 
-1. `apps/web/src/Settings.tsx` → component `About` → fill the `legal-block` with the real details.
-2. `PRIVACY.md` → section “Controller” and the placeholders for the update server and crash reports.
-3. Run `npm run release:check` and build the release.
+1. Add legal form, company register number, VAT ID, trade licence and chamber membership here,
+   in `apps/web/src/Settings.tsx` (component `About`, `legal-block`) and in `PRIVACY.md` (“Controller”).
+2. Run `npm run release:check` and build the release.

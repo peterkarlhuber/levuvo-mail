@@ -34,4 +34,4 @@ voluntarily and as a selling point for public customers.
 ## Accessibility statement (template for the website)
 
 > Levuvo Mail aims to conform to WCAG 2.2 level AA and EN 301 549 chapter 11. Known limitations:
-> [list]. Feedback and requests for accessible formats: [contact]. Last reviewed: [date].
+> [list]. Feedback and requests for accessible formats: office@levuvo.at. Last reviewed: [date].

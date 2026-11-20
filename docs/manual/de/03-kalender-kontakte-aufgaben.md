@@ -121,4 +121,4 @@ Kurz vor einem Termin mit anderen Menschen erscheint unten rechts eine Karte **T
 
 Ein Klick öffnet die Mail. Mit eingeschaltetem Assistenten fasst **Worum geht es? Mit KI zusammenfassen** die Mails zusammen. Die Zusammenfassung ist als KI-Ergebnis gekennzeichnet. Die Karte verdeckt nichts und schließt mit `Esc`.
 
-Wann die Karte erscheint, stellst du unter **Einstellungen → Allgemein → Lesen** bei **Termin-Vorbereitung** ein: 5, 10 oder 15 Minuten vorher oder **Aus**. Für den nächsten Termin öffnest du sie jederzeit über die Befehlspalette mit **Nächsten Termin vorbereiten**.
+Wann die Karte erscheint, stellst du unter **Einstellungen → Allgemein → Lesen** bei **Termin-Vorbereitung** ein: 5, 10 oder 15 Minuten vorher oder **Aus**. Für den nächsten Termin öffnest du sie jederzeit über die Befehlspalette mit **Nächsten Termin vorbereiten**. Dabei schaut Levuvo Mail bis zu 24 Stunden voraus und sagt es dir, wenn bis dahin kein Termin mit anderen ansteht.

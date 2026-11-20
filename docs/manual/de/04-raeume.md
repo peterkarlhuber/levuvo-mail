@@ -45,6 +45,6 @@ Eine Mail legst du in einen Raum, indem du sie öffnest, im Menü **…** auf **
 
 Der KI-Assistent sieht einen Raum nur, wenn der Besitzer das im Reiter **Einstellungen** des Raums erlaubt. Für Cloud-KI braucht es dort eine eigene, zusätzliche Erlaubnis.
 
-Der Reiter **Einstellungen** ist aufgebaut wie die Einstellungen der App: Karten für **Allgemein**, **Levuvo Mail Assistant in diesem Raum** und **Abgleich**. Alles wird automatisch gespeichert, sobald du ein Feld verlässt oder einen Schalter umlegst. Ganz unten steht die rot umrandete **Gefahrenzone** mit **Raum übergeben**, **Raum auflösen**, **Raum verlassen** oder **Kopie löschen**. Jede dieser Aktionen fragt vorher nach.
+Der Reiter **Einstellungen** (das Zahnrad ganz rechts in der Reiterleiste) ist aufgebaut wie die Einstellungen der App: Karten für **Allgemein**, **Levuvo Mail Assistant in diesem Raum** und **Abgleich**. Alles wird automatisch gespeichert, sobald du ein Feld verlässt oder einen Schalter umlegst. Ganz unten steht die rot umrandete **Gefahrenzone** mit **Raum übergeben**, **Raum auflösen**, **Raum verlassen** oder **Kopie löschen**. Jede dieser Aktionen fragt vorher nach.
 
 Deinen **Sicherheitscode** findest du im Reiter **Mitglieder** in der Karte **Sicherheitscodes**. Er ist der Fingerabdruck deines Raum-Schlüssels, in allen Räumen gleich und nicht geheim. Mit **Kopieren** kannst du ihn z. B. in eine Nachricht einfügen.
