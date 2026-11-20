@@ -9,6 +9,8 @@
 - **Name and tone:** the assistant calls itself exactly "Levuvo Mail Assistant" in every language and writes without emojis. (Manual: none)
 - **Wider question box:** the box in the assistant window uses the full width; "Question | Task" and the buttons are below it. (Manual: The assistant window)
 - **A chosen model becomes active after its download, also when you leave the page:** before, choosing a model, starting the download and opening another page left the old model active. (Manual: Advanced model settings)
+- **Routine reports without internal references:** reports of routines such as Daily briefing or Open replies no longer show internal numbers like "UID 50" and do not end with a question the routine cannot act on. (Manual: The assistant window)
+- **"Took too long" instead of "Is Ollama running?":** when a local model answers more slowly than the time limit, the message now says so, instead of suggesting that Ollama is not running. (Manual: none)
 - **Check cases for every AI function:** `python -m levuvo_ai.evals` now also checks summaries, translation, replies, rewriting, filters and automations in words, prioritisation, bundles, event and promise detection, the newsletter overview, phishing assessment and the assistant, with realistic fictional mail; used to compare local models. (Manual: none)
 
 ### Dictation
