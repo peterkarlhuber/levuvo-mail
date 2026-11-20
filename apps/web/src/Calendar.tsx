@@ -25,7 +25,7 @@ import AttachmentPreview from './AttachmentPreview';
 import { prettySize } from './format';
 import { useUi } from './ConfirmDialog';
 import { useT } from './i18n';
-import { Segmented, useFocusTrap } from './ui';
+import { Segmented, useFocusTrap, PageTitle } from './ui';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import { usePrefs, type Prefs } from './prefs';
 import TaskDialog, { type TaskDraft } from './TaskDialog';
@@ -1533,10 +1533,7 @@ export default function CalendarModule({
           <button className="icon-button" aria-label={t('Weiter')} onClick={() => step(1)}>
             <ChevronRight size={18} />
           </button>
-          <h1>
-            {title}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{title}</PageTitle>
           <button className="icon-button" aria-label={t('Aktualisieren')} onClick={() => void load()} disabled={busy}>
             <RefreshCcw size={16} className={busy ? 'spin' : ''} />
           </button>

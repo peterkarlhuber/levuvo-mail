@@ -1843,15 +1843,9 @@ export const EN: Record<string, string> = {
   entfernt: 'removed',
   'Sicherheitscodes könnt ihr z. B. am Telefon vergleichen. Stimmen sie überein, ist niemand dazwischen.':
     'You can compare safety codes, for example by phone. If they match, nobody is in between.',
-  'Dein Code': 'Your code',
   'Levuvo Mail Assistant in diesem Raum': 'Levuvo Mail Assistant in this space',
-  'Der Assistent darf diesen Raum lesen und Änderungen vorschlagen (jede Änderung erst nach Freigabe)':
-    'The assistant may read this space and suggest changes (each change only after approval)',
-  'Inhalte dürfen auch an Cloud-Modelle und externe Agenten gehen (sonst nur lokales Modell)':
-    'Content may also go to cloud models and external agents (otherwise local model only)',
   'Hinweise für den Assistenten': 'Notes for the assistant',
   'z. B. Ansprechpartner, Tonfall gegenüber dem Kunden': 'e.g. contact persons, tone towards the customer',
-  'Hinweise speichern': 'Save notes',
   'Raum übergeben': 'Hand over space',
   'Neuer Besitzer': 'New owner',
   'Mitglied wählen': 'Choose member',
@@ -1860,6 +1854,18 @@ export const EN: Record<string, string> = {
     'You become an editor and can no longer invite or remove people.',
   Übergeben: 'Hand over',
   'Raum auflösen': 'Dissolve space',
+  'Änderungen werden automatisch gespeichert.': 'Changes are saved automatically.',
+  'Raum lesen und Änderungen vorschlagen': 'Read the space and suggest changes',
+  'Jede Änderung des Assistenten gilt erst nach deiner Freigabe.':
+    'Every change the assistant makes only takes effect after you approve it.',
+  'Cloud-Modelle und externe Agenten erlauben': 'Allow cloud models and external agents',
+  'Sonst arbeitet der Assistent für diesen Raum nur mit dem lokalen Modell.':
+    'Otherwise the assistant only uses the local model for this space.',
+  'Fehlende Inhalte': 'Missing content',
+  'Fehlt auf diesem Gerät etwas, schicken die anderen Mitglieder es erneut.':
+    'If something is missing on this device, the other members send it again.',
+  Gefahrenzone: 'Danger zone',
+  Sicherheitscodes: 'Safety codes',
   'Raum auflösen?': 'Dissolve space?',
   'Für alle Mitglieder wird der Raum schreibgeschützt. Jeder kann seine Kopie danach löschen.':
     'The space becomes read-only for all members. Everyone can delete their copy afterwards.',

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Layout
+- **Space settings look like the app settings:** cards for General, Assistant and Sync, switches instead of checkboxes, fields save on their own, and a red-framed danger zone (hand over, dissolve, leave, delete copy) as the last card. (Manual: Work in a space)
+- **Safety code under Members:** your own safety code moved from the spaces sidebar to the Members tab, grouped, explained and with a copy button. (Manual: Work in a space)
+- **Every page title ends with the brand full stop,** including "Spaces." (Manual: none)
+
 ### Search index
 - **Index for search by meaning shows its state:** not there (with the reason, e.g. AI off or search model not downloaded), running with "x of y messages" and the time left, paused, incomplete, done (number and time) or error. Shown in Settings → AI & agents, in Settings → Search & offline and as a quiet line below the search field while you search. **Pause**, **Resume**, **Index now** and **Index again**; a pause survives a restart. (Manual: Keeping an eye on the index for search by meaning)
 - **"As of" in Search & offline is the last check:** before, it only moved when something changed, so "Update now" looked as if nothing happened. After an update the app now says what it found ("nothing new", "x new, y removed") or which account failed. (Manual: Keeping an eye on the index for search by meaning; The settings at a glance)

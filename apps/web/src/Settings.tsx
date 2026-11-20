@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ArchiveRestore,
   Bell,
@@ -28,7 +28,8 @@ import {
 import AccountSettings from './AccountSettings';
 import { download, getJson, postJson } from './api';
 import { useUi } from './ConfirmDialog';
-import { Segmented } from './ui';
+import { Segmented, PageTitle } from './ui';
+import { Row, Section, Toggle } from './ui/SettingsLayout';
 import { useT } from './i18n';
 import { usePrefs } from './prefs';
 import { ShortcutsDialog } from './Panels';
@@ -64,88 +65,8 @@ type Props = {
   onClose: () => void;
 };
 
-export function Section({
-  title,
-  children,
-  description
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="settings-section">
-      <h2>{title}</h2>
-      {description && <p className="settings-description">{description}</p>}
-      {children}
-    </section>
-  );
-}
-export function Row({
-  label,
-  hint,
-  wide,
-  children
-}: {
-  label: string;
-  hint?: string;
-  /** Free-text field: placed below the label at full row width. */
-  wide?: boolean;
-  children: ReactNode;
-}) {
-  const id = useId();
-  const control = useRef<HTMLDivElement>(null);
-  // Fields inside a row get the row's label and hint as accessible name and description,
-  // unless they carry their own (WCAG 1.3.1 / 4.1.2).
-  useLayoutEffect(() => {
-    const fields = [
-      ...(control.current?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), select, textarea') ?? [])
-    ];
-    fields.forEach(el => {
-      const named =
-        el.getAttribute('aria-label') ||
-        (el.getAttribute('aria-labelledby') && !el.dataset.rowLabel) ||
-        ((el as HTMLInputElement).labels?.length && !el.dataset.rowLabel);
-      if (!named) {
-        // A single field gets the row's visible <label>; several share it via aria-labelledby.
-        if (fields.length === 1 && (!el.id || el.id === `${id}-field`)) el.id = `${id}-field`;
-        else el.setAttribute('aria-labelledby', `${id}-label`);
-        el.dataset.rowLabel = '1';
-      }
-      if (hint && !el.getAttribute('aria-describedby')) el.setAttribute('aria-describedby', `${id}-hint`);
-    });
-  });
-  return (
-    <div className={wide ? 'settings-row settings-row--wide' : 'settings-row'}>
-      <div className="settings-row-label">
-        <label id={`${id}-label`} htmlFor={`${id}-field`}>
-          {label}
-        </label>
-        {hint && <small id={`${id}-hint`}>{hint}</small>}
-      </div>
-      <div className="settings-row-control" ref={control}>
-        {children}
-      </div>
-    </div>
-  );
-}
+export { Row, Section, Toggle };
 export { Segmented };
-export function Toggle({
-  checked,
-  onChange,
-  label
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <label className="switch">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} aria-label={label} />
-      <span />
-    </label>
-  );
-}
 
 function General() {
   const { t } = useT();
@@ -819,10 +740,7 @@ export default function Settings(props: Props) {
       </nav>
       <main className="settings-content">
         <header className="settings-head">
-          <h1>
-            {current.label}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{current.label}</PageTitle>
           <button
             className="icon-button"
             aria-label={t('Schließen')}

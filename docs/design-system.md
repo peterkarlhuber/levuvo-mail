@@ -58,7 +58,12 @@ import { Button, IconButton, Field, Segmented, Dialog, Toolbar, useFocusTrap } f
    are reserved; fixed elements sit above them. Use `dvh`, never `vh`.
 7. `npm run test:a11y` (axe-core in Chromium, part of CI) must stay free of violations; add new
    screens to `test/a11y/a11y.test.mjs`.
-8. In settings, free-text fields use `<Row wide>`: the field sits below the label at full width.
+8. Settings-like pages (Settings, a space's settings tab, …) are built from `Section`, `Row` and
+   `Toggle` in `ui/SettingsLayout.tsx`: one card per topic, fields save on blur or toggle (no separate
+   save button), and irreversible actions go into a last `<Section danger>` ("Danger zone").
+   Free-text fields use `<Row wide>`: the field sits below the label at full width.
+   The h1 of every view is `<PageTitle>` from `ui/`; it adds the brand full stop ("Spaces."). A
+   unit test rejects a bare `<h1>`.
 9. User-visible texts go through `t('…')` with an English entry in `i18n-en.ts`.
 10. Desktop window frame (`styles/window-frame.css`): the desktop app has no system title bar. The
     top `--titlebar-h` strip moves the window; controls in it are no-drag automatically. On Windows

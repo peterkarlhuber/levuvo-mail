@@ -24,6 +24,7 @@ import { useT } from './i18n';
 import { CloudConsentBanner, isConsentError, type CloudError } from './CloudConsent';
 import type { AddressBook, Contact, ContactEntry } from './types';
 
+import { PageTitle } from './ui';
 const EMPTY: Contact = {
   uid: '',
   name: '',
@@ -302,10 +303,7 @@ export default function ContactsModule({
     <main className={`contacts-module ${selected || edit ? 'has-detail' : ''}`}>
       <section className="contacts-list" aria-label={t('Kontaktliste')}>
         <div className="contacts-head">
-          <h1>
-            {t('Kontakte')}
-            <span className="period">.</span>
-          </h1>
+          <PageTitle>{t('Kontakte')}</PageTitle>
           <button className="icon-button" title={t('Neuer Kontakt')} aria-label={t('Neuer Kontakt')} onClick={startNew}>
             <Plus size={18} />
           </button>

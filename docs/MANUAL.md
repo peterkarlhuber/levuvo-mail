@@ -459,7 +459,14 @@ read receipts. Messages written with the assistant are marked "AI-generated". Wh
 one" or "For this space until revoked"; revoke it in the space settings.
 **“Start video call”** in the chat sends all members a new Jitsi link (chapter 9, “Video calls”); links in
 chat messages can be clicked. The assistant and agents see
-a space only if its owner allows it; cloud AI needs its own permission. Details: `docs/SPACES.md`.
+a space only if its owner allows it; cloud AI needs its own permission. A space's **Settings** tab is laid out like the app settings: cards for
+**General** (name, description), **Levuvo Mail Assistant in this space** (switches for reading and
+suggesting, cloud models and external agents, writing in the chat without asking, notes for the
+assistant) and **Sync** ("Request missing content"). Everything saves automatically as soon as you leave a
+field or flip a switch. At the bottom sits the red-framed **Danger zone** with "Hand over space",
+"Dissolve space", "Leave space" or "Delete copy"; each of these asks first. Your **safety code** (the fingerprint of your space key) is under
+space › **Members** with a copy button; for sensitive spaces compare it, e.g. by phone, with the one the
+others see for you. Details: `docs/SPACES.md`.
 
 ## 20 Backup & moving
 

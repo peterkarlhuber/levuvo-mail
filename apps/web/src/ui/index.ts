@@ -7,3 +7,4 @@ export { Segmented, type SegmentedOption } from './Segmented';
 export { Dialog, type DialogProps } from './Dialog';
 export { Toolbar, type ToolbarItem } from './Toolbar';
 export { useFocusTrap, focusableIn } from './focus';
+export { PageTitle } from './PageTitle';

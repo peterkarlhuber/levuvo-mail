@@ -1212,6 +1212,15 @@ test('Protect with password: the composer refuses the same weak passwords as the
     assert.equal(weakPassword(pw), server.weakPassword(pw), pw);
 });
 
+test('Page titles: every view heading goes through PageTitle, so it carries the brand full stop', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const src = join(root, 'apps/web/src');
+  const bare = readdirSync(src, { recursive: true })
+    .filter(f => /\.tsx$/.test(f) && !f.endsWith('PageTitle.tsx'))
+    .filter(f => /<h1[\s>]/.test(readFileSync(join(src, f), 'utf8').replace(/`[^`]*`/g, '')));
+  assert.deepEqual(bare, [], 'use <PageTitle> from ./ui instead of <h1>');
+});
+
 test('Assistant panel width: limits, saved value check and keyboard steps', async () => {
   const { ASSISTANT_WIDTH, clampAssistantWidth, maxAssistantWidth, validAssistantWidth, assistantWidthForKey } =
     await import('../src/assistant-width.ts');

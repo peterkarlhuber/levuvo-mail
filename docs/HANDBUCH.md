@@ -499,7 +499,15 @@ Lesebestätigungen. Mit dem Assistenten geschriebene Nachrichten sind als „KI-
 Mit **„Videocall starten“** im Chat schickt Levuvo Mail allen Mitgliedern einen neuen Jitsi-Link
 (Kapitel 9, „Videocalls“); Links in Chatnachrichten lassen sich anklicken.
 Assistent und Agenten sehen einen Raum nur, wenn der Eigentümer es erlaubt; Cloud-KI braucht eine eigene
-Erlaubnis. Details: `docs/SPACES.md`.
+Erlaubnis. Der Reiter **Einstellungen** eines Raums ist aufgebaut wie die App-Einstellungen: Karten für
+**Allgemein** (Name, Beschreibung), **Levuvo Mail Assistant in diesem Raum** (Schalter für Lesen und
+Vorschlagen, Cloud-Modelle und externe Agenten, Schreiben im Chat ohne Rückfrage, Hinweise für den
+Assistenten) und **Abgleich** („Fehlendes anfragen“). Alles speichert automatisch, sobald du ein Feld
+verlässt oder einen Schalter umlegst. Ganz unten steht die rot umrandete **Gefahrenzone** mit „Raum
+übergeben“, „Raum auflösen“, „Raum verlassen“ bzw. „Kopie löschen“; jede dieser Aktionen fragt vorher nach.
+Dein **Sicherheitscode** (Fingerabdruck deines Raum-Schlüssels) steht unter Raum › **Mitglieder** mit
+Kopieren-Knopf; vergleicht ihn bei sensiblen Räumen z. B. am Telefon mit dem, den die anderen bei dir sehen.
+Details: `docs/SPACES.md`.
 
 ## 20 Sicherung & Umzug
 
