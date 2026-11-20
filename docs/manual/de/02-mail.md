@@ -42,6 +42,10 @@ Unten links im Editor wählst du zum Beispiel **Nachfassen nach 3 Tagen**. Kommt
 
 Über **Vorlagen** fügst du gespeicherte Texte ein oder speicherst die aktuelle Nachricht als Vorlage. Platzhalter wie `{Vorname}` oder `{Datum}` werden beim Einfügen automatisch ersetzt. Vorlagen verwaltest du unter **Einstellungen → Vorlagen**.
 
+### Hinweise vor dem Senden
+
+Bevor eine Mail hinausgeht, prüft Levuvo Mail sie auf deinem Computer, ohne KI. Sehen viele externe Empfänger aus mehreren Organisationen gegenseitig ihre Adressen, schlägt es **Bcc** vor. Gehen Kartennummern, Sozialversicherungsnummern, Passwörter oder Gesundheitsdaten unverschlüsselt nach außen, weist es darauf hin. Mit eingeschaltetem Assistenten erkennt die Prüfung auch diskriminierende Formulierungen und Drohungen. Du entscheidest, ob du trotzdem sendest; nichts davon wird gespeichert oder gemeldet. Die Hinweise sind keine Rechtsberatung.
+
 ## Ordnung halten
 
 | Was du tun willst | So geht es |
@@ -88,10 +92,12 @@ Die **Anhang-Übersicht** (in der Ordnerleiste unter **Anhänge**) zeigt alle Da
 
 Unter **Einstellungen → Filter & Abwesenheit** legst du Regeln fest, etwa „Mails von rechnung@lieferant.at in den Ordner Buchhaltung“. Die Regeln laufen direkt auf deinem Mailserver. Sie wirken also auch, wenn Levuvo Mail geschlossen ist.
 
-- **Abwesenheitsnotiz:** einschalten, Zeitraum, Betreff und Text eingeben, speichern.
+- **Abwesenheitsnotiz:** einschalten, Zeitraum, Betreff und Text eingeben, speichern. Den Text formatierst du wie die Signatur (fett, Links, Bilder). Mit **Signatur des Kontos anhängen (mit Logo)** kommt deine Signatur dazu. Änderst du später die Signatur, speichere die Abwesenheitsnotiz noch einmal.
 - **Regeln:** Klicke auf **Regel hinzufügen**, wähle eine Bedingung (Von, An/CC, Betreff …) und eine Aktion (verschieben, als gelesen markieren …) und klicke auf **Auf dem Server speichern**.
 
-Das klappt, wenn dein Anbieter Serverfilter anbietet (Fachbegriff: Sieve oder ManageSieve). Bei Microsoft 365 und Gmail richtest du Regeln stattdessen im Webmail des Anbieters ein.
+Das klappt, wenn dein Anbieter Serverfilter anbietet (Fachbegriff: Sieve oder ManageSieve). Das Logo reist dann direkt in der Antwort mit. Kann dein Mailserver nur reinen Text senden, speichert Levuvo Mail die Notiz als Text und sagt dir das.
+
+**Microsoft 365 und Gmail:** Hier speichert Levuvo Mail die Abwesenheitsnotiz direkt bei Microsoft bzw. Google. Du wählst zusätzlich, wem geantwortet wird (alle, nur Kontakte, nur deine Organisation). Beim ersten Mal klickst du auf **Freigeben** und bestätigst auf der Anmeldeseite des Anbieters. Eingebettete Bilder übernehmen beide Anbieter nicht, das Logo entfällt dort also. Regeln richtest du bei diesen Konten im Webmail des Anbieters ein.
 
 ## Vertrauliche Nachrichten verschlüsseln
 

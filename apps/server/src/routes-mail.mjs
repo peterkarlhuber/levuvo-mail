@@ -1210,6 +1210,7 @@ export function registerMailRoutes(ctx) {
   ctx.runFollowups = runFollowups;
 
   // ------------------------------------------------------------ filters & vacation (Sieve)
+  const providerAccount = a => ({ ...a, oauthProvider: a.oauthProvider || a.imap?.oauth || '' });
   async function withSieve(account, fn) {
     if (account.auth === 'oauth2')
       throw Object.assign(new Error('Filterregeln sind für dieses Konto nur im Webmail des Anbieters verfügbar.'), {
@@ -1239,6 +1240,13 @@ export function registerMailRoutes(ctx) {
     }
   }
   api.get('/api/sieve', async (request, reply) => {
+    // Microsoft 365 / Google sign-in: the out-of-office reply goes to the provider (/api/auto-reply).
+    if (ctx.autoReply.supported(providerAccount(request.mailAccount)))
+      return {
+        available: false,
+        viaProvider: true,
+        reason: 'Filterregeln sind für dieses Konto nur im Webmail des Anbieters verfügbar.'
+      };
     try {
       const result = await withSieve(request.mailAccount, client => loadSieve(client));
       return result;
@@ -1262,6 +1270,28 @@ export function registerMailRoutes(ctx) {
           signatureHtml: account.signatureHtml || ''
         })
       );
+    } catch (err) {
+      return errorResponse(reply, err);
+    }
+  });
+
+  // ------------------------------------------------- out-of-office for Microsoft 365 / Google
+  api.get('/api/auto-reply', async (request, reply) => {
+    const account = providerAccount(request.mailAccount);
+    if (!ctx.autoReply.supported(account)) return { available: false };
+    try {
+      return await ctx.autoReply.load(account);
+    } catch (err) {
+      if (err.code === 'autoreply_consent_required')
+        return { available: true, consentRequired: true, provider: account.oauthProvider };
+      return errorResponse(reply, err);
+    }
+  });
+  api.post('/api/auto-reply', { bodyLimit: 1536 * 1024 }, async (request, reply) => {
+    if (!requireAction(request, reply, 'mail-v1')) return;
+    const account = providerAccount(request.mailAccount);
+    try {
+      return await ctx.autoReply.save(account, request.body?.reply, { signatureHtml: account.signatureHtml || '' });
     } catch (err) {
       return errorResponse(reply, err);
     }

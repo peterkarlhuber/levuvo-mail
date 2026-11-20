@@ -17,6 +17,8 @@ UI labels are given in English with the German label in parentheses where useful
 - [ ] `docs/manual` (German and English) covers every new or changed feature of this release; labels match the app
 - [ ] Screenshots re-captured with this version; PDFs (`Levuvo-Mail-Handbuch-X.Y.Z.pdf`, `Levuvo-Mail-Manual-X.Y.Z.pdf`) show this version and date
 - [ ] Every page looked at: layout, screenshots beside their text, no split tables, no near-empty pages
+- [ ] `npm run manual:features` is clean (feature registry, menu paths, screenshots, CHANGELOG manual references)
+- [ ] Independent first-time-user review per `docs/manual/REVIEW.md` done, all **must** findings fixed
 - [ ] Settings → Help shows the manual; the assistant answers a "how do I …" question with a manual source
 
 ## First setup (fresh user profile)
