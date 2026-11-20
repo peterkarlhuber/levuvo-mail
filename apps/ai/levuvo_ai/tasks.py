@@ -141,19 +141,13 @@ def newsletters(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         engine,
         f"Write a short overview of these newsletters for the user in {_lang(params)}. For each newsletter give one "
         "line with its most useful content (news, offers with price and end date, events with date). Skip "
-        "advertising phrases. Highlights: at most three lines across all newsletters. Use only the given ids.",
+        "advertising phrases. Highlights: at most three lines across all newsletters. `id` is the value after "
+        "'Newsletter id:', copied exactly.",
         frame_untrusted(body, "newsletters"),
         NewsletterDigest,
         max_tokens=2500,
     )
-    known = set(ids)
-    seen: set[str] = set()
-    kept = []
-    for item in result.get("items", []):
-        if item.get("id") in known and item["id"] not in seen:
-            seen.add(item["id"])
-            kept.append(item)
-    result["items"] = kept
+    result["items"] = _match_ids(result.get("items", []), [{**i, "id": nid} for nid, i in zip(ids, items, strict=True)])
     result["highlights"] = [str(h)[:300] for h in result.get("highlights", [])[:3]]
     return result
 
@@ -286,6 +280,7 @@ def rewrite(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     return _ask(
         engine,
         f"Rewrite the user's draft. {REWRITE_MODES[mode]} Keep names, numbers, dates and links. "
+        f"{'' if mode in ('english', 'german') else 'Keep the language of the draft; do not translate. '}"
         f"{_profile(params) if mode not in ('formal', 'casual', 'proofread') else ''} "
         "Return only the rewritten body as `body`.",
         frame_untrusted(_text(params.get("text")), "user's draft"),
@@ -375,6 +370,11 @@ def _items(params: dict[str, Any]) -> list[dict[str, Any]]:
     return items[:MAX_ITEMS]
 
 
+def _id_rule(items: list[dict[str, Any]]) -> str:
+    first = _text(items[0].get("id"), 80)
+    return f"Each email's id is the text in square brackets at the start of its line; copy it exactly, e.g. {first}."
+
+
 def _listing(items: list[dict[str, Any]]) -> str:
     lines = [
         f"[{_text(m.get('id'), 80)}] From: {_text(m.get('from'), 200)} | Subject: {_text(m.get('subject'), 200)} | "
@@ -382,6 +382,36 @@ def _listing(items: list[dict[str, Any]]) -> str:
         for m in items
     ]
     return frame_untrusted("\n".join(lines), "message list")
+
+
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+
+
+def _match_ids(found: list[Any], items: list[dict[str, Any]], unique: bool = True) -> list[dict[str, Any]]:
+    """Keeps the model's items that belong to a given email, each email once. Small models often write
+    the id as '[m1]', 'id: m1' or 'Newsletter m1', or use the sender address instead; those are mapped back.
+    With unique=False an email may have several items (e.g. two promises in one email)."""
+    ids = [str(m["id"]) for m in items]
+    senders: dict[str, list[str]] = {}
+    for m in items:
+        for addr in _EMAIL.findall(str(m.get("from") or "")):
+            senders.setdefault(addr.lower(), []).append(str(m["id"]))
+    kept, seen = [], set()
+    for item in found:
+        if not isinstance(item, dict):
+            continue
+        raw = str(item.get("id") or "").strip()
+        match = raw if raw in ids else None
+        if match is None:
+            hits = [i for i in ids if re.search(rf"(?<![\w-]){re.escape(i)}(?![\w-])", raw)]
+            match = hits[0] if len(hits) == 1 else None
+        if match is None:
+            owners = [i for a in _EMAIL.findall(raw) for i in senders.get(a.lower(), [])]
+            match = owners[0] if len(set(owners)) == 1 else None
+        if match is not None and (not unique or match not in seen):
+            seen.add(match)
+            kept.append({**item, "id": match})
+    return kept
 
 
 class Priority(BaseModel):
@@ -401,13 +431,12 @@ def prioritize(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         engine,
         f"Rate which emails really need the user's attention or answer today. Reasons in {_lang(params)}. "
         "high: a person expects an answer or a deadline is near; low: newsletters, notifications, ads. "
-        f"The user's own addresses: {_text(params.get('me'), 500)}. Return one item per id, ids exactly as given.",
+        f"The user's own addresses: {_text(params.get('me'), 500)}. Return one item per email. {_id_rule(items)}",
         _listing(items),
         Priorities,
         max_tokens=3000,
     )
-    known = {str(m["id"]) for m in items}
-    result["items"] = [i for i in result.get("items", []) if i.get("id") in known]
+    result["items"] = _match_ids(result.get("items", []), items)
     return result
 
 
@@ -431,13 +460,12 @@ def classify(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
     result = _ask(
         engine,
         "Sort each email into exactly one bundle: " + ", ".join(BUNDLES) + ". Mark from_person=true only for "
-        "mail a human wrote to the user. Return one item per id, ids exactly as given.",
+        f"mail a human wrote to the user. Return one item per email. {_id_rule(items)}",
         _listing(items),
         Categories,
         max_tokens=3000,
     )
-    known = {str(m["id"]) for m in items}
-    result["items"] = [i for i in result.get("items", []) if i.get("id") in known]
+    result["items"] = _match_ids(result.get("items", []), items)
     return result
 
 
@@ -867,15 +895,15 @@ def commitments(engine: Engine, params: dict[str, Any]) -> dict[str, Any]:
         "commitments to do or deliver something; not wishes, questions, politeness ('let me know if you need "
         "anything'), past actions or promises in quoted older messages. Resolve relative deadlines against today; "
         f"leave due empty when no deadline is stated. Write `what` in {_lang(params)}. For `who`, use the other "
-        "person's email address from the From or To line. Return an empty list when there is nothing.",
+        "person's email address from the From or To line. `id` is the value after 'id:' above the email, copied "
+        f"exactly, e.g. {_text(messages[0]['id'], 80)}. Return an empty list when there is nothing.",
         frame_untrusted(body, "emails"),
         Commitments,
         max_tokens=1500,
     )
-    known = {str(m["id"]) for m in messages}
     items = []
-    for item in result.get("items", []):
-        if item.get("id") not in known or not str(item.get("what") or "").strip():
+    for item in _match_ids(result.get("items", []), messages, unique=False):
+        if not str(item.get("what") or "").strip():
             continue
         due = str(item.get("due") or "")
         item["due"] = due[:10] if len(due) >= 10 and due[4] == "-" and due[7] == "-" else ""
