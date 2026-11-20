@@ -30,6 +30,8 @@ AGENT_RULES = (
 _INTERNAL = (
     re.compile(r"\s*[,;]?\s*\(?\b(?:UIDs?|uids?)\s*[:#]?\s*\d+(?:\s*(?:,|und|and|&)\s*\d+)*\)?", re.I),
     re.compile(r"\s*\(?\bmanaged-[0-9a-f]{6,}\b\)?"),
+    # "(Account: …, Ordner: INBOX)": Qwen3.5 9B added it to every line of the daily briefing.
+    re.compile(r"\s*\((?:account|konto|ordner|folder)\s*:[^)\n]*\)", re.I),
 )
 
 
@@ -37,6 +39,8 @@ def clean_report(text: str) -> str:
     for pattern in _INTERNAL:
         text = pattern.sub("", text)
     text = re.sub(r"[ \t]+([.,;:!?])", r"\1", text).strip()
+    # Bold that only held a removed id ("**UID 50**: …") would show as "****".
+    text = re.sub(r"\*\*\s*\*\*\s*:?\s*", "", text)
     # A closing question ("Shall I ...?") cannot be answered: a routine ends with its report.
     paragraphs = text.split("\n\n")
     if len(paragraphs) > 1 and paragraphs[-1].rstrip().endswith("?"):

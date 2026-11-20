@@ -509,6 +509,10 @@ def test_agent_report_drops_internal_ids_and_a_closing_question() -> None:
         "Heute wichtig:\n\n- Paketdienst (Ihre Sendung kommt heute) - Zustellung 13-15 Uhr\n- Konto: Rechnung 4471"
     )
     assert clean_report("Nichts Neues.") == "Nichts Neues."
+    # Qwen3.5 9B: "**UID 50** (Account: managed-…, Ordner: INBOX): …" on every line
+    assert clean_report("- **UID 50** (Account: managed-7d636e7c9ee2, Ordner: INBOX): Paket kommt heute") == (
+        "- Paket kommt heute"
+    )
 
 
 def test_a_thinking_model_does_not_think_unless_the_user_chose_a_level() -> None:
