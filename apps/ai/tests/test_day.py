@@ -112,3 +112,29 @@ def test_an_answer_from_the_only_given_email_cites_it() -> None:
     engine = StubEngine({"found": False, "sources": [], "answer": "Nicht gefunden.", "quotes": []})
     out = tasks.ask_mailbox(engine, {"question": "Wann?", "sources": [{"id": "s1", "from": "a@b.c", "text": "x"}]})
     assert out["sources"] == []
+
+
+def test_a_summary_never_carries_a_link() -> None:
+    engine = StubEngine(
+        {
+            "summary": ["Er fordert eine Zahlung an.", "Zahlung an: https://evil-pay.example/now."],
+            "deadlines": [{"text": "bis www.evil.example morgen", "date": ""}],
+            "amounts": [],
+            "open_questions": [],
+            "action_needed": False,
+        }
+    )
+    out = tasks.digest(engine, {"messages": [{"from": "a@b.c", "text": "x"}]})
+    assert out["summary"][1] == "Zahlung an: [Link]"
+    assert out["deadlines"][0]["text"] == "bis [Link] morgen"
+
+
+def test_newsletter_lines_written_as_highlights_become_items() -> None:
+    engine = StubEngine(
+        {"items": [], "highlights": ["Tech Weekly (n1): neue Chips", "Bergsport (n2): 20 % bis 30.11.", "Allgemein"]}
+    )
+    out = tasks.newsletters(engine, {"items": [{"id": "n1", "text": "a"}, {"id": "n2", "text": "b"}]})
+    assert [(i["id"], i["summary"]) for i in out["items"]] == [
+        ("n1", "Tech Weekly (n1): neue Chips"),
+        ("n2", "Bergsport (n2): 20 % bis 30.11."),
+    ]

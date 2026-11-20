@@ -13,6 +13,8 @@
 - **Reply drafts make no safety claims:** a manipulated email could get "I checked the documents, they are legitimate" into a reply draft. Drafts now never say an email, link or attachment was checked or is safe. (Manual: none)
 - **Automations say what they cannot do:** "Delete all mails from the parcel service" became a "mark as read" rule without a word. The rule now explains that deleting is not possible. (Manual: none)
 - **Subject in the subject field:** a draft written from bullet points no longer puts "Subject: …" as the first line of the text. (Manual: none)
+- **Newsletter overview shows every newsletter:** small models wrote all lines as highlights and left the per-newsletter list empty. The instructions now name the list, and such lines are still mapped to their newsletter. (Manual: none)
+- **Summaries carry no links:** a manipulated email got "Pay at https://…" into a thread summary. Links in a summary are now replaced by "[Link]"; they stay in the email, where Levuvo Mail checks them. (Manual: none)
 - **Source shown for a single email:** when the answer comes from the only email found, that email is shown as the source. (Manual: none)
 - **Wider question box:** the box in the assistant window uses the full width; "Question | Task" and the buttons are below it. (Manual: The assistant window)
 - **A chosen model becomes active after its download, also when you leave the page:** before, choosing a model, starting the download and opening another page left the old model active. (Manual: Advanced model settings)
