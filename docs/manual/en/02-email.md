@@ -21,7 +21,7 @@ Click **New message** or press `N`. To answer, use **Reply** (`R`), **Reply all*
 1. **From:** Choose the sender address if you have several. The matching signature is added automatically.
 2. **To:** Type a name or an address. Levuvo Mail suggests contacts. **CC/BCC** adds more recipients. BCC recipients can't see the others.
 3. Enter the **Subject** and the text. The bar above the text formats it (bold, lists, links, images).
-4. **Attachments:** Click **Choose files** or drag files into the window. Up to eight files with 8 MiB (about 8 MB) in total are allowed.
+4. **Attachments:** Click **Choose files** or drag files into the window. Up to eight files with 8 MB in total are allowed.
 5. Click **Send** or press `Ctrl` + `Enter`.
 
 Drafts are saved automatically while you write. **Close as draft** keeps the message in **Drafts**.
@@ -48,7 +48,7 @@ Click **Video call** above the text. Levuvo Mail inserts “Join the video call:
 
 ### Hints before sending
 
-Before an email goes out, Levuvo Mail checks it on your computer, without AI. If many external recipients from several organizations would see each other's addresses, it suggests **Bcc**. If card numbers, social security numbers, passwords or health data would leave unencrypted, it points that out. With the assistant switched on, the check also spots discriminatory wording and threats. You decide whether to send anyway; nothing of this is stored or reported. The hints are not legal advice.
+Before an email goes out, Levuvo Mail checks it on your computer, without AI. If many external recipients from several organizations would see each other's addresses, it suggests **Bcc**. If card numbers, Austrian social security numbers, passwords or health data would leave unencrypted, it points that out. With the assistant switched on, the check also spots discriminatory wording and threats. You decide whether to send anyway; nothing of this is stored or reported. The hints are not legal advice.
 
 ## Keep things tidy
 
@@ -110,7 +110,7 @@ This works if your provider offers server filters (the technical term is Sieve o
 This works for every recipient, without them setting anything up. Suitable for contracts, login details or personal documents.
 
 1. While writing, choose **Protect with password** in the **No encryption** field.
-2. Levuvo Mail suggests a strong password. You can keep it or change it (at least 10 characters). Text and attachments together may be at most 5 MiB.
+2. Levuvo Mail suggests a strong password. You can keep it or change it (at least 10 characters). Text and attachments together may be at most 5 MB.
 3. Click **Send**.
 4. Tell the recipient the password another way, for example by text message or phone. Never in the same email.
 

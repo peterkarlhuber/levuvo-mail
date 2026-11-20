@@ -159,6 +159,23 @@ const SHOTS = [
     }
   },
   {
+    // "My day" as it opens on the first start of the day (task due today, not overdue).
+    name: 'my-day',
+    prefs: { briefingOnStart: true },
+    routes: {
+      'GET /api/briefing': (() => {
+        const body = structuredClone(fixtures['GET /api/briefing'].body);
+        for (const task of body.tasks || []) task.overdue = false;
+        return body;
+      })()
+    },
+    ready: '.briefing',
+    run: async page => {
+      await page.locator('.briefing').waitFor();
+      await page.waitForTimeout(300);
+    }
+  },
+  {
     name: 'spaces',
     run: async (page, lang) => {
       await page.locator('.rail-item').nth(3).click();
@@ -256,7 +273,15 @@ try {
           sameSite: 'Strict'
         }
       ]);
-      const prefs = { theme: 'dark', language: lang, calendarView: 'week', ...(shot.prefs || {}) };
+      // "My day" and the meeting card would open over every shot; the my-day shot opens it itself.
+      const prefs = {
+        theme: 'dark',
+        language: lang,
+        calendarView: 'week',
+        briefingOnStart: false,
+        meetingPrep: 0,
+        ...(shot.prefs || {})
+      };
       await context.addInitScript(p => {
         window.localStorage.setItem('levuvo-mail-prefs-v2', JSON.stringify(p));
         // Draw the macOS traffic lights the system puts into the window.

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.6.0 – 20 November 2026
+
+> **User manual included:** the German and English user manual are attached to this release as PDFs (`Levuvo-Mail-Handbuch-2.6.0.pdf`, `Levuvo-Mail-Manual-2.6.0.pdf`) and are also in the app under Settings → Help.
 
 ### Assistant with real models
 - **The assistant searches your mail on its own more reliably:** tested with real local models, small models answered "What does the relaunch cost?" or "How high is the fee in the contract?" from general knowledge instead of searching. The rules for every model now say clearly that questions about your people, offers, prices, contracts, flights and appointments need the mailbox search; greetings and general knowledge are still answered directly. The model still decides itself. (Manual: The assistant window)
@@ -84,6 +86,7 @@
 - **Manual in the app:** Settings → Help shows the manual with chapter list and search; the question mark in the rail opens it. (Manual: Get help)
 - **The assistant answers app questions from the manual:** for "how do I …" questions it reads only the few matching sections (found with the same local search model as the mail search, by word match without one) and links to them as sources. (Manual: The assistant window)
 - **The manual keeps up with the app:** every setting, tab, command and shortcut is listed in a feature registry with its manual section in German and English; the tests fail when a new feature, a CHANGELOG entry or a quoted menu path has no matching manual text, and every release gets an independent first-time-user review of the manual. (Manual: none)
+- **Reviewed for 2.6.0:** all screenshots taken again from this version, a new screenshot of "My day", and a note on slow computers without a graphics card in "The assistant window". (Manual: My day; The assistant window)
 
 ### Fixes
 - **Alt shortcuts on the Mac:** Option + 1–5 and Option + , switch views again (they used the typed character, which is different on a Mac keyboard).

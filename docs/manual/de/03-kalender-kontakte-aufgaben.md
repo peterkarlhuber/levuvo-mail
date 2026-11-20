@@ -84,7 +84,7 @@ Der Verlauf bleibt auf diesem Computer. Notizen werden verschlüsselt gespeicher
 
 ![Offene Aufgaben mit Fälligkeit und Priorität](tasks.png)
 
-- **Schnell hinzufügen:** Tippe oben in das Feld **Aufgabe hinzufügen …** und drücke `Enter`.
+- **Schnell hinzufügen:** Tippe oben in das Feld **Aufgabe hinzufügen …** (in Heute: **Aufgabe für heute hinzufügen …**) und drücke `Enter`.
 - **Ausführlich:** **Neue Aufgabe** öffnet ein Fenster für Fälligkeit, Erinnerung, Priorität, Notiz und Wiederholung.
 - **Aus einer Mail:** Klicke im Lesebereich auf das Aufgaben-Symbol (**Als Aufgabe anlegen**). Die Aufgabe merkt sich die Mail, du kommst mit einem Klick zurück.
 - **Erledigt:** Kreis vor der Aufgabe anklicken.
@@ -98,6 +98,8 @@ Der Verlauf bleibt auf diesem Computer. Notizen werden verschlüsselt gespeicher
 ## Mein Tag
 
 Beim ersten Öffnen am Tag zeigt Levuvo Mail **Mein Tag**: einen Überblick über alles, was heute ansteht.
+
+![Mein Tag: Termine, Aufgaben, wartende Mails und Versprechen auf einen Blick](my-day.png)
 
 - **Termine heute** mit Ort und Zahl der Teilnehmenden.
 - **Aufgaben für heute**, auch überfällige. Mit dem Kreis hakst du sie gleich ab.
@@ -115,7 +117,7 @@ Ein Klick auf einen Eintrag öffnet die Mail, den Kalender oder die Aufgaben. De
 Kurz vor einem Termin mit anderen Menschen erscheint unten rechts eine Karte **Termin-Vorbereitung**. Sie zeigt:
 
 - die **Teilnehmenden** mit ihrem Eintrag im Adressbuch und ob sie zugesagt haben,
-- die **Letzte Mails** mit ihnen oder zum Thema des Termins,
+- unter **Letzte Mails** die Mails mit ihnen oder zum Thema des Termins,
 - **Dateien**: Anhänge des Termins und dieser Mails,
 - **Offene Punkte**: Aufgaben, Mails ohne Antwort und Versprechen, die diese Menschen betreffen.
 

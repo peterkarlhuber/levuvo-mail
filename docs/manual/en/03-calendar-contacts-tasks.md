@@ -71,7 +71,7 @@ Contacts from Microsoft 365 and Google appear automatically once you allowed acc
 Below a contact's details, **History** shows everything about the person on one timeline: emails from all accounts and folders, shared events, tasks and your notes.
 
 - **Save note:** record what was discussed. Edit a note with the pencil and delete it with the bin.
-- **Add task:** the task belongs to this person and also appears under Tasks. Tasks you made from one of the person's emails show up as well.
+- **Create task:** the task belongs to this person and also appears under Tasks. Tasks you made from one of the person's emails show up as well.
 - **Filter:** **Everything**, **Emails**, **Events**, **Tasks** and **Notes** hide the rest. Click an email to open it.
 
 You also see notes and open tasks while reading: click the sender to open the contact card. You can add notes and tasks there too, also for people who are not in an address book.
@@ -84,7 +84,7 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 
 ![Open tasks with due dates and priority](tasks.png)
 
-- **Add quickly:** Type into the **Add a task …** field at the top and press `Enter`.
+- **Add quickly:** Type into the **Add a task …** field at the top (in Today: **Add a task for today …**) and press `Enter`.
 - **In detail:** **New task** opens a window for due date, reminder, priority, notes and repeat.
 - **From an email:** Click the task icon (**Create task**) in the reading pane. The task remembers the email, so you get back to it with one click.
 - **Done:** Click the circle in front of the task.
@@ -98,6 +98,8 @@ Open tasks with `Alt` + `5`. On the left you choose the view: **Today**, **Upcom
 ## My day
 
 The first time you open Levuvo Mail on a day, it shows **My day**: an overview of everything that is on today.
+
+![My day: events, tasks, waiting emails and promises at a glance](my-day.png)
 
 - **Today’s events** with place and number of attendees.
 - **Tasks for today**, overdue ones too. Tick them off right there with the circle.

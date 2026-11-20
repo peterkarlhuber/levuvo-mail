@@ -296,7 +296,17 @@ const EN_TEXT = new Map([
   ['Rechtsanwältin', 'Lawyer'],
   ['Mariahilfer Straße 12, 1070 Wien', 'Mariahilfer Strasse 12, 1070 Vienna'],
   ['Angebot_Relaunch_2026.pdf', 'Relaunch_proposal_2026.pdf'],
-  ['Abnahme', 'Sign-off']
+  ['Abnahme', 'Sign-off'],
+  // "My day"
+  ['Angebot an Hofer IT schicken', 'Send the quote to Hofer IT'],
+  ['Jour fixe Relaunch', 'Relaunch weekly'],
+  ['Büro Linz', 'Linz office'],
+  ['Vertragsentwurf', 'Contract draft'],
+  ['Angebot Website-Relaunch', 'Website relaunch proposal'],
+  ['Re: Angebot Website-Relaunch', 'Re: Website relaunch proposal'],
+  ['Kannst du mir bis Freitag Bescheid geben?', 'Can you let me know by Friday?'],
+  ['Angebot an Lukas schicken', 'Send the quote to Lukas'],
+  ['Lukas schickt die Zugangsdaten', 'Lukas sends the login details']
 ]);
 
 /** The subject the screenshots open, per language. */

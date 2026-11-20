@@ -73,7 +73,7 @@ In the editor, the **Assistant** button opens these helpers:
 
 Under **Writing style** you set tone, formal or informal address, sign-off and your own instructions. With **Learn style per contact** the assistant adopts how you greet each recipient, encrypted on this device. Before sending, it checks for forgotten attachments, a harsh tone, wrong recipients and sensitive data; you decide.
 
-**Learn style per contact** (under Writing style, off at first): Levuvo Mail reads your sent emails in the local search index and remembers, for each contact, the greeting, the closing and whether you use du or Sie. No AI model runs for this; it is stored encrypted on this device only. A reply suggestion to that person then uses their greeting and your form of address and shows "In the style of your emails to …". The table shows what was learned; you can delete single contacts or everything.
+**Learn style per contact** (under Writing style, off at first): Levuvo Mail reads your sent emails in the local search index and remembers, for each contact, the greeting, the closing and whether you use the informal "du" or the formal "Sie" (in German). No AI model runs for this; it is stored encrypted on this device only. A reply suggestion to that person then uses their greeting and your form of address and shows "In the style of your emails to …". The table shows what was learned; you can delete single contacts or everything.
 
 ### Dictation
 
@@ -89,6 +89,7 @@ Click the sparkle icon ✦ on the left or press `Ctrl` + `J`.
 
 - **Question:** "When is the delivery from Müller arriving?" The assistant decides itself whether to search your emails or the manual. To "Hello" or "Who are you?" it answers directly and names the model it is using. Cards below the answer show the emails or manual sections it comes from. Each source shows sender, date and a literal quote; one click opens it. Follow-ups such as "And the price?" refer to the previous answer, **Clear history** starts afresh. If nothing fits, it says so instead of guessing.
 - **Long answers:** If an answer is longer than the maximum response length, it shows **Answer cut off**. **Continue** gets you the full answer.
+- **Slow computer:** Without a graphics card, local models answer more slowly. If a model needs longer than allowed, you see **The model took too long.** A smaller model answers faster. While you wait for an answer, AI work in the background (such as sorting in **My day**) pauses.
 - **Task:** "Find a meeting time with Anna next week." The assistant looks for free times and prepares a draft. Nothing is sent.
 - **Routines:** ready-made flows such as a daily briefing, open replies or tidying up newsletters. The routine bar stays visible at the top of the window.
 - **Approvals:** everything the assistant or an agent prepared that waits for your **Approve** or **Reject**.
