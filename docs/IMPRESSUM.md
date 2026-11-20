@@ -1,8 +1,8 @@
-# Imprint (Impressum) – template
+# Imprint (Impressum)
 
-> Levuvo fills in this template before publication. The same placeholders appear in the app
-> under Settings → About (`apps/web/src/Settings.tsx`, “Legal notice” section) and in the
-> privacy notice (`PRIVACY.md`). Legal review recommended.
+> The same details appear in the app under Settings → About (`apps/web/src/Settings.tsx`,
+> “Legal notice” section) and in the privacy notice (`PRIVACY.md`). Levuvo is still a start-up
+> project without a registered company; update this page once it is founded. Legal review recommended.
 >
 > The filename stays `IMPRESSUM.md` because the German app text refers to `docs/IMPRESSUM.md`.
 > Austrian law requires this disclosure; the German legal terms are kept in parentheses.
@@ -11,13 +11,13 @@
 
 | Item | Value |
 |---|---|
-| Media owner and manufacturer (Medieninhaber und Hersteller) | [Company name] [legal form, e.g. e.U. / GmbH] |
-| Address | [Street number], [postcode city], Austria |
-| Contact | Email: [kontakt@levuvo.at] · Phone: [+43 …] |
-| Business purpose (Unternehmensgegenstand) | [e.g. development and distribution of software] |
-| Company register number / court (Firmenbuchnummer / -gericht) | [FN …] / [Regional Court …] (if registered) |
-| VAT ID (UID-Nummer) | [ATU…] (if available) |
-| Membership / trade authority | [Austrian Economic Chamber (Wirtschaftskammer) …] / [district authority or municipal office …] |
+| Media owner and manufacturer (Medieninhaber und Hersteller) | Levuvo (Gründungsprojekt / start-up project), Peter Karlhuber |
+| Address | Laussastraße 24, 4460 Losenstein, Austria |
+| Contact | Email: office@levuvo.at |
+| Business purpose (Unternehmensgegenstand) | Development of software (Levuvo Mail) |
+| Company register number / court (Firmenbuchnummer / -gericht) | not registered (start-up project) |
+| VAT ID (UID-Nummer) | none yet |
+| Membership / trade authority | none yet (start-up project, no trade licence yet) |
 | Professional law | Trade Regulation Act (Gewerbeordnung), www.ris.bka.gv.at |
 | Basic orientation (§ 25 MedienG) | Information about Levuvo Mail and Levuvo products |
 
@@ -25,8 +25,8 @@
 
 **Liability for links:** Links in emails come from the respective senders; Levuvo Mail asks for confirmation before opening them.
 
-## Replace in the app
+## After founding
 
-1. `apps/web/src/Settings.tsx` → component `About` → fill the `legal-block` with the real details.
-2. `PRIVACY.md` → section “Controller” and the placeholders for the update server and crash reports.
-3. Run `npm run release:check` and build the release.
+1. Add legal form, company register number, VAT ID, trade licence and chamber membership here,
+   in `apps/web/src/Settings.tsx` (component `About`, `legal-block`) and in `PRIVACY.md` (“Controller”).
+2. Run `npm run release:check` and build the release.

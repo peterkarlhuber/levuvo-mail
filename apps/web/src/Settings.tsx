@@ -682,21 +682,17 @@ function About({ runtime }: { runtime: Runtime }) {
         <p className="about-motto">Less effort. More impact.</p>
       </Section>
       <Section title={t('Impressum')}>
-        <p className="settings-description">
-          {t(
-            'Angaben gemäß § 5 ECG / § 25 MedienG – bitte vor der Veröffentlichung mit den Firmendaten ersetzen (siehe docs/IMPRESSUM.md).'
-          )}
-        </p>
+        <p className="settings-description">{t('Angaben gemäß § 5 ECG und § 25 MedienG')}</p>
         <address className="legal-block">
-          Levuvo [Rechtsform]
+          {t('Levuvo (Gründungsprojekt)')}
           <br />
-          [Straße Hausnummer]
+          Peter Karlhuber
           <br />
-          [PLZ Ort], Österreich
+          Laussastraße 24
           <br />
-          E-Mail: [kontakt@levuvo.at]
+          4460 Losenstein, {t('Österreich')}
           <br />
-          [Firmenbuchnummer · Firmenbuchgericht · UID]
+          {t('E-Mail')}: <a href="mailto:office@levuvo.at">office@levuvo.at</a>
         </address>
       </Section>
       <AboutCompliance />

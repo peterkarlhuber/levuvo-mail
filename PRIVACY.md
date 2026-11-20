@@ -5,7 +5,7 @@
 
 ## Controller
 
-[Company name, legal form] · [Address] · [Email for privacy requests] · [Data protection officer, if applicable]
+Levuvo (start-up project), Peter Karlhuber · Laussastraße 24, 4460 Losenstein, Austria · office@levuvo.at · No data protection officer required at the moment
 
 ## Principle
 
@@ -170,5 +170,5 @@ anywhere.
 
 Since Levuvo receives no personal data from the app (exceptions: voluntary crash reports and
 technical data when checking for updates), requests for access and deletion concerning emails, events
-and contacts must be addressed to the respective provider. For crash reports and update logs: [contact].
+and contacts must be addressed to the respective provider. For crash reports and update logs: office@levuvo.at.
 Complaints: Austrian Data Protection Authority (Österreichische Datenschutzbehörde), Barichgasse 40–42, 1030 Vienna, dsb.gv.at.

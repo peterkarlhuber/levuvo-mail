@@ -121,4 +121,4 @@ Shortly before an event with other people, a **Meeting preparation** card appear
 
 Click to open an email. With the assistant on, **What is it about? Summarize with AI** summarizes the emails. The summary is labelled as an AI result. The card covers nothing and closes with `Esc`.
 
-Under **Settings → General → Reading**, **Meeting preparation** sets when the card appears: 5, 10 or 15 minutes before, or **Off**. You can open it for the next event at any time from the command palette with **Prepare the next meeting**.
+Under **Settings → General → Reading**, **Meeting preparation** sets when the card appears: 5, 10 or 15 minutes before, or **Off**. You can open it for the next event at any time from the command palette with **Prepare the next meeting**. Levuvo Mail looks up to 24 hours ahead and tells you when no meeting with others comes up in that time.
