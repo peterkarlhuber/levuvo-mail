@@ -140,8 +140,8 @@
       "en": "06-settings.md#The settings at a glance"
     },
     "settings-section:Gespeicherte Daten auf diesem Gerät": {
-      "de": "06-einstellungen.md#Die Einstellungen im Überblick",
-      "en": "06-settings.md#The settings at a glance"
+      "de": "06-einstellungen.md#Wo Levuvo Mail Daten speichert",
+      "en": "06-settings.md#Where Levuvo Mail stores data"
     },
     "settings-section:Handbuch": {
       "de": "06-einstellungen.md#Die Einstellungen im Überblick",
@@ -385,6 +385,10 @@
     "shortcut:?": {
       "de": "07-tastenkuerzel.md#Tastenkürzel",
       "en": "07-shortcuts.md#Keyboard shortcuts"
+    },
+    "settings-section:Suche nach Bedeutung": {
+      "de": "05-ki-assistent.md#Den Suchindex für die Suche nach Bedeutung im Blick",
+      "en": "05-ai-assistant.md#Keeping an eye on the index for search by meaning"
     }
   }
 }
