@@ -20,10 +20,14 @@ export function createIndexRunner({
   let running = false;
   let active = false;
   let catchUp = null;
+  // Outcome of the last pass per account, for Settings: counts and an error code, no content.
+  const last = new Map();
+  let runs = 0;
 
   async function run(force = false) {
     if (running || !enabled()) return { ran: false, incomplete: false };
     running = true;
+    runs++;
     let incomplete = false;
     try {
       for (const account of accounts().filter(a => a.imap.configured)) {
@@ -36,8 +40,22 @@ export function createIndexRunner({
             account
           );
           if (result?.enabled && result.complete === false) incomplete = true;
-        } catch {
+          last.set(account.id, {
+            at: Date.now(),
+            added: result?.added || 0,
+            removed: result?.removed || 0,
+            complete: result?.complete !== false,
+            error: null
+          });
+        } catch (err) {
           diagnostics.record('index', 'sync_failed');
+          last.set(account.id, {
+            at: Date.now(),
+            added: 0,
+            removed: 0,
+            complete: false,
+            error: String(err?.code || 'index_sync_failed').slice(0, 60)
+          });
         }
       }
     } finally {
@@ -55,6 +73,8 @@ export function createIndexRunner({
 
   return {
     run,
+    /** Whether a pass runs now, how many passes started, and the last outcome per account. */
+    status: () => ({ running, runs, accounts: Object.fromEntries(last) }),
     /** Catch-up batches only run between start() and stop(), i.e. while background jobs run. */
     start() {
       active = true;

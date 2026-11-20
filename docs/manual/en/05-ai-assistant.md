@@ -34,6 +34,21 @@ After the download each model is compared with a fixed checksum, a kind of digit
 
 Small runs from 8 GB of memory (RAM), Standard from 16 GB, Large from 32 GB. Levuvo Mail shows how much your computer has under **Local AI**. Larger models answer better but more slowly. Models marked **EU** come from Mistral AI in France. With a local model the origin doesn't matter for your data, because it never leaves your computer.
 
+### Keeping an eye on the index for search by meaning
+
+For search by meaning to work, the search model computes an entry for every message in the search index. This happens in the background and only on your computer. You can see how far it has got under **Settings → AI & agents**, right below the search model, and under **Settings → Search & offline**:
+
+| Display | Meaning |
+|---|---|
+| **Not there** | There is no index yet. The reason is shown with it, for example: AI switched off, search model not downloaded yet, or local search index switched off. |
+| **Running** | The index is being built, with "x of y messages" and the estimated time left. |
+| **Paused** | You stopped building with **Pause**. **Resume** continues where it stopped. What has been computed is kept. |
+| **Incomplete** | A part is still missing, such as new mail. It is added in the next run, within 10 minutes at the latest, or right away with **Index now**. |
+| **Done** | All messages are searchable, with the number and the time. |
+| **Error** | The search model did not answer. **Try again** starts building again. |
+
+**Index again** discards all entries and computes them anew. You only need it when search by meaning finds noticeably poorly. While you search, a slim line below the search field shows when the index is not finished yet.
+
 ## What the assistant can do
 
 ### In a message

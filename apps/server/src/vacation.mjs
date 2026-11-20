@@ -11,7 +11,7 @@ export const VACATION_LIMITS = {
   text: 20000,
   images: 4,
   /** All embedded images together (decoded bytes), body and signature. */
-  imageBytes: 400 * 1024
+  imageBytes: 400_000
 };
 const SIGNATURE_SEPARATOR = '<p>-- </p>';
 const DATA_IMAGE = /^data:(image\/(?:png|jpeg|gif|webp));base64,([a-z0-9+/=\s]+)$/i;
@@ -57,7 +57,7 @@ export function composeVacation({ bodyHtml = '', includeSignature = false }, sig
   const bytes = images.reduce((n, i) => n + Math.floor((i.base64.length * 3) / 4), 0);
   if (images.length > VACATION_LIMITS.images || bytes > VACATION_LIMITS.imageBytes)
     throw fail(
-      'Die Abwesenheitsnotiz enthält zu viele oder zu große Bilder (höchstens 4 Bilder, zusammen 400 KB).',
+      'Die Abwesenheitsnotiz enthält zu viele oder zu große Bilder (höchstens 4 Bilder, zusammen 400 kB).',
       'vacation_too_large',
       413
     );

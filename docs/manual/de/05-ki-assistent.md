@@ -34,6 +34,21 @@ Jedes Modell wird nach dem Download mit einer festen Prüfsumme verglichen, eine
 
 Klein läuft ab 8 GB Arbeitsspeicher (RAM), Standard ab 16 GB, Groß ab 32 GB. Wie viel dein Computer hat, zeigt Levuvo Mail unter **Lokale KI** an. Größere Modelle antworten besser, aber langsamer. Mit **EU** markierte Modelle stammen von Mistral AI aus Frankreich. Bei einem lokalen Modell spielt die Herkunft für deine Daten keine Rolle, denn sie verlassen deinen Computer nicht.
 
+### Den Suchindex für die Suche nach Bedeutung im Blick
+
+Damit die Suche nach Bedeutung funktioniert, berechnet das Suchmodell für jede Nachricht im Suchindex einen Eintrag. Das passiert im Hintergrund und nur auf deinem Computer. Wie weit es ist, siehst du unter **Einstellungen → KI & Agenten** direkt unter dem Modell für die Suche und unter **Einstellungen → Suche & Offline**:
+
+| Anzeige | Bedeutung |
+|---|---|
+| **Nicht vorhanden** | Es gibt noch keinen Index. Der Grund steht dabei, zum Beispiel: KI ausgeschaltet, Suchmodell noch nicht heruntergeladen oder lokaler Suchindex ausgeschaltet. |
+| **Läuft** | Der Index wird aufgebaut, mit „x von y Nachrichten“ und der geschätzten Restzeit. |
+| **Pausiert** | Du hast den Aufbau mit **Pausieren** angehalten. **Fortsetzen** macht dort weiter. Bereits Berechnetes bleibt erhalten. |
+| **Unvollständig** | Ein Teil fehlt noch, etwa neue Mails. Er wird beim nächsten Durchlauf ergänzt, spätestens nach 10 Minuten, oder sofort mit **Jetzt indexieren**. |
+| **Fertig** | Alle Nachrichten sind durchsuchbar, mit Anzahl und Zeitpunkt. |
+| **Fehler** | Das Suchmodell hat nicht geantwortet. **Erneut versuchen** startet den Aufbau wieder. |
+
+**Neu indexieren** verwirft alle Einträge und berechnet sie neu. Das brauchst du nur, wenn die Suche nach Bedeutung auffällig schlecht findet. Während du suchst, zeigt eine schmale Zeile unter dem Suchfeld an, wenn der Index noch nicht fertig ist.
+
 ## Was der Assistent kann
 
 ### In einer Nachricht

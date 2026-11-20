@@ -566,7 +566,7 @@ function ProtectedCard({ accountId, detail }: { accountId: string; detail: Detai
                 <a href={links[i]} download={a.name}>
                   {a.name}
                 </a>{' '}
-                <small className="muted">{Math.max(1, Math.round(a.size / 1024))} KB</small>
+                <small className="muted">{prettySize(a.size)}</small>
               </li>
             ))}
           </ul>

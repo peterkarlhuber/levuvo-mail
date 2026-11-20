@@ -804,7 +804,7 @@ export default function MailInstance({
       const files = await fetchAttachments(t, detail, { folder, accountId, onlyFiles: false });
       if (files === null)
         throw new Error(
-          t('Der Entwurf enthält mehr als acht Anhänge oder über 8 MiB und kann hier nicht bearbeitet werden.')
+          t('Der Entwurf enthält mehr als acht Anhänge oder über 8 MB und kann hier nicht bearbeitet werden.')
         );
       open(draftEdit(detail, { identities, uid: selectedUid, files }));
     } catch (err) {
